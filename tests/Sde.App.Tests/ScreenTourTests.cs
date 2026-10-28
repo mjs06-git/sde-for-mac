@@ -91,7 +91,7 @@ public class ScreenTourTests
 	}
 
 	[AvaloniaFact]
-	public void ThemeSwitch_RecoloursStatusPills_TheResultCard_AndLegendDots()
+	public void ThemeSwitch_RecoloursResultDots_TheThresholdBar_AndLegendDots()
 	{
 		BindingErrors.Instance.Messages.Clear();
 		using UiSession ui = new UiSession(ThemeVariant.Light);
@@ -100,24 +100,22 @@ public class ScreenTourTests
 		ui.Pump();
 
 		// Each check keeps the same control across the switch: a control made after it would be coloured right anyway.
-		Border pill = ui.Window.GetVisualDescendants().OfType<Border>().First(b => b.IsEffectivelyVisible && b.Classes.Contains("pill") && b.DataContext is StructureRowViewModel);
-		TextBlock pillText = pill.GetVisualDescendants().OfType<TextBlock>().Single();
-		string state = ((StructureRowViewModel)pill.DataContext).State.ToString();
-		AssertThemeColour("Status" + state + "Bg", pill.Background);
+		Ellipse dot = ui.Window.GetVisualDescendants().OfType<Ellipse>().First(e => e.IsEffectivelyVisible && e.Classes.Contains("dot") && e.DataContext is StructureRowViewModel);
+		string state = ((StructureRowViewModel)dot.DataContext).State.ToString();
+		AssertThemeColour("Status" + state + "Dot", dot.Fill);
 		SwitchTheme(ui, ThemeVariant.Dark);
-		AssertThemeColour("Status" + state + "Bg", pill.Background);
-		AssertThemeColour("Status" + state + "Fg", pillText.Foreground);
+		AssertThemeColour("Status" + state + "Dot", dot.Fill);
 
 		ui.Main.OpenAssessment(ui.Main.Structures.Rows.First(r => r.Address.StartsWith("123")).AssessmentID!.Value);
 		ui.Pump();
-		Border card = ui.Window.GetVisualDescendants().OfType<TextBlock>().First(t => t.IsEffectivelyVisible && t.Text == "PERCENT DAMAGED").FindAncestorOfType<Border>();
+		ProgressBar bar = ui.Window.GetVisualDescendants().OfType<ProgressBar>().First(p => p.IsEffectivelyVisible && p.Classes.Contains("threshold"));
 		Ellipse issueDot = ui.Window.GetVisualDescendants().OfType<Ellipse>().First(d => d.IsEffectivelyVisible && d.DataContext is IssueItem);
 		string issueKey = ((IssueItem)issueDot.DataContext).Severity + "Fg";
-		string cardKey = "Status" + ui.Main.Editor.State + "Bg";
-		AssertThemeColour(cardKey, card.Background);
+		string barKey = "Status" + ui.Main.Editor.State + "Dot";
+		AssertThemeColour(barKey, bar.Foreground);
 		AssertThemeColour(issueKey, issueDot.Fill);
 		SwitchTheme(ui, ThemeVariant.Light);
-		AssertThemeColour(cardKey, card.Background);
+		AssertThemeColour(barKey, bar.Foreground);
 		AssertThemeColour(issueKey, issueDot.Fill);
 
 		ui.Main.ShowCommand.Execute(Page.Map);

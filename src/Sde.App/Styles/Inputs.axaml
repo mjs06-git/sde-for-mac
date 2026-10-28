@@ -25,6 +25,13 @@
   <Style Selector="ComboBox">
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
+  <!-- A small pop-up button (scope bars): 19 px, 12 pt -->
+  <Style Selector="ComboBox.sm">
+    <Setter Property="MinHeight" Value="{StaticResource ControlHeightSmall}" />
+    <Setter Property="Height" Value="{StaticResource ControlHeightSmall}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
+    <Setter Property="Padding" Value="8,0,0,0" />
+  </Style>
   <!-- A pop-up button: the Mac's up-and-down chevrons, on a raised white face -->
   <Style Selector="ComboBox /template/ PathIcon#DropDownGlyph">
     <Setter Property="Data" Value="{StaticResource IconCaretUpDown}" />

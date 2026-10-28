@@ -11,6 +11,12 @@ public static class Converters
 	/// <summary>The name of the result's text colour, e.g. "StatusSubstantialFg", for <see cref="ThemeBrush"/>.</summary>
 	public static readonly IValueConverter StatusForegroundKey = new FuncValueConverter<ResultState, string>(s => $"Status{s}Fg");
 
+	/// <summary>The damaged percentage's colour: red when substantially damaged, otherwise ordinary text (colour is kept for the one result that matters).</summary>
+	public static readonly IValueConverter PercentForegroundKey = new FuncValueConverter<ResultState, string>(s => s == ResultState.Substantial ? "StatusSubstantialFg" : "TextPrimary");
+
+	/// <summary>The result dot's colour: the status hues, brighter than text so a small dot reads.</summary>
+	public static readonly IValueConverter StatusDotKey = new FuncValueConverter<ResultState, string>(s => $"Status{s}Dot");
+
 	/// <summary>The name of the result's background colour, e.g. "StatusSubstantialBg", for <see cref="ThemeBrush"/>.</summary>
 	public static readonly IValueConverter StatusBackgroundKey = new FuncValueConverter<ResultState, string>(s => $"Status{s}Bg");
 

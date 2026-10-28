@@ -77,12 +77,17 @@ public partial class SectionViewModel : ObservableObject
 	public virtual IEnumerable<FieldViewModel> AllFields => Groups.SelectMany(g => g.Fields);
 
 	[ObservableProperty]
-	[NotifyPropertyChangedFor(nameof(HasRequiredIssues), nameof(NeedsCheck), nameof(StatusText), nameof(IsDone))]
+	[NotifyPropertyChangedFor(nameof(HasRequiredIssues), nameof(NeedsCheck), nameof(StatusText), nameof(IsDone), nameof(IssueCount), nameof(HasIssues))]
 	public partial int RequiredIssues { get; set; }
 
 	[ObservableProperty]
-	[NotifyPropertyChangedFor(nameof(NeedsCheck), nameof(StatusText), nameof(IsDone))]
+	[NotifyPropertyChangedFor(nameof(NeedsCheck), nameof(StatusText), nameof(IsDone), nameof(IssueCount), nameof(HasIssues))]
 	public partial int OtherIssues { get; set; }
+
+	/// <summary>How many of the step's fields to check: the count beside it in the step list.</summary>
+	public int IssueCount => RequiredIssues + OtherIssues;
+
+	public bool HasIssues => IssueCount > 0;
 
 	public bool HasRequiredIssues => RequiredIssues > 0;
 

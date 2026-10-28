@@ -470,6 +470,94 @@
               </StackPanel>
             </StackPanel>
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <!-- The open assessment's actions: save state, status, steps, comments, assessments, reports, more -->
+              <Panel IsVisible="{Binding IsEditorPage}">
+                <StackPanel Orientation="Horizontal" Spacing="6" DataContext="{Binding Editor}" x:DataType="ed:AssessmentEditorViewModel" Name="EditorToolbar">
+                  <TextBlock Classes="toolbarSubtitle" Text="{Binding SaveState}" VerticalAlignment="Center" Margin="0,0,4,0" />
+                  <DropDownButton Classes="sm" AutomationProperties.Name="{Binding StatusLabel, StringFormat='Status: {0}. Change status'}"
+                          ToolTip.Tip="Where this assessment is in review. Final and Letter sent lock it." Content="{Binding StatusLabel}">
+                    <DropDownButton.Flyout>
+                      <MenuFlyout Placement="BottomEdgeAlignedRight">
+                        <MenuItem Header="Draft" Command="{Binding SetStatusCommand}" CommandParameter="Draft" />
+                        <MenuItem Header="Reviewed" Command="{Binding SetStatusCommand}" CommandParameter="Reviewed" />
+                        <MenuItem Header="Final (Locks It)" Command="{Binding SetStatusCommand}" CommandParameter="Final" />
+                        <MenuItem Header="Letter Sent (Locks It)" Command="{Binding SetStatusCommand}" CommandParameter="LetterSent" />
+                        <MenuItem Header="Appeal" Command="{Binding SetStatusCommand}" CommandParameter="Appeal" />
+                      </MenuFlyout>
+                    </DropDownButton.Flyout>
+                  </DropDownButton>
+                  <Border Classes="toolbarGroup">
+                    <StackPanel Orientation="Horizontal">
+                      <Button Classes="icon toolbar" Command="{Binding BackCommand}" AutomationProperties.Name="Previous step" ToolTip.Tip="Previous Step (⌘[)">
+                        <c:Icon Kind="CaretLeft" Size="14" />
+                      </Button>
+                      <Button Classes="icon toolbar" Command="{Binding NextCommand}" AutomationProperties.Name="Next step" ToolTip.Tip="Next Step (⌘])">
+                        <c:Icon Kind="CaretRight" Size="14" />
+                      </Button>
+                    </StackPanel>
+                  </Border>
+                  <Button Classes="icon toolbar" Command="{Binding ShowCommentsCommand}" AutomationProperties.Name="{Binding CommentsAccessibleName}"
+                          ToolTip.Tip="{Binding CommentsText}">
+                    <c:Icon Kind="Comment" Size="16" />
+                  </Button>
+                  <DropDownButton Classes="ghost toolbar" AutomationProperties.Name="Assessments" ToolTip.Tip="Assessments of This Structure">
+                    <c:Icon Kind="History" Size="16" />
+                    <DropDownButton.Flyout>
+                      <Flyout Placement="BottomEdgeAlignedRight">
+                        <StackPanel Spacing="4" MinWidth="240">
+                          <ItemsControl ItemsSource="{Binding OtherAssessments}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="ed:AssessmentChoice">
+                                <Button Classes="subtle" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Content="{Binding Label}"
+                                        Command="{Binding Open}" CommandParameter="{Binding}" />
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                          <Separator />
+                          <Button Classes="subtle" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Command="{Binding NewAssessmentForStructureCommand}"
+                                  Content="New Assessment of This Structure" ToolTip.Tip="For a re-inspection or a new damage event"
+                                  AutomationProperties.Name="New assessment of this structure" />
+                        </StackPanel>
+                      </Flyout>
+                    </DropDownButton.Flyout>
+                  </DropDownButton>
+                  <DropDownButton Classes="ghost toolbar" AutomationProperties.Name="Reports" ToolTip.Tip="Reports">
+                    <c:Icon Kind="Report" Size="16" />
+                    <DropDownButton.Flyout>
+                      <MenuFlyout Placement="BottomEdgeAlignedRight">
+                        <MenuItem Header="Summary Report" Command="{Binding PrintCommand}" CommandParameter="Summary" />
+                        <MenuItem Header="Summary Report, No Photos" Command="{Binding PrintCommand}" CommandParameter="Summary-NoPhotos" />
+                        <MenuItem Header="Detailed Report" Command="{Binding PrintCommand}" CommandParameter="Detail" />
+                        <MenuItem Header="Detailed Report, No Photos" Command="{Binding PrintCommand}" CommandParameter="Detail-NoPhotos" />
+                      </MenuFlyout>
+                    </DropDownButton.Flyout>
+                  </DropDownButton>
+                  <Button Classes="icon toolbar" AutomationProperties.Name="More actions" ToolTip.Tip="More">
+                    <c:Icon Kind="More" Size="18" />
+                    <Button.Flyout>
+                      <MenuFlyout Placement="BottomEdgeAlignedRight">
+                        <MenuItem Header="Save Now" Command="{Binding SaveCommand}" InputGesture="Cmd+S" />
+                        <MenuItem Header="Undo" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" InputGesture="Cmd+Z" />
+                        <MenuItem Header="Redo" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}" InputGesture="Cmd+Shift+Z" />
+                        <MenuItem Header="History…" Command="{Binding ShowHistoryCommand}" />
+                        <MenuItem Header="Comments…" Command="{Binding ShowCommentsCommand}" />
+                        <MenuItem Header="Copy from Another Structure…" Command="{Binding CopyFromCommand}" IsEnabled="{Binding IsEditable}" />
+                        <MenuItem Header="Set Event…" Command="{Binding SetEventCommand}" />
+                        <MenuItem Header="Elevation Certificate…" Command="{Binding ImportElevationCertificateCommand}" IsEnabled="{Binding IsEditable}" />
+                        <MenuItem Header="Flood Depth from High-Water Marks…" Command="{Binding FloodDepthCommand}" IsEnabled="{Binding IsEditable}" />
+                        <MenuItem Header="Copy from a Work Package…" Command="{Binding CopyFromPackageCommand}" IsEnabled="{Binding IsEditable}" />
+                        <Separator />
+                        <MenuItem Header="Improvements and SI…" Command="{Binding ShowImprovementsCommand}" />
+                        <MenuItem Header="Appeal…" Command="{Binding ShowAppealCommand}" />
+                        <MenuItem Header="Compliance Case…" Command="{Binding ComplianceCaseCommand}" />
+                        <MenuItem Header="Mark Letter as Sent…" Command="{Binding MarkLetterSentCommand}" />
+                        <Separator />
+                        <MenuItem Header="Move to Recently Deleted" Command="{Binding DeleteAssessmentCommand}" />
+                      </MenuFlyout>
+                    </Button.Flyout>
+                  </Button>
+                </StackPanel>
+              </Panel>
               <ListBox Classes="segmented toolbar" Name="ViewSwitch" SelectedIndex="{Binding LibraryView}" IsVisible="{Binding IsLibraryPage}"
                        AutomationProperties.Name="View">
                 <ListBoxItem AutomationProperties.Name="List" ToolTip.Tip="List (⌘1)"><c:Icon Kind="List" Size="16" /></ListBoxItem>
@@ -491,7 +579,7 @@
                   </MenuFlyout>
                 </DropDownButton.Flyout>
               </DropDownButton>
-              <TextBox Classes="toolbarSearch" Name="ToolbarSearch" Text="{Binding Structures.Search}" PlaceholderText="Search"
+              <TextBox Classes="toolbarSearch" Name="SearchBox" Text="{Binding Structures.Search}" PlaceholderText="Search"
                        IsVisible="{Binding IsListPage}" AutomationProperties.Name="Search structures">
                 <TextBox.InnerLeftContent>
                   <c:Icon Kind="Search" Size="13" Classes="tertiary" Margin="8,0,0,0" />

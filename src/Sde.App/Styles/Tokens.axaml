@@ -207,6 +207,12 @@
       <SolidColorBrush x:Key="StatusIncompleteBg" Color="{StaticResource NeutralBgColor}" />
       <SolidColorBrush x:Key="StatusUndeterminedFg" Color="{StaticResource VioletFgColor}" />
       <SolidColorBrush x:Key="StatusUndeterminedBg" Color="{StaticResource VioletBgColor}" />
+      <!-- The result dots in tables (Mac system hues; a dot needs no text contrast, it sits beside the result's name) -->
+      <SolidColorBrush x:Key="StatusSubstantialDot" Color="#FF3B30" />
+      <SolidColorBrush x:Key="StatusCloseDot" Color="#FF9500" />
+      <SolidColorBrush x:Key="StatusNotSubstantialDot" Color="#34C759" />
+      <SolidColorBrush x:Key="StatusIncompleteDot" Color="#8E8E93" />
+      <SolidColorBrush x:Key="StatusUndeterminedDot" Color="#AF52DE" />
       <SolidColorBrush x:Key="RequiredFg" Color="{StaticResource DangerFgColor}" />
       <SolidColorBrush x:Key="RecommendedFg" Color="{StaticResource WarningFgColor}" />
       <SolidColorBrush x:Key="SuggestedFg" Color="{StaticResource SuccessFgColor}" />
@@ -641,6 +647,11 @@
       <SolidColorBrush x:Key="StatusIncompleteBg" Color="{StaticResource NeutralBgColor}" />
       <SolidColorBrush x:Key="StatusUndeterminedFg" Color="{StaticResource VioletFgColor}" />
       <SolidColorBrush x:Key="StatusUndeterminedBg" Color="{StaticResource VioletBgColor}" />
+      <SolidColorBrush x:Key="StatusSubstantialDot" Color="#FF453A" />
+      <SolidColorBrush x:Key="StatusCloseDot" Color="#FF9F0A" />
+      <SolidColorBrush x:Key="StatusNotSubstantialDot" Color="#30D158" />
+      <SolidColorBrush x:Key="StatusIncompleteDot" Color="#98989D" />
+      <SolidColorBrush x:Key="StatusUndeterminedDot" Color="#BF5AF2" />
       <SolidColorBrush x:Key="RequiredFg" Color="{StaticResource DangerFgColor}" />
       <SolidColorBrush x:Key="RecommendedFg" Color="{StaticResource WarningFgColor}" />
       <SolidColorBrush x:Key="SuggestedFg" Color="{StaticResource SuccessFgColor}" />

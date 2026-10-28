@@ -196,7 +196,8 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	private void ToggleSidebar() => IsSidebarVisible = !IsSidebarVisible;
 
 	/// <summary>Under the window's title: the database, and the event when one is chosen.</summary>
-	public string WindowSubtitle => Events?.Selected?.Id == null ? DatabaseName : $"{DatabaseName} · {Events.Label}";
+	public string WindowSubtitle => ActivePage == Page.Editor && Editor != null ? Editor.Subtitle
+		: Events?.Selected?.Id == null ? DatabaseName : $"{DatabaseName} · {Events.Label}";
 
 	/// <summary>The event switcher at the top of the sidebar.</summary>
 	public EventSwitcherViewModel Events { get; }
@@ -323,6 +324,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		OnPropertyChanged(nameof(WindowSubtitle));
 		OnPropertyChanged(nameof(IsLibraryPage));
 		OnPropertyChanged(nameof(IsListPage));
+		OnPropertyChanged(nameof(IsEditorPage));
 		OnPropertyChanged(nameof(LibraryView));
 		OnPropertyChanged(nameof(PageTitle));
 		OnPropertyChanged(nameof(PageParent));
@@ -353,7 +355,14 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		{
 			OnPropertyChanged(nameof(PageTitle));
 		}
+		else if (e.PropertyName == nameof(AssessmentEditorViewModel.Subtitle))
+		{
+			OnPropertyChanged(nameof(WindowSubtitle));
+		}
 	}
+
+	/// <summary>An assessment is open: the toolbar shows its actions.</summary>
+	public bool IsEditorPage => ActivePage == Page.Editor && Editor != null;
 
 	/// <summary>The structure list itself: the toolbar's search field filters it.</summary>
 	public bool IsListPage => ActivePage == Page.Structures;

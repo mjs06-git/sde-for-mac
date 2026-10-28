@@ -18,7 +18,6 @@
   <Style Selector="DataGridCell">
     <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
     <Setter Property="MinHeight" Value="{StaticResource TableRowHeight}" />
-    <Setter Property="Padding" Value="8,0" />
   </Style>
   <!-- A cell's focus shows as the row's selection; no extra box -->
   <Style Selector="DataGridCell:focus /template/ Grid#FocusVisual">
@@ -77,6 +76,46 @@
   <!-- A sorted column's header text (the caret beside it comes from the view) -->
   <Style Selector="TextBlock.sortedHeader">
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+
+  <!-- A scope bar above a table (filters on the left, actions on the right) and a status bar under it, as in Finder -->
+  <Style Selector="Border.scopeBar">
+    <Setter Property="Height" Value="34" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="Background" Value="{DynamicResource BgApp}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <Style Selector="Border.statusBar">
+    <Setter Property="Height" Value="24" />
+    <Setter Property="Background" Value="{DynamicResource BgApp}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+  </Style>
+  <Style Selector="Border.statusBar TextBlock">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.statusBar Button.link">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+  </Style>
+  <!-- A panel that opens in place above a table (the submission folder): a quiet band, not a card -->
+  <Style Selector="Border.inlinePanel">
+    <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="16,12" />
+  </Style>
+  <!-- A result in a table: a coloured dot and its name -->
+  <Style Selector="Ellipse.dot">
+    <Setter Property="Width" Value="8" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="DataGridRow:selected Ellipse.dot">
+    <Setter Property="Stroke" Value="{DynamicResource OnAccent}" />
+    <Setter Property="StrokeThickness" Value="1" />
   </Style>
 
   <!-- The strip above a table: counts and sort on the left; the "N selected" bar covers it while rows are checked -->

@@ -47,8 +47,9 @@ public static class ThemeBrush
 
 	/// <summary>
 	/// Binds the brush property to the named resource in the control's current theme, replacing the binding for the
-	/// previous name. A missing name, or one that isn't a brush resource, gives grey.
+	/// previous name. A missing name, or one that isn't a brush resource, gives grey. The binding sits below a style's
+	/// state (template priority), so a selected table row can still turn the text white, as on the Mac.
 	/// </summary>
 	private static void Follow(Control control, AvaloniaProperty target, string key) =>
-		control.Bind(target, control.GetResourceObservable(key ?? string.Empty, value => value as IBrush ?? Brushes.Gray));
+		control.Bind(target, control.GetResourceObservable(key ?? string.Empty, value => value as IBrush ?? Brushes.Gray), Avalonia.Data.BindingPriority.Template);
 }

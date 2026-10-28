@@ -54,7 +54,7 @@
     <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
   </Style>
   <Style Selector=":is(TextBlock).eyebrow">
-    <Setter Property="Foreground" Value="{DynamicResource TextTertiary}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>

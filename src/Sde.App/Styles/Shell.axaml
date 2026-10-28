@@ -74,6 +74,10 @@
   <Style Selector="DropDownButton.toolbar:pointerover /template/ Border#RootBorder">
     <Setter Property="Background" Value="{DynamicResource BgHover}" />
   </Style>
+  <!-- Two toolbar buttons that belong together (previous and next step) -->
+  <Style Selector="Border.toolbarGroup">
+    <Setter Property="CornerRadius" Value="6" />
+  </Style>
   <Style Selector="ListBox.segmented.toolbar">
     <Setter Property="Padding" Value="2" />
     <Setter Property="CornerRadius" Value="6" />
