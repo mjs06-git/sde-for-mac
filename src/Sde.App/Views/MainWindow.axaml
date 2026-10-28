@@ -30,6 +30,9 @@
             <NativeMenu />
           </NativeMenuItem>
           <NativeMenuItem Header="New Database…" Command="{Binding Settings.NewDatabaseCommand}" />
+          <NativeMenuItem Header="Open Work Package…" Command="{Binding OpenWorkPackageCommand}" />
+          <NativeMenuItem Header="Show Database in Finder" Command="{Binding DatabaseSwitcher.ShowInFinderCommand}" />
+          <NativeMenuItem Header="Backups…" Command="{Binding DatabaseSwitcher.BackupsCommand}" />
           <NativeMenuItem Header="Save a Copy of the Database…" Command="{Binding Settings.BackUpCommand}" />
           <NativeMenuItem Header="Move or Copy the Database…" Command="{Binding DatabaseSwitcher.MoveOrCopyCommand}" />
           <NativeMenuItem Header="Restore from Backup…" Command="{Binding RestoreBackupCommand}" />
@@ -60,10 +63,19 @@
       <NativeMenuItem Header="View">
         <!-- The pages, ⌘1 to ⌘9 in the sidebar's order, are put first by MainWindow.axaml.cs. -->
         <NativeMenu>
+          <NativeMenuItem Header="Hide or Show Sidebar" Gesture="Ctrl+Cmd+S" Command="{Binding ToggleSidebarCommand}" />
           <NativeMenuItem Header="Search and Commands…" Gesture="Cmd+K" Command="{Binding Palette.OpenCommand}" />
           <NativeMenuItemSeparator />
           <NativeMenuItem Header="Previous Step" Gesture="Cmd+OemOpenBrackets" Command="{Binding PreviousStepCommand}" />
           <NativeMenuItem Header="Next Step" Gesture="Cmd+OemCloseBrackets" Command="{Binding NextStepCommand}" />
+        </NativeMenu>
+      </NativeMenuItem>
+      <NativeMenuItem Header="Event">
+        <NativeMenu>
+          <NativeMenuItem Header="New Event…" Command="{Binding NewEventCommand}" />
+          <NativeMenuItem Header="Manage Events…" Command="{Binding ManageEventsCommand}" />
+          <NativeMenuItemSeparator />
+          <NativeMenuItem Header="Event Summary" Command="{Binding ShowCommand}" CommandParameter="{x:Static vm:Page.Dashboard}" />
         </NativeMenu>
       </NativeMenuItem>
       <NativeMenuItem Header="Window">
@@ -360,6 +372,7 @@
   <Window.KeyBindings>
     <KeyBinding Gesture="Escape" Command="{Binding EscapeCommand}" />
     <KeyBinding Gesture="Cmd+K" Command="{Binding Palette.OpenCommand}" />
+    <KeyBinding Gesture="Ctrl+Cmd+S" Command="{Binding ToggleSidebarCommand}" />
     <KeyBinding Gesture="Cmd+S" Command="{Binding SaveCommand}" />
     <KeyBinding Gesture="Cmd+Z" Command="{Binding UndoCommand}" />
     <KeyBinding Gesture="Cmd+Shift+Z" Command="{Binding RedoCommand}" />
@@ -372,176 +385,60 @@
   </Window.KeyBindings>
 
   <Panel>
-    <Grid ColumnDefinitions="224,*">
+    <Grid ColumnDefinitions="Auto,*">
       <!--
-        Sidebar. Its top 52 px is under the window's own title bar: the close, minimise and zoom buttons sit there, and
-        the empty space drags the window (ElementRole TitleBar).
+        The source list. Its top 52 px is under the window's own title bar: the close, minimise and zoom buttons sit
+        there, and the empty space drags the window (ElementRole TitleBar). Library's rows filter the structure list,
+        an event's row scopes it, and Workflow's rows are the office pages.
       -->
-      <Border Classes="sidebar">
+      <Border Classes="sidebar" Width="{StaticResource SidebarWidth}" IsVisible="{Binding IsSidebarVisible}" Name="Sidebar">
         <DockPanel>
-          <Border DockPanel.Dock="Top" Height="52" Background="Transparent" Name="SidebarTitleBar"
-                  chrome:WindowDecorationProperties.ElementRole="TitleBar" />
+          <Panel DockPanel.Dock="Top" Height="52" Background="Transparent" Name="SidebarTitleBar"
+                 chrome:WindowDecorationProperties.ElementRole="TitleBar">
+            <Button Classes="icon toolbar" HorizontalAlignment="Right" Margin="0,0,10,0" Command="{Binding ToggleSidebarCommand}"
+                    AutomationProperties.Name="Hide sidebar" ToolTip.Tip="Hide Sidebar (⌃⌘S)">
+              <c:Icon Kind="Sidebar" Size="18" />
+            </Button>
+          </Panel>
 
-          <!-- Event switcher -->
-          <Button DockPanel.Dock="Top" Classes="switcher" Name="EventSwitcher" Margin="10,0,10,10"
-                  AutomationProperties.Name="{Binding Events.AccessibleName}" ToolTip.Tip="{Binding Events.Detail}">
+          <Button DockPanel.Dock="Bottom" Classes="nav" Margin="10,4,10,10" DataContext="{Binding TrashItem}" x:DataType="shell:NavItemViewModel"
+                  Classes.active="{Binding IsActive}" Command="{Binding ShowCommand}" AutomationProperties.Name="{Binding Title}" ToolTip.Tip="{Binding ToolTip}">
             <Grid ColumnDefinitions="Auto,*,Auto">
-              <Border Classes="switcherIcon">
-                <c:Icon Kind="Event" Size="14" />
-              </Border>
-              <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,4,0">
-                <TextBlock Classes="caption" Text="Event" />
-                <TextBlock Classes="semibold" Text="{Binding Events.Label}" TextTrimming="CharacterEllipsis" />
-              </StackPanel>
-              <c:Icon Grid.Column="2" Classes="tertiary" Kind="CaretUpDown" Size="14" />
+              <c:Icon Kind="{Binding Icon}" Size="16" Margin="0,0,8,0" />
+              <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+              <TextBlock Grid.Column="2" Classes="sourceCount" Text="{Binding CountText}" IsVisible="{Binding HasCount}" />
             </Grid>
-            <Button.Flyout>
-              <Flyout Placement="BottomEdgeAlignedLeft">
-                <StackPanel Classes="menu" Width="260" DataContext="{Binding Events}" x:DataType="shell:EventSwitcherViewModel">
-                  <TextBlock Classes="eyebrow" Text="EVENT" Margin="8,2,8,6" />
-                  <ItemsControl ItemsSource="{Binding Events}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate DataType="shell:EventChoice">
-                        <Button Classes="menuItem" Click="OnFlyoutItemClick"
-                                Command="{Binding $parent[ItemsControl].((shell:EventSwitcherViewModel)DataContext).ChooseCommand}" CommandParameter="{Binding}"
-                                AutomationProperties.Name="{Binding Name}">
-                          <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel>
-                              <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                              <TextBlock Classes="muted" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-                            <c:Icon Grid.Column="1" Classes="accent" Kind="Check" Size="14" Margin="12,0,0,0">
-                              <c:Icon.IsVisible>
-                                <MultiBinding Converter="{x:Static v:SheetConverters.Same}">
-                                  <Binding />
-                                  <Binding Path="$parent[ItemsControl].((shell:EventSwitcherViewModel)DataContext).Selected" />
-                                </MultiBinding>
-                              </c:Icon.IsVisible>
-                            </c:Icon>
-                          </Grid>
-                        </Button>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                  <Border Classes="divider" Margin="0,4" />
-                  <Button Classes="menuItem" Click="OnFlyoutItemClick" Command="{Binding NewEventCommand}" AutomationProperties.Name="New event">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                      <c:Icon Kind="Plus" Size="14" />
-                      <TextBlock Text="New event…" />
-                    </StackPanel>
-                  </Button>
-                  <Button Classes="menuItem" Click="OnFlyoutItemClick" Command="{Binding ManageEventsCommand}" AutomationProperties.Name="Manage events">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                      <c:Icon Kind="Edit" Size="14" />
-                      <TextBlock Text="Manage events…" />
-                    </StackPanel>
-                  </Button>
-                </StackPanel>
-              </Flyout>
-            </Button.Flyout>
           </Button>
 
-          <!-- Database switcher -->
-          <Button DockPanel.Dock="Bottom" Classes="switcher" Name="DatabaseButton" Margin="10,8,10,12"
-                  AutomationProperties.Name="{Binding DatabaseSwitcher.AccessibleName}" ToolTip.Tip="{Binding CountsText}">
-            <Grid ColumnDefinitions="Auto,*,Auto">
-              <Border Classes="switcherIcon">
-                <c:Icon Kind="Database" Size="14" />
-              </Border>
-              <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,4,0">
-                <TextBlock Classes="semibold" Text="{Binding DatabaseName}" TextTrimming="CharacterEllipsis" />
-                <TextBlock Classes="caption" Text="{Binding StructureCountText}" TextTrimming="CharacterEllipsis" />
-              </StackPanel>
-              <c:Icon Grid.Column="2" Classes="tertiary" Kind="CaretUpDown" Size="14" />
-            </Grid>
-            <Button.Flyout>
-              <Flyout Placement="TopEdgeAlignedLeft">
-                <StackPanel Classes="menu" Width="280" DataContext="{Binding DatabaseSwitcher}" x:DataType="shell:DatabaseSwitcherViewModel">
-                  <StackPanel Margin="8,2,8,8" Spacing="1">
-                    <TextBlock Classes="semibold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Classes="muted" Text="{Binding Folder}" TextTrimming="PathSegmentEllipsis" />
-                  </StackPanel>
-                  <Border Classes="divider" Margin="0,0,0,4" />
-                  <TextBlock Classes="eyebrow" Text="OPEN RECENT" Margin="8,6,8,4" IsVisible="{Binding HasRecent}" />
-                  <ItemsControl ItemsSource="{Binding Recent}" IsVisible="{Binding HasRecent}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate DataType="shell:RecentDatabase">
-                        <Button Classes="menuItem" Click="OnFlyoutItemClick" ToolTip.Tip="{Binding Path}"
-                                Command="{Binding $parent[ItemsControl].((shell:DatabaseSwitcherViewModel)DataContext).OpenRecentCommand}" CommandParameter="{Binding}"
-                                AutomationProperties.Name="{Binding Name, StringFormat='Open {0}'}">
-                          <StackPanel Orientation="Horizontal" Spacing="10">
-                            <c:Icon Kind="Database" Size="14" />
-                            <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                          </StackPanel>
-                        </Button>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                  <Border Classes="divider" Margin="0,4" IsVisible="{Binding HasRecent}" />
-                  <Button Classes="menuItem" Click="OnFlyoutItemClick" Command="{Binding OpenCommand}" AutomationProperties.Name="Open database">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
-                      <c:Icon Kind="FolderOpen" Size="14" />
-                      <TextBlock Grid.Column="1" Text="Open database…" Margin="10,0" />
-                      <TextBlock Grid.Column="2" Classes="muted" Text="⌘O" />
-                    </Grid>
-                  </Button>
-                  <Button Classes="menuItem" Click="OnFlyoutItemClick" Command="{Binding NewCommand}" AutomationProperties.Name="New database">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                      <c:Icon Kind="Plus" Size="14" />
-                      <TextBlock Text="New database…" />
-                    </StackPanel>
-                  </Button>
-                  <Button Classes="menuItem" Click="OnFlyoutItemClick" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenWorkPackageCommand}"
-                          AutomationProperties.Name="Open a work package">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                      <c:Icon Kind="Download" Size="14" />
-                      <TextBlock Text="Open a work package…" />
-                    </StackPanel>
-                  </Button>
-                  <Button Classes="menuItem" Click="OnFlyoutItemClick" Command="{Binding MoveOrCopyCommand}" AutomationProperties.Name="Move or copy database">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                      <c:Icon Kind="Copy" Size="14" />
-                      <TextBlock Text="Move or copy database…" />
-                    </StackPanel>
-                  </Button>
-                  <Border Classes="divider" Margin="0,4" />
-                  <Button Classes="menuItem" Click="OnFlyoutItemClick" Command="{Binding ShowInFinderCommand}" AutomationProperties.Name="Show in Finder">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                      <c:Icon Kind="Folder" Size="14" />
-                      <TextBlock Text="Show in Finder" />
-                    </StackPanel>
-                  </Button>
-                  <Button Classes="menuItem" Click="OnFlyoutItemClick" Command="{Binding BackupsCommand}" AutomationProperties.Name="Backups">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                      <c:Icon Kind="History" Size="14" />
-                      <TextBlock Text="Backups…" />
-                    </StackPanel>
-                  </Button>
-                </StackPanel>
-              </Flyout>
-            </Button.Flyout>
-          </Button>
-
-          <!-- Pages -->
           <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl ItemsSource="{Binding SidebarGroups}" Margin="10,0">
+            <ItemsControl ItemsSource="{Binding SourceSections}" Margin="10,0">
               <ItemsControl.ItemTemplate>
-                <DataTemplate DataType="shell:NavGroupViewModel">
-                  <StackPanel Spacing="1" Margin="0,0,0,14">
-                    <TextBlock Classes="eyebrow" Text="{Binding Title}" Margin="8,0,8,6" />
-                    <ItemsControl ItemsSource="{Binding Items}">
-                      <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="shell:SourceSectionViewModel">
+                  <StackPanel Spacing="1" Margin="0,0,0,12" IsVisible="{Binding !!Rows.Count}">
+                    <TextBlock Classes="sourceHeader" Text="{Binding Title}" />
+                    <ItemsControl ItemsSource="{Binding Rows}">
+                      <ItemsControl.DataTemplates>
                         <DataTemplate DataType="shell:NavItemViewModel">
                           <Button Classes="nav" Classes.active="{Binding IsActive}" Command="{Binding ShowCommand}"
                                   AutomationProperties.Name="{Binding Title}" ToolTip.Tip="{Binding ToolTip}">
                             <Grid ColumnDefinitions="Auto,*,Auto">
-                              <c:Icon Kind="{Binding Icon}" Size="16" Margin="0,0,10,0" />
+                              <c:Icon Kind="{Binding Icon}" Size="16" Margin="0,0,8,0" />
                               <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                              <c:Badge Grid.Column="2" Text="{Binding CountText}" Tone="{Binding CountTone}" IsVisible="{Binding HasCount}" Margin="6,0,0,0" />
+                              <TextBlock Grid.Column="2" Classes="sourceCount" Text="{Binding CountText}" IsVisible="{Binding HasCount}" />
                             </Grid>
                           </Button>
                         </DataTemplate>
-                      </ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="shell:SourceRowViewModel">
+                          <Button Classes="nav" Classes.active="{Binding IsActive}" Command="{Binding ShowCommand}"
+                                  AutomationProperties.Name="{Binding Title}" ToolTip.Tip="{Binding Title}">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                              <c:Icon Kind="{Binding Icon}" Size="16" Margin="0,0,8,0" />
+                              <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="2" Classes="sourceCount" Text="{Binding CountText}" IsVisible="{Binding HasCount}" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.DataTemplates>
                     </ItemsControl>
                   </StackPanel>
                 </DataTemplate>
@@ -553,70 +450,66 @@
 
       <DockPanel Grid.Column="1">
         <!--
-          The title band: under the window's title bar, so its empty parts drag the window. The page title on the
-          left, ⌘K search in the middle, New on the right.
+          The unified toolbar: under the window's title bar, so its empty parts drag the window. On the left the back
+          button (above an assessment), the title and the database; on the right the view switch, New and search.
         -->
         <Border DockPanel.Dock="Top" Classes="titleBand" Name="TitleBand" chrome:WindowDecorationProperties.ElementRole="TitleBar">
-          <Grid ColumnDefinitions="*,Auto,*">
-            <DockPanel Margin="0,0,16,0" VerticalAlignment="Center">
-              <!-- Breadcrumb: the page this one belongs to, one click back -->
-              <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2" IsVisible="{Binding HasPageParent}" VerticalAlignment="Center">
-                <Button Classes="crumb" Content="{Binding PageParent}" Command="{Binding GoToParentCommand}"
-                        AutomationProperties.Name="{Binding PageParent, StringFormat='Back to {0}'}" ToolTip.Tip="{Binding PageParent, StringFormat='Back to {0}'}" />
-                <c:Icon Kind="CaretRight" Size="12" Classes="tertiary" VerticalAlignment="Center" Margin="0,0,4,0" />
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+              <Button Classes="icon toolbar" Margin="70,0,4,0" IsVisible="{Binding !IsSidebarVisible}" Command="{Binding ToggleSidebarCommand}"
+                      AutomationProperties.Name="Show sidebar" ToolTip.Tip="Show Sidebar (⌃⌘S)">
+                <c:Icon Kind="Sidebar" Size="18" />
+              </Button>
+              <Button Classes="icon toolbar" Name="BackButton" IsVisible="{Binding HasPageParent}" Command="{Binding GoToParentCommand}"
+                      AutomationProperties.Name="{Binding PageParent, StringFormat='Back to {0}'}" ToolTip.Tip="{Binding PageParent, StringFormat='Back to {0}'}">
+                <c:Icon Kind="CaretLeft" Size="16" />
+              </Button>
+              <StackPanel VerticalAlignment="Center" Name="PageTitleStack" chrome:WindowDecorationProperties.ElementRole="TitleBar">
+                <TextBlock Classes="toolbarTitle" Text="{Binding PageTitle}" TextTrimming="CharacterEllipsis" Name="PageTitleText" />
+                <TextBlock Classes="toolbarSubtitle" Text="{Binding WindowSubtitle}" TextTrimming="CharacterEllipsis" />
               </StackPanel>
-              <TextBlock Classes="title" Text="{Binding PageTitle}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                         Name="PageTitleText" chrome:WindowDecorationProperties.ElementRole="TitleBar" />
-            </DockPanel>
-            <Button Grid.Column="1" Classes="searchField" Name="SearchField" Command="{Binding Palette.OpenCommand}"
-                    AutomationProperties.Name="Search structures, pages and commands" ToolTip.Tip="Search structures, pages and commands (⌘K)">
-              <Grid ColumnDefinitions="Auto,*,Auto">
-                <c:Icon Kind="Search" Size="14" />
-                <TextBlock Grid.Column="1" Text="Search structures, pages and commands" Margin="8,0" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                <Border Grid.Column="2" Classes="kbd">
-                  <TextBlock Text="⌘K" />
-                </Border>
-              </Grid>
-            </Button>
-            <DropDownButton Grid.Column="2" Classes="accent" Name="NewButton" HorizontalAlignment="Right" AutomationProperties.Name="New">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <c:Icon Kind="Plus" Size="14" />
-                <TextBlock Text="New" />
-              </StackPanel>
-              <DropDownButton.Flyout>
-                <MenuFlyout Placement="BottomEdgeAlignedRight">
-                  <MenuItem Header="Residential structure" InputGesture="Cmd+N" Command="{Binding Structures.NewStructureCommand}" CommandParameter="1">
-                    <MenuItem.Icon><c:Icon Kind="Structures" /></MenuItem.Icon>
-                  </MenuItem>
-                  <MenuItem Header="Non-residential structure" InputGesture="Cmd+Shift+N" Command="{Binding Structures.NewStructureCommand}" CommandParameter="2">
-                    <MenuItem.Icon><c:Icon Kind="NonResidential" /></MenuItem.Icon>
-                  </MenuItem>
-                  <Separator />
-                  <MenuItem Header="Import inspections or parcels…" InputGesture="Cmd+Shift+I" Command="{Binding OpenSourceImportCommand}">
-                    <MenuItem.Icon><c:Icon Kind="Import" /></MenuItem.Icon>
-                  </MenuItem>
-                  <MenuItem Header="Import SDE data…" InputGesture="Cmd+I" Command="{Binding ImportExport.ChooseSdeFolderCommand}">
-                    <MenuItem.Icon><c:Icon Kind="Download" /></MenuItem.Icon>
-                  </MenuItem>
-                  <Separator />
-                  <MenuItem Header="Database…" Command="{Binding Settings.NewDatabaseCommand}">
-                    <MenuItem.Icon><c:Icon Kind="Database" /></MenuItem.Icon>
-                  </MenuItem>
-                </MenuFlyout>
-              </DropDownButton.Flyout>
-            </DropDownButton>
+            </StackPanel>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <ListBox Classes="segmented toolbar" Name="ViewSwitch" SelectedIndex="{Binding LibraryView}" IsVisible="{Binding IsLibraryPage}"
+                       AutomationProperties.Name="View">
+                <ListBoxItem AutomationProperties.Name="List" ToolTip.Tip="List (⌘1)"><c:Icon Kind="List" Size="16" /></ListBoxItem>
+                <ListBoxItem AutomationProperties.Name="Map" ToolTip.Tip="Map (⌘2)"><c:Icon Kind="Map" Size="16" /></ListBoxItem>
+                <ListBoxItem AutomationProperties.Name="Summary" ToolTip.Tip="Summary (⌘3)"><c:Icon Kind="Dashboard" Size="16" /></ListBoxItem>
+              </ListBox>
+              <DropDownButton Classes="ghost toolbar" Name="NewButton" AutomationProperties.Name="New" ToolTip.Tip="New">
+                <c:Icon Kind="Plus" Size="16" />
+                <DropDownButton.Flyout>
+                  <MenuFlyout Placement="BottomEdgeAlignedRight">
+                    <MenuItem Header="Residential Structure" InputGesture="Cmd+N" Command="{Binding Structures.NewStructureCommand}" CommandParameter="1" />
+                    <MenuItem Header="Non-Residential Structure" InputGesture="Cmd+Shift+N" Command="{Binding Structures.NewStructureCommand}" CommandParameter="2" />
+                    <Separator />
+                    <MenuItem Header="Import Inspections or Parcels…" InputGesture="Cmd+Shift+I" Command="{Binding OpenSourceImportCommand}" />
+                    <MenuItem Header="Import SDE Data…" InputGesture="Cmd+I" Command="{Binding ImportExport.ChooseSdeFolderCommand}" />
+                    <Separator />
+                    <MenuItem Header="Event…" Command="{Binding NewEventCommand}" />
+                    <MenuItem Header="Database…" Command="{Binding Settings.NewDatabaseCommand}" />
+                  </MenuFlyout>
+                </DropDownButton.Flyout>
+              </DropDownButton>
+              <TextBox Classes="toolbarSearch" Name="ToolbarSearch" Text="{Binding Structures.Search}" PlaceholderText="Search"
+                       IsVisible="{Binding IsListPage}" AutomationProperties.Name="Search structures">
+                <TextBox.InnerLeftContent>
+                  <c:Icon Kind="Search" Size="13" Classes="tertiary" Margin="8,0,0,0" />
+                </TextBox.InnerLeftContent>
+              </TextBox>
+            </StackPanel>
           </Grid>
         </Border>
 
         <!-- The sample database is practice only: said on every page. -->
-        <c:Banner DockPanel.Dock="Top" Tone="Warning" CornerRadius="0" Padding="20,8" IsVisible="{Binding IsSampleDatabase}"
-                  Text="This is the sample database. Changes here are practice only." AutomationProperties.Name="Sample database notice">
-          <Button Classes="link semibold" Content="Back to my database" Command="{Binding LeaveSampleDatabaseCommand}" />
+        <c:Banner DockPanel.Dock="Top" Tone="Warning" CornerRadius="0" Padding="20,6" IsVisible="{Binding IsSampleDatabase}"
+                  Text="Sample database. Changes here are practice only." AutomationProperties.Name="Sample database notice">
+          <Button Classes="link" Content="Back to My Database" Command="{Binding LeaveSampleDatabaseCommand}" />
         </c:Banner>
         <!-- A work package opened on a field Mac: said on every page, with the way back. -->
-        <c:Banner DockPanel.Dock="Top" Tone="Accent" Icon="Upload" CornerRadius="0" Padding="20,8" IsVisible="{Binding IsWorkPackage}"
+        <c:Banner DockPanel.Dock="Top" Tone="Neutral" Icon="Upload" CornerRadius="0" Padding="20,6" IsVisible="{Binding IsWorkPackage}"
                   Text="{Binding WorkPackageText}" AutomationProperties.Name="Work package notice">
-          <Button Classes="link semibold" Content="Send back to the office…" Command="{Binding SendBackCommand}" />
+          <Button Classes="link" Content="Send Back to the Office…" Command="{Binding SendBackCommand}" />
         </c:Banner>
         <ContentControl Content="{Binding CurrentPage}" />
       </DockPanel>
@@ -630,7 +523,7 @@
               Classes.large="{Binding Sheets.CurrentSize, Converter={x:Static v:SheetConverters.IsSize}, ConverterParameter=Large}">
         <DockPanel>
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,14">
-            <TextBlock Classes="h2" Text="{Binding Sheets.CurrentTitle}" TextWrapping="Wrap" VerticalAlignment="Center" />
+            <TextBlock Classes="title" Text="{Binding Sheets.CurrentTitle}" TextWrapping="Wrap" VerticalAlignment="Center" />
             <Button Grid.Column="1" Classes="icon" Command="{Binding Sheets.CancelCurrentCommand}" VerticalAlignment="Top" Margin="12,-2,-6,0"
                     AutomationProperties.Name="Close" ToolTip.Tip="Close (Esc)">
               <c:Icon Kind="Close" Size="16" />

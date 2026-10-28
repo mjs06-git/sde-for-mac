@@ -317,7 +317,7 @@ public class HelpUiTests
 		Assert.Null(ui.Services.Backups);
 
 		TextBlock banner = ui.Window.GetVisualDescendants().OfType<TextBlock>()
-			.Single(t => t.IsEffectivelyVisible && t.Text == "This is the sample database. Changes here are practice only.");
+			.Single(t => t.IsEffectivelyVisible && t.Text == "Sample database. Changes here are practice only.");
 		Assert.NotNull(banner);
 		Assert.Empty(AccessibilityTests.Unnamed(ui.Window));
 		ui.Snapshot("71-sample-banner");
@@ -325,7 +325,7 @@ public class HelpUiTests
 		{
 			ui.Main.ShowCommand.Execute(page);
 			ui.Pump();
-			Assert.Contains(ui.Window.GetVisualDescendants().OfType<TextBlock>(), t => t.IsEffectivelyVisible && t.Text.StartsWith("This is the sample database"));
+			Assert.Contains(ui.Window.GetVisualDescendants().OfType<TextBlock>(), t => t.IsEffectivelyVisible && t.Text.StartsWith("Sample database."));
 		}
 
 		// Exporting to FEMA SDE asks first. "No" writes nothing; "Yes" writes the folder.
@@ -360,7 +360,7 @@ public class HelpUiTests
 		ui.Pump();
 		Assert.False(ui.Main.IsSampleDatabase);
 		Assert.Equal(mine, ui.Store.Database.FilePath);
-		Assert.DoesNotContain(ui.Window.GetVisualDescendants().OfType<TextBlock>(), t => t.IsEffectivelyVisible && t.Text != null && t.Text.StartsWith("This is the sample database"));
+		Assert.DoesNotContain(ui.Window.GetVisualDescendants().OfType<TextBlock>(), t => t.IsEffectivelyVisible && t.Text != null && t.Text.StartsWith("Sample database."));
 	}
 
 	[AvaloniaFact]

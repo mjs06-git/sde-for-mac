@@ -129,7 +129,7 @@ public partial class MainWindow : Window, IDialogs
 		_pageMenuItems.Clear();
 		_pageKeys.Clear();
 		int at = 0;
-		foreach (NavItemViewModel item in main.SidebarItems.Take(MaxPageShortcuts))
+		foreach (NavItemViewModel item in main.SidebarItems.Where(i => i.Number is >= 1 and <= MaxPageShortcuts))
 		{
 			KeyGesture gesture = new KeyGesture((Key)((int)Key.D0 + item.Number), KeyModifiers.Meta);
 			NativeMenuItem menuItem = new NativeMenuItem(item.Title) { Gesture = gesture, Command = main.ShowCommand, CommandParameter = item.Page };

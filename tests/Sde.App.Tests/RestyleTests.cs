@@ -38,7 +38,7 @@ public class RestyleTests
 		ui.Pump();
 		Assert.Equal("Structures", ui.Main.PageParent);
 		Assert.Equal(ui.Main.Editor.Title, ui.Main.PageTitle);
-		Button crumb = ui.Window.GetVisualDescendants().OfType<Button>().Single(b => b.Classes.Contains("crumb"));
+		Button crumb = ui.Window.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "BackButton");
 		Assert.True(crumb.IsEffectivelyVisible);
 		Assert.Equal("Back to Structures", AutomationProperties.GetName(crumb));
 		// The editor no longer repeats the address under the title band.
@@ -51,7 +51,7 @@ public class RestyleTests
 		Assert.False(ui.Main.HasPageParent);
 
 		ui.Main.ShowCommand.Execute(Page.SourceImport);
-		Assert.Equal("Import & export", ui.Main.PageParent);
+		Assert.Equal("Import & Export", ui.Main.PageParent);
 		ui.Main.GoToParentCommand.Execute(null);
 		Assert.Equal(Page.ImportExport, ui.Main.ActivePage);
 	}
