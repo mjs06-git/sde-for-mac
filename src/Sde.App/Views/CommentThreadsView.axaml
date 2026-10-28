@@ -6,8 +6,8 @@
              x:DataType="vm:CommentThreadsViewModel">
   <!-- An assessment's review comments: the threads (open first), each with its replies, Reply and Resolve, then a new comment -->
   <StackPanel Spacing="10">
-    <TextBlock Classes="muted" Text="No comments yet." IsVisible="{Binding IsEmpty}" />
-    <TextBlock Classes="muted" Text="Every comment is resolved." IsVisible="{Binding AllResolvedHidden}" />
+    <TextBlock Classes="muted" Text="No Comments" IsVisible="{Binding IsEmpty}" />
+    <TextBlock Classes="muted" Text="All Resolved" IsVisible="{Binding AllResolvedHidden}" />
 
     <ItemsControl ItemsSource="{Binding Threads}">
       <ItemsControl.ItemsPanel>
@@ -17,7 +17,7 @@
       </ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="vm:CommentThreadItemViewModel">
-          <Border Classes="subtle">
+          <Border Padding="0,0,0,4">
             <StackPanel Spacing="6">
               <!-- The comment -->
               <StackPanel Spacing="2">
@@ -29,10 +29,10 @@
               </StackPanel>
 
               <!-- Replies -->
-              <ItemsControl ItemsSource="{Binding Replies}" IsVisible="{Binding HasReplies}" Margin="12,0,0,0">
+              <ItemsControl ItemsSource="{Binding Replies}" IsVisible="{Binding HasReplies}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:CommentViewModel">
-                    <Border Classes="rule" Padding="0,6,0,0" Margin="0,0,0,4">
+                    <Border Classes="reply" Margin="0,2,0,4">
                       <StackPanel Spacing="2">
                         <TextBlock Classes="muted xs" Text="{Binding Byline}" TextWrapping="Wrap" />
                         <TextBlock Text="{Binding Body}" TextWrapping="Wrap" />
@@ -71,12 +71,12 @@
 
     <!-- A new comment -->
     <StackPanel Spacing="6">
-      <TextBox Text="{Binding NewComment}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="56" PlaceholderText="Add a comment for the inspector or other reviewers"
+      <TextBox Text="{Binding NewComment}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="56" PlaceholderText="Add a comment"
                AutomationProperties.Name="New comment" />
       <Button Classes="primary" HorizontalAlignment="Right" Command="{Binding AddCommand}" AutomationProperties.Name="Add the comment">
         <StackPanel Orientation="Horizontal" Spacing="6">
           <c:Icon Kind="Comment" Size="14" />
-          <TextBlock Text="Add comment" />
+          <TextBlock Text="Add Comment" />
         </StackPanel>
       </Button>
     </StackPanel>

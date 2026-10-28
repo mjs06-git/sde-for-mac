@@ -54,6 +54,30 @@
     <Setter Property="BorderThickness" Value="0,1,0,0" />
   </Style>
 
+  <!-- A page's inspector: a flush pane at the right with a hairline on its left, no card (Structures, Review, ...) -->
+  <Style Selector="Border.inspector">
+    <Setter Property="Width" Value="300" />
+    <Setter Property="Background" Value="{DynamicResource BgInspector}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderThickness" Value="1,0,0,0" />
+  </Style>
+  <Style Selector="Border.hairline">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource BorderDefault}" />
+  </Style>
+  <!-- A page's toolbar items (PageChrome.Toolbar): a row of controls beside the window's title -->
+  <Style Selector="StackPanel.pageToolbar">
+    <Setter Property="Orientation" Value="Horizontal" />
+    <Setter Property="Spacing" Value="8" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- A comment thread: plain text blocks; replies indented on a 2 px rule -->
+  <Style Selector="Border.reply">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+    <Setter Property="BorderThickness" Value="2,0,0,0" />
+    <Setter Property="Padding" Value="10,0,0,0" />
+  </Style>
+
   <!-- Summary tiles on the Structures page: a coloured border when their filter is on -->
   <Style Selector="Border.tile.active">
     <Setter Property="BorderThickness" Value="2" />

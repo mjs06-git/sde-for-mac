@@ -1,5 +1,9 @@
 # Step 4 test report: does the Mac SDE work?
 
+As of 2026-10-28 (v3.0), 1,232 automated tests pass and none are skipped, run on macOS with the answer key installed:
+Core 339, Interop 234, App (UI) 283, Gis 187, Reports 86, Mcp 57 and Field 46. Section "v3.0: the redesign" below
+covers what changed. The paragraph that follows is the v2.0 record.
+
 As of 2026-10-20 (v2.0), 577 automated tests pass and 34 are skipped, run with `dotnet test Sde.sln` (about two
 minutes). The skipped ones compare against FEMA's own SDE 3.0 and need its installer (`tools/answer-key/setup.sh`);
 they last ran, all passing, on macOS with v1.5, and the 2.0 run was on Linux (Ubuntu 24.04) without the installer, so
@@ -173,6 +177,21 @@ v1.5's Accela import became one vendor-neutral importer (`docs/IMPORTING.md`). T
 | Phone form | `Sde.Field.Tests` (real Kestrel on loopback) | Pairing by one-time token and PIN with lockout, cookie and CSRF header required, wrong Host refused, only private addresses served, uploads capped and type-checked, changes saved through the editor with Via Phone |
 | Help | `HelpUiTests` | Every field has help with a manual page; the excerpt PDF is written; the sample database is marked and warns before exporting |
 | Accessibility | `AccessibilityTests` and a check in each new UI test | Every input on every new page and sheet has an accessible name |
+
+## v3.0: the redesign
+3.0 changes the look, the copy and where things are, not the calculation or the files, so the engine, import and
+report tests ran unchanged and all pass. The UI tests were updated for the new layout and add:
+- **The source list and toolbar**: smart groups filter the list and the title follows them; events in the sidebar
+  scope the list; the sidebar hides and shows; ⌘1 to ⌘8 reach every page and Settings has none.
+- **Contrast**: both themes and eight Mac accent colours (blue, purple, pink, red, orange, yellow, green, graphite)
+  give text at 4.5:1 or better on the accent, in the sidebar and on selected rows.
+- **The anti-slop guard** (`StyleGuardTests`): no pill or KPI classes, no all-caps labels, empty states of 60
+  characters or fewer and no text over 200 characters in the views, on top of the existing bans on colour and font
+  literals.
+- **Every screen in light and dark** with no binding errors; the result dots, threshold bar and legend recolour with
+  the theme.
+
+The packaged app (arm64, and x64 under Rosetta) was opened on a new database and checked by eye.
 
 ## Not covered
 - **Real exports.** The column guesses, header names and the example profiles need real (anonymised) files; see `docs/IMPORTING.md`.

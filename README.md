@@ -1,3 +1,5 @@
+<img src="src/Sde.App/Assets/icon-1024.png" width="128" height="128" align="right" alt="">
+
 # SDE for Mac
 
 **FEMA's Substantial Damage Estimator, on a Mac.** After a flood or other disaster, communities in the National Flood
@@ -12,14 +14,18 @@ AI assistants that work only as far as you allow, edit history and automatic bac
 > FEMA. It uses FEMA's calculation, cost tables and validation rules and is tested against FEMA's own engine, but every
 > determination remains the responsibility of the local floodplain administrator.
 
-![The Structures list](docs/screenshots/01-structures.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/40-dark-structures.png">
+  <img src="docs/screenshots/01-structures.png" alt="The Structures list, with the sidebar, toolbar and a table of structures">
+</picture>
 
 **[Download the latest release](../../releases/latest)** · [User guide](docs/USER-GUIDE.md) ·
-[What's new in 2.5](docs/WHATS-NEW-2.5.md) · [Report a problem](../../issues/new/choose)
+[What's new in 3.0](docs/WHATS-NEW-3.0.md) · [Report a problem](../../issues/new/choose)
 
 ## Contents
 - [Who it's for](#who-its-for)
 - [What it does](#what-it-does)
+- [Finding your way around](#finding-your-way-around)
 - [Install](#install)
 - [Quick start](#quick-start)
 - [User guide](#user-guide)
@@ -45,7 +51,7 @@ both directions.
 - **Data from the field**: import inspections or parcels from any permit system, assessor roll or spreadsheet (`.csv`,
   `.xlsx`, `.xls`, or a shapefile's `.dbf`); match a folder of photos to structures; look up coordinates and flood data
   online; let inspectors fill in assessments from a phone over the office Wi-Fi.
-- **Events**: keep each disaster separate and look at one at a time; Structures, the map, the Dashboard, exports and
+- **Events**: keep each disaster separate and look at one at a time; Structures, the map, the summary, exports and
   letters follow the event chosen in the sidebar.
 - **A map you can work in**: layers from Shapefiles, GeoJSON, GeoPackages, CSV and ArcGIS services; styling, an
   attribute table, selecting, measuring, editing your own layers, copying values onto structures, printing, and FEMA's
@@ -55,12 +61,25 @@ both directions.
   FEMA's form; photo markup.
 - **Office work**: a review queue with quality checks and comments, a compliance and ICC tracker with letters, and web
   maps to share with partners or the public.
-- **Results**: an event dashboard and summary PDF, GeoPackage and GeoJSON files for GIS, owner letters from Word
+- **Results**: an event summary with a PDF version, GeoPackage and GeoJSON files for GIS, owner letters from Word
   templates, substantial improvement determinations, appeals with contractor bids, and optional cumulative damage.
 - **AI assistants**: Claude and other assistants can read and check a database and make reports; they change it only
   when you allow it, and every change can be reverted.
-- **Safety nets**: review statuses that lock finished assessments, edit history, undo, Recently deleted, and automatic
+- **Safety nets**: review statuses that lock finished assessments, edit history, undo, Recently Deleted, and automatic
   daily backups.
+
+## Finding your way around
+SDE 3.0 is laid out like other Mac apps. [What's new in 3.0](docs/WHATS-NEW-3.0.md) lists where everything from 2.5
+moved.
+
+- **The sidebar** lists your structures: **All Structures**, then smart groups (Substantially Damaged, Near
+  Threshold, Not Substantial, Incomplete) with counts, each **event** in the database, the **Review**, **Compliance**
+  and **Assignments** queues, and **Recently Deleted**.
+- **The toolbar** switches Structures between **List**, **Map** and **Summary** (⌘1, ⌘2, ⌘3), makes new structures
+  with the **New** pull-down, and searches the list.
+- **The menus** hold everything else: databases and imports in **File**, the pages in **View** (⌘1 to ⌘8), events
+  and the event summary in **Event**, and **Settings** in the SDE menu (⌘,).
+- **The look follows your Mac**: light or dark, and the accent colour set in System Settings › Appearance.
 
 ## Install
 
@@ -75,7 +94,8 @@ both directions.
 2. **Download the app.** Open the [latest release](../../releases/latest). Under **Assets**, download one zip:
    - `SDE-<version>-osx-arm64.zip` for **Apple silicon**, or
    - `SDE-<version>-osx-x64.zip` for **Intel**.
-3. **Unzip it.** Double-click the zip in your Downloads folder. An app called **SDE** appears next to it.
+3. **Unzip it.** Double-click the zip in your Downloads folder. An app called **SDE**, with a flooded-house icon,
+   appears next to it.
 4. **Move it to Applications.** Drag **SDE** into the **Applications** folder in the Finder sidebar.
 5. **Open it.** Double-click **SDE** in Applications (or press ⌘ Space, type `SDE`, press Return).
 6. **If macOS blocks it.** Unless a release says it is signed with a Developer ID, macOS shows a message that it can't
@@ -107,17 +127,18 @@ A first session takes about 15 minutes.
    know you are in it, and never touches your own data. Open a few structures and look around.
 2. **Make a database for your event.** Choose **File > New Database…** and save it in a folder named for the event
    (for example `2026-09 River flood`). Keep one database per event.
-3. **Set it up once.** Open **Settings** (⌘3). Type **Your name** (it goes into edit history), then fill in **Default
-   values** with what is the same for every building in this event: the community, FIRM panel information, cost data
+3. **Set it up once.** Choose **SDE > Settings…** (⌘,). Type **Your name** (it goes into edit history), then fill in
+   **Defaults** with what is the same for every building in this event: the community, FIRM panel information, cost data
    and so on. Turn on **Fill new structures with my default values**.
-4. **Assess a building.** On **Structures** (⌘1), click **New residential** (⌘N) or **New non-residential** (⇧⌘N).
-   Work through the eight steps on the left. The percent damaged appears on the right as soon as there is enough to
-   calculate, and **Needs attention** lists anything still missing. Your work saves itself.
+4. **Assess a building.** In **Structures** (⌘1), click **New** (+) in the toolbar and choose **Residential
+   Structure** (⌘N) or **Non-Residential Structure** (⇧⌘N). Work through the eight steps on the left. The percent
+   damaged appears on the right as soon as there is enough to calculate, and **To Check** lists anything still
+   missing. Your work saves itself.
 5. **Bring in what you already have.** If the data is in FEMA's SDE, choose **File > Import SDE Data…** (⌘I). If it
    is in a permit system, a spreadsheet or an assessor roll, choose **File > Import Inspections or Parcels…** (⇧⌘I).
-6. **Review and finish.** When an assessment has been checked, set its status (top of the editor) to **Final**. That
-   locks it against accidental changes.
-7. **Send the results.** On Structures, choose **Export ▾ > Submission folder (reports + FEMA package)…**. You get a
+6. **Review and finish.** When an assessment has been checked, set its status (the pop-up in the toolbar) to
+   **Final**. That locks it against accidental changes.
+7. **Send the results.** In Structures, click **Export** above the list and choose **Submission Folder…**. You get a
    PDF report for each building, the list reports, the FEMA package (`SDE_1`) for FEMA or your state, and a
    spreadsheet of results.
 
@@ -132,7 +153,7 @@ The **[user guide](docs/USER-GUIDE.md)** explains every task step by step:
 6. [Reviewing, locking and undoing](docs/USER-GUIDE.md#6-reviewing-locking-and-undoing)
 7. [Working with many structures](docs/USER-GUIDE.md#7-working-with-many-structures)
 8. [Looking up locations and flood data online](docs/USER-GUIDE.md#8-looking-up-locations-and-flood-data-online)
-9. [The map and the event dashboard](docs/USER-GUIDE.md#9-the-map-and-the-event-dashboard)
+9. [The map and the summary](docs/USER-GUIDE.md#9-the-map-and-the-summary)
 10. [Reports and sending results to FEMA or your state](docs/USER-GUIDE.md#10-reports-and-sending-results-to-fema-or-your-state)
 11. [Owner letters](docs/USER-GUIDE.md#11-owner-letters)
 12. [Substantial improvement](docs/USER-GUIDE.md#12-substantial-improvement)
@@ -194,7 +215,7 @@ unedited as the tests' answer key. Those folders are ignored by git and must nev
 | `src/Sde.Mcp` | The server for AI assistants (`SDE mcp`, see [MCP.md](docs/MCP.md)) |
 | `src/Sde.Cli` | The `sde` command-line tool |
 | `tests/` | Tests and synthetic fixtures |
-| `tools/` | The answer-key setup, packaging, fixture generators |
+| `tools/` | The answer-key setup, packaging, the app icon's sources, fixture generators |
 | `docs/` | User guides, how it works, what changed from FEMA's version, test report, screenshots |
 
 ## Documentation
@@ -203,7 +224,7 @@ unedited as the tests' answer key. Those folders are ignored by git and must nev
 - [Importing inspections or parcels](docs/IMPORTING.md): profiles, matching, updates and the submission folder in detail.
 - [Owner letters](docs/LETTERS.md): templates and every placeholder.
 - [Phone form](docs/PHONE-FORM.md): setup, pairing, and what it does and doesn't protect against.
-- [What's new in 2.5](docs/WHATS-NEW-2.5.md) and [in 2.0](docs/WHATS-NEW-2.0.md).
+- What's new in [3.0](docs/WHATS-NEW-3.0.md), [2.5](docs/WHATS-NEW-2.5.md) and [2.0](docs/WHATS-NEW-2.0.md).
 - [AI assistants (MCP)](docs/MCP.md): connecting Claude Desktop or Claude Code, and every tool.
 
 **For developers and reviewers**

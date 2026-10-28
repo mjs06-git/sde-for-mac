@@ -53,3 +53,30 @@ this list, and the anti-slop guard in `tests/Sde.App.Tests/StyleGuardTests.cs` e
 - No `card`, `pill`, `eyebrow` or KPI-tile classes in Views.
 - No page subtitle class.
 - No `c:EmptyState` body text longer than about 40 characters.
+
+## Outcome in 3.0
+
+Walked against the 3.0 screenshots and the approved Sequoia mock-ups on 2026-10-28.
+
+**Done as listed**: the system font and type ramp; the system accent with brand blue as the fallback; the source list
+(Library smart groups with counts, Events, Workflow, Recently Deleted); the toolbar search field, with ⌘K kept for the
+palette; the New pull-down; events in the sidebar and databases in File › Open / Open Recent with the name under the
+title; Map as a view mode of Structures; sheets attached under the toolbar; KPI cards replaced by smart-group counts,
+a status bar and one line of counts on the workflow pages; dots in place of status pills; sentence-case section
+labels in place of uppercase eyebrows; numbers at body or title size; one-line empty states; the damage ruler once in
+the header; a plain step outline with counts; the result as an inspector-style panel; page subtitles, question-style
+step subtitles and helper sentences moved to tooltips and the user guide.
+
+**Done differently**:
+- Settings and Import & Export stay pages in the main window, reached from SDE › Settings… (⌘,) and View (⌘8). A
+  separate Settings window and import/export sheets were left for later.
+- The Dashboard became **Summary**, the third view mode of Structures (⌘3, or Event › Event Summary), not a sheet.
+- Toasts stay as toasts. Banners are restyled (neutral by default, a fill only for warning and danger) rather than
+  merged into one info bar.
+- Sheets keep a close button as well as Esc and Cancel.
+- Cards remain as grouped boxes (no border, a subtle fill) on Settings, Summary and some panels.
+
+**Guard**: StyleGuardTests checks hex and named colours, font sizes and weights, typed ▾ and ⋯, pill and KPI
+classes, all-caps labels, empty states over 60 characters and any text over 200. Not enforced: CornerRadius literals
+(the 15 left draw colour swatches, map chips and square edges, where the radius is the shape) and the `card` and
+`eyebrow` classes (now restyled in the theme rather than removed).

@@ -30,6 +30,29 @@ public partial class MainWindow : Window, IDialogs
 	{
 		InitializeComponent();
 		this.FindControl<ItemsControl>("ToastList").ItemsSource = Toasts.Items;
+		ContentControl pages = this.FindControl<ContentControl>("PageHost");
+		pages.TemplateApplied += (_, _) =>
+		{
+			if (pages.Presenter is Avalonia.Controls.Presenters.ContentPresenter presenter)
+			{
+				presenter.PropertyChanged += (_, e) =>
+				{
+					if (e.Property == Avalonia.Controls.Presenters.ContentPresenter.ChildProperty)
+					{
+						ShowPageToolbar(pages.Content, presenter.Child);
+					}
+				};
+			}
+		};
+	}
+
+	/// <summary>Puts the open page's toolbar items (<see cref="PageChrome"/>) in the window's toolbar.</summary>
+	private void ShowPageToolbar(object page, Control view)
+	{
+		ContentControl bar = this.FindControl<ContentControl>("PageToolbar");
+		bar.Content = null;
+		bar.DataContext = page;
+		bar.Content = view is null ? null : PageChrome.GetToolbar(view);
 	}
 
 	/// <summary>The toasts shown at the bottom of the window (<see cref="Notify(string, string, bool)"/> adds one).</summary>

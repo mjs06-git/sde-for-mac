@@ -78,6 +78,12 @@ public sealed partial class ReviewRowViewModel : ObservableObject
 
 	public bool HasFindings => FindingCount > 0;
 
+	/// <summary>Whether any open check is an error (the Checks column adds "1 error" in red).</summary>
+	public bool HasErrors => ErrorCount > 0;
+
+	/// <summary>"1 error", "2 errors".</summary>
+	public string ErrorText => ErrorCount == 1 ? "1 error" : $"{ErrorCount:N0} errors";
+
 	public string FindingText => FindingCount.ToString("N0", CultureInfo.GetCultureInfo("en-US"));
 
 	/// <summary>Red when one of the findings is an error, amber for warnings, grey for notes.</summary>
@@ -201,6 +207,20 @@ public sealed class QaGroupViewModel(QaRuleInfo rule, IReadOnlyList<QaFindingVie
 		QaSeverity.Warning => Tone.Warning,
 		_ => Tone.Info,
 	};
+
+	/// <summary>The icon before the check's title, by its severity (the same as its findings').</summary>
+	public string Icon => Rule.Severity switch
+	{
+		QaSeverity.Error => "ErrorCircle",
+		QaSeverity.Warning => "Warning",
+		_ => "Info",
+	};
+
+	public bool IsError => Rule.Severity == QaSeverity.Error;
+
+	public bool IsWarning => Rule.Severity == QaSeverity.Warning;
+
+	public bool IsNote => Rule.Severity == QaSeverity.Info;
 
 	/// <summary>"3 open, 1 set aside".</summary>
 	public string CountText

@@ -102,6 +102,7 @@
       <Color x:Key="BgSidebarColor">#EBEBEA</Color>
       <Color x:Key="BgSurfaceColor">#FFFFFF</Color>
       <Color x:Key="BgSubtleColor">#F4F5F5</Color>
+      <Color x:Key="BgInspectorColor">#FBFBFB</Color>
       <Color x:Key="BgHoverColor">#EFEFEF</Color>
       <Color x:Key="BgPressedColor">#E3E3E3</Color>
       <Color x:Key="BgOverlayColor">#26000000</Color>
@@ -146,6 +147,7 @@
       <SolidColorBrush x:Key="BgSidebar" Color="{StaticResource BgSidebarColor}" /> <!-- the sidebar and side panels -->
       <SolidColorBrush x:Key="BgSurface" Color="{StaticResource BgSurfaceColor}" /> <!-- cards, sheets, inputs, menus -->
       <SolidColorBrush x:Key="BgSubtle" Color="{StaticResource BgSubtleColor}" /> <!-- insets and secondary areas inside a card -->
+      <SolidColorBrush x:Key="BgInspector" Color="{StaticResource BgInspectorColor}" /> <!-- the inspector pane at the right of a page -->
       <SolidColorBrush x:Key="BgHover" Color="{StaticResource BgHoverColor}" /> <!-- a row or ghost button under the pointer -->
       <SolidColorBrush x:Key="BgPressed" Color="{StaticResource BgPressedColor}" /> <!-- a row or button being pressed -->
       <SolidColorBrush x:Key="BgOverlay" Color="{StaticResource BgOverlayColor}" /> <!-- the scrim behind a sheet -->
@@ -542,6 +544,7 @@
       <Color x:Key="BgSidebarColor">#2B2B2D</Color>
       <Color x:Key="BgSurfaceColor">#252527</Color>
       <Color x:Key="BgSubtleColor">#262627</Color>
+      <Color x:Key="BgInspectorColor">#232324</Color>
       <Color x:Key="BgHoverColor">#2E2E30</Color>
       <Color x:Key="BgPressedColor">#3A3A3C</Color>
       <Color x:Key="BgOverlayColor">#4D000000</Color>
@@ -586,6 +589,7 @@
       <SolidColorBrush x:Key="BgSidebar" Color="{StaticResource BgSidebarColor}" /> <!-- the sidebar and side panels -->
       <SolidColorBrush x:Key="BgSurface" Color="{StaticResource BgSurfaceColor}" /> <!-- cards, sheets, inputs, menus -->
       <SolidColorBrush x:Key="BgSubtle" Color="{StaticResource BgSubtleColor}" /> <!-- insets and secondary areas inside a card -->
+      <SolidColorBrush x:Key="BgInspector" Color="{StaticResource BgInspectorColor}" /> <!-- the inspector pane at the right of a page -->
       <SolidColorBrush x:Key="BgHover" Color="{StaticResource BgHoverColor}" /> <!-- a row or ghost button under the pointer -->
       <SolidColorBrush x:Key="BgPressed" Color="{StaticResource BgPressedColor}" /> <!-- a row or button being pressed -->
       <SolidColorBrush x:Key="BgOverlay" Color="{StaticResource BgOverlayColor}" /> <!-- the scrim behind a sheet -->

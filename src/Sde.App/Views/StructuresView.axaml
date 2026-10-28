@@ -326,7 +326,7 @@
           <c:EmptyState IsVisible="{Binding IsEmpty}" Icon="Structures" Title="{Binding EmptyTitle}" Text="{Binding EmptyText}">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Button Classes="primary" Content="New Residential" Command="{Binding NewStructureCommand}" CommandParameter="1" />
-              <Button Content="New Non-residential" Command="{Binding NewStructureCommand}" CommandParameter="2" />
+              <Button Content="New Non-Residential" Command="{Binding NewStructureCommand}" CommandParameter="2" />
             </StackPanel>
           </c:EmptyState>
           <c:EmptyState IsVisible="{Binding NoMatches}" Icon="Search" Title="No Matches">

@@ -1,6 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:c="using:Sde.App.Controls">
+        xmlns:c="using:Sde.App.Controls"
+        xmlns:app="using:Sde.App">
   <!--
     The window's frame: sidebar, switchers and their menus, the title band and its search field, sheets (scrim and
     chrome, with small, medium and large widths), the command palette, and keyboard-key labels (Border.kbd).
@@ -224,6 +225,12 @@
     <Setter Property="HorizontalAlignment" Value="Center" />
   </Style>
 
+  <!-- Shortcuts in the window's menus as a Mac shows them (⇧⌘N, not Shift+Cmd+N). Two selectors with a pseudo-class so
+       this outranks the theme's own binding of the same text. -->
+  <Style Selector="MenuItem:not(:disabled) /template/ TextBlock#PART_InputGestureText, MenuItem:disabled /template/ TextBlock#PART_InputGestureText">
+    <Setter Property="Text" Value="{Binding $parent[MenuItem].InputGesture, Converter={x:Static app:Converters.MacKeyGesture}}" />
+  </Style>
+
   <!-- Sheets, as on the Mac: the window dims a little and the sheet hangs from the toolbar's lower edge -->
   <Style Selector="Border.scrim">
     <Setter Property="Background" Value="{DynamicResource BgOverlay}" />
@@ -241,13 +248,13 @@
     <Setter Property="MinWidth" Value="{StaticResource SheetWidthSmall}" />
     <Setter Property="MaxWidth" Value="760" />
   </Style>
-  <Style Selector="Border.sheet.small">
+  <Style Selector="Border.sheet.sheetSmall">
     <Setter Property="Width" Value="{StaticResource SheetWidthSmall}" />
   </Style>
-  <Style Selector="Border.sheet.medium">
+  <Style Selector="Border.sheet.sheetMedium">
     <Setter Property="Width" Value="{StaticResource SheetWidthMedium}" />
   </Style>
-  <Style Selector="Border.sheet.large">
+  <Style Selector="Border.sheet.sheetLarge">
     <Setter Property="Width" Value="{StaticResource SheetWidthLarge}" />
     <Setter Property="MaxWidth" Value="{StaticResource SheetWidthLarge}" />
   </Style>
