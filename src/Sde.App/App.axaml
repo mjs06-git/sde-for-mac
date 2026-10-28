@@ -108,8 +108,8 @@
             </Button>
           </StackPanel>
         </DockPanel>
-        <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}" AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" IsEnabled="{Binding IsEnabled}"
-                  HorizontalAlignment="Stretch" MaxDropDownHeight="360" />
+        <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}" MaxWidth="280" HorizontalAlignment="Left" AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" IsEnabled="{Binding IsEnabled}"
+                  MaxDropDownHeight="360" />
         <TextBlock Classes="issue" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
                    Classes.suggested="{Binding IsSuggestedIssue}" Text="{Binding IssueMessage}" IsVisible="{Binding ShowIssueInline}" />
       </StackPanel>

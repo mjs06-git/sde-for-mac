@@ -240,7 +240,7 @@
     <Setter Property="Text" Value="{Binding $parent[MenuItem].InputGesture, Converter={x:Static app:Converters.MacKeyGesture}}" />
   </Style>
 
-  <!-- Sheets, as on the Mac: the window dims a little and the sheet hangs from the toolbar's lower edge -->
+  <!-- Sheets, as on the Mac: the sheet hangs from the toolbar's lower edge; the window behind is not dimmed but can't be clicked -->
   <Style Selector="Border.scrim">
     <Setter Property="Background" Value="{DynamicResource BgOverlay}" />
   </Style>

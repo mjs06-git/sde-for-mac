@@ -50,9 +50,10 @@ public sealed partial class CustomFieldEntryViewModel(CustomFieldResultRecord ro
 public sealed record AssessmentChoice(Guid Id, string Label, IRelayCommand<AssessmentChoice> Open);
 
 /// <summary>A validation issue in the "Needs attention" list; clicking it opens the step that has the field.</summary>
-public sealed record IssueItem(ValidationIssue Issue, IRelayCommand<ValidationIssue> Go)
+/// <summary>A line in To Check: the field as the form labels it (FEMA's rule names it differently), and where to go.</summary>
+public sealed record IssueItem(ValidationIssue Issue, IRelayCommand<ValidationIssue> Go, string Label = null)
 {
-	public string FieldName => Issue.FieldName;
+	public string FieldName => Label ?? Issue.FieldName;
 	public string Message => Issue.Message?.Trim();
 	public IssueSeverity Severity => Issue.Severity;
 }
@@ -687,17 +688,19 @@ public sealed partial class AssessmentEditorViewModel : ViewModelBase
 		Dictionary<string, ValidationIssue> byField = issues
 			.GroupBy(i => (i.Model == "Property" ? "P." : "A.") + i.ControlName)
 			.ToDictionary(g => g.Key, g => g.OrderBy(i => i.Severity).First());
+		Dictionary<string, string> labels = new();
 		foreach (FieldViewModel f in _fields)
 		{
 			string key = (f.RecordType == typeof(PropertyRecord) ? "P." : "A.") + f.Member;
 			f.Issue = f.IsVisible && byField.TryGetValue(key, out ValidationIssue issue) ? issue : null;
+			labels.TryAdd(key, f.Label);
 		}
 		// FEMA's green "suggested" rules (owner/mailing details) are counted separately so they don't drown out real gaps.
 		List<ValidationIssue> important = issues.Where(i => i.Severity != IssueSeverity.Suggested).ToList();
 		Issues.Clear();
 		foreach (ValidationIssue i in important.OrderBy(i => i.Severity).ThenBy(i => SectionIndexFor(i)))
 		{
-			Issues.Add(new IssueItem(i, GoToIssueCommand));
+			Issues.Add(new IssueItem(i, GoToIssueCommand, labels.GetValueOrDefault((i.Model == "Property" ? "P." : "A.") + i.ControlName)));
 		}
 		RequiredIssueCount = issues.Count(i => i.Severity == IssueSeverity.Required);
 		OtherIssueCount = important.Count - RequiredIssueCount;

@@ -122,10 +122,10 @@
               <DataGridTemplateColumn Header="Result" SortMemberPath="Result" Width="1.3*" MinWidth="150">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:ReviewRowViewModel">
-                    <StackPanel Classes="result" Orientation="Horizontal" Spacing="7" Margin="8,0" VerticalAlignment="Center">
-                      <Ellipse Classes="dot" app:ThemeBrush.Fill="{Binding State, Converter={x:Static app:Converters.StatusDotKey}}" />
+                    <DockPanel Classes="result" Margin="8,0" VerticalAlignment="Center" ToolTip.Tip="{Binding Result}">
+                      <Ellipse DockPanel.Dock="Left" Classes="dot" Margin="0,0,7,0" app:ThemeBrush.Fill="{Binding State, Converter={x:Static app:Converters.StatusDotKey}}" />
                       <TextBlock Text="{Binding Result}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                    </StackPanel>
+                    </DockPanel>
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>

@@ -281,8 +281,13 @@
                     Background="{DynamicResource ToggleSwitchFillOn}" BorderBrush="{DynamicResource ToggleSwitchStrokeOn}" />
             <Canvas x:Name="PART_SwitchKnob" Width="16" Height="20" HorizontalAlignment="Left">
               <Grid x:Name="PART_MovingKnobs" Width="20" Height="20">
-                <Ellipse x:Name="SwitchKnobOn" Fill="{DynamicResource ToggleSwitchKnobFillOn}" Width="14" Height="14" />
-                <Ellipse x:Name="SwitchKnobOff" Fill="{DynamicResource ToggleSwitchKnobFillOff}" Width="12" Height="12" />
+                <!-- One white knob, the same size on and off, with a soft shadow, as the Mac's switch -->
+                <Ellipse x:Name="SwitchKnobOn" Fill="{DynamicResource ToggleSwitchKnobFillOn}" Width="16" Height="16">
+                  <Ellipse.Effect><DropShadowEffect BlurRadius="2" OffsetX="0" OffsetY="0.5" Opacity="0.35" Color="#000000" /></Ellipse.Effect>
+                </Ellipse>
+                <Ellipse x:Name="SwitchKnobOff" Fill="{DynamicResource ToggleSwitchKnobFillOff}" Width="16" Height="16">
+                  <Ellipse.Effect><DropShadowEffect BlurRadius="2" OffsetX="0" OffsetY="0.5" Opacity="0.35" Color="#000000" /></Ellipse.Effect>
+                </Ellipse>
               </Grid>
             </Canvas>
           </Grid>

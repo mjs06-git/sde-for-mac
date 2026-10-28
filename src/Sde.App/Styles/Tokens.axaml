@@ -106,7 +106,7 @@
       <Color x:Key="BgInspectorColor">#FBFBFB</Color>
       <Color x:Key="BgHoverColor">#EFEFEF</Color>
       <Color x:Key="BgPressedColor">#E3E3E3</Color>
-      <Color x:Key="BgOverlayColor">#26000000</Color>
+      <Color x:Key="BgOverlayColor">#00000000</Color> <!-- clear: a Mac sheet does not dim the window; the layer still takes the clicks -->
       <Color x:Key="BgTooltipColor">#F2F2F2</Color>
       <Color x:Key="BorderDefaultColor">#E0E0E0</Color>
       <Color x:Key="BorderStrongColor">#C8C8C8</Color>
@@ -420,12 +420,12 @@
       <SolidColorBrush x:Key="RadioButtonCheckGlyphStrokePointerOver" Color="{StaticResource OnAccentColor}" />
       <SolidColorBrush x:Key="RadioButtonCheckGlyphStrokePressed" Color="{StaticResource OnAccentColor}" />
       <SolidColorBrush x:Key="ToggleSwitchContentForeground" Color="{StaticResource TextPrimaryColor}" />
-      <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="{StaticResource BgSurfaceColor}" />
-      <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="{StaticResource BgHoverColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="{StaticResource BgPressedColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="{StaticResource BgPressedColor}" />
       <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="{StaticResource BgPressedColor}" />
       <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="{StaticResource BorderStrongColor}" />
-      <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
-      <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="{StaticResource BorderStrongColor}" />
       <SolidColorBrush x:Key="ToggleSwitchStrokeOffDisabled" Color="{StaticResource BorderDefaultColor}" />
       <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="{StaticResource AccentFillColor}" />
       <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="{StaticResource AccentFillHoverColor}" />
@@ -435,9 +435,9 @@
       <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="{StaticResource AccentFillHoverColor}" />
       <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="{StaticResource AccentFillPressedColor}" />
       <SolidColorBrush x:Key="ToggleSwitchStrokeOnDisabled" Color="{StaticResource BgPressedColor}" />
-      <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="{StaticResource TextSecondaryColor}" />
-      <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="{StaticResource TextPrimaryColor}" />
-      <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="{StaticResource TextPrimaryColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="{StaticResource OnAccentColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="{StaticResource OnAccentColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="{StaticResource OnAccentColor}" />
       <SolidColorBrush x:Key="ToggleSwitchKnobFillOffDisabled" Color="{StaticResource TextDisabledColor}" />
       <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="{StaticResource OnAccentColor}" />
       <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="{StaticResource OnAccentColor}" />
@@ -548,7 +548,7 @@
       <Color x:Key="BgInspectorColor">#232324</Color>
       <Color x:Key="BgHoverColor">#2E2E30</Color>
       <Color x:Key="BgPressedColor">#3A3A3C</Color>
-      <Color x:Key="BgOverlayColor">#4D000000</Color>
+      <Color x:Key="BgOverlayColor">#00000000</Color>
       <Color x:Key="BgTooltipColor">#3A3A3C</Color>
       <Color x:Key="BorderDefaultColor">#3A3A3C</Color>
       <Color x:Key="BorderStrongColor">#545458</Color>
@@ -859,12 +859,12 @@
       <SolidColorBrush x:Key="RadioButtonCheckGlyphStrokePointerOver" Color="{StaticResource OnAccentColor}" />
       <SolidColorBrush x:Key="RadioButtonCheckGlyphStrokePressed" Color="{StaticResource OnAccentColor}" />
       <SolidColorBrush x:Key="ToggleSwitchContentForeground" Color="{StaticResource TextPrimaryColor}" />
-      <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="{StaticResource BgSurfaceColor}" />
-      <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="{StaticResource BgHoverColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="{StaticResource BgPressedColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="{StaticResource BgPressedColor}" />
       <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="{StaticResource BgPressedColor}" />
       <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="{StaticResource BorderStrongColor}" />
-      <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
-      <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="{StaticResource BorderStrongColor}" />
       <SolidColorBrush x:Key="ToggleSwitchStrokeOffDisabled" Color="{StaticResource BorderDefaultColor}" />
       <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="{StaticResource AccentFillColor}" />
       <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="{StaticResource AccentFillHoverColor}" />
@@ -874,9 +874,9 @@
       <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="{StaticResource AccentFillHoverColor}" />
       <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="{StaticResource AccentFillPressedColor}" />
       <SolidColorBrush x:Key="ToggleSwitchStrokeOnDisabled" Color="{StaticResource BgPressedColor}" />
-      <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="{StaticResource TextSecondaryColor}" />
-      <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="{StaticResource TextPrimaryColor}" />
-      <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="{StaticResource TextPrimaryColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="{StaticResource OnAccentColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="{StaticResource OnAccentColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="{StaticResource OnAccentColor}" />
       <SolidColorBrush x:Key="ToggleSwitchKnobFillOffDisabled" Color="{StaticResource TextDisabledColor}" />
       <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="{StaticResource OnAccentColor}" />
       <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="{StaticResource OnAccentColor}" />

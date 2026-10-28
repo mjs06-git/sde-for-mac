@@ -195,7 +195,7 @@
         <!-- What the bar colours mean -->
         <StackPanel Orientation="Horizontal" Spacing="16" ToolTip.Tip="Bars are split by result">
           <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusSubstantialFg}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Substantial" /></StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusCloseFg}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Close" /></StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusCloseFg}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Near threshold" /></StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusNotSubstantialFg}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Not substantial" /></StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusIncompleteFg}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Incomplete or undetermined" /></StackPanel>
         </StackPanel>

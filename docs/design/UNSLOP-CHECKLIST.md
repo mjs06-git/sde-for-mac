@@ -80,3 +80,19 @@ step subtitles and helper sentences moved to tooltips and the user guide.
 classes, all-caps labels, empty states over 60 characters and any text over 200. Not enforced: CornerRadius literals
 (the 15 left draw colour swatches, map chips and square edges, where the radius is the shape) and the `card` and
 `eyebrow` classes (now restyled in the theme rather than removed).
+
+**Second finish review (ship after fixes), fixed**: result text trims with an ellipsis; pop-up buttons draw the Mac's
+⇅ chevrons and form pop-ups size to their content (at most 280 px); the switch is a grey track with a white knob; the
+slider knob has a hairline edge; sheets no longer dim the window; Summary and the map legend say "Near threshold";
+To Check uses each field's own label.
+
+**Left for after 3.0** (from the same review):
+- Dates still use Fluent's date picker ("Pick a date" and a calendar tile); a Mac date field would be better.
+- The Structures scope bar could become the comp's borderless "Type: All / Status: Any / Inspector: Any" pop-ups with
+  "Save as Smart Group", and its table header could show column dividers and a sort indicator like Review's.
+- Sheet buttons: standardise on Cancel plus one default action (Done alone where edits apply live).
+- A few sheets still carry a helper sentence (owner letters, Set a Field, the compliance case's overdue line), the
+  Photos step has an upload-card drop zone, and FEMA's inline validation messages are full sentences.
+- Recently Deleted acts with buttons on each row; a table with toolbar, context-menu and ⌫ actions would be more Mac.
+  Assignments' toolbar has five text buttons; a +/− footer on the teams list and one pull-down would be quieter.
+- Review's checks could show a short detail line under each title, as the comp does.

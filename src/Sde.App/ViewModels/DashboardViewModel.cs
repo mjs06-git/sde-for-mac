@@ -233,7 +233,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
 	private static string Label(DeterminationClass c) => c switch
 	{
 		DeterminationClass.Substantial => "Substantially damaged",
-		DeterminationClass.Close => "Close to the threshold",
+		DeterminationClass.Close => "Near threshold",
 		DeterminationClass.NotSubstantial => "Not substantially damaged",
 		DeterminationClass.Undetermined => "Undetermined",
 		_ => "Incomplete",
