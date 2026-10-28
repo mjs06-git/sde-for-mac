@@ -29,6 +29,9 @@ public class ScreenTourTests
 		ui.Snapshot("00-structures-empty");
 		AddSamples(ui.Store);
 		ui.Services.RaiseDataChanged();
+		ui.Main.Structures.Selected = ui.Main.Structures.Rows[0];
+		ui.Pump();
+		Assert.True(ui.Main.Structures.HasSelectedDetail);
 		ui.Snapshot("01-structures");
 
 		Guid ranch = ui.Main.Structures.Rows.First(r => r.Address.StartsWith("123")).AssessmentID!.Value;
@@ -71,6 +74,8 @@ public class ScreenTourTests
 		using UiSession ui = new UiSession(ThemeVariant.Dark);
 		AddSamples(ui.Store);
 		ui.Services.RaiseDataChanged();
+		ui.Main.Structures.Selected = ui.Main.Structures.Rows[0];
+		ui.Pump();
 		ui.Snapshot("40-dark-structures");
 		ui.Main.OpenAssessment(ui.Main.Structures.Rows.First(r => r.Address.StartsWith("48")).AssessmentID!.Value);
 		ui.Main.Editor.SelectedSection = ui.Main.Editor.Sections.OfType<DamageSectionViewModel>().Single();
@@ -91,7 +96,7 @@ public class ScreenTourTests
 	}
 
 	[AvaloniaFact]
-	public void ThemeSwitch_RecoloursStatusPills_TheResultCard_AndLegendDots()
+	public void ThemeSwitch_RecoloursResultDots_TheThresholdBar_AndLegendDots()
 	{
 		BindingErrors.Instance.Messages.Clear();
 		using UiSession ui = new UiSession(ThemeVariant.Light);
@@ -100,25 +105,19 @@ public class ScreenTourTests
 		ui.Pump();
 
 		// Each check keeps the same control across the switch: a control made after it would be coloured right anyway.
-		Border pill = ui.Window.GetVisualDescendants().OfType<Border>().First(b => b.IsEffectivelyVisible && b.Classes.Contains("pill") && b.DataContext is StructureRowViewModel);
-		TextBlock pillText = pill.GetVisualDescendants().OfType<TextBlock>().Single();
-		string state = ((StructureRowViewModel)pill.DataContext).State.ToString();
-		AssertThemeColour("Status" + state + "Bg", pill.Background);
+		Ellipse dot = ui.Window.GetVisualDescendants().OfType<Ellipse>().First(e => e.IsEffectivelyVisible && e.Classes.Contains("dot") && e.DataContext is StructureRowViewModel);
+		string state = ((StructureRowViewModel)dot.DataContext).State.ToString();
+		AssertThemeColour("Status" + state + "Dot", dot.Fill);
 		SwitchTheme(ui, ThemeVariant.Dark);
-		AssertThemeColour("Status" + state + "Bg", pill.Background);
-		AssertThemeColour("Status" + state + "Fg", pillText.Foreground);
+		AssertThemeColour("Status" + state + "Dot", dot.Fill);
 
 		ui.Main.OpenAssessment(ui.Main.Structures.Rows.First(r => r.Address.StartsWith("123")).AssessmentID!.Value);
 		ui.Pump();
-		Border card = ui.Window.GetVisualDescendants().OfType<TextBlock>().First(t => t.IsEffectivelyVisible && t.Text == "PERCENT DAMAGED").FindAncestorOfType<Border>();
-		Ellipse issueDot = ui.Window.GetVisualDescendants().OfType<Ellipse>().First(d => d.IsEffectivelyVisible && d.DataContext is IssueItem);
-		string issueKey = ((IssueItem)issueDot.DataContext).Severity + "Fg";
-		string cardKey = "Status" + ui.Main.Editor.State + "Bg";
-		AssertThemeColour(cardKey, card.Background);
-		AssertThemeColour(issueKey, issueDot.Fill);
+		ProgressBar bar = ui.Window.GetVisualDescendants().OfType<ProgressBar>().First(p => p.IsEffectivelyVisible && p.Classes.Contains("threshold"));
+		string barKey = "Status" + ui.Main.Editor.State + "Dot";
+		AssertThemeColour(barKey, bar.Foreground);
 		SwitchTheme(ui, ThemeVariant.Light);
-		AssertThemeColour(cardKey, card.Background);
-		AssertThemeColour(issueKey, issueDot.Fill);
+		AssertThemeColour(barKey, bar.Foreground);
 
 		ui.Main.ShowCommand.Execute(Page.Map);
 		ui.Pump();

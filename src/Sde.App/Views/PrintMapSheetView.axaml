@@ -5,7 +5,7 @@
              x:DataType="sh:PrintMapSheetViewModel">
   <StackPanel Spacing="14">
     <TextBlock Classes="secondary" TextWrapping="Wrap"
-               Text="A Letter-size PDF of the area the map shows now, with a legend, a scale bar, a north arrow, the sources and the date." />
+               Text="A Letter PDF of this view with legend, scale, north arrow, sources and date." />
     <StackPanel Spacing="4">
       <TextBlock Classes="fieldLabel" Text="Title" />
       <TextBox Text="{Binding MapTitle}" AutomationProperties.Name="Title of the printed map" />

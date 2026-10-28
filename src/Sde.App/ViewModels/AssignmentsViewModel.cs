@@ -6,8 +6,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Sde.App.Maps;
 using Sde.App.Services;
+using Sde.App.ViewModels.Editor;
 using Sde.App.ViewModels.Sheets;
 using Sde.Core;
+using Sde.Core.Assessments;
 using Sde.Core.Field;
 using Sde.Core.Records;
 using Sde.Data;
@@ -85,6 +87,17 @@ public sealed partial class AssignmentRowViewModel : ObservableObject
 
 	public string Result => Stop.Latest?.AssessmentID == null ? "Not assessed yet" : Stop.Latest.DamageMessage ?? "Data Entry Incomplete";
 
+	/// <summary>The result's dot, as on Structures and Review (the rule lives in <see cref="Determinations"/>).</summary>
+	public ResultState State => Stop.Latest?.AssessmentID == null ? ResultState.Incomplete
+		: Determinations.Classify(Stop.Latest.DamageMessage, Stop.Latest.PercentDamage) switch
+		{
+			DeterminationClass.Substantial => ResultState.Substantial,
+			DeterminationClass.Close => ResultState.Close,
+			DeterminationClass.NotSubstantial => ResultState.NotSubstantial,
+			DeterminationClass.Undetermined => ResultState.Undetermined,
+			_ => ResultState.Incomplete,
+		};
+
 	public string Code => Stop.Assignment.ShortCode;
 
 	public string Due => Stop.Assignment.DueDate is DateTime d ? d.ToString("MMM d", CultureInfo.InvariantCulture) : "";
@@ -151,7 +164,7 @@ public sealed partial class AssignmentsViewModel : ViewModelBase
 	public ObservableCollection<AssignmentRowViewModel> Stops { get; } = new();
 
 	[ObservableProperty]
-	[NotifyPropertyChangedFor(nameof(HasTeam), nameof(TeamTitle), nameof(TeamDetail))]
+	[NotifyPropertyChangedFor(nameof(HasTeam), nameof(TeamTitle), nameof(TeamDetail), nameof(StatusText))]
 	[NotifyCanExecuteChangedFor(nameof(EditTeamCommand), nameof(RemoveTeamCommand), nameof(OrderRouteCommand), nameof(RouteSheetCommand), nameof(WorksheetsCommand), nameof(KeepOfflineCommand))]
 	public partial TeamRowViewModel SelectedTeam { get; set; }
 
@@ -168,6 +181,21 @@ public sealed partial class AssignmentsViewModel : ViewModelBase
 	public string TeamTitle => SelectedTeam?.Name;
 
 	public string TeamDetail => SelectedTeam == null ? null : SelectedTeam.Members + " · " + SelectedTeam.ProgressText;
+
+	/// <summary>The row selected in the route table (its context menu's Open and Directions act on it).</summary>
+	[ObservableProperty]
+	public partial AssignmentRowViewModel SelectedStop { get; set; }
+
+	/// <summary>How many structures on the route are checked (Remove from Team takes those off).</summary>
+	public int CheckedCount => Stops.Count(s => s.IsChecked);
+
+	public bool HasChecked => CheckedCount > 0;
+
+	public string CheckedText => CheckedCount == 1 ? "1 checked" : $"{CheckedCount:N0} checked";
+
+	/// <summary>The status bar under the route: "Team North · Inspector A, Inspector B · 3 assigned · 3 assessed · 1 done".</summary>
+	public string StatusText => SelectedTeam == null ? null
+		: string.Join(" · ", new[] { TeamTitle, TeamDetail, HasChecked ? CheckedText : null }.Where(s => s != null));
 
 	/// <summary>"Who inspects what, and in what order." with the event when one is chosen.</summary>
 	public string Subtitle => _app.Scope.IsAll
@@ -201,17 +229,40 @@ public sealed partial class AssignmentsViewModel : ViewModelBase
 
 	private void LoadStops()
 	{
+		foreach (AssignmentRowViewModel old in Stops)
+		{
+			old.PropertyChanged -= OnStopChanged;
+		}
 		Stops.Clear();
 		if (SelectedTeam != null)
 		{
 			ReferenceData reference = _app.Store.Reference;
 			foreach (FieldKitStop stop in FieldKit.Stops(_app.Store, SelectedTeam.Team.TeamID, EventId))
 			{
-				Stops.Add(new AssignmentRowViewModel(stop, FieldKit.MapsLink(stop.Property, reference), SetStatus));
+				AssignmentRowViewModel row = new AssignmentRowViewModel(stop, FieldKit.MapsLink(stop.Property, reference), SetStatus);
+				row.PropertyChanged += OnStopChanged;
+				Stops.Add(row);
 			}
 		}
 		OnPropertyChanged(nameof(HasStops));
 		OnPropertyChanged(nameof(HasNoStops));
+		OnCheckedChanged();
+	}
+
+	private void OnStopChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+	{
+		if (e.PropertyName == nameof(AssignmentRowViewModel.IsChecked))
+		{
+			OnCheckedChanged();
+		}
+	}
+
+	private void OnCheckedChanged()
+	{
+		OnPropertyChanged(nameof(CheckedCount));
+		OnPropertyChanged(nameof(HasChecked));
+		OnPropertyChanged(nameof(CheckedText));
+		OnPropertyChanged(nameof(StatusText));
 	}
 
 	private void SetStatus(AssignmentRowViewModel row, string status)
@@ -225,6 +276,7 @@ public sealed partial class AssignmentsViewModel : ViewModelBase
 			t.Update(progress.GetValueOrDefault(t.Team.TeamID));
 		}
 		OnPropertyChanged(nameof(TeamDetail));
+		OnPropertyChanged(nameof(StatusText));
 	}
 
 	[RelayCommand]

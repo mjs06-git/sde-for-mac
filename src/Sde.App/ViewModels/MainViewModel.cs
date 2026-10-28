@@ -59,9 +59,18 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		Review = new ReviewViewModel(app, this);
 		Compliance = new ComplianceViewModel(app, this);
 		Assignments = new AssignmentsViewModel(app, this);
-		SidebarGroups = BuildSidebar();
+		SidebarItems = BuildPages();
 		Events = new EventSwitcherViewModel { NewEventCommand = NewEventCommand, ManageEventsCommand = ManageEventsCommand };
 		Events.SelectionChanged += choice => _app.Scope.Set(_app.Store, choice.Id);
+		SourceSections = BuildSourceList();
+		Structures.PropertyChanged += (_, e) =>
+		{
+			if (e.PropertyName is nameof(StructuresViewModel.Filter) or nameof(StructuresViewModel.SubstantialCount) or nameof(StructuresViewModel.CloseCount)
+				or nameof(StructuresViewModel.BelowCount) or nameof(StructuresViewModel.IncompleteCount))
+			{
+				UpdateSidebar();
+			}
+		};
 		app.Scope.Changed += OnScopeChanged;
 		DatabaseSwitcher = new DatabaseSwitcherViewModel(app, this);
 		Palette = new CommandPaletteViewModel(app, this);
@@ -122,6 +131,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		}
 		ReloadOfficePages();
 		RefreshStatus();
+		UpdateSidebar();
 	}
 
 	/// <summary>Review, Compliance and Assignments catch up with the database while one of them is showing.</summary>
@@ -162,11 +172,32 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		}
 	}
 
-	/// <summary>The sidebar's pages, in order; View › ⌘1 to ⌘9 follow this order.</summary>
-	public IReadOnlyList<NavGroupViewModel> SidebarGroups { get; }
+	/// <summary>
+	/// Every page, in the View menu's order (⌘1 to ⌘8; Settings is ⌘,). The sidebar's source list shows some of them
+	/// (Library's All Structures, Workflow, Recently Deleted); the rest are reached from the menus and the toolbar.
+	/// </summary>
+	public IReadOnlyList<NavItemViewModel> SidebarItems { get; }
 
-	/// <summary>Every sidebar page in order (the first is ⌘1).</summary>
-	public IEnumerable<NavItemViewModel> SidebarItems => SidebarGroups.SelectMany(g => g.Items);
+	/// <summary>The sidebar's source list: Library (with its smart groups), Events, Workflow.</summary>
+	public IReadOnlyList<SourceSectionViewModel> SourceSections { get; }
+
+	/// <summary>Recently Deleted, at the foot of the sidebar.</summary>
+	public NavItemViewModel TrashItem => SidebarItems.Single(i => i.Page == Page.Trash);
+
+	private SourceRowViewModel _allStructures;
+	private readonly List<SourceRowViewModel> _smartGroups = new();
+	private readonly System.Collections.ObjectModel.ObservableCollection<object> _eventRows = new();
+
+	/// <summary>True while the sidebar shows (View › Hide Sidebar, ⌃⌘S).</summary>
+	[ObservableProperty]
+	public partial bool IsSidebarVisible { get; set; } = true;
+
+	[RelayCommand]
+	private void ToggleSidebar() => IsSidebarVisible = !IsSidebarVisible;
+
+	/// <summary>Under the window's title: the database, and the event when one is chosen.</summary>
+	public string WindowSubtitle => ActivePage == Page.Editor && Editor != null ? Editor.Subtitle
+		: Events?.Selected?.Id == null ? DatabaseName : $"{DatabaseName} · {Events.Label}";
 
 	/// <summary>The event switcher at the top of the sidebar.</summary>
 	public EventSwitcherViewModel Events { get; }
@@ -186,28 +217,69 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	/// <summary>Teams, their structures in route order, and the field kit.</summary>
 	public AssignmentsViewModel Assignments { get; }
 
-	private IReadOnlyList<NavGroupViewModel> BuildSidebar()
+	private IReadOnlyList<NavItemViewModel> BuildPages()
 	{
 		int n = 0;
-		NavItemViewModel Item(Page page, string title, string icon) => new NavItemViewModel(page, title, icon, ++n, p => Show(p));
+		NavItemViewModel Item(Page page, string title, string icon, bool numbered = true) => new NavItemViewModel(page, title, icon, numbered ? ++n : 0, p => Show(p));
 		return new[]
 		{
-			new NavGroupViewModel("WORK", new[]
-			{
-				Item(Page.Structures, "Structures", "Structures"),
-				Item(Page.Map, "Map", "Map"),
-				Item(Page.Dashboard, "Dashboard", "Dashboard"),
-				Item(Page.Review, "Review", "Review"),
-				Item(Page.Compliance, "Compliance", "Compliance"),
-				Item(Page.Assignments, "Assignments", "Assignments"),
-			}),
-			new NavGroupViewModel("DATA", new[] { Item(Page.ImportExport, "Import & export", "ImportExport") }),
-			new NavGroupViewModel("MANAGE", new[]
-			{
-				Item(Page.Settings, "Settings", "Settings"),
-				Item(Page.Trash, "Recently deleted", "Trash"),
-			}),
+			Item(Page.Structures, "Structures", "Structures"),
+			Item(Page.Map, "Map", "Map"),
+			Item(Page.Dashboard, "Summary", "Dashboard"),
+			Item(Page.Review, "Review", "Review"),
+			Item(Page.Compliance, "Compliance", "Compliance"),
+			Item(Page.Assignments, "Assignments", "Assignments"),
+			Item(Page.Trash, "Recently Deleted", "Trash"),
+			Item(Page.ImportExport, "Import & Export", "ImportExport"),
+			Item(Page.Settings, "Settings", "Settings", numbered: false),
 		};
+	}
+
+	private IReadOnlyList<SourceSectionViewModel> BuildSourceList()
+	{
+		_allStructures = new SourceRowViewModel("All Structures", "Structures", () => ShowLibrary(StructureFilter.All, EventChoice.All));
+		foreach ((string title, StructureFilter filter) in new[]
+		{
+			("Substantially Damaged", StructureFilter.Substantial), ("Near Threshold", StructureFilter.Close),
+			("Not Substantial", StructureFilter.Below), ("Incomplete", StructureFilter.Incomplete),
+		})
+		{
+			_smartGroups.Add(new SourceRowViewModel(title, "Filter", () => ShowLibrary(filter, null)) { Filter = filter });
+		}
+		RebuildEventRows();
+		Events.Events.CollectionChanged += (_, _) => RebuildEventRows();
+		NavItemViewModel Page_(Page page) => SidebarItems.Single(i => i.Page == page);
+		return new[]
+		{
+			new SourceSectionViewModel("Library", new(new object[] { _allStructures }.Concat(_smartGroups))),
+			new SourceSectionViewModel("Events", _eventRows),
+			new SourceSectionViewModel("Workflow", new(new object[] { Page_(Page.Review), Page_(Page.Compliance), Page_(Page.Assignments) })),
+		};
+	}
+
+	private void RebuildEventRows()
+	{
+		_eventRows.Clear();
+		foreach (EventChoice choice in Events.Events.Where(e => e.Id != null))
+		{
+			_eventRows.Add(new SourceRowViewModel(choice.Name, "Event", () => ShowLibrary(StructureFilter.All, choice)) { Event = choice });
+		}
+		UpdateSidebar();
+	}
+
+	/// <summary>A Library row or an event was chosen: the structure list, filtered to it (and scoped to the event).</summary>
+	private void ShowLibrary(StructureFilter filter, EventChoice scope)
+	{
+		if (scope != null)
+		{
+			Events.ChooseCommand.Execute(scope);
+		}
+		Structures.Filter = filter;
+		if (ActivePage != Page.Structures)
+		{
+			Show(Page.Structures);
+		}
+		UpdateSidebar();
 	}
 
 	/// <summary>The sidebar page a page belongs to (the editor belongs to Structures; import to Import &amp; export).</summary>
@@ -221,10 +293,39 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	private void UpdateSidebar()
 	{
 		Page active = ActivePage == Page.Editor ? _editorParent : SidebarPage(ActivePage);
-		foreach (NavItemViewModel item in SidebarItems)
+		foreach (NavItemViewModel item in SidebarItems ?? Array.Empty<NavItemViewModel>())
 		{
 			item.IsActive = item.Page == active;
 		}
+		if (_allStructures != null)
+		{
+			// The source list: the row for the structure list's filter and event, while the list (or one of its
+			// assessments, or its map or summary) is showing.
+			bool library = active is Page.Structures or Page.Map or Page.Dashboard;
+			Guid? scope = Events?.Selected?.Id;
+			_allStructures.IsActive = library && Structures.Filter == StructureFilter.All && scope == null;
+			_allStructures.Count = Structures.TotalCount;
+			foreach (SourceRowViewModel group in _smartGroups)
+			{
+				group.IsActive = library && Structures.Filter == group.Filter;
+				group.Count = group.Filter switch
+				{
+					StructureFilter.Substantial => Structures.SubstantialCount,
+					StructureFilter.Close => Structures.CloseCount,
+					StructureFilter.Below => Structures.BelowCount,
+					_ => Structures.IncompleteCount,
+				};
+			}
+			foreach (SourceRowViewModel row in _eventRows.OfType<SourceRowViewModel>())
+			{
+				row.IsActive = library && Structures.Filter == StructureFilter.All && scope == row.Event.Id;
+			}
+		}
+		OnPropertyChanged(nameof(WindowSubtitle));
+		OnPropertyChanged(nameof(IsLibraryPage));
+		OnPropertyChanged(nameof(IsListPage));
+		OnPropertyChanged(nameof(IsEditorPage));
+		OnPropertyChanged(nameof(LibraryView));
 		OnPropertyChanged(nameof(PageTitle));
 		OnPropertyChanged(nameof(PageParent));
 		OnPropertyChanged(nameof(HasPageParent));
@@ -254,13 +355,42 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		{
 			OnPropertyChanged(nameof(PageTitle));
 		}
+		else if (e.PropertyName == nameof(AssessmentEditorViewModel.Subtitle))
+		{
+			OnPropertyChanged(nameof(WindowSubtitle));
+		}
 	}
 
-	/// <summary>The title band's text: the page's name, or the open assessment's address.</summary>
+	/// <summary>An assessment is open: the toolbar shows its actions.</summary>
+	public bool IsEditorPage => ActivePage == Page.Editor && Editor != null;
+
+	/// <summary>The structure list itself: the toolbar's search field filters it.</summary>
+	public bool IsListPage => ActivePage == Page.Structures;
+
+	/// <summary>The structure list, its map or its summary: the toolbar shows the List, Map and Summary switch.</summary>
+	public bool IsLibraryPage => ActivePage is Page.Structures or Page.Map or Page.Dashboard;
+
+	/// <summary>The toolbar's view switch: 0 the list, 1 the map, 2 the summary.</summary>
+	public int LibraryView
+	{
+		get => ActivePage switch { Page.Map => 1, Page.Dashboard => 2, _ => 0 };
+		set
+		{
+			Page page = value switch { 1 => Page.Map, 2 => Page.Dashboard, _ => Page.Structures };
+			if (page != ActivePage && value >= 0)
+			{
+				Show(page);
+			}
+		}
+	}
+
+	/// <summary>The toolbar's title: the page's name, the smart group's, or the open assessment's address.</summary>
 	public string PageTitle => ActivePage switch
 	{
 		Page.Editor when Editor != null => Editor.Title,
-		Page.SourceImport => "Import inspections or parcels",
+		Page.SourceImport => "Import Inspections or Parcels",
+		Page.Structures when _smartGroups.FirstOrDefault(g => g.Filter == Structures.Filter && Structures.Filter != StructureFilter.All) is SourceRowViewModel g => g.Title,
+		Page.Structures when Events?.Selected?.Id != null => Events.Label,
 		_ => SidebarItems.FirstOrDefault(i => i.Page == SidebarPage(ActivePage))?.Title ?? "Structures",
 	};
 
@@ -271,7 +401,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	public string PageParent => ActivePage switch
 	{
 		Page.Editor when Editor != null => SidebarItems.FirstOrDefault(i => i.Page == _editorParent)?.Title ?? "Structures",
-		Page.SourceImport => "Import & export",
+		Page.SourceImport => "Import & Export",
 		_ => null,
 	};
 
@@ -369,6 +499,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	public bool IsAssignmentsPage => ActivePage == Page.Assignments;
 
 	[ObservableProperty]
+	[NotifyPropertyChangedFor(nameof(WindowSubtitle))]
 	public partial string DatabaseName { get; set; }
 
 	/// <summary>"3 structures · 4 assessments", for the database switcher's tooltip.</summary>

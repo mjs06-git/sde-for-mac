@@ -115,6 +115,14 @@ public sealed partial class DashboardViewModel : ViewModelBase
 
 	public bool HasDates => Dates != null;
 
+	/// <summary>"Sep 14, 2026" or "Sep 14 to Sep 16, 2026" when the damage dates were entered, else null (the Summary page's list).</summary>
+	[ObservableProperty]
+	public partial string DamageDates { get; private set; }
+
+	/// <summary>The inspection dates, as <see cref="DamageDates"/>.</summary>
+	[ObservableProperty]
+	public partial string InspectionDates { get; private set; }
+
 	[ObservableProperty]
 	[NotifyPropertyChangedFor(nameof(HasAnything))]
 	public partial int TotalStructures { get; set; }
@@ -205,6 +213,8 @@ public sealed partial class DashboardViewModel : ViewModelBase
 		BuildingValue = s.TotalBuildingValue.ToString("C0", Us);
 		RepairCost = s.TotalRepairCost.ToString("C0", Us);
 		Dates = DateText(s);
+		DamageDates = Range(s.DamageStart, s.DamageEnd);
+		InspectionDates = Range(s.InspectionStart, s.InspectionEnd);
 
 		Fill(ByResult, new[]
 		{
@@ -223,7 +233,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
 	private static string Label(DeterminationClass c) => c switch
 	{
 		DeterminationClass.Substantial => "Substantially damaged",
-		DeterminationClass.Close => "Close to the threshold",
+		DeterminationClass.Close => "Near threshold",
 		DeterminationClass.NotSubstantial => "Not substantially damaged",
 		DeterminationClass.Undetermined => "Undetermined",
 		_ => "Incomplete",

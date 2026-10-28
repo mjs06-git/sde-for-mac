@@ -6,7 +6,7 @@
              x:DataType="sh:OfflineAreaSheetViewModel">
   <StackPanel Spacing="12">
     <TextBlock Classes="secondary" TextWrapping="Wrap"
-               Text="Downloads the background map for this area onto this Mac, so the map still shows it with no connection. Do it on the Mac going to the field, while it is still online." />
+               Text="Keeps this area's map on this Mac, for use without a connection. Do it before going to the field." />
     <TextBlock Classes="medium" Text="{Binding AreaName}" TextWrapping="Wrap" />
     <StackPanel Classes="field">
       <TextBlock Classes="fieldLabel" Text="Background map" />
@@ -18,7 +18,7 @@
           </DataTemplate>
         </ComboBox.ItemTemplate>
       </ComboBox>
-      <TextBlock Classes="muted" TextWrapping="Wrap" Text="Only USGS maps can be kept: OpenStreetMap's rules don't allow downloading areas." />
+      <TextBlock Classes="muted" TextWrapping="Wrap" Text="Only USGS maps can be kept (OpenStreetMap doesn't allow it)." />
     </StackPanel>
     <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
     <StackPanel Spacing="4" IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
@@ -28,7 +28,7 @@
     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
       <Button Content="Stop" Command="{Binding StopCommand}" IsVisible="{Binding IsBusy}" MinWidth="90" HorizontalContentAlignment="Center" />
       <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding !IsBusy}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Classes="primary" Content="Keep offline" IsDefault="True" Command="{Binding KeepCommand}" IsEnabled="{Binding CanKeep}" MinWidth="90" HorizontalContentAlignment="Center" />
+      <Button Classes="primary" Content="Keep Offline" IsDefault="True" Command="{Binding KeepCommand}" IsEnabled="{Binding CanKeep}" MinWidth="90" HorizontalContentAlignment="Center" />
     </StackPanel>
   </StackPanel>
 </UserControl>

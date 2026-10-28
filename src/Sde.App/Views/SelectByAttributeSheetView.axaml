@@ -36,7 +36,7 @@
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
-      <Button Classes="link" Content="Add a condition" Command="{Binding AddConditionCommand}" HorizontalAlignment="Left" />
+      <Button Classes="link" Content="Add a Condition" Command="{Binding AddConditionCommand}" HorizontalAlignment="Left" />
     </StackPanel>
 
     <StackPanel Orientation="Horizontal" Spacing="16">

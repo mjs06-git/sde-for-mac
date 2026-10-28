@@ -113,8 +113,9 @@ public class MapPrintTests
 			int py = (int)Math.Round(image.PixelHeight / 2.0 - (ry - cy) / perPixel);
 			SKColor dot = bitmap.GetPixel(px, py);
 			Assert.True(Math.Abs(dot.Red - red.R) < 12 && Math.Abs(dot.Green - red.G) < 12 && Math.Abs(dot.Blue - red.B) < 12, dot.ToString());
-			// A corner is the background map's paper, not white.
-			SKColor corner = bitmap.GetPixel(image.PixelWidth / 2, 4);
+			// An edge is the background map's paper, not white (the bottom edge: with the map edge to edge, the top edge
+			// falls in one of the fake flood tiles' blue bands).
+			SKColor corner = bitmap.GetPixel(image.PixelWidth / 2, image.PixelHeight - 4);
 			Assert.True(Math.Abs(corner.Red - FakeTiles.Paper.Red) < 14 && Math.Abs(corner.Blue - FakeTiles.Paper.Blue) < 14, corner.ToString());
 		}
 	}

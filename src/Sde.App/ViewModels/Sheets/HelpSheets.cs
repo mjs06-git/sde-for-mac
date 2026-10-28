@@ -122,7 +122,10 @@ public sealed partial class HelpIndexSheetViewModel : ManualSheetViewModel
 	}
 }
 
-/// <summary>One page of the walkthrough.</summary>
+/// <summary>
+/// One page of the walkthrough: one or two short sentences. The sheet's title is the only heading on screen, so a
+/// page shows only its body; <see cref="Heading"/> names the page.
+/// </summary>
 public sealed record WalkthroughPage(string Heading, string Body);
 
 /// <summary>The walkthrough shown on first launch and from Help: a few short pages with Back and Next.</summary>
@@ -142,15 +145,15 @@ public sealed partial class WalkthroughSheetViewModel : SheetViewModel
 	public IReadOnlyList<WalkthroughPage> Pages { get; } = new[]
 	{
 		new WalkthroughPage("What SDE does",
-			"A building is substantially damaged when the cost to repair it is 50 percent or more of its value before the damage. SDE helps a community work that out for each building after a flood or other disaster. You enter what the inspector saw, SDE does the math with FEMA's own method, and you get reports and the files FEMA's tool reads."),
+			"SDE works out whether a building is substantially damaged: repairs costing 50 percent or more of its value before the damage. It uses FEMA's own method."),
 		new WalkthroughPage("The Structures list",
-			"Structures is home. Each row is one building, with its percent damaged once it has been assessed. Search with ⌘F, sort and filter the list, and press Return to open a building. Add a house with ⌘N or a non-residential building with ⇧⌘N. Check several rows to change one field on all of them."),
+			"Structures lists every building with its percent damaged. Press Return to open one, or ⌘N to add one."),
 		new WalkthroughPage("Eight steps and a live result",
-			"Each assessment has eight steps: Location and owner, Building, Inspection, Flood zone, Cost and depreciation, Damage by element, Result, and Photos and notes. The result updates as you type, and anything missing is listed under Needs attention. Your work saves itself."),
-		new WalkthroughPage("Import, export and FEMA packages",
-			"Import SDE Data (⌘I) brings in a folder exported from FEMA's SDE. Export All to SDE (⌘E) writes a folder that FEMA's tool can open. Import Inspections or Parcels reads spreadsheets from your permit or assessor system. A submission folder gathers the reports and the FEMA package in one place to send on."),
+			"Each assessment has eight steps, and the result updates as you type. Your work saves itself."),
+		new WalkthroughPage("Import and export",
+			"Import SDE Data (⌘I) and Export All to SDE (⌘E) exchange folders with FEMA's SDE."),
 		new WalkthroughPage("Where to find help",
-			"The ? beside a field says what to enter and which page of FEMA's SDE User Manual covers it. Help, then SDE Help, lists all of them and can be searched. Help, then Open Sample Database, gives you made-up buildings to practice on without touching your own data. You can see this walkthrough again from the Help menu."),
+			"The ? beside a field explains it. The Help menu has SDE Help, the sample database and this walkthrough."),
 	};
 
 	[ObservableProperty]

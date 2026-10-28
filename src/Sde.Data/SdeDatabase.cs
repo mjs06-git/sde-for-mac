@@ -94,9 +94,16 @@ public sealed class SdeDatabase
 	/// </summary>
 	public Guid DatabaseId => Read(c => ReadDatabaseId(c, null));
 
-	/// <summary>The default location: ~/Library/Application Support/SDE/sde.sqlite.</summary>
-	public static string DefaultPath =>
-		Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SDE", "sde.sqlite");
+	/// <summary>
+	/// The default location: ~/Library/Application Support/SDE/sde.sqlite. SDE_HOME, when set, names a folder to use
+	/// instead of ~/Library/Application Support/SDE; the tests set it, so they can never reach a person's own SDE folder
+	/// (settings, backups and the other files kept beside the database follow it).
+	/// </summary>
+	public static string DefaultPath => Path.Combine(
+		Environment.GetEnvironmentVariable("SDE_HOME") is string home && home.Length > 0
+			? home
+			: Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SDE"),
+		"sde.sqlite");
 
 	/// <summary>Opens an existing database, or creates and seeds a new one.</summary>
 	public static SdeDatabase OpenOrCreate(string path)

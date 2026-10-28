@@ -38,7 +38,7 @@ public class RestyleTests
 		ui.Pump();
 		Assert.Equal("Structures", ui.Main.PageParent);
 		Assert.Equal(ui.Main.Editor.Title, ui.Main.PageTitle);
-		Button crumb = ui.Window.GetVisualDescendants().OfType<Button>().Single(b => b.Classes.Contains("crumb"));
+		Button crumb = ui.Window.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "BackButton");
 		Assert.True(crumb.IsEffectivelyVisible);
 		Assert.Equal("Back to Structures", AutomationProperties.GetName(crumb));
 		// The editor no longer repeats the address under the title band.
@@ -51,7 +51,7 @@ public class RestyleTests
 		Assert.False(ui.Main.HasPageParent);
 
 		ui.Main.ShowCommand.Execute(Page.SourceImport);
-		Assert.Equal("Import & export", ui.Main.PageParent);
+		Assert.Equal("Import & Export", ui.Main.PageParent);
 		ui.Main.GoToParentCommand.Execute(null);
 		Assert.Equal(Page.ImportExport, ui.Main.ActivePage);
 	}
@@ -96,15 +96,12 @@ public class RestyleTests
 		ProgressBar bar = ui.Window.GetVisualDescendants().OfType<ProgressBar>().Single(p => p.Classes.Contains("threshold"));
 		Assert.Equal(75.0, bar.Value, 1);
 
+		// The sections are the sidebar's outline while the editor is open: numbered, with no icons
 		ListBox steps = ui.Window.GetVisualDescendants().OfType<ListBox>().Single(l => l.Classes.Contains("steps"));
-		Assert.Equal(editor.Sections.Select(s => s.Icon), steps.GetVisualDescendants().OfType<Icon>().Where(i => i.FindAncestorOfType<Border>()?.Classes.Contains("stepIcon") == true).Select(i => i.Kind));
-		Grid grid = ui.Window.GetVisualDescendants().OfType<Grid>().Single(g => g.Name == "EditorGrid");
-		Assert.Contains("narrow", grid.Classes);                       // 1100 wide: the step titles are hidden
-		Assert.All(steps.GetVisualDescendants().OfType<StackPanel>().Where(p => p.Classes.Contains("stepText")), p => Assert.False(p.IsEffectivelyVisible));
-
-		ui.Window.Width = 1440;
-		ui.Pump();
-		Assert.DoesNotContain("narrow", grid.Classes);
+		Assert.Contains(steps.GetVisualAncestors().OfType<Border>(), b => b.Name == "Sidebar");
+		Assert.Equal(Enumerable.Range(1, editor.Sections.Count).Select(n => n.ToString()),
+			steps.GetVisualDescendants().OfType<TextBlock>().Where(t => t.Classes.Contains("stepNumber")).Select(t => t.Text));
+		Assert.Empty(steps.GetVisualDescendants().OfType<Icon>());
 	}
 
 	/// <summary>A FieldGrid with the given width and children, laid out.</summary>

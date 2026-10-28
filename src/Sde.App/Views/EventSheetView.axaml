@@ -22,12 +22,12 @@
                           CustomDateFormatString="MMM d, yyyy" PlaceholderText="Still going" AutomationProperties.Name="Date the event ended" />
     </Grid>
     <TextBlock Classes="muted" TextWrapping="Wrap"
-               Text="A new assessment whose damage date falls between these dates is offered this event." />
+               Text="New assessments damaged in this range are offered this event." />
     <StackPanel Spacing="4">
       <TextBlock Classes="fieldLabel" Text="Datum offset (ft, optional)" />
       <TextBox Text="{Binding DatumOffset}" Width="140" HorizontalAlignment="Left" PlaceholderText="0.0" AutomationProperties.Name="Datum offset in feet" />
       <TextBlock Classes="muted" TextWrapping="Wrap"
-                 Text="Added to high-water marks that use a different vertical datum from the structures, for example to go from NAVD 88 marks to NGVD 29 elevations." />
+                 Text="Added to high-water marks in another vertical datum (for example NAVD 88 to NGVD 29)." />
     </StackPanel>
     <StackPanel Spacing="4">
       <TextBlock Classes="fieldLabel" Text="Notes" />
@@ -35,7 +35,7 @@
     </StackPanel>
     <TextBlock Classes="danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding HasError}" />
     <DockPanel>
-      <Button DockPanel.Dock="Left" Classes="link danger" Content="Delete event…" Command="{Binding DeleteCommand}" IsVisible="{Binding IsExisting}" />
+      <Button DockPanel.Dock="Left" Classes="link danger" Content="Delete Event…" Command="{Binding DeleteCommand}" IsVisible="{Binding IsExisting}" />
       <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
         <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
         <Button Classes="primary" Content="Save" IsDefault="True" Command="{Binding SaveCommand}" MinWidth="90" HorizontalContentAlignment="Center" />

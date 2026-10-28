@@ -167,7 +167,7 @@ public class EditorBehaviourTests
 		// The screenshot shows the Photos & notes step with the photo that is left.
 		e.SelectedSection = e.Sections.OfType<PhotosSectionViewModel>().Single();
 		ui.Pump();
-		Assert.Contains(ui.Window.GetVisualDescendants().OfType<Avalonia.Controls.TextBlock>(), t => t.IsEffectivelyVisible && t.Text == "Pictures of the damage and your own fields");
+		Assert.Contains(ui.Window.GetVisualDescendants().OfType<Avalonia.Controls.TextBlock>(), t => t.IsEffectivelyVisible && t.Text == "Photos & notes");
 		ui.Snapshot("17b-editor-photos-with-photo");
 	}
 

@@ -50,7 +50,7 @@
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
-        <TextBlock Classes="secondary" Text="Nothing matches. Try an address, an owner's name or a parcel number." IsVisible="{Binding IsEmpty}"
+        <TextBlock Classes="secondary" Text="No Matches" IsVisible="{Binding IsEmpty}"
                    Margin="16,20" TextWrapping="Wrap" />
       </Panel>
     </DockPanel>

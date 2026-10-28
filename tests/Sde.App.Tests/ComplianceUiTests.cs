@@ -242,19 +242,27 @@ public class ComplianceUiTests
 		Assert.Equal("12 days overdue", ranch.OverdueText);
 		Assert.Equal("Filed · $30,000", ranch.IccText);
 		Assert.Equal("Elevate", ranch.PathText);
+		Assert.Equal("2 cases · 1 overdue · 1 ICC claim in progress · $12,000 ICC paid", page.StatusText);
+		Assert.False(page.HasFilters);
 
 		page.ToggleOverdueCommand.Execute(null);
 		Assert.Equal("123 River Street", Assert.Single(page.Rows).Address);
+		Assert.Equal("Overdue", page.FilterSummary);
+		Assert.StartsWith("1 case · ", page.StatusText);
 		page.ToggleOverdueCommand.Execute(null);
 		Assert.Equal(2, page.Rows.Count);
 		page.PathFilter = ComplianceViewModel.PathChoices.ToList().IndexOf(CompliancePaths.Label(CompliancePaths.Relocate));
 		Assert.Equal("48 Mill Creek Street", Assert.Single(page.Rows).Address);
+		Assert.Equal("Relocate", page.FilterSummary);
 		page.ShowIccInProgressCommand.Execute(null);
 		Assert.Equal("123 River Street", Assert.Single(page.Rows).Address);
+		Assert.Equal("ICC in progress", page.FilterSummary);
 		page.ShowIccPaidCommand.Execute(null);
 		Assert.Equal("48 Mill Creek Street", Assert.Single(page.Rows).Address);
+		Assert.Equal("ICC paid", page.FilterSummary);
 		page.ClearFiltersCommand.Execute(null);
 		Assert.Equal(2, page.Rows.Count);
+		Assert.False(page.HasFilters);
 
 		// The dashboard counts them.
 		ui.Main.ShowCommand.Execute(Page.Dashboard);

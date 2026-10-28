@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Sde.App.Maps;
@@ -208,6 +209,38 @@ public partial class MapView : UserControl
 		}
 		bool cross = _vm.IsSetLocation || _vm.Sketch != MapSketch.None || _vm.IsEdit && _vm.EditTool == MapEditTool.AddPoint;
 		Surface.Cursor = new Avalonia.Input.Cursor(cross ? Avalonia.Input.StandardCursorType.Cross : Avalonia.Input.StandardCursorType.Arrow);
+	}
+
+	// ───────────── The toolbar's More menu: Background Map ─────────────
+
+	/// <summary>A basemap's row in More › Background Map: its name for VoiceOver, and a tick if it is the one shown.</summary>
+	private void OnBasemapItemPrepared(object sender, ContainerPreparedEventArgs e)
+	{
+		if (e.Container is MenuItem item && item.DataContext is Basemap basemap)
+		{
+			Avalonia.Automation.AutomationProperties.SetName(item, basemap.Name);
+			Tick(item);
+		}
+	}
+
+	/// <summary>The submenu opened: the tick follows the basemap (it can be changed in Settings too).</summary>
+	private void OnBasemapMenuOpened(object sender, RoutedEventArgs e)
+	{
+		foreach (MenuItem item in (sender as MenuItem)?.GetRealizedContainers().OfType<MenuItem>() ?? Enumerable.Empty<MenuItem>())
+		{
+			Tick(item);
+		}
+	}
+
+	private void Tick(MenuItem item) => item.Icon = _vm != null && ReferenceEquals(item.DataContext, _vm.Basemap) ? new Sde.App.Controls.Icon { Kind = "Check", Size = 12 } : null;
+
+	/// <summary>A basemap was chosen in More › Background Map.</summary>
+	private void OnBasemapChosen(object sender, RoutedEventArgs e)
+	{
+		if (_vm != null && e.Source is MenuItem { DataContext: Basemap basemap })
+		{
+			_vm.Basemap = basemap;
+		}
 	}
 
 	/// <summary>Shows exactly the area of a bookmark.</summary>

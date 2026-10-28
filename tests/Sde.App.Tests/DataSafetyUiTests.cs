@@ -33,7 +33,7 @@ public class DataSafetyUiTests
 		e.DeleteAssessmentCommand.Execute(null);
 		ui.Pump();
 		Assert.Empty(ui.Main.Structures.Rows);
-		Assert.Contains(ui.Dialogs.Notifications, n => n.StartsWith("Moved to Recently deleted"));
+		Assert.Contains(ui.Dialogs.Notifications, n => n.StartsWith("Moved to Recently Deleted"));
 
 		ui.Main.ShowCommand.Execute(ViewModels.Page.Trash);
 		ui.Pump();

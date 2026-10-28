@@ -8,16 +8,22 @@ export DOTNET_ROOT="${DOTNET_ROOT:-/opt/homebrew/opt/dotnet/libexec}" DOTNET_CLI
 VERSION=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' src/Sde.App/Sde.App.csproj)
 RIDS="${*:-osx-arm64 osx-x64}"
 
-# Icon: render once, then build the .icns iconset with sips + iconutil.
+# Icon: build the .icns iconset once with sips + iconutil, from the PNGs tools/icon/render.sh makes. The 16 and 32 px
+# slots take the hand-simplified art (tools/icon/icon-16.png, icon-32.png); 64 px and up are scaled from the full icon.
 ICNS="out/icon/SDE.icns"
 if [ ! -f "$ICNS" ]; then
-  mkdir -p out/icon/SDE.iconset
+  SET=out/icon/SDE.iconset
+  mkdir -p "$SET"
   SRC=src/Sde.App/Assets/icon-1024.png
-  for s in 16 32 128 256 512; do
-    sips -z $s $s "$SRC" --out "out/icon/SDE.iconset/icon_${s}x${s}.png" >/dev/null
-    d=$((s * 2)); sips -z $d $d "$SRC" --out "out/icon/SDE.iconset/icon_${s}x${s}@2x.png" >/dev/null
+  cp tools/icon/icon-16.png "$SET/icon_16x16.png"
+  cp tools/icon/icon-32.png "$SET/icon_16x16@2x.png"
+  cp tools/icon/icon-32.png "$SET/icon_32x32.png"
+  sips -z 64 64 "$SRC" --out "$SET/icon_32x32@2x.png" >/dev/null
+  for s in 128 256 512; do
+    sips -z $s $s "$SRC" --out "$SET/icon_${s}x${s}.png" >/dev/null
+    d=$((s * 2)); sips -z $d $d "$SRC" --out "$SET/icon_${s}x${s}@2x.png" >/dev/null
   done
-  iconutil -c icns out/icon/SDE.iconset -o "$ICNS"
+  iconutil -c icns "$SET" -o "$ICNS"
 fi
 
 for RID in $RIDS; do

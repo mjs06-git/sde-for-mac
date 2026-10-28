@@ -185,7 +185,7 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 	}
 
 	private IEnumerable<PaletteItem> Pages() =>
-		_main.SidebarGroups.SelectMany(g => g.Items).Select(n => new PaletteItem("Pages", n.Title, null, n.Icon, n.Shortcut, () => _main.ShowCommand.Execute(n.Page), "go page"));
+		_main.SidebarItems.Select(n => new PaletteItem("Pages", n.Title, null, n.Icon, n.Shortcut, () => _main.ShowCommand.Execute(n.Page), "go page"));
 
 	/// <summary>Each Settings category, found by its name ("phone form") or by "settings"; only once something is typed.</summary>
 	private IEnumerable<PaletteItem> SettingsPages() =>

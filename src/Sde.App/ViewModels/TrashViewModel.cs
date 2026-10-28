@@ -6,7 +6,7 @@ using Sde.Data;
 
 namespace Sde.App.ViewModels;
 
-/// <summary>One thing in Recently deleted.</summary>
+/// <summary>One thing in Recently Deleted.</summary>
 public sealed class DeletedItemViewModel(DeletedItemRecord item)
 {
 	public DeletedItemRecord Item { get; } = item;
@@ -38,9 +38,12 @@ public sealed class DeletedItemViewModel(DeletedItemRecord item)
 			return days == 1 ? "Removed for good tomorrow" : $"Removed for good in {days} days";
 		}
 	}
+
+	/// <summary>The row's second line: "Structure · Deleted Oct 28, 2026 11:38 AM by Reviewer A · Removed for good in 30 days".</summary>
+	public string Detail => $"{Kind} · {When} · {DaysLeft}";
 }
 
-/// <summary>Recently deleted: restore something, or remove it for good now.</summary>
+/// <summary>Recently Deleted: restore something, or remove it for good now.</summary>
 public sealed partial class TrashViewModel(AppServices app) : ViewModelBase
 {
 	public ObservableCollection<DeletedItemViewModel> Items { get; } = new();
@@ -48,6 +51,21 @@ public sealed partial class TrashViewModel(AppServices app) : ViewModelBase
 	public bool IsEmpty => Items.Count == 0;
 
 	public string Intro => $"Deleted structures, assessments and photos stay here for {SdeStore.KeepDays} days, then they are removed for good. They aren't in lists, reports or exports while they're here.";
+
+	/// <summary>The status bar: "2 items · Items are kept for 30 days".</summary>
+	public string StatusText
+	{
+		get
+		{
+			string keep = $"Items are kept for {SdeStore.KeepDays} days";
+			return Items.Count switch
+			{
+				0 => keep,
+				1 => "1 item · " + keep,
+				int n => $"{n} items · {keep}",
+			};
+		}
+	}
 
 	public void Reload()
 	{
@@ -57,6 +75,7 @@ public sealed partial class TrashViewModel(AppServices app) : ViewModelBase
 			Items.Add(new DeletedItemViewModel(r));
 		}
 		OnPropertyChanged(nameof(IsEmpty));
+		OnPropertyChanged(nameof(StatusText));
 	}
 
 	[RelayCommand]
@@ -76,7 +95,7 @@ public sealed partial class TrashViewModel(AppServices app) : ViewModelBase
 	[RelayCommand]
 	private async Task DeleteNow(DeletedItemViewModel item)
 	{
-		if (!await app.Dialogs.ConfirmAsync("Delete for good?", $"{item.Label}\n\nThis can't be undone.", "Delete", destructive: true))
+		if (!await app.Dialogs.ConfirmAsync($"Permanently Delete “{item.Label}”?", "This can't be undone.", "Delete", destructive: true))
 		{
 			return;
 		}
@@ -87,7 +106,7 @@ public sealed partial class TrashViewModel(AppServices app) : ViewModelBase
 	[RelayCommand]
 	private async Task EmptyAll()
 	{
-		if (IsEmpty || !await app.Dialogs.ConfirmAsync("Empty Recently deleted?", $"The {Items.Count} item{(Items.Count == 1 ? "" : "s")} here will be removed for good. This can't be undone.", "Empty", destructive: true))
+		if (IsEmpty || !await app.Dialogs.ConfirmAsync("Empty Recently Deleted?", $"{(Items.Count == 1 ? "1 item" : $"{Items.Count} items")} will be permanently deleted. This can't be undone.", "Empty", destructive: true))
 		{
 			return;
 		}

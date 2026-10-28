@@ -5,7 +5,7 @@ using Sde.App.ViewModels;
 
 namespace Sde.App.Views;
 
-/// <summary>The Compliance page: the cases with their filters, headline numbers and exports.</summary>
+/// <summary>The Compliance page: the cases edge to edge, their filters and exports in the toolbar, the counts in the status bar.</summary>
 public partial class ComplianceView : UserControl
 {
 	public ComplianceView() => InitializeComponent();

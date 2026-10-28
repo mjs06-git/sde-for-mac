@@ -179,6 +179,7 @@ public sealed partial class MapViewModel
 			OnPropertyChanged(nameof(StructureLegend));
 			OnPropertyChanged(nameof(HasStructureLegend));
 			OnPropertyChanged(nameof(StructureLegendTitle));
+			OnPropertyChanged(nameof(StructureLegendHeader));
 		}
 		RefreshTable();
 	}
@@ -256,6 +257,10 @@ public sealed partial class MapViewModel
 	/// <summary>"COLOURED BY STATUS".</summary>
 	public string StructureLegendTitle => ColoursByResult ? null
 		: "COLOURED BY " + (StructureFieldChoices.FirstOrDefault(f => f.Key == StructuresLayer.Style.Field)?.Label ?? StructuresLayer.Style.Field).ToUpperInvariant();
+
+	/// <summary>The legend's section header on the Map page, in sentence case: "Coloured by Status".</summary>
+	public string StructureLegendHeader => ColoursByResult ? null
+		: "Coloured by " + (StructureFieldChoices.FirstOrDefault(f => f.Key == StructuresLayer.Style.Field)?.Label ?? StructuresLayer.Style.Field);
 
 	/// <summary>The fields a layer can be styled, labelled or queried by.</summary>
 	public IReadOnlyList<MapFieldChoice> FieldChoices(MapLayerViewModel layer) => layer.IsStructures

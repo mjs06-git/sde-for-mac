@@ -78,6 +78,12 @@ public sealed partial class ReviewRowViewModel : ObservableObject
 
 	public bool HasFindings => FindingCount > 0;
 
+	/// <summary>Whether any open check is an error (the Checks column adds "1 error" in red).</summary>
+	public bool HasErrors => ErrorCount > 0;
+
+	/// <summary>"1 error", "2 errors".</summary>
+	public string ErrorText => ErrorCount == 1 ? "1 error" : $"{ErrorCount:N0} errors";
+
 	public string FindingText => FindingCount.ToString("N0", CultureInfo.GetCultureInfo("en-US"));
 
 	/// <summary>Red when one of the findings is an error, amber for warnings, grey for notes.</summary>
@@ -201,6 +207,20 @@ public sealed class QaGroupViewModel(QaRuleInfo rule, IReadOnlyList<QaFindingVie
 		QaSeverity.Warning => Tone.Warning,
 		_ => Tone.Info,
 	};
+
+	/// <summary>The icon before the check's title, by its severity (the same as its findings').</summary>
+	public string Icon => Rule.Severity switch
+	{
+		QaSeverity.Error => "ErrorCircle",
+		QaSeverity.Warning => "Warning",
+		_ => "Info",
+	};
+
+	public bool IsError => Rule.Severity == QaSeverity.Error;
+
+	public bool IsWarning => Rule.Severity == QaSeverity.Warning;
+
+	public bool IsNote => Rule.Severity == QaSeverity.Info;
 
 	/// <summary>"3 open, 1 set aside".</summary>
 	public string CountText
@@ -354,19 +374,17 @@ public sealed partial class ReviewViewModel : ViewModelBase
 	/// <summary>There are assessments, but the filters hide every one.</summary>
 	public bool NoRowsMatch => _all.Count > 0 && Rows.Count == 0;
 
-	public string QueueEmptyTitle => _app.Scope.IsAll ? "No assessments yet" : $"Nothing in {_app.Scope.Event.Label} yet";
+	public string QueueEmptyTitle => _app.Scope.IsAll ? "No Assessments to Review" : $"Nothing in {_app.Scope.Event.Label}";
 
-	public string QueueEmptyText => "Assessments appear here for review as soon as they are entered or imported.";
+	public string QueueEmptyText => null;
 
 	public bool HasGroups => Groups.Count > 0;
 
 	public bool ChecksEmpty => Groups.Count == 0;
 
-	public string ChecksEmptyTitle => _findings.Count == 0 ? "No problems found" : "Nothing matches";
+	public string ChecksEmptyTitle => _findings.Count == 0 ? "No Problems Found" : "No Matches";
 
-	public string ChecksEmptyText => _findings.Count == 0
-		? "The quality checks found nothing to look at in these assessments."
-		: "Show every check, or the ones set aside, to see more.";
+	public string ChecksEmptyText => _findings.Count == 0 ? null : "Show every check, or the ones set aside.";
 
 	public int CheckedCount => _all.Count(r => r.IsChecked);
 

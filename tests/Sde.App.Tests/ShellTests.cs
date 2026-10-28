@@ -44,10 +44,13 @@ public class ShellTests
 	}
 
 	[AvaloniaFact]
-	public void Sidebar_IsGrouped_WithCountsOnStructuresAndRecentlyDeleted()
+	public void Sidebar_IsASourceList_WithCountsOnStructuresAndRecentlyDeleted()
 	{
 		using UiSession ui = WithSamples();
-		Assert.Equal(new[] { "WORK", "DATA", "MANAGE" }, ui.Main.SidebarGroups.Select(g => g.Title));
+		Assert.Equal(new[] { "Library", "Events", "Workflow" }, ui.Main.SourceSections.Select(s => s.Title));
+		Assert.Equal(new[] { "All Structures", "Substantially Damaged", "Near Threshold", "Not Substantial", "Incomplete" },
+			ui.Main.SourceSections[0].Rows.OfType<SourceRowViewModel>().Select(r => r.Title));
+		Assert.Equal(new[] { "Review", "Compliance", "Assignments" }, ui.Main.SourceSections[2].Rows.OfType<NavItemViewModel>().Select(r => r.Title));
 		NavItemViewModel structures = ui.Main.SidebarItems.Single(i => i.Page == Page.Structures);
 		NavItemViewModel trash = ui.Main.SidebarItems.Single(i => i.Page == Page.Trash);
 		Assert.Equal(ui.Store.Counts().Properties, structures.Count);
@@ -63,7 +66,50 @@ public class ShellTests
 		Assert.Equal(1, trash.Count);
 		Assert.Equal(structures.Count, ui.Store.Counts().Properties);
 		Assert.True(trash.IsActive);
-		Assert.Equal("Recently deleted", ui.Main.PageTitle);
+		Assert.Equal("Recently Deleted", ui.Main.PageTitle);
+	}
+
+	/// <summary>A smart group filters the list (and the toolbar's title follows it); All Structures clears it.</summary>
+	[AvaloniaFact]
+	public void SmartGroups_FilterTheList_AndTheTitleFollows()
+	{
+		using UiSession ui = WithSamples();
+		List<SourceRowViewModel> library = ui.Main.SourceSections[0].Rows.OfType<SourceRowViewModel>().ToList();
+		Assert.True(library[0].IsActive);
+		SourceRowViewModel substantial = library.Single(r => r.Filter == StructureFilter.Substantial);
+		Assert.Equal(ui.Main.Structures.SubstantialCount, substantial.Count);
+
+		ui.Main.ShowCommand.Execute(Page.Review);
+		substantial.ShowCommand.Execute(null);
+		ui.Pump();
+		Assert.Equal(Page.Structures, ui.Main.ActivePage);
+		Assert.Equal(StructureFilter.Substantial, ui.Main.Structures.Filter);
+		Assert.True(substantial.IsActive);
+		Assert.False(library[0].IsActive);
+		Assert.Equal("Substantially Damaged", ui.Main.PageTitle);
+		Assert.All(ui.Main.Structures.Rows, r => Assert.Equal(ResultState.Substantial, r.State));
+
+		library[0].ShowCommand.Execute(null);
+		ui.Pump();
+		Assert.Equal(StructureFilter.All, ui.Main.Structures.Filter);
+		Assert.Equal("Structures", ui.Main.PageTitle);
+
+		// The toolbar's view switch: the map and the summary are views of the same list.
+		ui.Main.LibraryView = 1;
+		Assert.Equal(Page.Map, ui.Main.ActivePage);
+		ui.Main.LibraryView = 2;
+		Assert.Equal(Page.Dashboard, ui.Main.ActivePage);
+		Assert.True(library[0].IsActive);
+		ui.Main.LibraryView = 0;
+		Assert.Equal(Page.Structures, ui.Main.ActivePage);
+
+		// ⌃⌘S hides and shows the sidebar.
+		ui.Window.KeyPressQwerty(PhysicalKey.S, RawInputModifiers.Control | RawInputModifiers.Meta);
+		ui.Pump();
+		Assert.False(ui.Main.IsSidebarVisible);
+		ui.Snapshot("85-sidebar-hidden");
+		ui.Main.ToggleSidebarCommand.Execute(null);
+		Assert.True(ui.Main.IsSidebarVisible);
 	}
 
 	/// <summary>Every icon the shell and the editor's steps name is in Styles/Icons.axaml.</summary>
@@ -180,9 +226,17 @@ public class ShellTests
 		ui.Store.SaveEvent(new EventRecord { Name = "Spring storm", StartDate = new DateTime(2026, 4, 2) });
 		ui.Services.RaiseDataChanged();
 
-		OpenFlyoutInWindow(ui, "EventSwitcher");
+		// The events are rows of the sidebar; choosing one scopes the list to it and names it in the toolbar.
+		SourceRowViewModel row = ui.Main.SourceSections.Single(s => s.Title == "Events").Rows.OfType<SourceRowViewModel>().Single();
+		Assert.Equal("Spring storm", row.Title);
+		row.ShowCommand.Execute(null);
+		ui.Pump();
+		Assert.False(ui.Services.Scope.IsAll);
+		Assert.True(row.IsActive);
+		Assert.Equal("Spring storm", ui.Main.PageTitle);
+		Assert.EndsWith("· Spring storm", ui.Main.WindowSubtitle);
 		Assert.Empty(AccessibilityTests.Unnamed(ui.Window));
-		ui.Snapshot("84-event-switcher");
+		ui.Snapshot("84-event-in-sidebar");
 	}
 
 	[AvaloniaFact]
@@ -300,9 +354,9 @@ public class ShellTests
 			ui.Snapshot("82-toast" + suffix);
 			ui.Window.Toasts.Items.Clear();
 
-			OpenFlyoutInWindow(ui, "DatabaseButton");
+			OpenFlyoutInWindow(ui, "NewButton");
 			Assert.Empty(AccessibilityTests.Unnamed(ui.Window));
-			ui.Snapshot("83-database-switcher" + suffix);
+			ui.Snapshot("83-new-menu" + suffix);
 		}
 	}
 }

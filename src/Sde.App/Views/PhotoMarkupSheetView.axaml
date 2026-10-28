@@ -35,13 +35,13 @@
       </Panel>
     </Border>
     <TextBlock Classes="muted" TextWrapping="Wrap"
-               Text="The photo itself doesn't change: the thumbnail, the reports and the submission folder's marked-up copies draw the marks on, and FEMA's export keeps the original." />
+               Text="The original photo doesn't change; reports draw the marks on." />
 
     <TextBlock Classes="danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding HasError}" />
     <DockPanel>
       <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsEditable}" VerticalAlignment="Center">
         <Button Content="Undo" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Take back the last change" />
-        <Button Classes="link danger" Content="Clear all" Command="{Binding ClearAllCommand}" IsEnabled="{Binding HasMarks}" VerticalAlignment="Center"
+        <Button Classes="link danger" Content="Clear All" Command="{Binding ClearAllCommand}" IsEnabled="{Binding HasMarks}" VerticalAlignment="Center"
                 AutomationProperties.Name="Take every mark off the photo" />
         <TextBlock Classes="muted" Text="{Binding CountText}" VerticalAlignment="Center" Margin="4,0,0,0" />
       </StackPanel>

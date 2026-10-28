@@ -6,7 +6,7 @@
   <StackPanel Spacing="16">
     <TextBlock Classes="secondary" Text="{Binding Message}" TextWrapping="Wrap" />
     <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
-      <Button Classes="danger" Content="Don't save" Command="{Binding DiscardCommand}" MinWidth="90" HorizontalContentAlignment="Center"
+      <Button Classes="danger" Content="Don't Save" Command="{Binding DiscardCommand}" MinWidth="90" HorizontalContentAlignment="Center"
               AutomationProperties.Name="Don't save: throw the edits away" />
       <Button Grid.Column="2" Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center"
               AutomationProperties.Name="Cancel: keep editing" />

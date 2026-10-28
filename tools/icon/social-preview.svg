@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- GitHub's social preview (Settings › General › Social preview): rendered to docs/social-preview.png by tools/icon/render.sh. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1280" height="640" viewBox="0 0 1280 640">
+  <title>SDE for Mac</title>
+  <rect width="1280" height="640" fill="#F5F5F7" />
+  <image x="96" y="112" width="416" height="416" xlink:href="../../src/Sde.App/Assets/icon-1024.png" />
+  <text x="560" y="300" font-family=".AppleSystemUIFont, Helvetica Neue, sans-serif" font-size="80" font-weight="700" fill="#1D1D1F">SDE for Mac</text>
+  <text x="564" y="364" font-family=".AppleSystemUIFont, Helvetica Neue, sans-serif" font-size="32" fill="#5E5E62">FEMA's Substantial Damage Estimator,</text>
+  <text x="564" y="406" font-family=".AppleSystemUIFont, Helvetica Neue, sans-serif" font-size="32" fill="#5E5E62">as a native Mac app. Unofficial.</text>
+</svg>

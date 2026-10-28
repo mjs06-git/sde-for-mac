@@ -97,9 +97,10 @@ public partial class StructuresView : UserControl
 		}
 	}
 
+	/// <summary>⌘F: the toolbar's search field (it filters this list).</summary>
 	private void FocusSearch()
 	{
-		TextBox box = this.FindControl<TextBox>("SearchBox");
+		TextBox box = TopLevel.GetTopLevel(this)?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault(t => t.Name == "SearchBox");
 		box?.Focus();
 		box?.SelectAll();
 	}

@@ -52,6 +52,33 @@ public class StyleGuardTests
 	[Fact]
 	public void NoTypedChevronsOrEllipsisButtons() => AssertNone(Find(new Regex("[▾⋯]")), "typed ▾ or ⋯ (use DropDownButton or the More icon)");
 
+	// ───────────── The v3.0 anti-slop guard (docs/design/UNSLOP-CHECKLIST.md) ─────────────
+
+	/// <summary>Results show as a coloured dot and their name, not a tinted pill.</summary>
+	[Fact]
+	public void NoStatusPills() => AssertNone(Find(new Regex("Classes=\"[^\"]*\\bpill\\b[^\"]*\"")), "status pills (use a dot: StackPanel.result with Ellipse.dot)");
+
+	/// <summary>No big dashboard numbers: counts sit in the sidebar, status bars and small filter buttons.</summary>
+	[Fact]
+	public void NoKpiNumbers() => AssertNone(Find(new Regex("Classes=\"[^\"]*\\bkpi\\b[^\"]*\"")), "KPI numbers");
+
+	/// <summary>Labels are in title or sentence case, as on the Mac, never shouted in capitals.</summary>
+	[Fact]
+	public void NoAllCapsLabels()
+	{
+		HashSet<string> allowed = new() { "OH, KY", "DR-0000", "PIN", "SDE", "GIS", "ICC", "PDF", "CSV", "ID", "ZIP" };
+		List<string> found = Find(new Regex("\\b(Text|Content|Header)=\"([A-Z][A-Z0-9 &%/,.()'-]{2,})\"")).Where(f => !allowed.Any(a => f.EndsWith("\"" + a + "\""))).ToList();
+		AssertNone(found, "all-caps labels");
+	}
+
+	/// <summary>An empty state is a short grey line, not a paragraph.</summary>
+	[Fact]
+	public void EmptyStatesAreShort() => AssertNone(Find(new Regex("<c:EmptyState[^>]*\\bText=\"[^\"{]{61,}\"")), "empty states with a paragraph (60 characters at most)");
+
+	/// <summary>No paragraphs of explanation in the window: the user guide and the field help hold those.</summary>
+	[Fact]
+	public void NoParagraphs() => AssertNone(Find(new Regex("\\bText=\"[^\"{]{201,}\"")), "paragraphs over 200 characters");
+
 	/// <summary>The guard itself: each rule catches what it should and lets tokens through.</summary>
 	[Theory]
 	[InlineData("<TextBlock FontSize=\"12\" />", true)]

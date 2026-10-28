@@ -1,59 +1,48 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Sde.App.ViewModels"
+             xmlns:v="using:Sde.App.Views"
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.TrashView"
              x:DataType="vm:TrashViewModel">
-  <DockPanel Margin="{StaticResource PagePadding}">
-    <!-- The title band says "Recently deleted"; the header says how long things stay -->
-    <c:PageHeader DockPanel.Dock="Top" Subtitle="{Binding Intro}">
-      <Button Classes="danger" Command="{Binding EmptyAllCommand}" IsEnabled="{Binding !IsEmpty}" AutomationProperties.Name="Empty Recently deleted">
-        <StackPanel Orientation="Horizontal" Spacing="6">
-          <c:Icon Kind="Trash" Size="14" />
-          <TextBlock Text="Empty Recently deleted…" />
-        </StackPanel>
-      </Button>
-    </c:PageHeader>
-    <Border Classes="card flush">
-      <Grid>
-        <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !IsEmpty}">
-          <ItemsControl ItemsSource="{Binding Items}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:DeletedItemViewModel">
-                <Border Classes="listRow">
-                  <Grid ColumnDefinitions="Auto,*,Auto">
-                    <Border Classes="rowIcon">
-                      <c:Icon Kind="{Binding Icon}" Size="16" />
-                    </Border>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0" Spacing="1">
-                      <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Classes="medium" Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                        <c:Badge Text="{Binding Kind}" Tone="Neutral" VerticalAlignment="Center" />
-                      </StackPanel>
-                      <TextBlock Classes="muted" TextTrimming="CharacterEllipsis">
-                        <Run Text="{Binding When}" /><Run Text=" · " /><Run Text="{Binding DaysLeft}" />
-                      </TextBlock>
-                    </StackPanel>
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                      <Button Command="{Binding $parent[UserControl].((vm:TrashViewModel)DataContext).RestoreCommand}" CommandParameter="{Binding}"
-                              AutomationProperties.Name="{Binding Label, StringFormat='Restore {0}'}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                          <c:Icon Kind="Restore" Size="14" />
-                          <TextBlock Text="Restore" />
-                        </StackPanel>
-                      </Button>
-                      <Button Classes="danger" Content="Delete now…" Command="{Binding $parent[UserControl].((vm:TrashViewModel)DataContext).DeleteNowCommand}" CommandParameter="{Binding}"
-                              AutomationProperties.Name="{Binding Label, StringFormat='Delete {0} for good'}" />
-                    </StackPanel>
-                  </Grid>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </ScrollViewer>
-        <c:EmptyState IsVisible="{Binding IsEmpty}" Icon="Trash" Title="Nothing here"
-                      Text="What you delete appears here for 30 days, so you can bring it back." />
-      </Grid>
+  <!-- In the window's toolbar: empty it (asks first) -->
+  <v:PageChrome.Toolbar>
+    <StackPanel Classes="pageToolbar">
+      <Button Content="Empty Recently Deleted…" Command="{Binding EmptyAllCommand}" IsEnabled="{Binding !IsEmpty}"
+              ToolTip.Tip="Permanently delete everything here" AutomationProperties.Name="Empty Recently Deleted" />
+    </StackPanel>
+  </v:PageChrome.Toolbar>
+
+  <!-- The deleted items edge to edge; the count and the 30-day rule in the status bar under them -->
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="statusBar">
+      <TextBlock Text="{Binding StatusText}" HorizontalAlignment="Center" ToolTip.Tip="{Binding Intro}" />
     </Border>
+    <Grid>
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !IsEmpty}">
+        <ItemsControl ItemsSource="{Binding Items}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:DeletedItemViewModel">
+              <Border Classes="listRow" Padding="16,7">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                  <c:Icon Classes="secondary" Kind="{Binding Icon}" Size="16" VerticalAlignment="Center" ToolTip.Tip="{Binding Kind}" />
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                    <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="muted" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Detail}" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Button Content="Restore" Command="{Binding $parent[UserControl].((vm:TrashViewModel)DataContext).RestoreCommand}" CommandParameter="{Binding}"
+                            AutomationProperties.Name="{Binding Label, StringFormat='Restore {0}'}" />
+                    <Button Content="Delete Now…" Command="{Binding $parent[UserControl].((vm:TrashViewModel)DataContext).DeleteNowCommand}" CommandParameter="{Binding}"
+                            AutomationProperties.Name="{Binding Label, StringFormat='Permanently delete {0}'}" />
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+      <c:EmptyState IsVisible="{Binding IsEmpty}" Title="No Deleted Items" />
+    </Grid>
   </DockPanel>
 </UserControl>

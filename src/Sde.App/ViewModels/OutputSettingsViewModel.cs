@@ -105,7 +105,7 @@ public sealed partial class OutputSettingsViewModel : ObservableObject
 	public bool HasTemplates => Templates.Count > 0;
 
 	public string TemplatesText => Templates.Count == 0
-		? "There are no templates yet. Create the starter templates, then edit them in Word or Pages."
+		? "No Templates"
 		: $"{Templates.Count} template{(Templates.Count == 1 ? "" : "s")}: {string.Join(", ", Templates)}";
 
 	private void LoadTemplates()

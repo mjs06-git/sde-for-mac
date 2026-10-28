@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Sde.App.Services;
 
 namespace Sde.App.Tests;
 
@@ -77,16 +78,47 @@ public class ContrastTests
 	}
 
 	[AvaloniaFact]
-	public void TheThemesDiffer_AndTheAccentIsTheBrandBlue()
+	public void TheThemesDiffer_AndTheAccentFallsBackToTheMacBlue()
 	{
 		Assert.NotEqual(ColorOf("BgSurface", ThemeVariant.Light), ColorOf("BgSurface", ThemeVariant.Dark));
-		Assert.Equal(Color.Parse("#1E5AA8"), ColorOf("Accent", ThemeVariant.Light));
-		Assert.Equal(Color.Parse("#1E5AA8"), ColorOf("AccentFill", ThemeVariant.Light));
-		Assert.True(Application.Current!.TryGetResource("BrandAccentColor", null, out object brand));
-		Assert.Equal(Color.Parse("#1E5AA8"), (Color)brand);
-		// Fluent's own accent (check boxes, sliders, switches) is the brand blue, not the Mac's accent colour.
+		Assert.Equal(SystemAccent.Fallback, ColorOf("AccentFill", ThemeVariant.Light));
+		Assert.True(Application.Current!.TryGetResource("AccentFallbackColor", null, out object fallback));
+		Assert.Equal(SystemAccent.Fallback, (Color)fallback);
+		// Fluent's own accent (check boxes, sliders, switches) starts from the same colour.
 		Assert.True(Application.Current.TryGetResource("SystemAccentColor", ThemeVariant.Light, out object fluent));
-		Assert.Equal(Color.Parse("#1E5AA8"), (Color)fluent);
+		Assert.Equal(SystemAccent.Fallback, (Color)fluent);
+	}
+
+	/// <summary>Whatever accent the Mac is set to, the colours derived from it keep text at 4.5:1.</summary>
+	[Theory]
+	[InlineData("#007AFF")] // blue (and multicolour)
+	[InlineData("#A550A7")] // purple
+	[InlineData("#F74F9E")] // pink
+	[InlineData("#FF5257")] // red
+	[InlineData("#F7821B")] // orange
+	[InlineData("#FFC600")] // yellow
+	[InlineData("#62BA46")] // green
+	[InlineData("#8C8C8C")] // graphite
+	public void EveryMacAccent_DerivesReadableColours(string accent)
+	{
+		List<string> failures = new();
+		foreach ((ThemeVariant theme, Dictionary<string, Color> c) in SystemAccent.Derive(Color.Parse(accent)))
+		{
+			Color sidebar = Color.Parse(theme == ThemeVariant.Light ? "#EBEBEA" : "#2B2B2D");
+			Color surface = Color.Parse(theme == ThemeVariant.Light ? "#FFFFFF" : "#252527");
+			void Check(string what, Color a, Color b)
+			{
+				if (Ratio(a, b) < 4.5)
+				{
+					failures.Add($"{accent} {theme}: {what} is {Ratio(a, b):0.00}:1");
+				}
+			}
+			Check("white on AccentFill", Colors.White, c["AccentFill"]);
+			Check("Accent on the sidebar", c["Accent"], sidebar);
+			Check("Accent on the surface", c["Accent"], surface);
+			Check("Accent on AccentSoft", c["Accent"], c["AccentSoft"]);
+		}
+		Assert.True(failures.Count == 0, string.Join("\n", failures));
 	}
 
 	[Fact]

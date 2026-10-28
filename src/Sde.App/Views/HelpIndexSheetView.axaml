@@ -6,7 +6,7 @@
              x:DataType="sh:HelpIndexSheetViewModel">
   <StackPanel Spacing="10">
     <TextBlock Classes="secondary" TextWrapping="Wrap"
-               Text="What to enter in each field, with the page of FEMA's SDE User Manual that covers it. The same help opens from the ? beside a field." />
+               Text="What to enter in each field, with its page in FEMA's SDE manual." />
     <TextBox Text="{Binding Search}" PlaceholderText="Search the help" AutomationProperties.Name="Search the help" />
     <TextBlock Classes="muted" Text="{Binding CountText}" />
     <Grid ColumnDefinitions="260,*" ColumnSpacing="16">
@@ -31,12 +31,12 @@
     <TextBlock Classes="secondary" Text="{Binding MissingMessage}" TextWrapping="Wrap" IsVisible="{Binding ManualMissing}" />
     <DockPanel>
       <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-        <Button Classes="link" Content="Open the full manual" Command="{Binding OpenManualCommand}" IsVisible="{Binding ManualAvailable}" />
-        <Button Classes="link" Content="Open FEMA's SDE page" Command="{Binding OpenFemaPageCommand}" IsVisible="{Binding ManualMissing}" />
+        <Button Classes="link" Content="Open the Full Manual" Command="{Binding OpenManualCommand}" IsVisible="{Binding ManualAvailable}" />
+        <Button Classes="link" Content="Open FEMA's SDE Page" Command="{Binding OpenFemaPageCommand}" IsVisible="{Binding ManualMissing}" />
       </StackPanel>
       <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
         <Button Content="Done" Command="{Binding CancelCommand}" IsDefault="True" MinWidth="90" HorizontalContentAlignment="Center" />
-        <Button Classes="primary" Content="Open the manual at this page" Command="{Binding OpenAtPageCommand}" IsVisible="{Binding ManualAvailable}" IsEnabled="{Binding HasSelection}" />
+        <Button Classes="primary" Content="Open the Manual at This Page" Command="{Binding OpenAtPageCommand}" IsVisible="{Binding ManualAvailable}" IsEnabled="{Binding HasSelection}" />
       </StackPanel>
     </DockPanel>
   </StackPanel>

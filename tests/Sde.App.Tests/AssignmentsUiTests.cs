@@ -66,6 +66,7 @@ public class AssignmentsUiTests
 		first.StatusIndex = AssignmentStatuses.All.ToList().IndexOf(AssignmentStatuses.Done);
 		Assert.Equal(AssignmentStatuses.Done, ui.Store.GetAssignment(first.Stop.Assignment.AssignmentID).Status);
 		Assert.Contains("1 done", page.SelectedTeam.ProgressText);
+		Assert.Equal("Team North · Inspector A, Inspector B · 3 assigned · 3 assessed · 1 done", page.StatusText);
 		Assert.Empty(AccessibilityTests.Unnamed(ui.Window));
 		ui.Snapshot("115-assignments");
 
@@ -91,9 +92,13 @@ public class AssignmentsUiTests
 		Assert.Contains(first.MapsLink, ui.Dialogs.Opened);
 
 		// Take one off the team.
+		Assert.False(page.HasChecked);
 		page.Stops[2].IsChecked = true;
+		Assert.True(page.HasChecked);
+		Assert.EndsWith(" · 1 checked", page.StatusText);
 		await page.UnassignCommand.ExecuteAsync(null);   // the test dialogs say yes
 		Assert.Equal(2, page.Stops.Count);
 		Assert.Equal("Took 1 structure off the team.", page.Message);
+		Assert.False(page.HasChecked);
 	}
 }
