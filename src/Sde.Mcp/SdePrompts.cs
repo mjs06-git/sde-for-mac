@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Sde.Core.Assessments;
@@ -10,6 +11,12 @@ namespace Sde.Mcp;
 /// Prompts an assistant offers the person (in Claude Desktop, under the attachment menu; in Claude Code, as slash
 /// commands): short, factual instructions that steer the assistant to the right tools. They read the database only to
 /// name what was chosen, and they never ask for anything to be changed.
+/// <para>
+/// A prompt's message reaches the assistant as the person's own words, so it names what was chosen by ID only: an
+/// event's name or a street is text anyone (or an assistant, through create_event) could have typed, and text planted
+/// there must never speak with the person's voice. The tools return those names as data; the prompt's description,
+/// which the person sees, carries them on one shortened line.
+/// </para>
 /// </summary>
 [McpServerPromptType]
 public sealed class SdePrompts(SdeMcpContext sde)
@@ -23,7 +30,7 @@ public sealed class SdePrompts(SdeMcpContext sde)
 	{
 		sde.RequireDatabase();
 		EventRecord e = Lookups.OptionalEvent(sde.Reader, @event);
-		string what = e == null ? "every structure in the SDE database" : $"the event {e.Label} (event ID {e.EventID})";
+		string what = e == null ? "every structure in the SDE database" : $"the event with ID {e.EventID} (event_summary gives its name and details)";
 		string arg = e == null ? "" : $" with event = \"{e.EventID}\"";
 		string text = string.Join("\n", new[]
 		{
@@ -38,7 +45,7 @@ public sealed class SdePrompts(SdeMcpContext sde)
 			"Use only numbers the tools return. If something isn't recorded, say so instead of estimating it.",
 			DataNotInstructions,
 		});
-		return Result(e == null ? "Briefing on the whole database" : "Briefing on " + e.Label, text);
+		return Result(e == null ? "Briefing on the whole database" : "Briefing on " + OneLine(e.Label), text);
 	}
 
 	[McpServerPrompt(Name = "qa_review", Title = "Review quality findings")]
@@ -48,7 +55,7 @@ public sealed class SdePrompts(SdeMcpContext sde)
 	{
 		sde.RequireDatabase();
 		EventRecord e = Lookups.OptionalEvent(sde.Reader, @event);
-		string what = e == null ? "the whole SDE database" : $"the event {e.Label} (event ID {e.EventID})";
+		string what = e == null ? "the whole SDE database" : $"the event with ID {e.EventID}";
 		string arg = e == null ? "" : $" with event = \"{e.EventID}\"";
 		List<string> lines = new List<string>
 		{
@@ -66,7 +73,7 @@ public sealed class SdePrompts(SdeMcpContext sde)
 			lines.Add("If I ask, you can leave a note for the reviewer on an assessment with add_review_comment.");
 		}
 		lines.Add(DataNotInstructions);
-		return Result("Quality review of " + (e?.Label ?? "the whole database"), string.Join("\n", lines));
+		return Result("Quality review of " + (e == null ? "the whole database" : OneLine(e.Label)), string.Join("\n", lines));
 	}
 
 	[McpServerPrompt(Name = "owner_letter_draft", Title = "Draft a letter to the owner")]
@@ -79,7 +86,7 @@ public sealed class SdePrompts(SdeMcpContext sde)
 		string address = Describe.Address(file.Property, sde.Reader.Reference);
 		string text = string.Join("\n", new[]
 		{
-			$"Draft a letter to the owner of the structure at {address} (assessment ID {id}) explaining SDE's substantial damage result.",
+			$"Draft a letter to the owner of the structure in assessment ID {id} explaining SDE's substantial damage result.",
 			"",
 			$"1. Call get_assessment and explain_result with assessmentId = \"{id}\".",
 			"2. Use only names, addresses, dates and numbers those tools return. Never invent or estimate a value: where something is missing, write a placeholder in square brackets, such as [permit office phone number].",
@@ -89,7 +96,15 @@ public sealed class SdePrompts(SdeMcpContext sde)
 			"This is a draft for staff to check. It isn't sent, and SDE doesn't save it; SDE's official letters come from its Letters page.",
 			DataNotInstructions,
 		});
-		return Result("Draft letter for " + address, text);
+		return Result("Draft letter for " + OneLine(address), text);
+	}
+
+	/// <summary>Text from the database for a prompt's description: one line, without invisible characters, shortened.</summary>
+	internal static string OneLine(string text)
+	{
+		string clean = new string((text ?? "").Select(c => char.IsControl(c)
+			|| char.GetUnicodeCategory(c) is UnicodeCategory.Format or UnicodeCategory.LineSeparator or UnicodeCategory.ParagraphSeparator ? ' ' : c).ToArray());
+		return Describe.Shorten(string.Join(' ', clean.Split(' ', StringSplitOptions.RemoveEmptyEntries)), 80);
 	}
 
 	private static GetPromptResult Result(string description, string text) => new GetPromptResult

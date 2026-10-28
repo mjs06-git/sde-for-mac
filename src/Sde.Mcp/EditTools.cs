@@ -5,6 +5,7 @@ using ModelContextProtocol;
 using ModelContextProtocol.Server;
 using Sde.Core;
 using Sde.Core.Assessments;
+using Sde.Core.Records;
 using Sde.Data;
 
 namespace Sde.Mcp;
@@ -46,6 +47,7 @@ public sealed partial class EditTools(SdeMcpContext sde, ILogger<EditTools> log)
 
 		// Check every value on a copy first, so a refused value changes nothing and takes no backup.
 		List<FieldInputChange> resolved = Resolve(check, changes, store);
+		RefuseSharedStructureChange(store, id, check.Property);
 		sde.EnsureBackup();
 		SaveContext ctx = Context(server);
 		AssessmentFile saved;
@@ -174,6 +176,33 @@ public sealed partial class EditTools(SdeMcpContext sde, ILogger<EditTools> log)
 			throw CheckedOut(new AssessmentCheckedOutException(id, checkOut));
 		}
 		return status;
+	}
+
+	/// <summary>
+	/// A tool error when the changes (already applied to <paramref name="changed"/>, a copy) reach the structure's own
+	/// fields (address, owner, flood zone, elevations…) while another assessment of the structure is Final or Letter sent,
+	/// or checked out to another Mac. Those fields belong to every assessment of the structure, so changing them through
+	/// a Draft would change a Final one too, or be replaced when the checked-out one comes back.
+	/// </summary>
+	private static void RefuseSharedStructureChange(SdeStore store, Guid assessmentId, PropertyRecord changed)
+	{
+		PropertyRecord stored = store.GetProperty(changed.PropertyID);
+		if (stored == null || AssessmentDiff.CompareProperty(stored, changed).Count == 0)
+		{
+			return;
+		}
+		foreach (AssessmentRecord other in store.GetAssessmentsForProperty(changed.PropertyID).Where(a => a.AssessmentID != assessmentId))
+		{
+			AssessmentStatusRecord status = store.GetStatus(other.AssessmentID);
+			if (status.IsLocked)
+			{
+				throw new McpException($"The structure's own fields (such as its address, owner, flood zone and elevations) belong to every assessment of it, and its assessment {other.AssessmentID} is {AssessmentStatuses.Label(status.Value)}, so SDE won't let an AI assistant change them. Nothing was changed. This assessment's own fields can still be changed; a person can change the structure's fields in SDE.");
+			}
+			if (store.GetCheckOut(other.AssessmentID) is CheckOutRecord checkOut)
+			{
+				throw new McpException($"{new AssessmentCheckedOutException(other.AssessmentID, checkOut).Message} The structure's own fields belong to every assessment of it, and checking that one back in would replace them, so nothing was changed.");
+			}
+		}
 	}
 
 	private static McpException CheckedOut(AssessmentCheckedOutException ex) => new McpException(ex.Message + " Nothing was changed.");

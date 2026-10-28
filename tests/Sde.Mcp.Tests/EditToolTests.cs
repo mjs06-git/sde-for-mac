@@ -168,6 +168,39 @@ public sealed class EditToolTests
 	}
 
 	[Fact]
+	public async Task Structure_fields_shared_with_a_final_or_checked_out_assessment_are_refused()
+	{
+		await using McpSession s = await McpSession.StartAsync(allowEdits: true);
+		// A structure assessed twice: the first assessment is Final, the second a Draft.
+		AssessmentFile ranch = SampleCases.RanchFlood(s.Store);
+		AssessmentFile second = s.Store.CreateAssessment(ranch.Property.PropertyID, applyDefaults: false);
+		s.Store.SetStatus(ranch.Id(), AssessmentStatus.Final);
+		string draft = second.Id().ToString();
+
+		// The structure's fields belong to the Final assessment too, so changing them through the Draft is refused.
+		string refused = await s.CallErrorAsync("update_fields", Changes(draft, ("Property.OwnerLastName", "Someone Else")));
+		Assert.Contains("Final", refused);
+		Assert.Contains(ranch.Id().ToString(), refused);
+		Assert.Contains("Nothing was changed", refused);
+		Assert.Contains("Final", await s.CallErrorAsync("update_fields", Changes(draft, ("Assessment.InspectorName", "B"), ("Property.FirstFloorElevation", "99"))));
+		Assert.Equal("Example", s.Store.GetProperty(ranch.Property.PropertyID).OwnerLastName);
+		Assert.NotEqual("B", s.Store.LoadAssessment(second.Id()).Assessment.InspectorName);
+		Assert.Equal(0, BackupsBeforeAiEdits(s.Store));
+
+		// The Draft's own fields can still be changed.
+		JsonElement own = await s.CallOkAsync("update_fields", Changes(draft, ("Assessment.InspectorName", "B")));
+		Assert.Single(own.List("changed"));
+		Assert.Equal("B", s.Store.LoadAssessment(second.Id()).Assessment.InspectorName);
+
+		// The same when the other assessment is checked out to another Mac: checking it back in would replace them.
+		AssessmentFile other = TestData.Structure(s.Store, "9");
+		AssessmentFile otherSecond = s.Store.CreateAssessment(other.Property.PropertyID, applyDefaults: false);
+		WorkPackages.CheckOut(s.Store, new[] { other.Id() }, Path.Combine(s.Db.Folder, "out" + WorkPackages.Extension), "Team 1");
+		Assert.Contains("checked out to Team 1", await s.CallErrorAsync("update_fields", Changes(otherSecond.Id().ToString(), ("Property.City", "Elsewhere"))));
+		Assert.Equal("Testville", s.Store.GetProperty(other.Property.PropertyID).City);
+	}
+
+	[Fact]
 	public async Task An_assessment_checked_out_to_another_mac_is_refused_without_a_backup()
 	{
 		await using McpSession s = await McpSession.StartAsync(allowEdits: true);
