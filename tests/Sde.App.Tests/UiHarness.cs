@@ -24,7 +24,7 @@ public static class TestAppBuilder
 {
 	public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
 		.UseSkia()
-		.WithInterFont()
+		.WithMacFonts()
 		.UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
 		.AfterSetup(_ => Logger.Sink = BindingErrors.Instance);
 }

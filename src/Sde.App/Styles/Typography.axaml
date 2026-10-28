@@ -2,8 +2,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <!--
     Text classes. Views set sizes and weights only through these (or the FontSize* tokens), never with numbers.
-      Roles:   h1 (22 semibold, page titles), h2 (17 semibold, step and section titles), h3 (13 semibold, card titles),
-               title (15 semibold), kpi (22 semibold, tabular), display (28 semibold, tabular), eyebrow (11 caps label),
+      Roles:   h1 (22 bold, page titles), h2 (17 bold, step and section titles), h3 (13 semibold, group titles),
+               title (15 semibold), kpi (22 semibold, tabular), display (26 semibold, tabular), eyebrow (11 semibold label),
                secondary (13, TextSecondary), muted (12, TextTertiary), caption (11, TextTertiary)
       Sizes:   xs 11, sm 12, md 13, lg 15, xl 17, xxl 22
       Weights: medium, semibold, bold
@@ -14,13 +14,12 @@
   <!-- Roles -->
   <Style Selector="TextBlock.h1">
     <Setter Property="FontSize" Value="{StaticResource FontSizeLargeTitle}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="LetterSpacing" Value="-0.2" />
+    <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
   <Style Selector="TextBlock.h2">
     <Setter Property="FontSize" Value="{StaticResource FontSizeTitle}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
   <Style Selector="TextBlock.h3">
@@ -41,7 +40,6 @@
   <Style Selector=":is(TextBlock).display">
     <Setter Property="FontSize" Value="{StaticResource FontSizeDisplay}" />
     <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="LetterSpacing" Value="-0.4" />
     <Setter Property="FontFeatures" Value="+tnum" />
   </Style>
   <Style Selector=":is(TextBlock).secondary">
@@ -59,7 +57,6 @@
     <Setter Property="Foreground" Value="{DynamicResource TextTertiary}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
     <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="LetterSpacing" Value="0.6" />
   </Style>
 
   <!-- Sizes -->

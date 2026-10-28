@@ -6,20 +6,21 @@
     4.5:1 contrast on the backgrounds they are used on, in both themes (ContrastTests).
   -->
 
-  <!-- The brand accent, also given to Fluent so check boxes, sliders, switches and focus use it, not the Mac's accent. -->
-  <Color x:Key="BrandAccentColor">#1E5AA8</Color>
+  <!-- The accent when the Mac doesn't report one (tests, other platforms): the Mac's default blue, darkened for 4.5:1.
+       On a Mac, Services/SystemAccent recolours every accent brush from the System Settings accent. -->
+  <Color x:Key="AccentFallbackColor">#0A64D6</Color>
 
   <!-- Behind the phone form's QR code: always white, in both themes, so a phone camera can read it -->
   <SolidColorBrush x:Key="QrBackground" Color="#FFFFFF" />
 
-  <!-- Type ramp (Inter): caption 11, footnote 12, body 13, subheadline 15, title 17, large title 22, display 28 -->
+  <!-- Type ramp (the Mac system font, SF Pro): caption 11, footnote 12, body 13, subheadline 15, title 17, large title 22, display 26 -->
   <x:Double x:Key="FontSizeCaption">11</x:Double>
   <x:Double x:Key="FontSizeFootnote">12</x:Double>
   <x:Double x:Key="FontSizeBody">13</x:Double>
   <x:Double x:Key="FontSizeSubheadline">15</x:Double>
   <x:Double x:Key="FontSizeTitle">17</x:Double>
   <x:Double x:Key="FontSizeLargeTitle">22</x:Double>
-  <x:Double x:Key="FontSizeDisplay">28</x:Double>
+  <x:Double x:Key="FontSizeDisplay">26</x:Double>
   <!-- Weights, for the rare place a class can't go (a Run inside a TextBlock); elsewhere use the medium, semibold and bold classes -->
   <FontWeight x:Key="FontWeightRegular">Normal</FontWeight>
   <FontWeight x:Key="FontWeightMedium">Medium</FontWeight>
@@ -39,45 +40,46 @@
   <Thickness x:Key="CardPaddingCompact">12,10</Thickness>
   <Thickness x:Key="SheetPadding">24,20</Thickness>
 
-  <!-- Corner radii: controls 6, cards and sheets 10, pills fully round -->
-  <CornerRadius x:Key="RadiusControl">6</CornerRadius>
-  <CornerRadius x:Key="RadiusCard">10</CornerRadius>
+  <!-- Corner radii (macOS): controls 5, grouped boxes and sheets 8, pills fully round (being retired) -->
+  <CornerRadius x:Key="RadiusControl">5</CornerRadius>
+  <CornerRadius x:Key="RadiusCard">8</CornerRadius>
   <CornerRadius x:Key="RadiusPill">999</CornerRadius>
 
-  <!-- Control heights: small 24, default 28, large 32 -->
-  <x:Double x:Key="ControlHeightSmall">24</x:Double>
-  <x:Double x:Key="ControlHeight">28</x:Double>
-  <x:Double x:Key="ControlHeightLarge">32</x:Double>
+  <!-- Control heights (macOS): small 19, regular 22, large 28 (toolbar items) -->
+  <x:Double x:Key="ControlHeightSmall">19</x:Double>
+  <x:Double x:Key="ControlHeight">22</x:Double>
+  <x:Double x:Key="ControlHeightLarge">28</x:Double>
   <x:Double x:Key="IconSize">16</x:Double>
   <x:Double x:Key="IconSizeSmall">14</x:Double>
   <x:Double x:Key="IconSizeLarge">20</x:Double>
 
   <!-- Shell -->
-  <x:Double x:Key="SidebarWidth">224</x:Double>
+  <x:Double x:Key="SidebarWidth">220</x:Double>
   <x:Double x:Key="TitleBandHeight">52</x:Double>
-  <x:Double x:Key="TableRowHeight">34</x:Double>
+  <x:Double x:Key="TableRowHeight">24</x:Double>
   <x:Double x:Key="SheetWidthSmall">440</x:Double>
   <x:Double x:Key="SheetWidthMedium">600</x:Double>
   <x:Double x:Key="SheetWidthLarge">800</x:Double>
 
-  <!-- Fluent's sizes, brought to the 13 pt, 28 px scale (DensityStyle="Compact" alone gives 14 pt and 24 px inputs) -->
+  <!-- Fluent's sizes, brought to the Mac's 13 pt, 22 px scale (DensityStyle="Compact" alone gives 14 pt and 24 px inputs) -->
+  <FontFamily x:Key="ContentControlThemeFontFamily">.AppleSystemUIFont, fonts:Inter#Inter</FontFamily>
   <x:Double x:Key="ControlContentThemeFontSize">13</x:Double>
   <x:Double x:Key="ToolTipContentThemeFontSize">12</x:Double>
-  <x:Double x:Key="TextControlThemeMinHeight">28</x:Double>
-  <Thickness x:Key="TextControlThemePadding">8,5,8,5</Thickness>
+  <x:Double x:Key="TextControlThemeMinHeight">22</x:Double>
+  <Thickness x:Key="TextControlThemePadding">6,2,6,2</Thickness>
   <Thickness x:Key="TextControlBorderThemeThicknessFocused">1</Thickness>
-  <x:Double x:Key="ComboBoxMinHeight">28</x:Double>
-  <Thickness x:Key="ComboBoxPadding">10,4,0,4</Thickness>
-  <Thickness x:Key="ComboBoxItemThemePadding">10,5,10,6</Thickness>
-  <x:Double x:Key="DropDownButtonMinHeight">28</x:Double>
-  <Thickness x:Key="ButtonPadding">12,4,12,4</Thickness>
-  <x:Double x:Key="CheckBoxMinHeight">24</x:Double>
-  <x:Double x:Key="RadioButtonMinHeight">24</x:Double>
-  <CornerRadius x:Key="ControlCornerRadius">6</CornerRadius>
-  <CornerRadius x:Key="OverlayCornerRadius">8</CornerRadius>
-  <Thickness x:Key="MenuFlyoutPresenterThemePadding">4,4</Thickness>
-  <Thickness x:Key="MenuFlyoutItemThemePadding">10,6,10,6</Thickness>
-  <Thickness x:Key="MenuFlyoutItemThemePaddingNarrow">10,5,10,5</Thickness>
+  <x:Double x:Key="ComboBoxMinHeight">22</x:Double>
+  <Thickness x:Key="ComboBoxPadding">9,1,0,1</Thickness>
+  <Thickness x:Key="ComboBoxItemThemePadding">10,3,10,3</Thickness>
+  <x:Double x:Key="DropDownButtonMinHeight">22</x:Double>
+  <Thickness x:Key="ButtonPadding">12,1,12,1</Thickness>
+  <x:Double x:Key="CheckBoxMinHeight">20</x:Double>
+  <x:Double x:Key="RadioButtonMinHeight">20</x:Double>
+  <CornerRadius x:Key="ControlCornerRadius">5</CornerRadius>
+  <CornerRadius x:Key="OverlayCornerRadius">7</CornerRadius>
+  <Thickness x:Key="MenuFlyoutPresenterThemePadding">5,5</Thickness>
+  <Thickness x:Key="MenuFlyoutItemThemePadding">9,3,9,3</Thickness>
+  <Thickness x:Key="MenuFlyoutItemThemePaddingNarrow">9,3,9,3</Thickness>
   <Thickness x:Key="FlyoutContentThemePadding">12</Thickness>
   <Thickness x:Key="ToolTipBorderThemePadding">8,5,8,6</Thickness>
   <x:Double x:Key="DataGridSortIconMinWidth">0</x:Double>
@@ -96,49 +98,49 @@
   <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">
       <!-- Colours (the brushes below use these) -->
-      <Color x:Key="BgAppColor">#F7F8FA</Color>
-      <Color x:Key="BgSidebarColor">#F0F2F5</Color>
+      <Color x:Key="BgAppColor">#FFFFFF</Color>
+      <Color x:Key="BgSidebarColor">#EBEBEA</Color>
       <Color x:Key="BgSurfaceColor">#FFFFFF</Color>
-      <Color x:Key="BgSubtleColor">#F2F4F6</Color>
-      <Color x:Key="BgHoverColor">#EBEEF2</Color>
-      <Color x:Key="BgPressedColor">#E2E6EB</Color>
-      <Color x:Key="BgOverlayColor">#47000000</Color>
-      <Color x:Key="BgTooltipColor">#1F2329</Color>
-      <Color x:Key="BorderDefaultColor">#E2E5E9</Color>
-      <Color x:Key="BorderStrongColor">#C9CFD6</Color>
-      <Color x:Key="BorderStrongHoverColor">#B3BAC3</Color>
-      <Color x:Key="BorderSubtleColor">#ECEEF1</Color>
-      <Color x:Key="TextPrimaryColor">#16191D</Color>
-      <Color x:Key="TextSecondaryColor">#4B5360</Color>
-      <Color x:Key="TextTertiaryColor">#636C78</Color>
-      <Color x:Key="TextDisabledColor">#A2A9B2</Color>
-      <Color x:Key="TextOnTooltipColor">#FFFFFF</Color>
-      <Color x:Key="AccentColor">#1E5AA8</Color>
-      <Color x:Key="AccentHoverColor">#194E93</Color>
-      <Color x:Key="AccentPressedColor">#15427D</Color>
-      <Color x:Key="AccentFillColor">#1E5AA8</Color>
-      <Color x:Key="AccentFillHoverColor">#194E93</Color>
-      <Color x:Key="AccentFillPressedColor">#15427D</Color>
-      <Color x:Key="AccentSoftColor">#E7EEF8</Color>
-      <Color x:Key="AccentSoftHoverColor">#DAE5F4</Color>
+      <Color x:Key="BgSubtleColor">#F4F5F5</Color>
+      <Color x:Key="BgHoverColor">#EFEFEF</Color>
+      <Color x:Key="BgPressedColor">#E3E3E3</Color>
+      <Color x:Key="BgOverlayColor">#26000000</Color>
+      <Color x:Key="BgTooltipColor">#F2F2F2</Color>
+      <Color x:Key="BorderDefaultColor">#E0E0E0</Color>
+      <Color x:Key="BorderStrongColor">#C8C8C8</Color>
+      <Color x:Key="BorderStrongHoverColor">#B4B4B4</Color>
+      <Color x:Key="BorderSubtleColor">#EBEBEB</Color>
+      <Color x:Key="TextPrimaryColor">#1D1D1F</Color>
+      <Color x:Key="TextSecondaryColor">#5E5E62</Color>
+      <Color x:Key="TextTertiaryColor">#68686D</Color>
+      <Color x:Key="TextDisabledColor">#A8A8AD</Color>
+      <Color x:Key="TextOnTooltipColor">#1D1D1F</Color>
+      <Color x:Key="AccentColor">#0058C2</Color>
+      <Color x:Key="AccentHoverColor">#004EAD</Color>
+      <Color x:Key="AccentPressedColor">#004497</Color>
+      <Color x:Key="AccentFillColor">#0A64D6</Color>
+      <Color x:Key="AccentFillHoverColor">#0958BE</Color>
+      <Color x:Key="AccentFillPressedColor">#084FA9</Color>
+      <Color x:Key="AccentSoftColor">#E3EDFB</Color>
+      <Color x:Key="AccentSoftHoverColor">#D6E5FA</Color>
       <Color x:Key="OnAccentColor">#FFFFFF</Color>
-      <Color x:Key="FocusColor">#1E5AA8</Color>
-      <Color x:Key="DangerFgColor">#B42318</Color>
-      <Color x:Key="DangerBgColor">#FDECEA</Color>
-      <Color x:Key="DangerFillColor">#B42318</Color>
-      <Color x:Key="DangerFillHoverColor">#9B1D13</Color>
-      <Color x:Key="DangerFillPressedColor">#831910</Color>
-      <Color x:Key="WarningFgColor">#935400</Color>
-      <Color x:Key="WarningBgColor">#FFF3DC</Color>
-      <Color x:Key="SuccessFgColor">#1C7432</Color>
-      <Color x:Key="SuccessBgColor">#E6F4E9</Color>
-      <Color x:Key="InfoFgColor">#1A5CA3</Color>
-      <Color x:Key="InfoBgColor">#E6EFF9</Color>
-      <Color x:Key="VioletFgColor">#5B4FA8</Color>
-      <Color x:Key="VioletBgColor">#EEECF8</Color>
-      <Color x:Key="NeutralFgColor">#4B5360</Color>
-      <Color x:Key="NeutralBgColor">#EDEFF2</Color>
-      <Color x:Key="ScrollThumbColor">#B9C0C8</Color>
+      <Color x:Key="FocusColor">#0A64D6</Color>
+      <Color x:Key="DangerFgColor">#C4001A</Color>
+      <Color x:Key="DangerBgColor">#FDE8EA</Color>
+      <Color x:Key="DangerFillColor">#C4001A</Color>
+      <Color x:Key="DangerFillHoverColor">#A80016</Color>
+      <Color x:Key="DangerFillPressedColor">#8F0013</Color>
+      <Color x:Key="WarningFgColor">#A34400</Color>
+      <Color x:Key="WarningBgColor">#FFF1E0</Color>
+      <Color x:Key="SuccessFgColor">#187A34</Color>
+      <Color x:Key="SuccessBgColor">#E5F5EA</Color>
+      <Color x:Key="InfoFgColor">#0058C2</Color>
+      <Color x:Key="InfoBgColor">#E5EFFC</Color>
+      <Color x:Key="VioletFgColor">#6A45B8</Color>
+      <Color x:Key="VioletBgColor">#F0EBFA</Color>
+      <Color x:Key="NeutralFgColor">#5E5E62</Color>
+      <Color x:Key="NeutralBgColor">#EEEEEF</Color>
+      <Color x:Key="ScrollThumbColor">#C1C1C1</Color>
       <!-- Backgrounds -->
       <SolidColorBrush x:Key="BgApp" Color="{StaticResource BgAppColor}" /> <!-- the content area behind cards -->
       <SolidColorBrush x:Key="BgSidebar" Color="{StaticResource BgSidebarColor}" /> <!-- the sidebar and side panels -->
@@ -209,10 +211,17 @@
       <SolidColorBrush x:Key="RecommendedFg" Color="{StaticResource WarningFgColor}" />
       <SolidColorBrush x:Key="SuggestedFg" Color="{StaticResource SuccessFgColor}" />
       <!-- Focus halo around inputs and the focused-control ring -->
-      <BoxShadows x:Key="FocusHalo">0 0 0 3 #401E5AA8</BoxShadows>
-      <BoxShadows x:Key="ShadowPopup">0 8 24 0 #1F0F1720</BoxShadows>
-      <BoxShadows x:Key="ShadowSheet">0 12 40 0 #330F1720</BoxShadows>
-      <BoxShadows x:Key="ShadowCard">0 1 2 0 #1F0F1720</BoxShadows>
+      <BoxShadows x:Key="FocusHalo">0 0 0 3 #730A64D6</BoxShadows>
+      <BoxShadows x:Key="ShadowPopup">0 6 20 0 #29000000</BoxShadows>
+      <BoxShadows x:Key="ShadowSheet">0 10 30 0 #40000000</BoxShadows>
+      <BoxShadows x:Key="ShadowCard">0 0 0 0 #00000000</BoxShadows>
+      <!-- The bezel under a push button, a pop-up button and the selected segment (Mac controls sit slightly raised) -->
+      <BoxShadows x:Key="ShadowControl">0 0.5 1.5 0 #24000000</BoxShadows>
+      <!-- Mac surfaces with no WCAG text pair: the selected source-list row and a segmented control's track -->
+      <SolidColorBrush x:Key="SidebarSelection" Color="#D9D9D9" />
+      <SolidColorBrush x:Key="SegmentedTrack" Color="#E6E6E7" />
+      <SolidColorBrush x:Key="ControlFill" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="ControlFillPressed" Color="#EBEBEB" />
       <!-- Fluent's resource keys, pointed at the tokens -->
       <SolidColorBrush x:Key="ButtonBackground" Color="{StaticResource BgSurfaceColor}" />
       <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{StaticResource BgHoverColor}" />
@@ -523,49 +532,49 @@
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
       <!-- Colours (the brushes below use these) -->
-      <Color x:Key="BgAppColor">#16181B</Color>
-      <Color x:Key="BgSidebarColor">#1B1D21</Color>
-      <Color x:Key="BgSurfaceColor">#212328</Color>
-      <Color x:Key="BgSubtleColor">#272A30</Color>
-      <Color x:Key="BgHoverColor">#2B2F35</Color>
-      <Color x:Key="BgPressedColor">#33373E</Color>
-      <Color x:Key="BgOverlayColor">#80000000</Color>
-      <Color x:Key="BgTooltipColor">#3A3E45</Color>
-      <Color x:Key="BorderDefaultColor">#31353B</Color>
-      <Color x:Key="BorderStrongColor">#464B53</Color>
-      <Color x:Key="BorderStrongHoverColor">#585E67</Color>
-      <Color x:Key="BorderSubtleColor">#2A2D32</Color>
-      <Color x:Key="TextPrimaryColor">#ECEEF1</Color>
-      <Color x:Key="TextSecondaryColor">#B1B8C1</Color>
-      <Color x:Key="TextTertiaryColor">#959DA7</Color>
-      <Color x:Key="TextDisabledColor">#5F666F</Color>
+      <Color x:Key="BgAppColor">#1E1E1E</Color>
+      <Color x:Key="BgSidebarColor">#2B2B2D</Color>
+      <Color x:Key="BgSurfaceColor">#252527</Color>
+      <Color x:Key="BgSubtleColor">#262627</Color>
+      <Color x:Key="BgHoverColor">#2E2E30</Color>
+      <Color x:Key="BgPressedColor">#3A3A3C</Color>
+      <Color x:Key="BgOverlayColor">#4D000000</Color>
+      <Color x:Key="BgTooltipColor">#3A3A3C</Color>
+      <Color x:Key="BorderDefaultColor">#3A3A3C</Color>
+      <Color x:Key="BorderStrongColor">#545458</Color>
+      <Color x:Key="BorderStrongHoverColor">#636366</Color>
+      <Color x:Key="BorderSubtleColor">#303032</Color>
+      <Color x:Key="TextPrimaryColor">#E8E8EA</Color>
+      <Color x:Key="TextSecondaryColor">#A1A1A6</Color>
+      <Color x:Key="TextTertiaryColor">#98989D</Color>
+      <Color x:Key="TextDisabledColor">#5C5C60</Color>
       <Color x:Key="TextOnTooltipColor">#FFFFFF</Color>
-      <Color x:Key="AccentColor">#80B1F0</Color>
-      <Color x:Key="AccentHoverColor">#94BEF3</Color>
-      <Color x:Key="AccentPressedColor">#6CA2EA</Color>
-      <Color x:Key="AccentFillColor">#2C67B8</Color>
-      <Color x:Key="AccentFillHoverColor">#3472C6</Color>
-      <Color x:Key="AccentFillPressedColor">#255BA4</Color>
-      <Color x:Key="AccentSoftColor">#1E3250</Color>
+      <Color x:Key="AccentColor">#4EA2FF</Color>
+      <Color x:Key="AccentHoverColor">#6DB2FF</Color>
+      <Color x:Key="AccentPressedColor">#3A92F5</Color>
+      <Color x:Key="AccentFillColor">#0A6BE0</Color>
+      <Color x:Key="AccentFillHoverColor">#0B63D0</Color>
+      <Color x:Key="AccentFillPressedColor">#0958BE</Color>
+      <Color x:Key="AccentSoftColor">#1F3352</Color>
       <Color x:Key="AccentSoftHoverColor">#263D60</Color>
       <Color x:Key="OnAccentColor">#FFFFFF</Color>
-      <Color x:Key="FocusColor">#80B1F0</Color>
-      <Color x:Key="DangerFgColor">#FF8A80</Color>
-      <Color x:Key="DangerBgColor">#43211F</Color>
-      <Color x:Key="DangerFillColor">#C0392B</Color>
-      <Color x:Key="DangerFillHoverColor">#CE4637</Color>
-      <Color x:Key="DangerFillPressedColor">#A93224</Color>
-      <Color x:Key="WarningFgColor">#F2B65A</Color>
-      <Color x:Key="WarningBgColor">#3E3019</Color>
-      <Color x:Key="SuccessFgColor">#7FD393</Color>
-      <Color x:Key="SuccessBgColor">#1C3524</Color>
-      <Color x:Key="InfoFgColor">#8EB9F2</Color>
-      <Color x:Key="InfoBgColor">#1D2F48</Color>
-      <Color x:Key="VioletFgColor">#B9AEF5</Color>
-      <Color x:Key="VioletBgColor">#302C47</Color>
-      <Color x:Key="NeutralFgColor">#B1B8C1</Color>
-      <Color x:Key="NeutralBgColor">#30333A</Color>
-      <Color x:Key="ScrollThumbColor">#4E545D</Color>
+      <Color x:Key="FocusColor">#4EA2FF</Color>
+      <Color x:Key="DangerFgColor">#FF6B61</Color>
+      <Color x:Key="DangerBgColor">#3D2222</Color>
+      <Color x:Key="DangerFillColor">#C4001A</Color>
+      <Color x:Key="DangerFillHoverColor">#A80016</Color>
+      <Color x:Key="DangerFillPressedColor">#8F0013</Color>
+      <Color x:Key="WarningFgColor">#FFB54A</Color>
+      <Color x:Key="WarningBgColor">#3A2E1C</Color>
+      <Color x:Key="SuccessFgColor">#63D47F</Color>
+      <Color x:Key="SuccessBgColor">#1D3324</Color>
+      <Color x:Key="InfoFgColor">#64AEFF</Color>
+      <Color x:Key="InfoBgColor">#1C2E47</Color>
+      <Color x:Key="VioletFgColor">#C3B2FF</Color>
+      <Color x:Key="VioletBgColor">#2F2A45</Color>
+      <Color x:Key="NeutralFgColor">#A1A1A6</Color>
+      <Color x:Key="NeutralBgColor">#333336</Color>
+      <Color x:Key="ScrollThumbColor">#5A5A5E</Color>
       <!-- Backgrounds -->
       <SolidColorBrush x:Key="BgApp" Color="{StaticResource BgAppColor}" /> <!-- the content area behind cards -->
       <SolidColorBrush x:Key="BgSidebar" Color="{StaticResource BgSidebarColor}" /> <!-- the sidebar and side panels -->
@@ -636,22 +645,27 @@
       <SolidColorBrush x:Key="RecommendedFg" Color="{StaticResource WarningFgColor}" />
       <SolidColorBrush x:Key="SuggestedFg" Color="{StaticResource SuccessFgColor}" />
       <!-- Focus halo around inputs and the focused-control ring -->
-      <BoxShadows x:Key="FocusHalo">0 0 0 3 #5580B1F0</BoxShadows>
-      <BoxShadows x:Key="ShadowPopup">0 8 24 0 #66000000</BoxShadows>
-      <BoxShadows x:Key="ShadowSheet">0 12 40 0 #99000000</BoxShadows>
-      <BoxShadows x:Key="ShadowCard">0 1 2 0 #66000000</BoxShadows>
+      <BoxShadows x:Key="FocusHalo">0 0 0 3 #804EA2FF</BoxShadows>
+      <BoxShadows x:Key="ShadowPopup">0 6 20 0 #66000000</BoxShadows>
+      <BoxShadows x:Key="ShadowSheet">0 10 30 0 #8C000000</BoxShadows>
+      <BoxShadows x:Key="ShadowCard">0 0 0 0 #00000000</BoxShadows>
+      <BoxShadows x:Key="ShadowControl">0 0.5 1 0 #59000000</BoxShadows>
+      <SolidColorBrush x:Key="SidebarSelection" Color="#3E3E41" />
+      <SolidColorBrush x:Key="SegmentedTrack" Color="#333335" />
+      <SolidColorBrush x:Key="ControlFill" Color="#5A5A5E" />
+      <SolidColorBrush x:Key="ControlFillPressed" Color="#6A6A6E" />
       <!-- Fluent's resource keys, pointed at the tokens -->
-      <SolidColorBrush x:Key="ButtonBackground" Color="{StaticResource BgSurfaceColor}" />
-      <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{StaticResource BgHoverColor}" />
-      <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{StaticResource BgPressedColor}" />
+      <SolidColorBrush x:Key="ButtonBackground" Color="#48484B" />
+      <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#525255" />
+      <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#5C5C5F" />
       <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="{StaticResource BgSubtleColor}" />
       <SolidColorBrush x:Key="ButtonForeground" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="ButtonForegroundPressed" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="{StaticResource TextDisabledColor}" />
-      <SolidColorBrush x:Key="ButtonBorderBrush" Color="{StaticResource BorderStrongColor}" />
-      <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
-      <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ButtonBorderBrush" Color="#48484B" />
+      <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#525255" />
+      <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#5C5C5F" />
       <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
       <SolidColorBrush x:Key="AccentButtonBackground" Color="{StaticResource AccentFillColor}" />
       <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="{StaticResource AccentFillHoverColor}" />
@@ -665,21 +679,21 @@
       <SolidColorBrush x:Key="AccentButtonBorderBrushPointerOver" Color="{StaticResource AccentFillHoverColor}" />
       <SolidColorBrush x:Key="AccentButtonBorderBrushPressed" Color="{StaticResource AccentFillPressedColor}" />
       <SolidColorBrush x:Key="AccentButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
-      <SolidColorBrush x:Key="RepeatButtonBackground" Color="{StaticResource BgSurfaceColor}" />
-      <SolidColorBrush x:Key="RepeatButtonBackgroundPointerOver" Color="{StaticResource BgHoverColor}" />
-      <SolidColorBrush x:Key="RepeatButtonBackgroundPressed" Color="{StaticResource BgPressedColor}" />
+      <SolidColorBrush x:Key="RepeatButtonBackground" Color="#48484B" />
+      <SolidColorBrush x:Key="RepeatButtonBackgroundPointerOver" Color="#525255" />
+      <SolidColorBrush x:Key="RepeatButtonBackgroundPressed" Color="#5C5C5F" />
       <SolidColorBrush x:Key="RepeatButtonBackgroundDisabled" Color="{StaticResource BgSubtleColor}" />
       <SolidColorBrush x:Key="RepeatButtonForeground" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="RepeatButtonForegroundPointerOver" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="RepeatButtonForegroundPressed" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="RepeatButtonForegroundDisabled" Color="{StaticResource TextDisabledColor}" />
-      <SolidColorBrush x:Key="RepeatButtonBorderBrush" Color="{StaticResource BorderStrongColor}" />
-      <SolidColorBrush x:Key="RepeatButtonBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
-      <SolidColorBrush x:Key="RepeatButtonBorderBrushPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="RepeatButtonBorderBrush" Color="#48484B" />
+      <SolidColorBrush x:Key="RepeatButtonBorderBrushPointerOver" Color="#525255" />
+      <SolidColorBrush x:Key="RepeatButtonBorderBrushPressed" Color="#5C5C5F" />
       <SolidColorBrush x:Key="RepeatButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
-      <SolidColorBrush x:Key="ToggleButtonBackground" Color="{StaticResource BgSurfaceColor}" />
-      <SolidColorBrush x:Key="ToggleButtonBackgroundPointerOver" Color="{StaticResource BgHoverColor}" />
-      <SolidColorBrush x:Key="ToggleButtonBackgroundPressed" Color="{StaticResource BgPressedColor}" />
+      <SolidColorBrush x:Key="ToggleButtonBackground" Color="#48484B" />
+      <SolidColorBrush x:Key="ToggleButtonBackgroundPointerOver" Color="#525255" />
+      <SolidColorBrush x:Key="ToggleButtonBackgroundPressed" Color="#5C5C5F" />
       <SolidColorBrush x:Key="ToggleButtonBackgroundDisabled" Color="{StaticResource BgSubtleColor}" />
       <SolidColorBrush x:Key="ToggleButtonBackgroundChecked" Color="{StaticResource AccentSoftColor}" />
       <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver" Color="{StaticResource AccentSoftHoverColor}" />
@@ -693,25 +707,25 @@
       <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPointerOver" Color="{StaticResource AccentColor}" />
       <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPressed" Color="{StaticResource AccentColor}" />
       <SolidColorBrush x:Key="ToggleButtonForegroundCheckedDisabled" Color="{StaticResource TextDisabledColor}" />
-      <SolidColorBrush x:Key="ToggleButtonBorderBrush" Color="{StaticResource BorderStrongColor}" />
-      <SolidColorBrush x:Key="ToggleButtonBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
-      <SolidColorBrush x:Key="ToggleButtonBorderBrushPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrush" Color="#48484B" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrushPointerOver" Color="#525255" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrushPressed" Color="#5C5C5F" />
       <SolidColorBrush x:Key="ToggleButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
       <SolidColorBrush x:Key="ToggleButtonBorderBrushChecked" Color="{StaticResource AccentColor}" />
       <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPointerOver" Color="{StaticResource AccentColor}" />
       <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPressed" Color="{StaticResource AccentColor}" />
       <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedDisabled" Color="{StaticResource BorderDefaultColor}" />
-      <SolidColorBrush x:Key="SplitButtonBackground" Color="{StaticResource BgSurfaceColor}" />
-      <SolidColorBrush x:Key="SplitButtonBackgroundPointerOver" Color="{StaticResource BgHoverColor}" />
-      <SolidColorBrush x:Key="SplitButtonBackgroundPressed" Color="{StaticResource BgPressedColor}" />
+      <SolidColorBrush x:Key="SplitButtonBackground" Color="#48484B" />
+      <SolidColorBrush x:Key="SplitButtonBackgroundPointerOver" Color="#525255" />
+      <SolidColorBrush x:Key="SplitButtonBackgroundPressed" Color="#5C5C5F" />
       <SolidColorBrush x:Key="SplitButtonBackgroundDisabled" Color="{StaticResource BgSubtleColor}" />
       <SolidColorBrush x:Key="SplitButtonForeground" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="SplitButtonForegroundPointerOver" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="SplitButtonForegroundPressed" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="SplitButtonForegroundDisabled" Color="{StaticResource TextDisabledColor}" />
-      <SolidColorBrush x:Key="SplitButtonBorderBrush" Color="{StaticResource BorderStrongColor}" />
-      <SolidColorBrush x:Key="SplitButtonBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
-      <SolidColorBrush x:Key="SplitButtonBorderBrushPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="SplitButtonBorderBrush" Color="#48484B" />
+      <SolidColorBrush x:Key="SplitButtonBorderBrushPointerOver" Color="#525255" />
+      <SolidColorBrush x:Key="SplitButtonBorderBrushPressed" Color="#5C5C5F" />
       <SolidColorBrush x:Key="SplitButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
       <SolidColorBrush x:Key="TextControlForeground" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="{StaticResource TextPrimaryColor}" />

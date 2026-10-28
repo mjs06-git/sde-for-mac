@@ -1,9 +1,9 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <!--
-    Tables (DataGrid, on top of its Fluent theme): rows at least 34 px (TableRowHeight), body text with tabular numbers,
-    a quiet 12 px header on the surface colour (in dark mode too), a caret for the sorted column, hover and selection in
-    the tokens' colours, and hairline row separators when GridLinesVisibility shows them.
+    Tables, in the Mac's look (DataGrid, on top of its Fluent theme): 24 px rows (TableRowHeight) striped with BgSubtle,
+    body text with tabular numbers, a quiet 12 px header with hairline column separators, a caret for the sorted column,
+    and the selected row filled with the accent, its text white.
   -->
 
   <Style Selector="DataGrid">
@@ -18,6 +18,7 @@
   <Style Selector="DataGridCell">
     <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
     <Setter Property="MinHeight" Value="{StaticResource TableRowHeight}" />
+    <Setter Property="Padding" Value="8,0" />
   </Style>
   <!-- A cell's focus shows as the row's selection; no extra box -->
   <Style Selector="DataGridCell:focus /template/ Grid#FocusVisual">
@@ -26,13 +27,31 @@
 
   <Style Selector="DataGridColumnHeader">
     <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
-    <Setter Property="FontWeight" Value="Medium" />
-    <Setter Property="MinHeight" Value="32" />
-    <Setter Property="Padding" Value="12,0,4,0" />
+    <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="MinHeight" Value="26" />
+    <Setter Property="Padding" Value="8,0,4,0" />
   </Style>
-  <!-- No line between column headers (columns can still be resized at their edges) -->
+  <!-- A hairline between column headers, as in Finder's list view -->
   <Style Selector="DataGridColumnHeader /template/ Rectangle#VerticalSeparator">
-    <Setter Property="IsVisible" Value="False" />
+    <Setter Property="Fill" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="Margin" Value="0,5" />
+  </Style>
+  <Style Selector="DataGrid">
+    <Setter Property="RowBackground" Value="Transparent" />
+  </Style>
+  <Style Selector="DataGridRow:nth-child(2n)">
+    <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
+  </Style>
+  <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+    <Setter Property="Fill" Value="{DynamicResource AccentFill}" />
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="DataGridRow:selected">
+    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+  </Style>
+  <Style Selector="DataGridRow:selected TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
   </Style>
   <Style Selector="DataGridColumnHeader:sortascending, DataGridColumnHeader:sortdescending">
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
@@ -51,7 +70,7 @@
 
   <!-- A cell's text in a template column: the same inset as a text column, one line, trimmed -->
   <Style Selector="TextBlock.cell">
-    <Setter Property="Margin" Value="12,0" />
+    <Setter Property="Margin" Value="8,0" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>

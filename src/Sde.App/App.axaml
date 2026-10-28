@@ -135,11 +135,11 @@
   </Application.DataTemplates>
 
   <Application.Styles>
-    <!-- Fluent, compact, with the brand accent (not the Mac's) for check boxes, switches, sliders and selection -->
+    <!-- Fluent, compact; its accent (check boxes, switches, sliders) follows the Mac's, like the tokens (Services/SystemAccent) -->
     <FluentTheme DensityStyle="Compact">
       <FluentTheme.Palettes>
-        <ColorPaletteResources x:Key="Light" Accent="{StaticResource BrandAccentColor}" />
-        <ColorPaletteResources x:Key="Dark" Accent="{StaticResource BrandAccentColor}" />
+        <ColorPaletteResources x:Key="Light" Accent="{StaticResource AccentFallbackColor}" />
+        <ColorPaletteResources x:Key="Dark" Accent="{StaticResource AccentFallbackColor}" />
       </FluentTheme.Palettes>
     </FluentTheme>
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
