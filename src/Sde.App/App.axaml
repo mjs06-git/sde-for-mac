@@ -31,7 +31,7 @@
     <DataTemplate DataType="f:TextFieldViewModel">
       <StackPanel Classes="field" Classes.wide="{Binding IsWide}" IsVisible="{Binding IsVisible}">
         <DockPanel Classes="fieldHead">
-          <Button DockPanel.Dock="Right" Classes="link sm" Content="Insert snippet" IsVisible="{Binding HasSnippets}" IsEnabled="{Binding IsEnabled}" Padding="0"
+          <Button DockPanel.Dock="Right" Classes="link sm" Content="Insert Snippet" IsVisible="{Binding HasSnippets}" IsEnabled="{Binding IsEnabled}" Padding="0"
                   AutomationProperties.Name="{Binding Label, StringFormat='Insert a snippet into {0}'}">
             <Button.Flyout>
               <MenuFlyout ItemsSource="{Binding SnippetItems}" />

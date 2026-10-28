@@ -42,10 +42,7 @@
 
     <ScrollViewer Grid.Column="1" Name="SettingsScroller" HorizontalScrollBarVisibility="Disabled">
       <StackPanel Margin="{StaticResource PagePadding}" Spacing="14" MaxWidth="840" HorizontalAlignment="Left">
-        <StackPanel Spacing="2">
-          <TextBlock Classes="h2" Text="{Binding SelectedCategory.Title}" />
-          <TextBlock Classes="secondary" Text="{Binding SelectedCategory.Subtitle}" TextWrapping="Wrap" />
-        </StackPanel>
+        <TextBlock Classes="h2" Text="{Binding SelectedCategory.Title}" ToolTip.Tip="{Binding SelectedCategory.Subtitle}" />
 
         <!-- General -->
         <StackPanel Spacing="14" IsVisible="{Binding IsGeneral}">
@@ -55,7 +52,7 @@
                 <Grid ColumnDefinitions="*,Auto">
                   <StackPanel VerticalAlignment="Center" Spacing="1" Margin="0,0,16,0">
                     <TextBlock Classes="medium" Text="Your name" />
-                    <TextBlock Classes="muted" Text="Shown in each assessment's history next to the changes you make." TextWrapping="Wrap" />
+                    <TextBlock Classes="muted" Text="Shown in History next to your changes." TextWrapping="Wrap" />
                   </StackPanel>
                   <TextBox Grid.Column="1" Text="{Binding YourName}" Width="260" VerticalAlignment="Center" AutomationProperties.Name="Your name, shown in edit history" />
                 </Grid>
@@ -64,7 +61,7 @@
                 <ToggleSwitch IsChecked="{Binding CheckLatLong}" OnContent="" OffContent="" AutomationProperties.Name="Check that latitude and longitude are inside the structure's state">
                   <ToggleSwitch.Content>
                     <StackPanel Spacing="1">
-                      <TextBlock Classes="medium" Text="Check that latitude and longitude are inside the structure's state" />
+                      <TextBlock Classes="medium" Text="Check coordinates are in the structure's state" />
                       <TextBlock Classes="muted" Text="FEMA's “Lat/Long Validation”." />
                     </StackPanel>
                   </ToggleSwitch.Content>
@@ -75,7 +72,7 @@
 
           <Border Classes="card">
             <StackPanel Spacing="12">
-              <c:CardHeader Icon="Edit" Title="Your fields" Text="Three extra fields on every assessment. Name them for what your office tracks." />
+              <c:CardHeader Icon="Edit" Title="Your fields" Text="Three extra fields on every assessment." />
               <ItemsControl Classes="fields" ItemsSource="{Binding CustomFieldNames}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate><c:FieldGrid Columns="3" MinColumnWidth="160" /></ItemsPanelTemplate>
@@ -94,7 +91,7 @@
 
           <Border Classes="card">
             <StackPanel Spacing="12">
-              <c:CardHeader Icon="Comment" Title="Note snippets" Text="Text you type often. In an assessment, use Insert snippet above any notes box.">
+              <c:CardHeader Icon="Comment" Title="Note snippets" Text="Text to insert into notes.">
                 <Button Command="{Binding AddSnippetCommand}" AutomationProperties.Name="Add a snippet">
                   <StackPanel Orientation="Horizontal" Spacing="6">
                     <c:Icon Kind="Plus" Size="12" />
@@ -123,13 +120,13 @@
 
           <Border Classes="card">
             <StackPanel Spacing="8">
-              <c:CardHeader Icon="Info" Title="About" Text="An unofficial Mac port of FEMA's Substantial Damage Estimator (SDE) 3.0.0." />
+              <c:CardHeader Icon="Info" Title="About" Text="Unofficial Mac port of FEMA's SDE 3.0.0." />
               <StackPanel Spacing="6" Margin="48,0,0,0">
                 <TextBlock TextWrapping="Wrap">
                   <Run Text="Substantial Damage Estimator for Mac, version " /><Run Text="{Binding Version}" />
                 </TextBlock>
                 <TextBlock Classes="secondary" TextWrapping="Wrap"
-                           Text="It uses FEMA's calculation engine, cost tables and validation rules, and has been checked to give identical results to FEMA's engine for every building type FEMA's tables cover. It is not produced or endorsed by FEMA. Determinations remain the responsibility of the local floodplain administrator." />
+                           Text="Uses FEMA's engine, cost tables and rules, checked to match FEMA's results. Not produced or endorsed by FEMA. Determinations remain the floodplain administrator's." />
               </StackPanel>
             </StackPanel>
           </Border>
@@ -144,7 +141,7 @@
                   <ToggleSwitch.Content>
                     <StackPanel Spacing="1">
                       <TextBlock Classes="medium" Text="Fill new structures with my default values" />
-                      <TextBlock Classes="muted" TextWrapping="Wrap" Text="FEMA's “Enter Default Data”. Saves typing when assessing many buildings after one event. The values below are saved as you type." />
+                      <TextBlock Classes="muted" TextWrapping="Wrap" Text="FEMA's Enter Default Data. Saved as you type." />
                     </StackPanel>
                   </ToggleSwitch.Content>
                 </ToggleSwitch>
@@ -170,7 +167,7 @@
                   <Border Classes="rowIcon"><c:Icon Kind="MapPin" Size="16" /></Border>
                   <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="1">
                     <TextBlock Classes="medium" Text="U.S. Census Bureau geocoder" />
-                    <TextBlock Classes="muted" TextWrapping="Wrap" Text="Finds a structure's latitude and longitude from its street address, when it has no coordinates yet." />
+                    <TextBlock Classes="muted" TextWrapping="Wrap" Text="Coordinates from a street address." />
                   </StackPanel>
                 </Grid>
               </Border>
@@ -179,7 +176,7 @@
                   <Border Classes="rowIcon"><c:Icon Kind="Flood" Size="16" /></Border>
                   <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="1">
                     <TextBlock Classes="medium" Text="FEMA National Flood Hazard Layer" />
-                    <TextBlock Classes="muted" TextWrapping="Wrap" Text="Gives the flood zone, FIRM panel and NFIP community at the structure's coordinates." />
+                    <TextBlock Classes="muted" TextWrapping="Wrap" Text="Flood zone, FIRM panel and NFIP community at a structure's coordinates." />
                   </StackPanel>
                 </Grid>
               </Border>
@@ -192,7 +189,7 @@
                   <Border Classes="rowIcon"><c:Icon Kind="Flood" Size="16" /></Border>
                   <StackPanel Grid.Column="1" Margin="12,0,12,0" Spacing="1">
                     <TextBlock Classes="medium" Text="USGS high-water marks (STN)" />
-                    <TextBlock Classes="muted" TextWrapping="Wrap" Text="The marks USGS surveyed after a flood, for Flood depth from high-water marks. Its data is provisional. Change the address only if USGS moves the service." />
+                    <TextBlock Classes="muted" TextWrapping="Wrap" Text="USGS high-water marks (provisional data)." />
                   </StackPanel>
                   <TextBox Grid.Column="2" Text="{Binding UsgsStnUrl}" PlaceholderText="{Binding UsgsStnDefault}" VerticalAlignment="Center"
                            AutomationProperties.Name="USGS high-water mark service address" />
@@ -201,7 +198,7 @@
             </StackPanel>
           </Border>
           <c:Banner Tone="Info" Title="Only when you ask"
-                    Text="SDE contacts these services only when you choose Look up online in an assessment, Look up flood data online on the Structures page, or USGS high-water marks in Flood depth. It sends the structure's address or coordinates, or the event and states, nothing else. You review every value before it is saved." />
+                    Text="Contacted only when you look something up. Sends only addresses, coordinates, or the event and states. You review every value." />
         </StackPanel>
 
         <!-- Phone form -->
@@ -250,13 +247,13 @@
           <Border Classes="card">
             <StackPanel Spacing="12">
               <c:CardHeader Icon="Database" Title="This database"
-                            Text="Tip: keep one database per disaster event, and share data with colleagues through Import &amp; export rather than a shared network file." />
+                            Text="Tip: one database per event; share through Import &amp; Export." />
               <WrapPanel>
-                <Button Margin="0,0,8,8" Content="Save a copy…" Command="{Binding BackUpCommand}" />
-                <Button Margin="0,0,8,8" Content="Restore from backup…" Command="{Binding RestoreBackupCommand}" />
+                <Button Margin="0,0,8,8" Content="Save a Copy…" Command="{Binding BackUpCommand}" />
+                <Button Margin="0,0,8,8" Content="Restore from Backup…" Command="{Binding RestoreBackupCommand}" />
                 <Button Margin="0,0,8,8" Content="Move…" Command="{Binding MoveDatabaseCommand}" AutomationProperties.Name="Move the database" />
-                <Button Margin="0,0,8,8" Content="Open another…" Command="{Binding OpenDatabaseCommand}" />
-                <Button Margin="0,0,8,8" Content="New empty database…" Command="{Binding NewDatabaseCommand}" />
+                <Button Margin="0,0,8,8" Content="Open Another…" Command="{Binding OpenDatabaseCommand}" />
+                <Button Margin="0,0,8,8" Content="New Empty Database…" Command="{Binding NewDatabaseCommand}" />
               </WrapPanel>
             </StackPanel>
           </Border>

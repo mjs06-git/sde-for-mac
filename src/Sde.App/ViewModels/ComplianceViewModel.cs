@@ -175,8 +175,8 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 	public bool NoMatches => _all.Count > 0 && Rows.Count == 0;
 
 	public string EmptyText => HasMissing
-		? "Open a case for each substantially damaged structure to track its permit, deadline, ICC claim and final inspection."
-		: "Substantially damaged structures appear here once a compliance case is opened for them, from the editor or with the button above.";
+		? "Open a case for each substantially damaged structure."
+		: "Cases appear here once opened, from the editor or the button above.";
 
 	/// <summary>Every case in scope: all of them, or for an event its assessments' cases and the SI cases of its structures.</summary>
 	public static List<ComplianceCaseRecord> CasesInScope(AppServices app)

@@ -11,7 +11,7 @@
       <ListBox Classes="segmented" ItemsSource="{Binding Kinds}" SelectedIndex="{Binding KindIndex}" AutomationProperties.Name="How the features are coloured" />
 
       <TextBlock Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding IsByResult}"
-                 Text="Each structure in the colour of its result: substantially damaged, close to the threshold, not substantially damaged, undetermined or incomplete." />
+                 Text="Each structure in its result's colour." />
 
       <StackPanel Spacing="8" IsVisible="{Binding IsSingle}">
         <ItemsControl ItemsSource="{Binding Swatches}">

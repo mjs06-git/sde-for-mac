@@ -45,10 +45,10 @@
     </StackPanel>
 
     <DockPanel>
-      <Button DockPanel.Dock="Left" Content="Try again" Command="{Binding RetryCommand}" IsVisible="{Binding HasError}" />
+      <Button DockPanel.Dock="Left" Content="Try Again" Command="{Binding RetryCommand}" IsVisible="{Binding HasError}" />
       <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
         <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-        <Button Classes="primary" Content="Apply ticked values" Command="{Binding ApplyCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
+        <Button Classes="primary" Content="Apply Ticked Values" Command="{Binding ApplyCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
       </StackPanel>
     </DockPanel>
   </StackPanel>

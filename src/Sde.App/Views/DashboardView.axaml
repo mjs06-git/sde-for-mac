@@ -88,7 +88,7 @@
           <StackPanel Spacing="2">
             <TextBlock Classes="h3" Text="Share this event" />
             <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="The GIS files hold one point per assessed structure in latitude and longitude (WGS 84), with a QGIS style file beside them. Structures without coordinates are left out." />
+                       Text="GIS files: one point per assessed structure (WGS 84) with a QGIS style. Structures without coordinates are left out." />
           </StackPanel>
           <WrapPanel>
             <Button Classes="primary" Margin="0,0,8,6" Command="{Binding SummaryPdfCommand}" IsEnabled="{Binding HasAnything}" AutomationProperties.Name="Event summary PDF">
@@ -130,7 +130,7 @@
         <Border Classes="card" IsVisible="{Binding HasTeams}">
           <StackPanel Spacing="8">
             <TextBlock Classes="h3" Text="Field teams" />
-            <TextBlock Classes="muted" Text="Structures each team has, and how many have an assessment since they were assigned." TextWrapping="Wrap" />
+            <TextBlock Classes="muted" Text="Structures per team, and how many are assessed since assigned." TextWrapping="Wrap" />
             <ItemsControl ItemsSource="{Binding ByTeam}" ItemTemplate="{StaticResource BarRow}" />
           </StackPanel>
         </Border>

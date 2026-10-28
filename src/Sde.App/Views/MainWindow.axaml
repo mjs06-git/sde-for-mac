@@ -136,7 +136,7 @@
         <TextBlock Text="{Binding MissingMessage}" TextWrapping="Wrap" />
         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
           <Button Content="Done" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-          <Button Classes="primary" Content="Open FEMA's SDE page" Command="{Binding OpenFemaPageCommand}" IsDefault="True" />
+          <Button Classes="primary" Content="Open FEMA's SDE Page" Command="{Binding OpenFemaPageCommand}" IsDefault="True" />
         </StackPanel>
       </StackPanel>
     </DataTemplate>
@@ -159,7 +159,7 @@
         </ListBox>
         <TextBlock Classes="muted" Text="There are no backups yet." IsVisible="{Binding !HasBackups}" />
         <DockPanel>
-          <Button DockPanel.Dock="Left" Classes="link" Content="Show the backups folder" Command="{Binding ShowFolderCommand}" />
+          <Button DockPanel.Dock="Left" Classes="link" Content="Show the Backups Folder" Command="{Binding ShowFolderCommand}" />
           <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
             <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
             <Button Classes="danger" Content="Restore…" Command="{Binding RestoreCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
@@ -223,7 +223,7 @@
         <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Classes="secondary" />
         <TextBlock Classes="medium" Text="{Binding ResultText}" TextWrapping="Wrap" IsVisible="{Binding ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
         <DockPanel>
-          <Button DockPanel.Dock="Left" Content="Undo this change" Command="{Binding RevertCommand}" />
+          <Button DockPanel.Dock="Left" Content="Undo This Change" Command="{Binding RevertCommand}" />
           <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
             <Button Content="Done" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
             <Button Classes="primary" Content="Apply" Command="{Binding ApplyCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
@@ -262,17 +262,17 @@
         </ScrollViewer>
         <TextBlock Classes="medium" Text="{Binding ResultText}" TextWrapping="Wrap" IsVisible="{Binding ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
         <DockPanel>
-          <Button DockPanel.Dock="Left" Content="Undo this change" Command="{Binding RevertCommand}" />
+          <Button DockPanel.Dock="Left" Content="Undo This Change" Command="{Binding RevertCommand}" />
           <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
             <Button Content="Done" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-            <Button Classes="primary" Content="Replace all" Command="{Binding ReplaceAllCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
+            <Button Classes="primary" Content="Replace All" Command="{Binding ReplaceAllCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
           </StackPanel>
         </DockPanel>
       </StackPanel>
     </DataTemplate>
     <DataTemplate DataType="sh:CopyFromSheetViewModel">
       <StackPanel Spacing="12">
-        <TextBlock Classes="secondary" TextWrapping="Wrap" Text="Fills this assessment from one already entered. Location, owner and damage percentages are never copied." />
+        <TextBlock Classes="secondary" TextWrapping="Wrap" Text="Location, owner and damage percentages are never copied." />
         <TextBox Text="{Binding Search}" PlaceholderText="Search address or owner" AutomationProperties.Name="Search for the structure to copy from" />
         <ListBox ItemsSource="{Binding Sources}" SelectedItem="{Binding Source}" Height="200" AutomationProperties.Name="Structure to copy from">
           <ListBox.ItemTemplate>
@@ -332,7 +332,7 @@
           <RadioButton GroupName="moveOrCopy" IsChecked="{Binding IsMove}" AutomationProperties.Name="Move it">
             <StackPanel>
               <TextBlock Classes="medium" Text="Move it" />
-              <TextBlock Classes="muted" TextWrapping="Wrap" Text="To another folder or a shared drive, and open it from there." />
+              <TextBlock Classes="muted" TextWrapping="Wrap" Text="To another folder or a shared drive." />
             </StackPanel>
           </RadioButton>
           <RadioButton GroupName="moveOrCopy" IsChecked="{Binding IsCopy}" AutomationProperties.Name="Copy it and open the copy">

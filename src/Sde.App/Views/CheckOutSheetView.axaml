@@ -5,7 +5,7 @@
              x:DataType="sh:CheckOutSheetViewModel">
   <StackPanel Spacing="12">
     <TextBlock Classes="secondary" TextWrapping="Wrap"
-               Text="A file to take to a Mac in the field. Open it there with SDE (the database button, then Open a work package), work without a connection, then send it back. Until it is checked in here, these assessments are read-only." />
+               Text="For a Mac in the field: work offline there, then send it back. These assessments are read-only here until it's checked in." />
     <TextBlock Classes="medium" Text="{Binding Summary}" TextWrapping="Wrap" />
     <StackPanel Classes="field">
       <TextBlock Classes="fieldLabel" Text="Checked out to" />
@@ -14,7 +14,7 @@
     <TextBlock Classes="danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding HasError}" />
     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
       <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Classes="primary" Content="Save work package…" IsDefault="True" Command="{Binding CreateCommand}" IsEnabled="{Binding CanCheckOut}" HorizontalContentAlignment="Center" />
+      <Button Classes="primary" Content="Save Work Package…" IsDefault="True" Command="{Binding CreateCommand}" IsEnabled="{Binding CanCheckOut}" HorizontalContentAlignment="Center" />
     </StackPanel>
   </StackPanel>
 </UserControl>

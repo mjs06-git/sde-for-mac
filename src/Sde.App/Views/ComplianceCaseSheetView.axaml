@@ -9,7 +9,7 @@
     <StackPanel Spacing="2">
       <TextBlock Classes="semibold" Text="{Binding Address}" TextWrapping="Wrap" />
       <TextBlock Classes="muted" Text="{Binding Detail}" TextWrapping="Wrap" />
-      <Button Classes="link" Content="Open the assessment" Command="{Binding OpenAssessmentCommand}" IsVisible="{Binding CanOpenAssessment}" HorizontalAlignment="Left" Margin="0,2,0,0" />
+      <Button Classes="link" Content="Open the Assessment" Command="{Binding OpenAssessmentCommand}" IsVisible="{Binding CanOpenAssessment}" HorizontalAlignment="Left" Margin="0,2,0,0" />
     </StackPanel>
     <c:Banner Tone="Danger" IsVisible="{Binding IsOverdue}" Text="{Binding OverdueText}" AutomationProperties.Name="Overdue" />
 
@@ -75,7 +75,7 @@
             <StackPanel Spacing="8">
               <StackPanel Spacing="2">
                 <TextBlock Classes="h3" Text="Letters" />
-                <TextBlock Classes="muted" TextWrapping="Wrap" Text="Written from your templates with this case's fields, then added to the timeline." />
+                <TextBlock Classes="muted" TextWrapping="Wrap" Text="From your templates, then added to the timeline." />
               </StackPanel>
               <ItemsControl ItemsSource="{Binding Letters}">
                 <ItemsControl.ItemTemplate>
@@ -100,7 +100,7 @@
             <ComboBox ItemsSource="{x:Static sh:ComplianceCaseSheetViewModel.NoteKinds}" SelectedItem="{Binding NoteKind}" HorizontalAlignment="Stretch"
                       AutomationProperties.Name="Kind of timeline entry" />
             <TextBox Grid.Column="1" Text="{Binding NoteText}" PlaceholderText="What happened" AutomationProperties.Name="Timeline entry" />
-            <Button Grid.Row="1" Grid.Column="1" Content="Add note" Command="{Binding AddNoteCommand}" HorizontalAlignment="Right" />
+            <Button Grid.Row="1" Grid.Column="1" Content="Add Note" Command="{Binding AddNoteCommand}" HorizontalAlignment="Right" />
           </Grid>
           <ItemsControl ItemsSource="{Binding Entries}">
             <ItemsControl.ItemTemplate>

@@ -22,10 +22,10 @@
           </StackPanel>
           <DropDownButton.Flyout>
             <MenuFlyout Placement="BottomEdgeAlignedRight">
-              <MenuItem Header="Compliance report (PDF)…" Command="{Binding ExportPdfCommand}">
+              <MenuItem Header="Compliance Report (PDF)…" Command="{Binding ExportPdfCommand}">
                 <MenuItem.Icon><c:Icon Kind="Pdf" /></MenuItem.Icon>
               </MenuItem>
-              <MenuItem Header="Compliance list (CSV)…" Command="{Binding ExportCsvCommand}">
+              <MenuItem Header="Compliance List (CSV)…" Command="{Binding ExportCsvCommand}">
                 <MenuItem.Icon><c:Icon Kind="Table" /></MenuItem.Icon>
               </MenuItem>
             </MenuFlyout>
@@ -49,7 +49,7 @@
     <!-- Structures that still need a case -->
     <c:Banner DockPanel.Dock="Top" Tone="Info" Icon="Compliance" Margin="0,0,0,10" IsVisible="{Binding ShowMissingBanner}" Text="{Binding MissingText}"
               AutomationProperties.Name="Structures without a compliance case">
-      <Button Content="Open their cases…" Command="{Binding OpenMissingCasesCommand}"
+      <Button Content="Open Their Cases…" Command="{Binding OpenMissingCasesCommand}"
               AutomationProperties.Name="Open cases for every substantially damaged structure without one" />
     </c:Banner>
     <TextBlock DockPanel.Dock="Top" Classes="medium" Text="{Binding LastResult}" IsVisible="{Binding HasResult}" TextWrapping="Wrap" Margin="0,0,0,10"
@@ -64,7 +64,7 @@
       <ComboBox ItemsSource="{x:Static vm:ComplianceViewModel.IccChoices}" SelectedIndex="{Binding IccFilter}" Width="240" Margin="0,0,8,8"
                 AutomationProperties.Name="ICC status filter" />
       <CheckBox Content="Overdue only" IsChecked="{Binding OverdueOnly}" Margin="0,0,12,8" />
-      <Button Classes="link" Content="Clear the filters" Command="{Binding ClearFiltersCommand}" VerticalAlignment="Top" Margin="0,6,0,8" />
+      <Button Classes="link" Content="Clear the Filters" Command="{Binding ClearFiltersCommand}" VerticalAlignment="Top" Margin="0,6,0,8" />
     </WrapPanel>
 
     <!-- The list -->
@@ -83,7 +83,7 @@
                     AutomationProperties.Name="Compliance cases" DoubleTapped="OnCasesDoubleTapped" KeyDown="OnCasesKeyDown">
             <DataGrid.ContextMenu>
               <ContextMenu>
-                <MenuItem Header="Open case…" Command="{Binding OpenSelectedCommand}" />
+                <MenuItem Header="Open Case…" Command="{Binding OpenSelectedCommand}" />
               </ContextMenu>
             </DataGrid.ContextMenu>
             <DataGrid.Columns>
@@ -165,10 +165,10 @@
 
           <!-- Empty states -->
           <c:EmptyState IsVisible="{Binding IsEmpty}" Icon="Compliance" Title="No compliance cases" Text="{Binding EmptyText}">
-            <Button Classes="primary" Content="Open cases for every substantially damaged structure…" Command="{Binding OpenMissingCasesCommand}" IsVisible="{Binding HasMissing}" />
+            <Button Classes="primary" Content="Open Cases for Every Substantially Damaged Structure…" Command="{Binding OpenMissingCasesCommand}" IsVisible="{Binding HasMissing}" />
           </c:EmptyState>
           <c:EmptyState IsVisible="{Binding NoMatches}" Icon="Filter" Title="Nothing matches" Text="No cases match these filters.">
-            <Button Content="Clear the filters" Command="{Binding ClearFiltersCommand}" />
+            <Button Content="Clear the Filters" Command="{Binding ClearFiltersCommand}" />
           </c:EmptyState>
         </Grid>
       </DockPanel>

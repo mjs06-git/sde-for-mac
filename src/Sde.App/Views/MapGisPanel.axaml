@@ -14,7 +14,7 @@
             <Border Classes="rowIcon"><c:Icon Kind="Map" Size="16" /></Border>
             <StackPanel Grid.Column="1" Margin="12,0,16,0" Spacing="1" VerticalAlignment="Center">
               <TextBlock Classes="medium" Text="Background map" />
-              <TextBlock Classes="muted" TextWrapping="Wrap" Text="What the Map page shows under the structures and layers. You can also change it on the Map page." />
+              <TextBlock Classes="muted" TextWrapping="Wrap" Text="The background under the structures and layers." />
             </StackPanel>
             <ComboBox Grid.Column="2" ItemsSource="{Binding BasemapChoices}" SelectedItem="{Binding Basemap}" MinWidth="220" VerticalAlignment="Center"
                       AutomationProperties.Name="Background map">
@@ -31,7 +31,7 @@
             <ToggleSwitch.Content>
               <StackPanel Spacing="1">
                 <TextBlock Classes="medium" Text="Start the map with FEMA flood zones on" />
-                <TextBlock Classes="muted" TextWrapping="Wrap" Text="Each time SDE opens this database's map, FEMA's flood zones show over the background. They need the internet." />
+                <TextBlock Classes="muted" TextWrapping="Wrap" Text="FEMA flood zones over the background (needs the internet)." />
               </StackPanel>
             </ToggleSwitch.Content>
           </ToggleSwitch>
@@ -47,7 +47,7 @@
             <Border Classes="rowIcon"><c:Icon Kind="Download" Size="16" /></Border>
             <StackPanel Grid.Column="1" Margin="12,0,16,0" Spacing="1" VerticalAlignment="Center">
               <TextBlock Classes="medium" Text="Saved map pieces" />
-              <TextBlock Classes="muted" TextWrapping="Wrap" Text="Pieces of the background map kept on this Mac, so places you've looked at show without the internet. Every database shares them." />
+              <TextBlock Classes="muted" TextWrapping="Wrap" Text="Map tiles kept on this Mac for offline use, shared by every database." />
               <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding TileMessage}" IsVisible="{Binding TileMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
             </StackPanel>
             <TextBlock Grid.Column="2" Classes="secondary" Text="{Binding TileCacheText}" VerticalAlignment="Center" Margin="0,0,12,0" />
@@ -66,7 +66,7 @@
             <ToggleSwitch.Content>
               <StackPanel Spacing="1">
                 <TextBlock Classes="medium" Text="Leave owner names out of GIS files" />
-                <TextBlock Classes="muted" TextWrapping="Wrap" Text="The GeoPackage and GeoJSON files made on the Dashboard start without owners' names, which are personal information. You can still include them for one file there." />
+                <TextBlock Classes="muted" TextWrapping="Wrap" Text="Owner names are left out of GIS files unless you include them." />
               </StackPanel>
             </ToggleSwitch.Content>
           </ToggleSwitch>

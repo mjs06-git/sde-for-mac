@@ -188,7 +188,7 @@ public class EventUiTests
 		Assert.Equal(saved.EventID, ui.Services.Scope.EventId);
 		Assert.Equal("Spring storm", ui.Main.Events.Label);
 		Assert.True(ui.Main.Structures.IsEmpty);
-		Assert.Equal("Nothing in Spring storm yet", ui.Main.Structures.EmptyTitle);
+		Assert.Equal("Nothing in Spring storm", ui.Main.Structures.EmptyTitle);
 		Assert.Empty(AccessibilityTests.Unnamed(ui.Window));
 
 		Task managing = ui.Main.ManageEventsCommand.ExecuteAsync(null);

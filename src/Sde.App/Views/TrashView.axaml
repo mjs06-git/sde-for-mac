@@ -42,7 +42,7 @@
                           <TextBlock Text="Restore" />
                         </StackPanel>
                       </Button>
-                      <Button Classes="danger" Content="Delete now…" Command="{Binding $parent[UserControl].((vm:TrashViewModel)DataContext).DeleteNowCommand}" CommandParameter="{Binding}"
+                      <Button Classes="danger" Content="Delete Now…" Command="{Binding $parent[UserControl].((vm:TrashViewModel)DataContext).DeleteNowCommand}" CommandParameter="{Binding}"
                               AutomationProperties.Name="{Binding Label, StringFormat='Delete {0} for good'}" />
                     </StackPanel>
                   </Grid>
@@ -52,7 +52,7 @@
           </ItemsControl>
         </ScrollViewer>
         <c:EmptyState IsVisible="{Binding IsEmpty}" Icon="Trash" Title="Nothing here"
-                      Text="What you delete appears here for 30 days, so you can bring it back." />
+                      Text="Deleted items stay here for 30 days." />
       </Grid>
     </Border>
   </DockPanel>

@@ -18,7 +18,7 @@
     <!-- No teams yet -->
     <Border Classes="card" IsVisible="{Binding HasNoTeams}">
       <c:EmptyState Icon="Assignments" Title="No teams yet"
-                    Text="Make a team, then assign structures to it from Structures (Change, Assign to team) or from a selection on the map. Each team gets its structures in a driving order, a route sheet and field worksheets.">
+                    Text="Make a team, then assign structures from Structures or the map.">
         <Button Classes="primary" Command="{Binding NewTeamCommand}" AutomationProperties.Name="Make the first team">
           <StackPanel Orientation="Horizontal" Spacing="6"><c:Icon Kind="Plus" Size="12" /><TextBlock Text="New team…" /></StackPanel>
         </Button>
@@ -57,9 +57,9 @@
               <TextBlock Classes="muted" Text="{Binding TeamDetail}" TextTrimming="CharacterEllipsis" />
             </StackPanel>
             <WrapPanel Grid.Column="1" ItemSpacing="6" LineSpacing="6" VerticalAlignment="Center">
-              <Button Content="Order the route" Command="{Binding OrderRouteCommand}" IsEnabled="{Binding HasStops}"
+              <Button Content="Order the Route" Command="{Binding OrderRouteCommand}" IsEnabled="{Binding HasStops}"
                       ToolTip.Tip="A short driving order, by straight-line distance" />
-              <Button Content="Route sheet…" Command="{Binding RouteSheetCommand}" IsEnabled="{Binding HasStops}" AutomationProperties.Name="Save the route sheet as a PDF" />
+              <Button Content="Route Sheet…" Command="{Binding RouteSheetCommand}" IsEnabled="{Binding HasStops}" AutomationProperties.Name="Save the route sheet as a PDF" />
               <Button Content="Worksheets…" Command="{Binding WorksheetsCommand}" IsEnabled="{Binding HasStops}" AutomationProperties.Name="Save the field worksheets as a PDF" />
               <Button Content="Offline…" Command="{Binding KeepOfflineCommand}" IsEnabled="{Binding HasStops}"
                       AutomationProperties.Name="Keep the map around the team's structures on this Mac" ToolTip.Tip="Keep the background map around these structures on this Mac, for the field" />
@@ -80,7 +80,7 @@
             <TextBlock Grid.Column="5" Classes="eyebrow" Text="Due" />
             <TextBlock Grid.Column="6" Classes="eyebrow" Text="Status" />
           </Grid>
-          <Button DockPanel.Dock="Bottom" Classes="link danger" Content="Take the ticked structures off the team…" Command="{Binding UnassignCommand}"
+          <Button DockPanel.Dock="Bottom" Classes="link danger" Content="Take the Ticked Structures Off the Team…" Command="{Binding UnassignCommand}"
                   Margin="16,8,16,12" HorizontalAlignment="Left" IsVisible="{Binding HasStops}" />
 
           <Panel>
@@ -112,7 +112,7 @@
               </ItemsControl>
             </ScrollViewer>
             <c:EmptyState IsVisible="{Binding HasNoStops}" Icon="Assignments" Title="Nothing assigned"
-                          Text="Assign structures to this team from Structures (Change, Assign to team) or from a selection on the map." />
+                          Text="Assign from Structures (Change, Assign to Team) or the map." />
           </Panel>
         </DockPanel>
       </Border>

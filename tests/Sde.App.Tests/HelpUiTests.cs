@@ -107,8 +107,8 @@ public class HelpUiTests
 			Assert.False(sheet.ManualAvailable);
 			Assert.Contains("isn't included", sheet.MissingMessage);
 			Assert.Empty(AccessibilityTests.Unnamed(ui.Window));
-			Assert.DoesNotContain(ui.Window.GetVisualDescendants().OfType<Button>(), b => b.IsEffectivelyVisible && b.Content as string == "Open the manual at this page");
-			Assert.Contains(ui.Window.GetVisualDescendants().OfType<Button>(), b => b.IsEffectivelyVisible && b.Content as string == "Open FEMA's SDE page");
+			Assert.DoesNotContain(ui.Window.GetVisualDescendants().OfType<Button>(), b => b.IsEffectivelyVisible && b.Content as string == "Open the Manual at This Page");
+			Assert.Contains(ui.Window.GetVisualDescendants().OfType<Button>(), b => b.IsEffectivelyVisible && b.Content as string == "Open FEMA's SDE Page");
 			ui.Snapshot("69-field-help");
 
 			sheet.OpenFemaPageCommand.Execute(null);
@@ -156,7 +156,7 @@ public class HelpUiTests
 			ui.Pump();
 			FieldHelpSheetViewModel sheet = Assert.IsType<FieldHelpSheetViewModel>(ui.Main.Sheets.Current);
 			Assert.True(sheet.ManualAvailable);
-			Assert.Contains(ui.Window.GetVisualDescendants().OfType<Button>(), b => b.IsEffectivelyVisible && b.Content as string == "Open the manual at this page");
+			Assert.Contains(ui.Window.GetVisualDescendants().OfType<Button>(), b => b.IsEffectivelyVisible && b.Content as string == "Open the Manual at This Page");
 			Assert.Empty(AccessibilityTests.Unnamed(ui.Window));
 
 			sheet.OpenAtPageCommand.Execute(null);

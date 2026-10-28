@@ -176,7 +176,7 @@ public class ReviewUiTests
 		Assert.DoesNotContain(r.Groups, g => g.Rule.Severity == QaSeverity.Info);
 		r.ShowErrorsCommand.Execute(null);
 		Assert.True(r.ChecksEmpty);
-		Assert.Equal("Nothing matches", r.ChecksEmptyTitle);
+		Assert.Equal("No Matches", r.ChecksEmptyTitle);
 	}
 
 	[AvaloniaFact]

@@ -33,7 +33,7 @@
     <TextBlock Classes="danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding HasError}" />
     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
       <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Classes="primary" Content="Copy the ticked values" IsDefault="True" Command="{Binding CopyCommand}" IsVisible="{Binding HasRows}" HorizontalContentAlignment="Center" />
+      <Button Classes="primary" Content="Copy the Ticked Values" IsDefault="True" Command="{Binding CopyCommand}" IsVisible="{Binding HasRows}" HorizontalContentAlignment="Center" />
     </StackPanel>
   </StackPanel>
 </UserControl>

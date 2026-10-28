@@ -74,7 +74,7 @@
         <Button Name="ZoomOutButton" Classes="icon" ToolTip.Tip="Zoom out (−)" AutomationProperties.Name="Zoom out">
           <c:Icon Kind="ZoomOut" />
         </Button>
-        <Button Content="Show all" Command="{Binding FitToStructuresCommand}" AutomationProperties.Name="Zoom to show all structures" />
+        <Button Content="Show All" Command="{Binding FitToStructuresCommand}" AutomationProperties.Name="Zoom to show all structures" />
         <Button Command="{Binding KeepOfflineCommand}" ToolTip.Tip="Keep the background map of this area on this Mac, for working without a connection"
                 AutomationProperties.Name="Keep this area of the map offline">
           <StackPanel Orientation="Horizontal" Spacing="6">
@@ -105,7 +105,7 @@
             <Border Classes="card" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="10" Padding="12,6" IsVisible="{Binding HasBasemapProblem}">
               <StackPanel Orientation="Horizontal" Spacing="10">
                 <TextBlock Classes="secondary" Text="{Binding BasemapProblem}" TextWrapping="Wrap" MaxWidth="420" VerticalAlignment="Center" />
-                <Button Classes="link" Content="Try again" Command="{Binding RetryTilesCommand}" VerticalAlignment="Center"
+                <Button Classes="link" Content="Try Again" Command="{Binding RetryTilesCommand}" VerticalAlignment="Center"
                         AutomationProperties.Name="Try downloading the map tiles again" />
               </StackPanel>
             </Border>
@@ -114,7 +114,7 @@
               <StackPanel Spacing="4" MaxWidth="360">
                 <TextBlock Classes="h3" Text="No structures on the map yet" HorizontalAlignment="Center" />
                 <TextBlock Classes="secondary" TextWrapping="Wrap" TextAlignment="Center"
-                           Text="A structure appears here once it has a latitude and longitude. Use Set location to click each one on the map, or add coordinates in bulk." />
+                           Text="Structures need a latitude and longitude. Use Set location, or add coordinates in bulk." />
               </StackPanel>
             </Border>
 
@@ -132,8 +132,8 @@
                     </ComboBox.ItemTemplate>
                   </ComboBox>
                   <ToggleButton Content="Draw an area" IsChecked="{Binding IsPolygonSelect}" AutomationProperties.Name="Select by drawing an area: click its corners" />
-                  <Button Content="By attribute…" Command="{Binding SelectByAttributeCommand}" AutomationProperties.Name="Select by the values of a field" />
-                  <Button Content="By location…" Command="{Binding SelectByLocationCommand}" AutomationProperties.Name="Select by where features are compared with other features" />
+                  <Button Content="By Attribute…" Command="{Binding SelectByAttributeCommand}" AutomationProperties.Name="Select by the values of a field" />
+                  <Button Content="By Location…" Command="{Binding SelectByLocationCommand}" AutomationProperties.Name="Select by where features are compared with other features" />
                 </WrapPanel>
               </Border>
               <Border Name="EditBar" Classes="card compact" IsVisible="{Binding IsEdit}" HorizontalAlignment="Left">
@@ -151,7 +151,7 @@
                     <ListBox Classes="segmented" ItemsSource="{Binding EditTools}" SelectedItem="{Binding SelectedEditTool}"
                              IsVisible="{Binding EditLayer, Converter={x:Static ObjectConverters.IsNotNull}}"
                              AutomationProperties.Name="Edit tool: change shapes or add new ones" />
-                    <Button Content="New layer…" Command="{Binding NewLayerCommand}" AutomationProperties.Name="Make a new layer to draw on" />
+                    <Button Content="New Layer…" Command="{Binding NewLayerCommand}" AutomationProperties.Name="Make a new layer to draw on" />
                   </WrapPanel>
                   <WrapPanel ItemSpacing="6" LineSpacing="6" IsVisible="{Binding EditLayer, Converter={x:Static ObjectConverters.IsNotNull}}">
                     <CheckBox Content="Snap" IsChecked="{Binding SnapToShapes}" ToolTip.Tip="New corners snap to nearby corners and edges, and to structures"
@@ -162,7 +162,7 @@
                     <Button Classes="icon" Command="{Binding RedoEditCommand}" ToolTip.Tip="{Binding RedoEditText}" AutomationProperties.Name="{Binding RedoEditText}">
                       <c:Icon Kind="Redo" />
                     </Button>
-                    <Button Content="Delete shape" Command="{Binding DeleteEditFeatureCommand}" IsVisible="{Binding HasEditFeature}"
+                    <Button Content="Delete Shape" Command="{Binding DeleteEditFeatureCommand}" IsVisible="{Binding HasEditFeature}"
                             AutomationProperties.Name="Delete the picked shape" />
                     <TextBlock Classes="muted" Text="{Binding EditStatus}" VerticalAlignment="Center" Margin="4,0" AutomationProperties.LiveSetting="Polite" />
                     <Button Classes="subtle" Content="Discard…" Command="{Binding DiscardEditsCommand}" AutomationProperties.Name="Discard the unsaved edits" />
@@ -188,22 +188,22 @@
                   <TextBlock Classes="medium" Text="{Binding SelectionText}" AutomationProperties.LiveSetting="Polite" />
                   <WrapPanel ItemSpacing="6" LineSpacing="6">
                     <Button Content="Show in Structures" Command="{Binding ShowCheckedCommand}" AutomationProperties.Name="Show the selected structures in the Structures list" />
-                    <Button Content="Set a field…" Command="{Binding SetFieldOnSelectionCommand}" AutomationProperties.Name="Set a field on the selected structures" />
-                    <Button Content="Assign to team…" Command="{Binding AssignSelectionCommand}" AutomationProperties.Name="Assign the selected structures to a team" />
+                    <Button Content="Set a Field…" Command="{Binding SetFieldOnSelectionCommand}" AutomationProperties.Name="Set a field on the selected structures" />
+                    <Button Content="Assign to Team…" Command="{Binding AssignSelectionCommand}" AutomationProperties.Name="Assign the selected structures to a team" />
                     <DropDownButton Content="Reports" AutomationProperties.Name="Reports for the selected structures">
                       <DropDownButton.Flyout>
                         <MenuFlyout Placement="BottomEdgeAlignedLeft">
-                          <MenuItem Header="Summary report" Command="{Binding PrintSelectionCommand}" CommandParameter="Summary" />
-                          <MenuItem Header="Summary report (no photos)" Command="{Binding PrintSelectionCommand}" CommandParameter="Summary-NoPhotos" />
-                          <MenuItem Header="Detailed report" Command="{Binding PrintSelectionCommand}" CommandParameter="Detail" />
-                          <MenuItem Header="Detailed report (no photos)" Command="{Binding PrintSelectionCommand}" CommandParameter="Detail-NoPhotos" />
-                          <MenuItem Header="Structure &amp; percent damaged list" Command="{Binding PrintSelectionCommand}" CommandParameter="PercentDamaged" />
-                          <MenuItem Header="Community report" Command="{Binding PrintSelectionCommand}" CommandParameter="Community" />
+                          <MenuItem Header="Summary Report" Command="{Binding PrintSelectionCommand}" CommandParameter="Summary" />
+                          <MenuItem Header="Summary Report (no Photos)" Command="{Binding PrintSelectionCommand}" CommandParameter="Summary-NoPhotos" />
+                          <MenuItem Header="Detailed Report" Command="{Binding PrintSelectionCommand}" CommandParameter="Detail" />
+                          <MenuItem Header="Detailed Report (no Photos)" Command="{Binding PrintSelectionCommand}" CommandParameter="Detail-NoPhotos" />
+                          <MenuItem Header="Structure &amp; Percent Damaged List" Command="{Binding PrintSelectionCommand}" CommandParameter="PercentDamaged" />
+                          <MenuItem Header="Community Report" Command="{Binding PrintSelectionCommand}" CommandParameter="Community" />
                         </MenuFlyout>
                       </DropDownButton.Flyout>
                     </DropDownButton>
-                    <Button Content="Add to web map…" Command="{Binding WebMapOfSelectionCommand}" AutomationProperties.Name="Make a web map of the selected structures" />
-                    <Button Content="Copy values…" Command="{Binding CopyValuesCommand}" AutomationProperties.Name="Copy values from a layer of areas onto the selected structures" />
+                    <Button Content="Add to Web Map…" Command="{Binding WebMapOfSelectionCommand}" AutomationProperties.Name="Make a web map of the selected structures" />
+                    <Button Content="Copy Values…" Command="{Binding CopyValuesCommand}" AutomationProperties.Name="Copy values from a layer of areas onto the selected structures" />
                     <Button Classes="subtle" Content="Clear" Command="{Binding ClearCheckedCommand}" AutomationProperties.Name="Clear the selected structures" />
                   </WrapPanel>
                 </StackPanel>
@@ -211,7 +211,7 @@
               <Border Classes="card compact" IsVisible="{Binding HasLayerSelection}" HorizontalAlignment="Left">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                   <TextBlock Classes="medium" Text="{Binding LayerSelectionText}" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
-                  <Button Content="Show in the table" Command="{Binding ShowSelectionInTableCommand}" AutomationProperties.Name="Show the selected features in the attribute table" />
+                  <Button Content="Show in the Table" Command="{Binding ShowSelectionInTableCommand}" AutomationProperties.Name="Show the selected features in the attribute table" />
                   <Button Classes="subtle" Content="Clear" Command="{Binding ClearSelectionCommand}" AutomationProperties.Name="Clear the selected features" />
                 </StackPanel>
               </Border>
@@ -231,7 +231,7 @@
                     <c:Icon Kind="Close" />
                   </Button>
                 </Grid>
-                <Button DockPanel.Dock="Bottom" Classes="link" Content="Show in the table" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).ShowIdentifiedInTableCommand}"
+                <Button DockPanel.Dock="Bottom" Classes="link" Content="Show in the Table" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).ShowIdentifiedInTableCommand}"
                         Margin="0,6,0,0" AutomationProperties.Name="Select this feature and show it in the attribute table" />
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                   <ItemsControl ItemsSource="{Binding Lines}">
@@ -289,18 +289,18 @@
         <DockPanel IsVisible="{Binding IsLayersPanel}">
           <StackPanel DockPanel.Dock="Top" Spacing="8">
             <c:Banner Classes="stacked" Tone="Warning" IsVisible="{Binding HasLayersWarning}" Text="{Binding LayersWarning}">
-              <Button Classes="link" Content="These layers belong to this database" Command="{Binding KeepLayersCommand}" HorizontalAlignment="Left"
+              <Button Classes="link" Content="These Layers Belong to This Database" Command="{Binding KeepLayersCommand}" HorizontalAlignment="Left"
                       AutomationProperties.Name="Keep these map layers with this database" />
             </c:Banner>
-            <DropDownButton Content="Add layer" HorizontalAlignment="Left" AutomationProperties.Name="Add a map layer">
+            <DropDownButton Content="Add Layer" HorizontalAlignment="Left" AutomationProperties.Name="Add a map layer">
               <DropDownButton.Flyout>
                 <MenuFlyout Placement="BottomEdgeAlignedLeft">
-                  <MenuItem Header="From a file…" Command="{Binding AddFileLayerCommand}" ToolTip.Tip="A Shapefile, GeoJSON, GeoPackage or CSV with latitude and longitude" />
-                  <MenuItem Header="From an ArcGIS web address…" Command="{Binding AddOnlineLayerCommand}" />
+                  <MenuItem Header="From a File…" Command="{Binding AddFileLayerCommand}" ToolTip.Tip="A Shapefile, GeoJSON, GeoPackage or CSV with latitude and longitude" />
+                  <MenuItem Header="From an ArcGIS Web Address…" Command="{Binding AddOnlineLayerCommand}" />
                   <Separator />
-                  <MenuItem Header="FEMA flood zones" Command="{Binding AddFloodZonesCommand}" />
+                  <MenuItem Header="FEMA Flood Zones" Command="{Binding AddFloodZonesCommand}" />
                   <Separator />
-                  <MenuItem Header="New layer to draw on…" Command="{Binding NewLayerCommand}" />
+                  <MenuItem Header="New Layer to Draw On…" Command="{Binding NewLayerCommand}" />
                 </MenuFlyout>
               </DropDownButton.Flyout>
             </DropDownButton>
@@ -327,15 +327,15 @@
                             <MenuFlyout Placement="BottomEdgeAlignedRight">
                               <MenuItem Header="Style…" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).StyleLayerCommand}" CommandParameter="{Binding}"
                                         IsVisible="{Binding !IsTiles}" />
-                              <MenuItem Header="Attribute table" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).ShowTableCommand}" CommandParameter="{Binding}"
+                              <MenuItem Header="Attribute Table" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).ShowTableCommand}" CommandParameter="{Binding}"
                                         IsVisible="{Binding !IsTiles}" />
-                              <MenuItem Header="Zoom to layer" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).ZoomToLayerCommand}" CommandParameter="{Binding}"
+                              <MenuItem Header="Zoom to Layer" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).ZoomToLayerCommand}" CommandParameter="{Binding}"
                                         IsVisible="{Binding IsFeatures}" />
-                              <MenuItem Header="Copy values onto structures…" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).CopyValuesCommand}" CommandParameter="{Binding}"
+                              <MenuItem Header="Copy Values Onto Structures…" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).CopyValuesCommand}" CommandParameter="{Binding}"
                                         IsVisible="{Binding IsAreaLayer}" />
-                              <MenuItem Header="Move up" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).MoveLayerUpCommand}" CommandParameter="{Binding}"
+                              <MenuItem Header="Move Up" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).MoveLayerUpCommand}" CommandParameter="{Binding}"
                                         IsVisible="{Binding !IsStructures}" />
-                              <MenuItem Header="Move down" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).MoveLayerDownCommand}" CommandParameter="{Binding}"
+                              <MenuItem Header="Move Down" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).MoveLayerDownCommand}" CommandParameter="{Binding}"
                                         IsVisible="{Binding !IsStructures}" />
                               <Separator IsVisible="{Binding CanRemove}" />
                               <MenuItem Header="Remove…" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).RemoveLayerCommand}" CommandParameter="{Binding}"
@@ -409,7 +409,7 @@
 
             <StackPanel Spacing="2" IsVisible="{Binding HasUnplaced}">
               <TextBlock Classes="medium" Text="{Binding UnplacedText}" TextWrapping="Wrap" />
-              <Button Classes="link" Content="Add coordinates in Import &amp; export" Command="{Binding ShowCoordinateToolsCommand}" HorizontalAlignment="Left"
+              <Button Classes="link" Content="Add Coordinates in Import &amp; Export" Command="{Binding ShowCoordinateToolsCommand}" HorizontalAlignment="Left"
                       AutomationProperties.Name="Open Import and export to add coordinates in bulk" />
             </StackPanel>
 
@@ -435,7 +435,7 @@
             <TextBlock Classes="eyebrow" Text="{Binding CountText, StringFormat='STRUCTURES, {0}'}" Margin="0,6,0,0" />
           </StackPanel>
 
-          <Button DockPanel.Dock="Bottom" Content="Open assessment" Command="{Binding OpenSelectedCommand}" IsEnabled="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}"
+          <Button DockPanel.Dock="Bottom" Content="Open Assessment" Command="{Binding OpenSelectedCommand}" IsEnabled="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}"
                   Margin="0,8,0,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
           <Border Classes="card flush" Margin="0,4,0,0">
             <ListBox Name="PointList" Classes="rows" ItemsSource="{Binding Visible}" SelectedItem="{Binding Selected}" Background="Transparent"

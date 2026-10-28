@@ -26,7 +26,7 @@
             </Grid>
             <StackPanel Spacing="4">
               <TextBlock Classes="fieldLabel" Text="Basis (what the owner disputes, and why)" />
-              <TextBox Text="{Binding Basis}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="40" PlaceholderText="For example: the repair estimate is too high; two contractor bids attached"
+              <TextBox Text="{Binding Basis}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="40" PlaceholderText="For example: repair estimate too high; two bids attached"
                        AutomationProperties.Name="Basis of the appeal" />
             </StackPanel>
             <StackPanel Spacing="4">
@@ -34,7 +34,7 @@
               <TextBox Text="{Binding Notes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="40" AutomationProperties.Name="Notes on the appeal" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Classes="primary" Content="Save appeal" Command="{Binding SaveAppealCommand}" />
+              <Button Classes="primary" Content="Save Appeal" Command="{Binding SaveAppealCommand}" />
               <TextBlock Classes="medium" Text="{Binding SavedText}" VerticalAlignment="Center" TextWrapping="Wrap" />
             </StackPanel>
           </StackPanel>
@@ -44,7 +44,7 @@
         <StackPanel Spacing="6">
           <TextBlock Classes="h3" Text="Contractor bids" />
           <TextBlock Classes="muted" TextWrapping="Wrap"
-                     Text="For each bid, the percent damaged FEMA's engine gives with that bid as the repair cost (contractor's estimate). Nothing changes until you choose Use this bid." />
+                     Text="Percent damaged with each bid as the repair cost. Nothing changes until you choose Use this bid." />
           <TextBlock Classes="muted" Text="No bids yet." IsVisible="{Binding !HasBids}" />
           <ItemsControl ItemsSource="{Binding Bids}">
             <ItemsControl.ItemTemplate>
@@ -61,7 +61,7 @@
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                       <TextBlock Classes="muted" Text="In use" VerticalAlignment="Center" IsVisible="{Binding IsInUse}" />
-                      <Button Content="Use this bid…" IsVisible="{Binding CanUse}" AutomationProperties.Name="{Binding AccessibleUse}"
+                      <Button Content="Use This Bid…" IsVisible="{Binding CanUse}" AutomationProperties.Name="{Binding AccessibleUse}"
                               Command="{Binding Use}" CommandParameter="{Binding}" />
                       <Button Content="Remove…" AutomationProperties.Name="{Binding AccessibleRemove}"
                               Command="{Binding Remove}" CommandParameter="{Binding}" />
@@ -87,7 +87,7 @@
                                 CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" AutomationProperties.Name="Date of the new bid" />
             <TextBlock Grid.Row="2" Classes="fieldLabel" Text="Notes" Margin="0,4,0,0" />
             <TextBox Grid.Row="3" Grid.ColumnSpan="2" Text="{Binding NewNotes}" AutomationProperties.Name="Notes on the new bid" />
-            <Button Grid.Row="3" Grid.Column="2" Content="Add bid" Command="{Binding AddBidCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+            <Button Grid.Row="3" Grid.Column="2" Content="Add Bid" Command="{Binding AddBidCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
           </Grid>
         </StackPanel>
       </StackPanel>

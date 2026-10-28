@@ -199,9 +199,9 @@
             <DataGrid.ContextMenu>
               <ContextMenu>
                 <MenuItem Header="Open" Command="{Binding OpenCommand}" CommandParameter="{Binding Selected}" />
-                <MenuItem Header="Copy from another structure…" Command="{Binding CopyFromCommand}" CommandParameter="{Binding Selected}" />
-                <MenuItem Header="Set a field on the checked structures…" Command="{Binding BulkEditCommand}" />
-                <MenuItem Header="Set event for the checked structures…" Command="{Binding SetEventCommand}" />
+                <MenuItem Header="Copy from Another Structure…" Command="{Binding CopyFromCommand}" CommandParameter="{Binding Selected}" />
+                <MenuItem Header="Set a Field on the Checked Structures…" Command="{Binding BulkEditCommand}" />
+                <MenuItem Header="Set Event for the Checked Structures…" Command="{Binding SetEventCommand}" />
                 <Separator />
                 <MenuItem Header="Move to Recently Deleted" Command="{Binding TrashCommand}" CommandParameter="{Binding Selected}" />
               </ContextMenu>
@@ -325,8 +325,8 @@
           <!-- Empty states -->
           <c:EmptyState IsVisible="{Binding IsEmpty}" Icon="Structures" Title="{Binding EmptyTitle}" Text="{Binding EmptyText}">
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Classes="primary" Content="New residential" Command="{Binding NewStructureCommand}" CommandParameter="1" />
-              <Button Content="New non-residential" Command="{Binding NewStructureCommand}" CommandParameter="2" />
+              <Button Classes="primary" Content="New Residential" Command="{Binding NewStructureCommand}" CommandParameter="1" />
+              <Button Content="New Non-residential" Command="{Binding NewStructureCommand}" CommandParameter="2" />
             </StackPanel>
           </c:EmptyState>
           <c:EmptyState IsVisible="{Binding NoMatches}" Icon="Search" Title="No Matches">

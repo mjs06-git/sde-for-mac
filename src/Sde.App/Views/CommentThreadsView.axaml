@@ -58,7 +58,7 @@
               <StackPanel Orientation="Horizontal" Spacing="14" IsVisible="{Binding !IsReplying}">
                 <Button Classes="link" Content="Reply" Command="{Binding StartReplyCommand}" IsVisible="{Binding IsOpen}" AutomationProperties.Name="{Binding AccessibleReply}" />
                 <Button Classes="link" Content="Resolve" Command="{Binding ResolveCommand}" IsVisible="{Binding IsOpen}" AutomationProperties.Name="{Binding AccessibleResolve}" />
-                <Button Classes="link" Content="Open again" Command="{Binding ReopenCommand}" IsVisible="{Binding IsResolved}" AutomationProperties.Name="{Binding AccessibleReopen}" />
+                <Button Classes="link" Content="Open Again" Command="{Binding ReopenCommand}" IsVisible="{Binding IsResolved}" AutomationProperties.Name="{Binding AccessibleReopen}" />
               </StackPanel>
             </StackPanel>
           </Border>

@@ -19,9 +19,9 @@
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
             <Button Content="{Binding OpenText}" IsVisible="{Binding CanOpen}" ToolTip.Tip="{Binding OpenTip}"
                     Command="{Binding Open}" CommandParameter="{Binding}" AutomationProperties.Name="{Binding AccessibleOpen}" />
-            <Button Content="Set aside…" IsVisible="{Binding CanDismiss}"
+            <Button Content="Set Aside…" IsVisible="{Binding CanDismiss}"
                     Command="{Binding Dismiss}" CommandParameter="{Binding}" AutomationProperties.Name="{Binding AccessibleDismiss}" />
-            <Button Content="Bring back" IsVisible="{Binding IsDismissed}"
+            <Button Content="Bring Back" IsVisible="{Binding IsDismissed}"
                     Command="{Binding BringBack}" CommandParameter="{Binding}" AutomationProperties.Name="{Binding AccessibleBringBack}" />
           </StackPanel>
         </Grid>
@@ -108,7 +108,7 @@
                 <DataGrid.ContextMenu>
                   <ContextMenu>
                     <MenuItem Header="Open" Command="{Binding OpenSelectedCommand}" />
-                    <MenuItem Header="Mark reviewed" Command="{Binding MarkReviewedCommand}" />
+                    <MenuItem Header="Mark Reviewed" Command="{Binding MarkReviewedCommand}" />
                   </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
@@ -178,8 +178,8 @@
               </DataGrid>
 
               <c:EmptyState IsVisible="{Binding IsQueueEmpty}" Icon="Review" Title="{Binding QueueEmptyTitle}" Text="{Binding QueueEmptyText}" />
-              <c:EmptyState IsVisible="{Binding NoRowsMatch}" Icon="Filter" Title="Nothing with this status" Text="No assessments have this status. Choose another, or Every status.">
-                <Button Content="Show the assessments in review" Command="{Binding ShowWaitingCommand}" />
+              <c:EmptyState IsVisible="{Binding NoRowsMatch}" Icon="Filter" Title="Nothing with this status" Text="No Assessments with This Status">
+                <Button Content="Show the Assessments in Review" Command="{Binding ShowWaitingCommand}" />
               </c:EmptyState>
             </Grid>
           </DockPanel>
@@ -193,7 +193,7 @@
                 <StackPanel Spacing="2">
                   <TextBlock Classes="h3" Text="{Binding SelectedTitle}" TextWrapping="Wrap" />
                   <TextBlock Classes="muted" Text="{Binding SelectedDetail}" TextWrapping="Wrap" />
-                  <Button Classes="link" Content="Open the assessment" Command="{Binding OpenSelectedCommand}" HorizontalAlignment="Left" Margin="0,4,0,0" />
+                  <Button Classes="link" Content="Open the Assessment" Command="{Binding OpenSelectedCommand}" HorizontalAlignment="Left" Margin="0,4,0,0" />
                 </StackPanel>
 
                 <StackPanel Spacing="4" IsVisible="{Binding HasSelectedFindings}">

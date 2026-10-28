@@ -13,7 +13,7 @@
               <StackPanel Spacing="1">
                 <TextBlock Classes="medium" Text="Let AI assistants change this database" />
                 <TextBlock Classes="muted" TextWrapping="Wrap"
-                           Text="Off: an assistant such as Claude can read assessments, check them and make reports and maps, but can't change anything. On: it can also fill in fields, set Draft, Reviewed or Appeal, add structures, events and review comments, and assign teams. Every change is recorded in History as the assistant's, Final and Letter sent assessments stay locked, and it can never delete anything." />
+                           Text="Off: read, check and report only. On: can also edit fields, statuses, structures, events, comments and teams. Every change is in History; locked assessments stay locked; nothing is deleted." />
               </StackPanel>
             </ToggleSwitch.Content>
           </ToggleSwitch>
@@ -24,7 +24,7 @@
     <Border Classes="card">
       <StackPanel Spacing="12">
         <c:CardHeader Icon="Link" Title="Connect an assistant"
-                      Text="The assistant runs SDE in the background to reach this database. Put SDE in the Applications folder and open this database in SDE once before connecting. The setup names this database, so copy it again after you switch databases." />
+                      Text="Needs SDE in Applications and this database opened in it once. Copy the setup again after switching databases." />
         <c:Banner Tone="Warning" Icon="Warning" Text="{Binding TranslocationWarning}" IsVisible="{Binding HasTranslocationWarning}" />
 
         <StackPanel Spacing="6">
@@ -32,17 +32,17 @@
           <Border Background="{DynamicResource BgSubtle}" CornerRadius="6" Padding="10,8">
             <SelectableTextBlock Classes="mono sm" Text="{Binding ClaudeCodeCommand}" TextWrapping="Wrap" />
           </Border>
-          <Button Content="Copy command" Command="{Binding CopyClaudeCodeCommand}" HorizontalAlignment="Left"
+          <Button Content="Copy Command" Command="{Binding CopyClaudeCodeCommand}" HorizontalAlignment="Left"
                   AutomationProperties.Name="Copy the Claude Code command" />
         </StackPanel>
 
         <StackPanel Spacing="6">
           <TextBlock Classes="semibold" Text="Claude Desktop" />
-          <TextBlock Classes="muted" TextWrapping="Wrap" Text="Add this to claude_desktop_config.json (Settings, Developer, Edit Config), then restart Claude Desktop." />
+          <TextBlock Classes="muted" TextWrapping="Wrap" Text="Add to claude_desktop_config.json, then restart Claude Desktop." />
           <Border Background="{DynamicResource BgSubtle}" CornerRadius="6" Padding="10,8">
             <SelectableTextBlock Classes="mono sm" Text="{Binding ClaudeDesktopConfig}" TextWrapping="Wrap" />
           </Border>
-          <Button Content="Copy setup" Command="{Binding CopyClaudeDesktopCommand}" HorizontalAlignment="Left"
+          <Button Content="Copy Setup" Command="{Binding CopyClaudeDesktopCommand}" HorizontalAlignment="Left"
                   AutomationProperties.Name="Copy the Claude Desktop setup" />
         </StackPanel>
       </StackPanel>
@@ -51,7 +51,7 @@
     <Border Classes="card">
       <StackPanel Spacing="12">
         <c:CardHeader Icon="History" Title="Recent changes by AI assistants"
-                      Text="Each line is one request that changed something. Revert puts back the values from before it; anything changed again since is left as it is." />
+                      Text="Each line is one change. Revert restores the values from before it." />
         <TextBlock Classes="muted" Text="No AI assistant has changed this database." IsVisible="{Binding HasNoChanges}" />
         <ItemsControl ItemsSource="{Binding Changes}" IsVisible="{Binding HasChanges}">
           <ItemsControl.ItemTemplate>

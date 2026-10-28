@@ -64,7 +64,7 @@
         </DockPanel>
       </Border>
       <TextBlock Classes="muted" TextWrapping="Wrap"
-                 Text="Each value goes in through the same checks as typing it in the editor. The copy is one change in each structure's history, so it can be reverted. Final, Letter sent and checked-out assessments are left as they are." />
+                 Text="Each value is checked as if typed, and the copy can be reverted. Locked and checked-out assessments are skipped." />
     </StackPanel>
 
     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">

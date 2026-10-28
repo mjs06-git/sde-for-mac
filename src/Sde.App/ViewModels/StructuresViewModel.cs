@@ -284,11 +284,11 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	public int StructureCount => _all.Select(r => r.Summary.PropertyID).Distinct().Count();
 
 	/// <summary>The empty state's title: there are no structures at all, or none in the chosen event.</summary>
-	public string EmptyTitle => _app.Scope.IsAll ? "No structures yet" : $"Nothing in {_app.Scope.Event.Name} yet";
+	public string EmptyTitle => _app.Scope.IsAll ? "No Structures" : $"Nothing in {_app.Scope.Event.Name}";
 
 	public string EmptyText => _app.Scope.IsAll
-		? "Start a new residential or non-residential assessment, or bring in data from FEMA's SDE or another system on the Import & export page."
-		: "A new assessment started while this event is chosen joins it. To add existing ones, choose All events, tick them, then use Change, Set event.";
+		? "Start one, or import from File › Import."
+		: "New assessments join this event. To add others, use Change › Set Event.";
 
 	public bool HasRows => Rows.Count > 0;
 

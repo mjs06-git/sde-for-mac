@@ -38,7 +38,7 @@
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Spacing="2">
                 <TextBlock Classes="h3" Text="Square footage" />
-                <TextBlock Classes="muted" Text="Add the building's footprint as rectangles (length × width × stories), or type a total." TextWrapping="Wrap" />
+                <TextBlock Classes="muted" Text="Rectangles (length × width × stories), or a total." TextWrapping="Wrap" />
               </StackPanel>
               <TextBlock Classes="xl semibold num" Grid.Column="1" Text="{Binding Editor.SquareFootage, Converter={x:Static app:Converters.SquareFeet}}" VerticalAlignment="Center" Margin="12,0,0,0" />
             </Grid>
@@ -118,7 +118,7 @@
           <StackPanel>
             <StackPanel Spacing="2" Margin="0,0,0,10">
               <TextBlock Classes="h3" Text="Cost adjustments" />
-              <TextBlock Classes="muted" Text="Features that add to the replacement cost. The list depends on the type of building." TextWrapping="Wrap" />
+              <TextBlock Classes="muted" Text="Features that add to the replacement cost." TextWrapping="Wrap" />
             </StackPanel>
             <Border Classes="tableHead">
               <Grid ColumnDefinitions="*,52,104,128,104">
@@ -153,7 +153,7 @@
           <StackPanel>
             <StackPanel Spacing="2" Margin="0,0,0,10">
               <TextBlock Classes="h3" Text="Additional adjustments" />
-              <TextBlock Classes="muted" Text="Anything else to include in the replacement cost (up to 7 lines)." TextWrapping="Wrap" />
+              <TextBlock Classes="muted" Text="Up to 7 lines." TextWrapping="Wrap" />
             </StackPanel>
             <Border Classes="tableHead">
               <Grid ColumnDefinitions="*,104,128,104">
@@ -207,7 +207,7 @@
       <StackPanel>
         <TextBlock Classes="h2" Text="{Binding Title}" Margin="0,0,0,14" />
         <c:Banner Tone="Violet" Icon="Info" Margin="0,0,0,14" IsVisible="{Binding Editor.IsUndetermined}"
-                  Text="Damage is marked as undetermined on the Inspection step, so these values don't affect the result." />
+                  Text="Damage is undetermined (Inspection step), so these values don't affect the result." />
         <Border Classes="card" Margin="0,0,0,14" IsVisible="{Binding Editor.HasDepthTables}">
           <StackPanel Spacing="10">
             <Grid ColumnDefinitions="*,Auto">
@@ -222,13 +222,13 @@
                     <DataTemplate x:DataType="core:DepthDamageTable"><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" /></DataTemplate>
                   </ComboBox.ItemTemplate>
                 </ComboBox>
-                <Button Classes="primary" Content="Suggest from depth table" Command="{Binding Editor.SuggestDamageCommand}" />
+                <Button Classes="primary" Content="Suggest from Depth Table" Command="{Binding Editor.SuggestDamageCommand}" />
               </StackPanel>
             </Grid>
             <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{Binding Editor.DepthResultText}" IsVisible="{Binding Editor.DepthResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding Editor.HasSuggestions}">
               <TextBlock Classes="issue recommended" TextWrapping="Wrap" Text="{Binding Editor.SuggestionsText}" VerticalAlignment="Center" />
-              <Button Grid.Column="1" Content="Accept all" Command="{Binding Editor.AcceptAllSuggestionsCommand}" Margin="12,0,0,0"
+              <Button Grid.Column="1" Content="Accept All" Command="{Binding Editor.AcceptAllSuggestionsCommand}" Margin="12,0,0,0"
                       AutomationProperties.Name="Accept all suggested damage values" />
             </Grid>
           </StackPanel>
@@ -366,15 +366,15 @@
               <StackPanel HorizontalAlignment="Center" Spacing="8">
                 <c:Icon Kind="Camera" Size="28" Classes="tertiary" HorizontalAlignment="Center" />
                 <TextBlock Classes="medium" Text="Drag photos here" HorizontalAlignment="Center" />
-                <Button Content="Choose photos…" HorizontalAlignment="Center" Command="{Binding Editor.ChoosePhotosCommand}" />
-                <TextBlock Classes="muted" Text="Reports show the photos in this order, the starred one first. Drag a photo by its handle, or use the arrows, to change the order." HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="460" />
+                <Button Content="Choose Photos…" HorizontalAlignment="Center" Command="{Binding Editor.ChoosePhotosCommand}" />
+                <TextBlock Classes="muted" Text="The starred photo comes first on reports. Drag or use the arrows to reorder." HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="460" />
               </StackPanel>
             </Border>
             <c:Banner Classes="stacked" Tone="Accent" Icon="Image" IsVisible="{Binding Editor.HasPhotoOffer}" Text="{Binding Editor.PhotoOfferText}">
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Content="Use as the structure's location" Command="{Binding Editor.UsePhotoLocationCommand}" IsVisible="{Binding Editor.CanUsePhotoLocation}" />
-                <Button Content="Use as the inspection date" Command="{Binding Editor.UsePhotoDateCommand}" IsVisible="{Binding Editor.CanUsePhotoDate}" />
-                <Button Classes="subtle" Content="Not now" Command="{Binding Editor.DismissPhotoOfferCommand}" />
+                <Button Content="Use as the Structure's Location" Command="{Binding Editor.UsePhotoLocationCommand}" IsVisible="{Binding Editor.CanUsePhotoLocation}" />
+                <Button Content="Use as the Inspection Date" Command="{Binding Editor.UsePhotoDateCommand}" IsVisible="{Binding Editor.CanUsePhotoDate}" />
+                <Button Classes="subtle" Content="Not Now" Command="{Binding Editor.DismissPhotoOfferCommand}" />
               </StackPanel>
             </c:Banner>
             <ItemsControl ItemsSource="{Binding Editor.Photos}" IsVisible="{Binding Editor.Photos.Count, Converter={x:Static app:Converters.IsPositive}}">
@@ -518,25 +518,25 @@
           <c:Banner Classes="stacked" Tone="Accent" Icon="Lock" Margin="0,0,0,14" IsVisible="{Binding IsLocked}" Text="{Binding LockText}"
                     AutomationProperties.Name="Locked">
             <TextBlock Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding ChangedInOlderVersion}"
-                       Text="It was changed in an older version of SDE after it was locked. Check it, then reopen and lock it again." />
+                       Text="Changed in an older SDE after it was locked. Check it, then reopen and lock it again." />
           </c:Banner>
           <c:Banner Classes="stacked" Tone="Accent" Icon="Lock" Margin="0,0,0,14" IsVisible="{Binding IsCheckedOut}" Text="{Binding CheckOutText}"
                     AutomationProperties.Name="Checked out">
-            <Button Content="Take it back…" Command="{Binding TakeBackCommand}" HorizontalAlignment="Left"
+            <Button Content="Take It Back…" Command="{Binding TakeBackCommand}" HorizontalAlignment="Left"
                     AutomationProperties.Name="Take it back from the work package early" />
           </c:Banner>
           <c:Banner Classes="stacked" Tone="Warning" Margin="0,0,0,14" IsVisible="{Binding HasConflict}" Text="{Binding ConflictText}"
                     AutomationProperties.Name="Changed elsewhere">
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Content="Use theirs" Command="{Binding UseTheirsCommand}" AutomationProperties.Name="Use their values" />
-              <Button Content="Keep mine" Command="{Binding KeepMineCommand}" AutomationProperties.Name="Keep my values" />
+              <Button Content="Use Theirs" Command="{Binding UseTheirsCommand}" AutomationProperties.Name="Use their values" />
+              <Button Content="Keep Mine" Command="{Binding KeepMineCommand}" AutomationProperties.Name="Keep my values" />
             </StackPanel>
           </c:Banner>
           <c:Banner Classes="stacked" Tone="Info" Icon="Event" Margin="0,0,0,14" IsVisible="{Binding HasEventSuggestion}" Text="{Binding EventSuggestionText}"
                     AutomationProperties.Name="Event suggestion">
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Classes="primary" Content="Add to event" Command="{Binding AddToSuggestedEventCommand}" />
-              <Button Content="Not now" Command="{Binding DismissEventSuggestionCommand}" />
+              <Button Classes="primary" Content="Add to Event" Command="{Binding AddToSuggestedEventCommand}" />
+              <Button Content="Not Now" Command="{Binding DismissEventSuggestionCommand}" />
             </StackPanel>
           </c:Banner>
           <ContentControl Content="{Binding SelectedSection}" IsEnabled="{Binding IsEditable}" />
@@ -595,7 +595,7 @@
                            app:ThemeBrush.Foreground="{Binding CumulativeState, Converter={x:Static app:Converters.PercentForegroundKey}}"
                            ToolTip.Tip="Damage from the events in the look-back period added together, as set in Settings. FEMA's reports and exports keep FEMA's own result." />
                 <TextBlock Classes="sm" Text="{Binding CumulativeVerdict}" TextWrapping="Wrap" />
-                <TextBlock Classes="xs secondary" TextWrapping="Wrap" Text="A separate finding: the percent damaged and determination above don't change." />
+                <TextBlock Classes="xs secondary" TextWrapping="Wrap" Text="A separate finding: the result above doesn't change." />
                 <Expander Header="How this was worked out" HorizontalAlignment="Stretch" Margin="0,4,0,0" AutomationProperties.Name="How cumulative damage was worked out">
                   <ItemsControl ItemsSource="{Binding CumulativeLines}">
                     <ItemsControl.ItemTemplate>

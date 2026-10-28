@@ -23,22 +23,22 @@
       <Border Classes="card">
         <StackPanel Spacing="12">
           <c:CardHeader Icon="ImportExport" Title="FEMA SDE data"
-                        Text="The same format as SDE's “Export SDE data” and “Import SDE data”: a folder with Export.json and the photos." />
+                        Text="SDE's own format: a folder with Export.json and the photos." />
           <Grid ColumnDefinitions="*,*" >
             <Border Classes="subtle" Margin="0,0,6,0" Padding="14">
               <StackPanel Spacing="8">
                 <TextBlock Classes="h3" Text="Export" />
-                <TextBlock Classes="muted" TextWrapping="Wrap" Text="Everything in this database (or in the chosen event). To export only some structures, check them on the Structures page and use Export." />
-                <Button Classes="primary" Content="Export all to an SDE folder…" Command="{Binding ExportAllCommand}" HorizontalAlignment="Left" />
+                <TextBlock Classes="muted" TextWrapping="Wrap" Text="Everything in this database or event. For some, use Export on Structures." />
+                <Button Classes="primary" Content="Export All to an SDE Folder…" Command="{Binding ExportAllCommand}" HorizontalAlignment="Left" />
               </StackPanel>
             </Border>
             <Border Grid.Column="1" Classes="subtle" Margin="6,0,0,0" Padding="14">
               <StackPanel Spacing="8">
                 <TextBlock Classes="h3" Text="Import" />
-                <TextBlock Classes="muted" TextWrapping="Wrap" Text="You'll see what's inside before anything is added. You can also drop a folder or .mdb file on this page." />
+                <TextBlock Classes="muted" TextWrapping="Wrap" Text="You'll see what's inside first. You can also drop a folder or .mdb here." />
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <Button Content="SDE export folder…" Command="{Binding ChooseSdeFolderCommand}" ToolTip.Tip="SDE 3 (Export.json) or SDE 2.x (SummaryData.xml)" />
-                  <Button Content="SDE database (.mdb)…" Command="{Binding ChooseMdbCommand}" ToolTip.Tip="A FEMA SDE database file, e.g. from a colleague's Windows PC" />
+                  <Button Content="SDE Export Folder…" Command="{Binding ChooseSdeFolderCommand}" ToolTip.Tip="SDE 3 (Export.json) or SDE 2.x (SummaryData.xml)" />
+                  <Button Content="SDE Database (.mdb)…" Command="{Binding ChooseMdbCommand}" ToolTip.Tip="A FEMA SDE database file, e.g. from a colleague's Windows PC" />
                 </StackPanel>
               </StackPanel>
             </Border>
@@ -79,7 +79,7 @@
                 </ComboBox>
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Classes="primary" Content="Import checked" Command="{Binding RunImportCommand}" />
+                <Button Classes="primary" Content="Import Checked" Command="{Binding RunImportCommand}" />
                 <Button Content="Cancel" Command="{Binding CancelImportCommand}" />
               </StackPanel>
             </StackPanel>
@@ -90,16 +90,16 @@
       <!-- Inspections or parcels from another system -->
       <Border Classes="card">
         <c:CardHeader Icon="Table" Title="Inspections or parcels"
-                      Text="Turn inspections from a permit system or a spreadsheet into assessments, or a parcel list or assessor roll into structures (.xlsx, .xls, .csv or .dbf). Import an updated file at any time: only what changed in it is updated, and your edits in SDE are kept.">
-          <Button Classes="primary" Content="Import inspections or parcels…" Command="{Binding OpenSourceImportCommand}" />
+                      Text="From a permit system, spreadsheet or assessor roll (.xlsx, .xls, .csv, .dbf). Importing again updates only what changed.">
+          <Button Classes="primary" Content="Import Inspections or Parcels…" Command="{Binding OpenSourceImportCommand}" />
         </c:CardHeader>
       </Border>
 
       <!-- A folder of field photos -->
       <Border Classes="card">
         <c:CardHeader Icon="Camera" Title="Photos from the field"
-                      Text="Attach a folder of photos to the right structures: by a record ID, parcel number or address in each file name, or by the photo's GPS position. You'll see every match before anything is attached.">
-          <Button Content="Match a photo folder to structures…" Command="{Binding MatchPhotoFolderCommand}" />
+                      Text="Matched by record ID, parcel, address or GPS. You'll see every match first.">
+          <Button Content="Match a Photo Folder to Structures…" Command="{Binding MatchPhotoFolderCommand}" />
         </c:CardHeader>
       </Border>
 
@@ -107,8 +107,8 @@
       <Border Classes="card">
         <StackPanel Spacing="10">
           <c:CardHeader Icon="Upload" Title="Work packages"
-                        Text="Assessments taken to a Mac in the field (Structures, Export, Work package for the field). When the package comes back, check it in: the field's work replaces the copies here, with its history.">
-            <Button Content="Check in a work package…" Command="{Binding CheckInCommand}" />
+                        Text="Check in a package from the field; its work replaces the copies here.">
+            <Button Content="Check in a Work Package…" Command="{Binding CheckInCommand}" />
           </c:CardHeader>
           <ItemsControl ItemsSource="{Binding CheckedOut}" IsVisible="{Binding HasCheckedOut}">
             <ItemsControl.ItemTemplate>
@@ -116,7 +116,7 @@
                 <Border Classes="rule" Padding="0,6">
                   <Grid ColumnDefinitions="*,Auto">
                     <TextBlock Text="{Binding Text}" VerticalAlignment="Center" TextWrapping="Wrap" />
-                    <Button Grid.Column="1" Classes="link" Content="Take back…" VerticalAlignment="Center"
+                    <Button Grid.Column="1" Classes="link" Content="Take Back…" VerticalAlignment="Center"
                             Command="{Binding $parent[UserControl].((vm:ImportExportViewModel)DataContext).TakeBackPackageCommand}" CommandParameter="{Binding}"
                             AutomationProperties.Name="{Binding TakeBackName}" />
                   </Grid>
@@ -130,20 +130,20 @@
       <!-- Spreadsheets and maps -->
       <Border Classes="card">
         <StackPanel Spacing="12">
-          <c:CardHeader Icon="Layers" Title="Spreadsheets &amp; maps" Text="For your own analysis, your GIS, or sharing results with people who don't use SDE." />
+          <c:CardHeader Icon="Layers" Title="Spreadsheets &amp; maps" Text="For your own analysis, GIS, or sharing." />
           <Grid ColumnDefinitions="*,*">
             <Border Classes="subtle" Margin="0,0,6,0" Padding="14">
               <StackPanel Spacing="8">
                 <TextBlock Classes="h3" Text="Excel" />
-                <TextBlock Classes="muted" TextWrapping="Wrap" Text="Every assessment as one row, with the same 218 columns as SDE's “Export to Excel”." />
+                <TextBlock Classes="muted" TextWrapping="Wrap" Text="One row per assessment, in SDE's 218 columns." />
                 <Button Content="Export to Excel…" Command="{Binding ExportExcelCommand}" />
               </StackPanel>
             </Border>
             <Border Grid.Column="1" Classes="subtle" Margin="6,0,0,0" Padding="14">
               <StackPanel Spacing="8">
                 <TextBlock Classes="h3" Text="Google Earth map" />
-                <TextBlock Classes="muted" TextWrapping="Wrap" Text="A pin for each assessment, coloured by % damaged. Structures need a latitude and longitude." />
-                <Button Content="Save map (.kmz)…" Command="{Binding ExportMapCommand}" />
+                <TextBlock Classes="muted" TextWrapping="Wrap" Text="A pin per assessment, coloured by percent damaged." />
+                <Button Content="Save Map (.kmz)…" Command="{Binding ExportMapCommand}" />
               </StackPanel>
             </Border>
           </Grid>
@@ -153,10 +153,10 @@
             <StackPanel Spacing="8">
               <TextBlock Classes="h3" Text="Add coordinates in bulk" />
               <TextBlock Classes="muted" TextWrapping="Wrap"
-                         Text="1. Save a spreadsheet of your structures.  2. Fill in Latitude and Longitude (by hand or with a geocoder).  3. Read it back: you'll see every change before it's saved." />
+                         Text="Save a spreadsheet, fill in Latitude and Longitude, then read it back." />
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Content="Save coordinates spreadsheet…" Command="{Binding ExportLatLongCommand}" />
-                <Button Content="Read coordinates…" Command="{Binding ChooseLatLongCommand}" />
+                <Button Content="Save Coordinates Spreadsheet…" Command="{Binding ExportLatLongCommand}" />
+                <Button Content="Read Coordinates…" Command="{Binding ChooseLatLongCommand}" />
               </StackPanel>
               <StackPanel Spacing="8" IsVisible="{Binding HasLatLong}" Margin="0,6,0,0">
                 <TextBlock Classes="semibold" Text="{Binding LatLongSummary}" />
@@ -183,7 +183,7 @@
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <Button Classes="primary" Content="Save checked coordinates" Command="{Binding ApplyLatLongCommand}" />
+                  <Button Classes="primary" Content="Save Checked Coordinates" Command="{Binding ApplyLatLongCommand}" />
                   <Button Content="Cancel" Command="{Binding CancelLatLongCommand}" />
                 </StackPanel>
               </StackPanel>
@@ -199,7 +199,7 @@
       <Border Classes="card">
         <StackPanel Spacing="12">
           <c:CardHeader Icon="Settings" Title="Share your setup"
-                        Text="Give colleagues your saved notes, spreadsheet mappings and default values (for example your community's details). Uses SDE's user-settings file, so it also works with FEMA's SDE." />
+                        Text="Share notes, mappings and default values with colleagues. Works with FEMA's SDE." />
           <Grid ColumnDefinitions="*,*">
             <Border Classes="subtle" Margin="0,0,6,0" Padding="14">
               <StackPanel Spacing="8">
@@ -207,14 +207,14 @@
                 <CheckBox Content="Saved notes" IsChecked="{Binding SettingsIncludeNotes}" />
                 <CheckBox Content="Spreadsheet import mappings" IsChecked="{Binding SettingsIncludeMappings}" />
                 <CheckBox Content="Default values" IsChecked="{Binding SettingsIncludeDefaults}" />
-                <Button Content="Save settings file…" Command="{Binding ExportSettingsFileCommand}" />
+                <Button Content="Save Settings File…" Command="{Binding ExportSettingsFileCommand}" />
               </StackPanel>
             </Border>
             <Border Grid.Column="1" Classes="subtle" Margin="6,0,0,0" Padding="14">
               <StackPanel Spacing="8">
                 <TextBlock Classes="h3" Text="Import" />
-                <TextBlock Classes="muted" TextWrapping="Wrap" Text="Notes and mappings are added to yours. Default values replace yours; you'll be asked first." />
-                <Button Content="Import settings file…" Command="{Binding ImportSettingsFileCommand}" />
+                <TextBlock Classes="muted" TextWrapping="Wrap" Text="Notes and mappings are added. Default values replace yours (you'll be asked)." />
+                <Button Content="Import Settings File…" Command="{Binding ImportSettingsFileCommand}" />
               </StackPanel>
             </Border>
           </Grid>

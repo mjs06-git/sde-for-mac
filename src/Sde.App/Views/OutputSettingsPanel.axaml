@@ -8,7 +8,7 @@
     <Border Classes="card">
       <StackPanel Spacing="12">
         <c:CardHeader Icon="Building" Title="Substantial improvement"
-                      Text="How improvement projects are counted for this database (in an assessment, More actions, then Improvements and SI). The NFIP minimum is 50 percent of market value, counting each project on its own. Your ordinance may be stricter." />
+                      Text="How improvement projects count. NFIP minimum: 50% of market value, each project on its own." />
         <WrapPanel>
           <StackPanel Classes="field">
             <TextBlock Classes="fieldLabel" Text="Threshold" />
@@ -30,33 +30,33 @@
             <TextBlock Classes="help" Text="0 counts each project on its own." />
           </StackPanel>
         </WrapPanel>
-        <CheckBox IsChecked="{Binding SiIncludePrior}" Content="Add earlier projects in the look-back period to the new one (cumulative substantial improvement)" />
+        <CheckBox IsChecked="{Binding SiIncludePrior}" Content="Add earlier projects in the look-back period (cumulative)" />
       </StackPanel>
     </Border>
 
     <Border Classes="card">
       <StackPanel Spacing="12">
         <c:CardHeader Icon="Letter" Title="Owner letters"
-                      Text="Word (.docx) templates for letters to owners (Structures, Export, then Owner letters). Edit them in Word or Pages. A placeholder such as «OwnerName» is filled in for each structure." />
+                      Text="Word templates for owner letters. Placeholders such as «OwnerName» are filled in." />
         <StackPanel Spacing="2">
           <TextBlock Classes="fieldLabel" Text="Templates folder" />
           <SelectableTextBlock Text="{Binding TemplatesFolder}" TextWrapping="Wrap" />
           <TextBlock Classes="secondary" Text="{Binding TemplatesText}" TextWrapping="Wrap" Margin="0,4,0,0" />
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="8">
-          <Button Content="Create starter templates" Command="{Binding CreateStarterTemplatesCommand}"
+          <Button Content="Create Starter Templates" Command="{Binding CreateStarterTemplatesCommand}"
                   ToolTip.Tip="Adds the three starter letters. Templates already in the folder are never overwritten." />
-          <Button Content="Show folder" Command="{Binding ShowTemplatesFolderCommand}" />
+          <Button Content="Show Folder" Command="{Binding ShowTemplatesFolderCommand}" />
         </StackPanel>
         <c:Banner Tone="Accent" Icon="Info"
-                  Text="The starter letters are a plain-English starting point based on FEMA P-758's sample notice. They are not legal advice. Review and adapt them with your community's counsel before you send any letters." />
+                  Text="Starter letters are based on FEMA P-758 and are not legal advice. Review them with your counsel." />
       </StackPanel>
     </Border>
 
     <Border Classes="card">
       <StackPanel Spacing="12">
         <c:CardHeader Icon="Layers" Title="Cumulative damage"
-                      Text="Off unless your ordinance counts damage from several events together. When on, an assessment's result panel also shows the cumulative total over the look-back period. This is a separate finding: each assessment keeps FEMA's own percent damaged and determination, and FEMA's reports and exports don't change." />
+                      Text="Only if your ordinance adds damage across events. A separate finding: FEMA's result, reports and exports don't change." />
         <ToggleSwitch IsChecked="{Binding CumulativeEnabled}" OnContent="" OffContent="" AutomationProperties.Name="Count damage cumulatively">
           <ToggleSwitch.Content>
             <TextBlock Classes="medium" Text="Count damage from several events together" />
