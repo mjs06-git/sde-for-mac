@@ -1,0 +1,6 @@
+<Project>
+  <!-- Every test project gets IsolateHome.cs, so no test can reach the person's own SDE folders (see TestHome). -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'Sde.TestSupport'">
+    <Compile Include="$(MSBuildThisFileDirectory)IsolateHome.cs" Link="IsolateHome.cs" />
+  </ItemGroup>
+</Project>
