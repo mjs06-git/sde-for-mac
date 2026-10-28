@@ -35,16 +35,16 @@
     </c:PageHeader>
 
     <!-- Headline numbers: each one filters the list -->
-    <UniformGrid DockPanel.Dock="Top" Columns="4" Margin="-6,-6,-6,10">
-      <c:KpiTile Margin="6" Tone="Accent" Value="{Binding OpenCount}" Label="Open cases" Caption="{Binding ClosedCaption}"
+    <StackPanel DockPanel.Dock="Top" Classes="kpiBar">
+      <c:KpiTile Tone="Accent" Value="{Binding OpenCount}" Label="Open cases" Caption="{Binding ClosedCaption}"
                  Command="{Binding ShowOpenCommand}" AutomationProperties.Name="{Binding OpenCount, StringFormat='Show the open cases: {0}'}" />
-      <c:KpiTile Margin="6" Tone="Danger" Value="{Binding OverdueCount}" Label="Overdue" Caption="Deadline passed, still open" IsActive="{Binding OverdueOnly}"
+      <c:KpiTile Tone="Danger" Value="{Binding OverdueCount}" Label="Overdue" Caption="Deadline passed, still open" IsActive="{Binding OverdueOnly}"
                  Command="{Binding ToggleOverdueCommand}" AutomationProperties.Name="{Binding OverdueCount, StringFormat='Show the overdue cases: {0}'}" />
-      <c:KpiTile Margin="6" Tone="Info" Value="{Binding IccInProgressCount}" Label="ICC claims in progress" Caption="Filed or approved, not paid"
+      <c:KpiTile Tone="Info" Value="{Binding IccInProgressCount}" Label="ICC claims in progress" Caption="Filed or approved, not paid"
                  Command="{Binding ShowIccInProgressCommand}" AutomationProperties.Name="{Binding IccInProgressCount, StringFormat='Show the ICC claims in progress: {0}'}" />
-      <c:KpiTile Margin="6" Tone="Success" Value="{Binding IccPaidText}" Label="ICC paid" Caption="{Binding IccPaidCaption}"
+      <c:KpiTile Tone="Success" Value="{Binding IccPaidText}" Label="ICC paid" Caption="{Binding IccPaidCaption}"
                  Command="{Binding ShowIccPaidCommand}" AutomationProperties.Name="{Binding IccPaidText, StringFormat='Show the paid ICC claims: {0}'}" />
-    </UniformGrid>
+    </StackPanel>
 
     <!-- Structures that still need a case -->
     <c:Banner DockPanel.Dock="Top" Tone="Info" Icon="Compliance" Margin="0,0,0,10" IsVisible="{Binding ShowMissingBanner}" Text="{Binding MissingText}"

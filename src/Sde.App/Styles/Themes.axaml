@@ -52,98 +52,43 @@
     </Style>
   </ControlTheme>
 
-  <!-- KPI tile: a card-like button with a big number -->
+  <!-- KPI tile, Mac style: a small borderless filter button, "In review 3" (the label, then the count in grey) -->
   <ControlTheme x:Key="{x:Type c:KpiTile}" TargetType="c:KpiTile">
-    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
-    <Setter Property="Padding" Value="{StaticResource CardPadding}" />
-    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
+    <Setter Property="Padding" Value="8,3" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-    <Setter Property="Cursor" Value="Hand" />
     <Setter Property="Template">
       <ControlTemplate>
-        <Border Name="PART_Root" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
-          <StackPanel Spacing="2">
-            <TextBlock Name="PART_Value" Classes="kpi" Text="{TemplateBinding Value}" />
-            <TextBlock Classes="medium" Text="{TemplateBinding Label}" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis" />
-            <TextBlock Classes="muted" Text="{TemplateBinding Caption}" TextTrimming="CharacterEllipsis"
-                       IsVisible="{TemplateBinding Caption, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <Border Name="PART_Root" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="{TemplateBinding Label}" Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Name="PART_Value" Classes="num" Text="{TemplateBinding Value}" Foreground="{DynamicResource TextSecondary}" />
           </StackPanel>
         </Border>
       </ControlTemplate>
     </Setter>
-    <Style Selector="^ /template/ TextBlock#PART_Value">
-      <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-    </Style>
     <Style Selector="^:pointerover /template/ Border#PART_Root">
-      <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+      <Setter Property="Background" Value="{DynamicResource BgHover}" />
     </Style>
     <Style Selector="^:pressed /template/ Border#PART_Root">
-      <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
+      <Setter Property="Background" Value="{DynamicResource BgPressed}" />
     </Style>
     <Style Selector="^:active /template/ Border#PART_Root">
-      <Setter Property="BorderThickness" Value="2" />
-      <Setter Property="Padding" Value="15,13" />
-      <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+      <Setter Property="Background" Value="{DynamicResource SidebarSelection}" />
     </Style>
-    <Style Selector="^:danger">
-      <Style Selector="^ /template/ TextBlock#PART_Value">
-        <Setter Property="Foreground" Value="{DynamicResource DangerFg}" />
-      </Style>
-      <Style Selector="^:active /template/ Border#PART_Root">
-        <Setter Property="BorderBrush" Value="{DynamicResource DangerFg}" />
-      </Style>
-    </Style>
-    <Style Selector="^:warning">
-      <Style Selector="^ /template/ TextBlock#PART_Value">
-        <Setter Property="Foreground" Value="{DynamicResource WarningFg}" />
-      </Style>
-      <Style Selector="^:active /template/ Border#PART_Root">
-        <Setter Property="BorderBrush" Value="{DynamicResource WarningFg}" />
-      </Style>
-    </Style>
-    <Style Selector="^:success">
-      <Style Selector="^ /template/ TextBlock#PART_Value">
-        <Setter Property="Foreground" Value="{DynamicResource SuccessFg}" />
-      </Style>
-      <Style Selector="^:active /template/ Border#PART_Root">
-        <Setter Property="BorderBrush" Value="{DynamicResource SuccessFg}" />
-      </Style>
-    </Style>
-    <Style Selector="^:info">
-      <Style Selector="^ /template/ TextBlock#PART_Value">
-        <Setter Property="Foreground" Value="{DynamicResource InfoFg}" />
-      </Style>
-    </Style>
-    <Style Selector="^:violet">
-      <Style Selector="^ /template/ TextBlock#PART_Value">
-        <Setter Property="Foreground" Value="{DynamicResource VioletFg}" />
-      </Style>
-    </Style>
-    <Style Selector="^:accent">
-      <Style Selector="^ /template/ TextBlock#PART_Value">
-        <Setter Property="Foreground" Value="{DynamicResource Accent}" />
-      </Style>
-    </Style>
-    <Style Selector="^:neutral">
-      <Style Selector="^ /template/ TextBlock#PART_Value">
-        <Setter Property="Foreground" Value="{DynamicResource NeutralFg}" />
-      </Style>
-      <Style Selector="^:active /template/ Border#PART_Root">
-        <Setter Property="BorderBrush" Value="{DynamicResource NeutralFg}" />
-      </Style>
+    <Style Selector="^:danger /template/ TextBlock#PART_Value">
+      <Setter Property="Foreground" Value="{DynamicResource DangerFg}" />
     </Style>
   </ControlTheme>
 
   <!-- Banner -->
   <ControlTheme x:Key="{x:Type c:Banner}" TargetType="c:Banner">
-    <Setter Property="Background" Value="{DynamicResource InfoBg}" />
+    <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-    <Setter Property="CornerRadius" Value="8" />
-    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="10,7" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="Template">
       <ControlTemplate>
@@ -174,7 +119,6 @@
       <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
     <Style Selector="^:accent">
-      <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
       <Style Selector="^ /template/ c|Icon#PART_Icon">
         <Setter Property="Foreground" Value="{DynamicResource Accent}" />
       </Style>
@@ -192,26 +136,23 @@
       </Style>
     </Style>
     <Style Selector="^:success">
-      <Setter Property="Background" Value="{DynamicResource SuccessBg}" />
       <Style Selector="^ /template/ c|Icon#PART_Icon">
         <Setter Property="Foreground" Value="{DynamicResource SuccessFg}" />
       </Style>
     </Style>
     <Style Selector="^:violet">
-      <Setter Property="Background" Value="{DynamicResource VioletBg}" />
       <Style Selector="^ /template/ c|Icon#PART_Icon">
         <Setter Property="Foreground" Value="{DynamicResource VioletFg}" />
       </Style>
     </Style>
     <Style Selector="^:neutral">
-      <Setter Property="Background" Value="{DynamicResource NeutralBg}" />
       <Style Selector="^ /template/ c|Icon#PART_Icon">
         <Setter Property="Foreground" Value="{DynamicResource NeutralFg}" />
       </Style>
     </Style>
   </ControlTheme>
 
-  <!-- Toast: a dark-on-light (light-on-dark) card at the bottom of the window -->
+  <!-- Toast: a notification card at the bottom of the window -->
   <ControlTheme x:Key="{x:Type c:Toast}" TargetType="c:Toast">
     <Setter Property="Background" Value="{DynamicResource BgSurface}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
@@ -264,13 +205,9 @@
     <Setter Property="Padding" Value="24" />
     <Setter Property="Template">
       <ControlTemplate>
-        <StackPanel Spacing="8" Margin="{TemplateBinding Padding}">
-          <Border Width="48" Height="48" CornerRadius="{StaticResource RadiusPill}" Background="{DynamicResource BgSubtle}" HorizontalAlignment="Center" Margin="0,0,0,6"
-                  IsVisible="{TemplateBinding Icon, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-            <c:Icon Kind="{TemplateBinding Icon}" Size="24" Foreground="{DynamicResource TextTertiary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-          </Border>
-          <TextBlock Classes="title" Text="{TemplateBinding Title}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
-          <TextBlock Classes="secondary" Text="{TemplateBinding Text}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
+        <StackPanel Spacing="6" Margin="{TemplateBinding Padding}">
+          <TextBlock Classes="lg" Text="{TemplateBinding Title}" Foreground="{DynamicResource TextSecondary}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+          <TextBlock Classes="sm" Text="{TemplateBinding Text}" Foreground="{DynamicResource TextSecondary}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
                      IsVisible="{TemplateBinding Text, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" HorizontalAlignment="Center" Margin="0,8,0,0"
                             IsVisible="{TemplateBinding Content, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -284,12 +221,8 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Grid ColumnDefinitions="Auto,*,Auto">
-          <Border Width="36" Height="36" CornerRadius="9" Background="{DynamicResource AccentSoft}" VerticalAlignment="Top" Margin="0,0,12,0"
-                  IsVisible="{TemplateBinding Icon, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-            <c:Icon Kind="{TemplateBinding Icon}" Size="18" Foreground="{DynamicResource Accent}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-          </Border>
           <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-            <TextBlock Classes="title" Text="{TemplateBinding Title}" TextWrapping="Wrap" />
+            <TextBlock Classes="h3" Text="{TemplateBinding Title}" TextWrapping="Wrap" />
             <TextBlock Classes="muted" Text="{TemplateBinding Text}" TextWrapping="Wrap"
                        IsVisible="{TemplateBinding Text, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </StackPanel>
@@ -302,16 +235,13 @@
 
   <!-- Page header -->
   <ControlTheme x:Key="{x:Type c:PageHeader}" TargetType="c:PageHeader">
-    <Setter Property="Margin" Value="0,0,0,16" />
+    <Setter Property="Margin" Value="0,0,0,10" />
     <Setter Property="Template">
       <ControlTemplate>
-        <Grid ColumnDefinitions="*,Auto">
-          <StackPanel Spacing="2" VerticalAlignment="Center">
-            <TextBlock Classes="h1" Text="{TemplateBinding Title}" TextTrimming="CharacterEllipsis"
-                       IsVisible="{TemplateBinding Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-            <TextBlock Classes="secondary" Text="{TemplateBinding Subtitle}" TextWrapping="Wrap"
-                       IsVisible="{TemplateBinding Subtitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-          </StackPanel>
+        <!-- The toolbar names the page, so this row holds only the page's actions; the subtitle is the tooltip -->
+        <Grid ColumnDefinitions="*,Auto" ToolTip.Tip="{TemplateBinding Subtitle}">
+          <TextBlock Classes="h2" Text="{TemplateBinding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                     IsVisible="{TemplateBinding Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           <ContentPresenter Grid.Column="1" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" VerticalAlignment="Center" Margin="16,0,0,0" />
         </Grid>
       </ControlTemplate>

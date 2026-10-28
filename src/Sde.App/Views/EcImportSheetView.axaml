@@ -11,9 +11,9 @@
     <Border Classes="card flush" IsVisible="{Binding HasRows}">
       <StackPanel>
         <Grid ColumnDefinitions="36,2*,2*,3*" Margin="14,8">
-          <TextBlock Grid.Column="1" Classes="eyebrow" Text="FIELD" />
-          <TextBlock Grid.Column="2" Classes="eyebrow" Text="NOW" />
-          <TextBlock Grid.Column="3" Classes="eyebrow" Text="CERTIFICATE" />
+          <TextBlock Grid.Column="1" Classes="eyebrow" Text="Field" />
+          <TextBlock Grid.Column="2" Classes="eyebrow" Text="Now" />
+          <TextBlock Grid.Column="3" Classes="eyebrow" Text="Certificate" />
         </Grid>
         <ScrollViewer MaxHeight="380" HorizontalScrollBarVisibility="Disabled">
           <ItemsControl ItemsSource="{Binding Rows}">

@@ -201,9 +201,9 @@
               <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{Binding ValuesSummary}" />
             </StackPanel>
             <Grid ColumnDefinitions="200,240,130,*" ColumnSpacing="10">
-              <TextBlock Classes="eyebrow" Text="FIELD" />
-              <TextBlock Grid.Column="1" Classes="eyebrow" Text="IN THE FILE" />
-              <TextBlock Grid.Column="3" Classes="eyebrow" Text="MEANS IN SDE" />
+              <TextBlock Classes="eyebrow" Text="Field" />
+              <TextBlock Grid.Column="1" Classes="eyebrow" Text="In the File" />
+              <TextBlock Grid.Column="3" Classes="eyebrow" Text="Means in SDE" />
             </Grid>
             <ItemsControl ItemsSource="{Binding Values}">
               <ItemsControl.ItemTemplate>
@@ -243,10 +243,10 @@
                        IsVisible="{Binding ShapeNotes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <TextBlock Classes="semibold" Text="{Binding PreviewSummary}" TextWrapping="Wrap" />
             <Grid ColumnDefinitions="30,190,1.4*,150,270,1.6*" ColumnSpacing="8">
-              <TextBlock Grid.Column="1" Classes="eyebrow" Text="RECORD ID" />
-              <TextBlock Grid.Column="2" Classes="eyebrow" Text="STRUCTURE" />
-              <TextBlock Grid.Column="3" Classes="eyebrow" Text="WILL BE" />
-              <TextBlock Grid.Column="4" Classes="eyebrow" Text="RESULT" />
+              <TextBlock Grid.Column="1" Classes="eyebrow" Text="Record ID" />
+              <TextBlock Grid.Column="2" Classes="eyebrow" Text="Structure" />
+              <TextBlock Grid.Column="3" Classes="eyebrow" Text="Will Be" />
+              <TextBlock Grid.Column="4" Classes="eyebrow" Text="Result" />
             </Grid>
             <ItemsControl ItemsSource="{Binding PreviewRows}" MaxHeight="420">
               <ItemsControl.Template>

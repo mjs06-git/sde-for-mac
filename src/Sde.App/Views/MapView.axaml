@@ -302,7 +302,7 @@
                 </MenuFlyout>
               </DropDownButton.Flyout>
             </DropDownButton>
-            <TextBlock Classes="eyebrow" Text="LAYERS, TOP FIRST" />
+            <TextBlock Classes="eyebrow" Text="Layers, Top First" />
           </StackPanel>
           <ScrollViewer HorizontalScrollBarVisibility="Disabled">
             <ItemsControl ItemsSource="{Binding Layers}">
@@ -369,7 +369,7 @@
         <!-- Structures: legend, messages and the list -->
         <DockPanel IsVisible="{Binding IsStructuresPanel}">
           <StackPanel DockPanel.Dock="Top" Spacing="8">
-            <TextBlock Classes="eyebrow" Text="SHOW" />
+            <TextBlock Classes="eyebrow" Text="Show" />
             <ItemsControl ItemsSource="{Binding Classes}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:MapClassViewModel">
@@ -413,7 +413,7 @@
 
             <!-- Set location -->
             <StackPanel Spacing="6" IsVisible="{Binding IsSetLocation}">
-              <TextBlock Classes="eyebrow" Text="STRUCTURE TO PLACE" />
+              <TextBlock Classes="eyebrow" Text="Structure to Place" />
               <ComboBox ItemsSource="{Binding PlaceChoices}" SelectedItem="{Binding PlaceTarget}" HorizontalAlignment="Stretch"
                         PlaceholderText="Structures without coordinates" AutomationProperties.Name="Structure to place">
                 <ComboBox.ItemTemplate>

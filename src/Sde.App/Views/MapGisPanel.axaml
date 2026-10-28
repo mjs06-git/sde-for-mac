@@ -7,7 +7,7 @@
              x:DataType="vm:MapGisSettingsViewModel">
   <StackPanel Spacing="14">
     <!-- The map -->
-    <Border Classes="card flush">
+    <Border Classes="card settings">
       <StackPanel Classes="settingsGroup">
         <Border Classes="settingsRow">
           <Grid ColumnDefinitions="Auto,*,Auto">
@@ -40,7 +40,7 @@
     </Border>
 
     <!-- Map pieces kept on this Mac -->
-    <Border Classes="card flush">
+    <Border Classes="card settings">
       <StackPanel Classes="settingsGroup">
         <Border Classes="settingsRow">
           <Grid ColumnDefinitions="Auto,*,Auto,Auto">
@@ -59,7 +59,7 @@
     </Border>
 
     <!-- Files for GIS -->
-    <Border Classes="card flush">
+    <Border Classes="card settings">
       <StackPanel Classes="settingsGroup">
         <Border Classes="settingsRow">
           <ToggleSwitch IsChecked="{Binding LeaveOutOwnerNames}" OnContent="" OffContent="" AutomationProperties.Name="Leave owner names out of GIS files">

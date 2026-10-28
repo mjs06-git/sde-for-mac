@@ -39,10 +39,10 @@
       <Border Classes="card flush" IsVisible="{Binding HasRows}">
         <DockPanel>
           <Grid DockPanel.Dock="Top" ColumnDefinitions="32,2*,*,*,2*" Margin="10,6">
-            <TextBlock Grid.Column="1" Classes="eyebrow" Text="STRUCTURE" />
-            <TextBlock Grid.Column="2" Classes="eyebrow" Text="NOW" />
-            <TextBlock Grid.Column="3" Classes="eyebrow" Text="NEW" />
-            <TextBlock Grid.Column="4" Classes="eyebrow" Text="HOW IT WAS MATCHED" />
+            <TextBlock Grid.Column="1" Classes="eyebrow" Text="Structure" />
+            <TextBlock Grid.Column="2" Classes="eyebrow" Text="Now" />
+            <TextBlock Grid.Column="3" Classes="eyebrow" Text="New" />
+            <TextBlock Grid.Column="4" Classes="eyebrow" Text="How It Was Matched" />
           </Grid>
           <ScrollViewer MaxHeight="300" HorizontalScrollBarVisibility="Disabled">
             <ItemsControl ItemsSource="{Binding Rows}">

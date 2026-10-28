@@ -80,11 +80,11 @@
     <Border Classes="card flush" IsVisible="{Binding HasRows}">
       <StackPanel>
         <Grid ColumnDefinitions="36,2*,2*,2*,90,3*" ColumnSpacing="10" Margin="14,8">
-          <TextBlock Grid.Column="1" Classes="eyebrow" Text="STRUCTURE" />
-          <TextBlock Grid.Column="2" Classes="eyebrow" Text="NOW" />
-          <TextBlock Grid.Column="3" Classes="eyebrow" Text="PROPOSED" />
-          <TextBlock Grid.Column="4" Classes="eyebrow" Text="CONFIDENCE" />
-          <TextBlock Grid.Column="5" Classes="eyebrow" Text="HOW" />
+          <TextBlock Grid.Column="1" Classes="eyebrow" Text="Structure" />
+          <TextBlock Grid.Column="2" Classes="eyebrow" Text="Now" />
+          <TextBlock Grid.Column="3" Classes="eyebrow" Text="Proposed" />
+          <TextBlock Grid.Column="4" Classes="eyebrow" Text="Confidence" />
+          <TextBlock Grid.Column="5" Classes="eyebrow" Text="How" />
         </Grid>
         <ScrollViewer MaxHeight="300" HorizontalScrollBarVisibility="Disabled">
           <ItemsControl ItemsSource="{Binding Rows}">

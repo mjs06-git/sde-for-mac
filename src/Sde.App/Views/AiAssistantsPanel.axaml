@@ -5,7 +5,7 @@
              x:Class="Sde.App.Views.AiAssistantsPanel"
              x:DataType="vm:AiAssistantsViewModel">
   <StackPanel Spacing="14">
-    <Border Classes="card flush">
+    <Border Classes="card settings">
       <StackPanel Classes="settingsGroup">
         <Border Classes="settingsRow">
           <ToggleSwitch IsChecked="{Binding AllowEdits}" OnContent="" OffContent="" AutomationProperties.Name="Let AI assistants change this database">

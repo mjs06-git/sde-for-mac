@@ -43,7 +43,7 @@
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
           <StackPanel Spacing="4">
             <StackPanel Orientation="Horizontal">
-              <TextBlock Classes="eyebrow" Text="DEPTH (FT)" Width="100" VerticalAlignment="Bottom" />
+              <TextBlock Classes="eyebrow" Text="Depth (ft)" Width="100" VerticalAlignment="Bottom" />
               <ItemsControl ItemsSource="{Binding ElementNames}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>

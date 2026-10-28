@@ -161,9 +161,9 @@
               <StackPanel Spacing="8" IsVisible="{Binding HasLatLong}" Margin="0,6,0,0">
                 <TextBlock Classes="semibold" Text="{Binding LatLongSummary}" />
                 <Grid ColumnDefinitions="30,2*,1.3*,1.3*,2*" Margin="0,0,0,2">
-                  <TextBlock Grid.Column="1" Classes="eyebrow" Text="STRUCTURE" />
-                  <TextBlock Grid.Column="2" Classes="eyebrow" Text="NOW" />
-                  <TextBlock Grid.Column="3" Classes="eyebrow" Text="FROM SPREADSHEET" />
+                  <TextBlock Grid.Column="1" Classes="eyebrow" Text="Structure" />
+                  <TextBlock Grid.Column="2" Classes="eyebrow" Text="Now" />
+                  <TextBlock Grid.Column="3" Classes="eyebrow" Text="From Spreadsheet" />
                 </Grid>
                 <ItemsControl ItemsSource="{Binding LatLongRows}" MaxHeight="300">
                   <ItemsControl.Template>

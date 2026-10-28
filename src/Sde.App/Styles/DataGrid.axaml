@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Sde.App.Controls">
   <!--
     Tables, in the Mac's look (DataGrid, on top of its Fluent theme): 24 px rows (TableRowHeight) striped with BgSubtle,
     body text with tabular numbers, a quiet 12 px header with hairline column separators, a caret for the sorted column,
@@ -112,6 +113,11 @@
     <Setter Property="Width" Value="8" />
     <Setter Property="Height" Value="8" />
     <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- A badge in a table cell is just its number, in its tone's colour (white on a selected row) -->
+  <Style Selector="DataGridRow c|Badge">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Padding" Value="0" />
   </Style>
   <Style Selector="DataGridRow:selected Ellipse.dot">
     <Setter Property="Stroke" Value="{DynamicResource OnAccent}" />

@@ -30,69 +30,57 @@
         <TextBlock Classes="secondary" Text="{Binding Dates}" VerticalAlignment="Center" />
       </StackPanel>
 
-      <!-- Headline numbers -->
-      <UniformGrid Columns="4" Margin="-6,0">
-        <Border Classes="card" Margin="6" AutomationProperties.Name="{Binding Structures, StringFormat='Structures: {0}'}">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="kpi" Text="{Binding Structures}" />
-            <TextBlock Classes="medium" Text="Structures" />
+      <!-- The numbers: one grouped box of quiet stats, as in Activity Monitor's footer -->
+      <Border Classes="card">
+      <UniformGrid Columns="4">
+        <StackPanel Spacing="1" Margin="0,0,12,0" AutomationProperties.Name="{Binding Structures, StringFormat='Structures: {0}'}">
+            <TextBlock Classes="title num" Text="{Binding Structures}" />
+            <TextBlock Classes="secondary sm" Text="Structures" />
             <TextBlock Classes="muted" Text="{Binding StructuresNote}" TextTrimming="CharacterEllipsis" />
-          </StackPanel>
-        </Border>
-        <Border Classes="card" Margin="6">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="kpi" Text="{Binding SubstantialText}" Foreground="{DynamicResource StatusSubstantialFg}" />
-            <TextBlock Classes="medium" Text="Substantially damaged" />
+        </StackPanel>
+        <StackPanel Spacing="1" Margin="0,0,12,0">
+            <TextBlock Classes="title num" Text="{Binding SubstantialText}" Foreground="{DynamicResource StatusSubstantialFg}" />
+            <TextBlock Classes="secondary sm" Text="Substantially damaged" />
             <TextBlock Classes="muted" Text="{Binding SubstantialNote}" TextTrimming="CharacterEllipsis" />
-          </StackPanel>
-        </Border>
-        <Border Classes="card" Margin="6">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="kpi" Text="{Binding BuildingValue}" />
-            <TextBlock Classes="medium" Text="Building value" />
+        </StackPanel>
+        <StackPanel Spacing="1" Margin="0,0,12,0">
+            <TextBlock Classes="title num" Text="{Binding BuildingValue}" />
+            <TextBlock Classes="secondary sm" Text="Building value" />
             <TextBlock Classes="muted" Text="Of assessed structures" />
-          </StackPanel>
-        </Border>
-        <Border Classes="card" Margin="6">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="kpi" Text="{Binding RepairCost}" />
-            <TextBlock Classes="medium" Text="Repair cost" />
+        </StackPanel>
+        <StackPanel Spacing="1" Margin="0,0,12,0">
+            <TextBlock Classes="title num" Text="{Binding RepairCost}" />
+            <TextBlock Classes="secondary sm" Text="Repair cost" />
             <TextBlock Classes="muted" Text="Of assessed structures" />
-          </StackPanel>
-        </Border>
+        </StackPanel>
       </UniformGrid>
+      </Border>
 
       <!-- Compliance: shown once a case is open for a structure in scope -->
-      <UniformGrid Columns="4" Margin="-6,-14,-6,0" IsVisible="{Binding HasCompliance}">
-        <Border Classes="card" Margin="6" AutomationProperties.Name="{Binding ComplianceOpen, StringFormat='Open compliance cases: {0}'}">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="kpi" Text="{Binding ComplianceOpen}" />
-            <TextBlock Classes="medium" Text="Open compliance cases" />
+      <Border Classes="card" IsVisible="{Binding HasCompliance}">
+      <UniformGrid Columns="4">
+        <StackPanel Spacing="1" Margin="0,0,12,0" AutomationProperties.Name="{Binding ComplianceOpen, StringFormat='Open compliance cases: {0}'}">
+            <TextBlock Classes="title num" Text="{Binding ComplianceOpen}" />
+            <TextBlock Classes="secondary sm" Text="Open compliance cases" />
             <TextBlock Classes="muted" Text="{Binding ComplianceOpenNote}" TextTrimming="CharacterEllipsis" />
-          </StackPanel>
-        </Border>
-        <Border Classes="card" Margin="6" AutomationProperties.Name="{Binding ComplianceOverdue, StringFormat='Overdue compliance cases: {0}'}">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="kpi" Text="{Binding ComplianceOverdue}" Classes.danger="{Binding HasOverdue}" />
-            <TextBlock Classes="medium" Text="Overdue" />
+        </StackPanel>
+        <StackPanel Spacing="1" Margin="0,0,12,0" AutomationProperties.Name="{Binding ComplianceOverdue, StringFormat='Overdue compliance cases: {0}'}">
+            <TextBlock Classes="title num" Text="{Binding ComplianceOverdue}" Classes.danger="{Binding HasOverdue}" />
+            <TextBlock Classes="secondary sm" Text="Overdue" />
             <TextBlock Classes="muted" Text="Deadline passed, still open" TextTrimming="CharacterEllipsis" />
-          </StackPanel>
-        </Border>
-        <Border Classes="card" Margin="6">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="kpi" Text="{Binding IccInProgress}" />
-            <TextBlock Classes="medium" Text="ICC claims in progress" />
+        </StackPanel>
+        <StackPanel Spacing="1" Margin="0,0,12,0">
+            <TextBlock Classes="title num" Text="{Binding IccInProgress}" />
+            <TextBlock Classes="secondary sm" Text="ICC claims in progress" />
             <TextBlock Classes="muted" Text="Filed or approved, not paid" TextTrimming="CharacterEllipsis" />
-          </StackPanel>
-        </Border>
-        <Border Classes="card" Margin="6">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="kpi" Text="{Binding IccPaid}" />
-            <TextBlock Classes="medium" Text="ICC paid" />
+        </StackPanel>
+        <StackPanel Spacing="1" Margin="0,0,12,0">
+            <TextBlock Classes="title num" Text="{Binding IccPaid}" />
+            <TextBlock Classes="secondary sm" Text="ICC paid" />
             <TextBlock Classes="muted" Text="{Binding IccPaidNote}" TextTrimming="CharacterEllipsis" />
-          </StackPanel>
-        </Border>
+        </StackPanel>
       </UniformGrid>
+      </Border>
 
       <!-- Reports and GIS files -->
       <Border Classes="card">
@@ -120,7 +108,7 @@
       </Border>
 
       <Border Classes="card" IsVisible="{Binding !HasAnything}">
-        <c:EmptyState Icon="Dashboard" Title="No structures yet" Text="Add or import structures and their assessments, and the numbers appear here." />
+        <c:EmptyState Title="No Structures" />
       </Border>
 
       <!-- Bars -->

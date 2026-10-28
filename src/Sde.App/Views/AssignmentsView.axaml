@@ -74,11 +74,11 @@
 
           <Grid DockPanel.Dock="Top" ColumnDefinitions="40,32,*,190,80,60,120,40" Margin="16,0,16,6" IsVisible="{Binding HasStops}">
             <TextBlock Grid.Column="1" Classes="eyebrow" Text="#" />
-            <TextBlock Grid.Column="2" Classes="eyebrow" Text="STRUCTURE" />
-            <TextBlock Grid.Column="3" Classes="eyebrow" Text="RESULT" />
-            <TextBlock Grid.Column="4" Classes="eyebrow" Text="CODE" />
-            <TextBlock Grid.Column="5" Classes="eyebrow" Text="DUE" />
-            <TextBlock Grid.Column="6" Classes="eyebrow" Text="STATUS" />
+            <TextBlock Grid.Column="2" Classes="eyebrow" Text="Structure" />
+            <TextBlock Grid.Column="3" Classes="eyebrow" Text="Result" />
+            <TextBlock Grid.Column="4" Classes="eyebrow" Text="Code" />
+            <TextBlock Grid.Column="5" Classes="eyebrow" Text="Due" />
+            <TextBlock Grid.Column="6" Classes="eyebrow" Text="Status" />
           </Grid>
           <Button DockPanel.Dock="Bottom" Classes="link danger" Content="Take the ticked structures off the team…" Command="{Binding UnassignCommand}"
                   Margin="16,8,16,12" HorizontalAlignment="Left" IsVisible="{Binding HasStops}" />

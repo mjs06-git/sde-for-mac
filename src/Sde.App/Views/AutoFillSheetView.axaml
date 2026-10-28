@@ -18,10 +18,10 @@
 
     <StackPanel Spacing="6" IsVisible="{Binding HasRows}">
       <Grid ColumnDefinitions="30,1.3*,1.3*,1.6*,1.1*">
-        <TextBlock Grid.Column="1" Classes="eyebrow" Text="FIELD" />
-        <TextBlock Grid.Column="2" Classes="eyebrow" Text="NOW" />
-        <TextBlock Grid.Column="3" Classes="eyebrow" Text="FOUND ONLINE" />
-        <TextBlock Grid.Column="4" Classes="eyebrow" Text="FROM" />
+        <TextBlock Grid.Column="1" Classes="eyebrow" Text="Field" />
+        <TextBlock Grid.Column="2" Classes="eyebrow" Text="Now" />
+        <TextBlock Grid.Column="3" Classes="eyebrow" Text="Found Online" />
+        <TextBlock Grid.Column="4" Classes="eyebrow" Text="From" />
       </Grid>
       <ScrollViewer MaxHeight="400">
         <ItemsControl ItemsSource="{Binding Rows}">

@@ -49,7 +49,7 @@
 
         <!-- General -->
         <StackPanel Spacing="14" IsVisible="{Binding IsGeneral}">
-          <Border Classes="card flush">
+          <Border Classes="card settings">
             <StackPanel Classes="settingsGroup">
               <Border Classes="settingsRow">
                 <Grid ColumnDefinitions="*,Auto">
@@ -137,7 +137,7 @@
 
         <!-- Defaults -->
         <StackPanel Spacing="14" IsVisible="{Binding IsDefaults}">
-          <Border Classes="card flush">
+          <Border Classes="card settings">
             <StackPanel Classes="settingsGroup">
               <Border Classes="settingsRow">
                 <ToggleSwitch IsChecked="{Binding UseDefaults}" OnContent="" OffContent="" AutomationProperties.Name="Fill new structures with my default values">
@@ -163,7 +163,7 @@
 
         <!-- Online services -->
         <StackPanel Spacing="14" IsVisible="{Binding IsOnlineServices}">
-          <Border Classes="card flush">
+          <Border Classes="card settings">
             <StackPanel Classes="settingsGroup">
               <Border Classes="settingsRow">
                 <Grid ColumnDefinitions="Auto,*">
@@ -185,7 +185,7 @@
               </Border>
             </StackPanel>
           </Border>
-          <Border Classes="card flush">
+          <Border Classes="card settings">
             <StackPanel Classes="settingsGroup">
               <Border Classes="settingsRow">
                 <Grid ColumnDefinitions="Auto,*,280">
@@ -218,7 +218,7 @@
 
         <!-- Backups -->
         <StackPanel Spacing="14" IsVisible="{Binding IsBackups}">
-          <Border Classes="card flush">
+          <Border Classes="card settings">
             <StackPanel Classes="settingsGroup">
               <Border Classes="settingsRow">
                 <Grid ColumnDefinitions="*,Auto">

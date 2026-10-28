@@ -56,7 +56,7 @@
                       <TextBlock Classes="muted xs" Text="{Binding Detail}" TextWrapping="Wrap" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                      <TextBlock Classes="eyebrow" Text="WITH THIS BID" />
+                      <TextBlock Classes="eyebrow" Text="With This Bid" />
                       <TextBlock Classes="semibold" Text="{Binding WhatIfText}" TextWrapping="Wrap" />
                     </StackPanel>
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">

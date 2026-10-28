@@ -84,7 +84,7 @@
               <TextBlock Classes="display bold" Text="{Binding PercentText}" VerticalAlignment="Center"
                          app:ThemeBrush.Foreground="{Binding State, Converter={x:Static app:Converters.StatusForegroundKey}}" />
               <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                <TextBlock Classes="eyebrow" Text="IMPROVEMENT COST AS A PERCENT OF MARKET VALUE" />
+                <TextBlock Classes="eyebrow" Text="Improvement Cost as a Percent of Market Value" />
                 <TextBlock Classes="lg semibold" Text="{Binding ResultText}"
                            app:ThemeBrush.Foreground="{Binding State, Converter={x:Static app:Converters.StatusForegroundKey}}" />
               </StackPanel>

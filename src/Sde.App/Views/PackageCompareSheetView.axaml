@@ -8,9 +8,9 @@
     <Border Classes="card flush" IsVisible="{Binding HasRows}">
       <StackPanel>
         <Grid ColumnDefinitions="36,2*,2*,2*" Margin="14,8">
-          <TextBlock Grid.Column="1" Classes="eyebrow" Text="FIELD" />
-          <TextBlock Grid.Column="2" Classes="eyebrow" Text="HERE" />
-          <TextBlock Grid.Column="3" Classes="eyebrow" Text="IN THE PACKAGE" />
+          <TextBlock Grid.Column="1" Classes="eyebrow" Text="Field" />
+          <TextBlock Grid.Column="2" Classes="eyebrow" Text="Here" />
+          <TextBlock Grid.Column="3" Classes="eyebrow" Text="In the Package" />
         </Grid>
         <ScrollViewer MaxHeight="400" HorizontalScrollBarVisibility="Disabled">
           <ItemsControl ItemsSource="{Binding Rows}">

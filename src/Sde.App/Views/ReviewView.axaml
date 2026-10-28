@@ -50,16 +50,16 @@
     </c:PageHeader>
 
     <!-- Headline numbers: each one shows its part of the page -->
-    <UniformGrid DockPanel.Dock="Top" Columns="4" Margin="-6,-6,-6,10">
-      <c:KpiTile Margin="6" Tone="Accent" Value="{Binding WaitingCount}" Label="In review" Caption="Draft or Reviewed, not Final yet"
+    <StackPanel DockPanel.Dock="Top" Classes="kpiBar">
+      <c:KpiTile Tone="Accent" Value="{Binding WaitingCount}" Label="In review" Caption="Draft or Reviewed, not Final yet"
                  Command="{Binding ShowWaitingCommand}" AutomationProperties.Name="{Binding WaitingCount, StringFormat='Show the assessments in review: {0}'}" />
-      <c:KpiTile Margin="6" Tone="Warning" Value="{Binding OpenFindingCount}" Label="Open checks" Caption="Possible problems to look at"
+      <c:KpiTile Tone="Warning" Value="{Binding OpenFindingCount}" Label="Open checks" Caption="Possible problems to look at"
                  Command="{Binding ShowAllFindingsCommand}" AutomationProperties.Name="{Binding OpenFindingCount, StringFormat='Show the open checks: {0}'}" />
-      <c:KpiTile Margin="6" Tone="Danger" Value="{Binding ErrorCount}" Label="Errors" Caption="Fix before exporting"
+      <c:KpiTile Tone="Danger" Value="{Binding ErrorCount}" Label="Errors" Caption="Fix before exporting"
                  Command="{Binding ShowErrorsCommand}" AutomationProperties.Name="{Binding ErrorCount, StringFormat='Show the errors: {0}'}" />
-      <c:KpiTile Margin="6" Tone="Info" Value="{Binding OpenCommentCount}" Label="Open comments" Caption="Threads not resolved yet"
+      <c:KpiTile Tone="Info" Value="{Binding OpenCommentCount}" Label="Open comments" Caption="Threads not resolved yet"
                  Command="{Binding ShowCommentedCommand}" AutomationProperties.Name="{Binding OpenCommentCount, StringFormat='Show the assessments with open comments: {0}'}" />
-    </UniformGrid>
+    </StackPanel>
 
     <!-- Tabs and the filters for the one showing -->
     <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,2">
@@ -151,11 +151,10 @@
                   <DataGridTemplateColumn Header="Result" SortMemberPath="Result" Width="1.3*" MinWidth="150">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate x:DataType="vm:ReviewRowViewModel">
-                        <Border Classes="pill" Margin="12,0,8,0" VerticalAlignment="Center" HorizontalAlignment="Left"
-                                app:ThemeBrush.Background="{Binding State, Converter={x:Static app:Converters.StatusBackgroundKey}}">
-                          <TextBlock Text="{Binding Result}" TextTrimming="CharacterEllipsis"
-                                     app:ThemeBrush.Foreground="{Binding State, Converter={x:Static app:Converters.StatusForegroundKey}}" />
-                        </Border>
+                        <StackPanel Classes="result" Orientation="Horizontal" Spacing="7" Margin="8,0" VerticalAlignment="Center">
+                          <Ellipse Classes="dot" app:ThemeBrush.Fill="{Binding State, Converter={x:Static app:Converters.StatusDotKey}}" />
+                          <TextBlock Text="{Binding Result}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        </StackPanel>
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                   </DataGridTemplateColumn>
@@ -198,7 +197,7 @@
                 </StackPanel>
 
                 <StackPanel Spacing="4" IsVisible="{Binding HasSelectedFindings}">
-                  <TextBlock Classes="eyebrow" Text="OPEN CHECKS" />
+                  <TextBlock Classes="eyebrow" Text="Open Checks" />
                   <ItemsControl ItemsSource="{Binding SelectedFindings}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:QaFindingViewModel">
@@ -218,7 +217,7 @@
                 </StackPanel>
 
                 <StackPanel Spacing="6">
-                  <TextBlock Classes="eyebrow" Text="COMMENTS" />
+                  <TextBlock Classes="eyebrow" Text="Comments" />
                   <v:CommentThreadsView DataContext="{Binding SelectedComments}" />
                 </StackPanel>
               </StackPanel>

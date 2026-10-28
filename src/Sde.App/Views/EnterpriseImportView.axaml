@@ -101,9 +101,9 @@
                        IsVisible="{Binding MappingProblems, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <TextBlock Classes="semibold" Text="{Binding PreviewSummary}" />
             <Grid ColumnDefinitions="30,44,2.2*,1.4*,2*">
-              <TextBlock Grid.Column="1" Classes="eyebrow" Text="ROW" />
-              <TextBlock Grid.Column="2" Classes="eyebrow" Text="ADDRESS" />
-              <TextBlock Grid.Column="3" Classes="eyebrow" Text="OWNER" />
+              <TextBlock Grid.Column="1" Classes="eyebrow" Text="Row" />
+              <TextBlock Grid.Column="2" Classes="eyebrow" Text="Address" />
+              <TextBlock Grid.Column="3" Classes="eyebrow" Text="Owner" />
             </Grid>
             <ItemsControl ItemsSource="{Binding PreviewRows}" MaxHeight="340">
               <ItemsControl.Template>
