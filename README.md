@@ -75,8 +75,10 @@ moved.
 - **The sidebar** lists your structures: **All Structures**, then smart groups (Substantially Damaged, Near
   Threshold, Not Substantial, Incomplete) with counts, each **event** in the database, the **Review**, **Compliance**
   and **Assignments** queues, and **Recently Deleted**.
-- **The toolbar** switches Structures between **List**, **Map** and **Summary** (⌘1, ⌘2, ⌘3), makes new structures
-  with the **New** pull-down, and searches the list.
+- **The toolbar** switches Structures between **List**, **Map** and **Summary** (⌘1, ⌘2, ⌘3), holds the open page's
+  actions, makes new structures with the **New** pull-down, and searches the list.
+- **The inspector** at the right of Structures and Review shows the selected row (⌥⌘I hides it). While an assessment
+  is open, the sidebar lists its eight sections.
 - **The menus** hold everything else: databases and imports in **File**, the pages in **View** (⌘1 to ⌘8), events
   and the event summary in **Event**, and **Settings** in the SDE menu (⌘,).
 - **The look follows your Mac**: light or dark, and the accent colour set in System Settings › Appearance.

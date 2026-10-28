@@ -61,8 +61,14 @@ hidden), or **View > Hide or Show Sidebar** (⌃⌘S).
 **The toolbar** across the top shows the page's title, with the open database's name under it (and the event's, when
 one is chosen). On Structures, the map and the summary it has a switch with three buttons: **List**, **Map** and
 **Summary**. **New** (+) is a pull-down for a new structure, an import, an event or a database. On Structures there
-is also a search field. When an assessment is open, its address is the title, the arrow (‹) beside it goes back, and
-the toolbar holds the assessment's actions ([chapter 4](#4-assessing-a-structure-step-by-step)).
+is also a search field. Each page puts its own actions in the toolbar too: **Change**, **Reports** and **Export** on
+Structures, **Check Again** and **Mark Reviewed** on Review, and so on. When an assessment is open, its address is the
+title, the arrow (‹) beside it goes back, the toolbar holds the assessment's actions, and the sidebar lists its steps
+([chapter 4](#4-assessing-a-structure-step-by-step)).
+
+**The inspector** at the right of Structures and Review shows the selected row: on Structures, the kind of building,
+the percent damaged against the 50 percent line, the owner, community, inspection, status and costs, with **Report**
+and **Open**. Hide or show it with the inspector button in the toolbar or **View > Hide or Show Inspector** (⌥⌘I).
 
 **The menus** reach everything else. **File** opens, makes and backs up databases, **Event** adds and manages events,
 and **View** lists the pages with their shortcuts. **View > Search and Commands…** (⌘K) finds structures, pages and
@@ -268,10 +274,11 @@ Structures need a latitude and longitude to appear on the map and in GIS files. 
 ## 4. Assessing a structure, step by step
 
 ### Opening the editor
-On **Structures**, double-click a row, or select it and press Return. The editor has three columns:
+On **Structures**, double-click a row, or select it and press Return (or click **Open** in the inspector). While the
+editor is open:
 
-- **The steps** on the left. A count beside a step shows how many of its fields are left to check, in red when one is
-  required.
+- **The sidebar** lists the assessment's eight steps, numbered. A count beside a step shows how many of its fields are
+  left to check, in red when one is required.
 - **The fields** of the current step in the middle.
 - **The result** on the right: the **Percent Damaged** and FEMA's result, the bar with the 50 percent line, the values
   behind them, and **To Check**, which lists what is still missing.
@@ -282,9 +289,9 @@ has the rest of the assessment's commands.
 
 ![The editor's Result step](screenshots/16-editor-result.png)
 
-Move between steps by clicking them, with **Back** and **Next** under the fields, or with ⌘[ and ⌘]. Click the arrow
-(‹) beside the address in the toolbar to go back to the list. The **?** next to a field explains what to enter and
-which page of FEMA's SDE User Manual covers it.
+Move between steps by clicking them in the sidebar, with the **‹ ›** pair in the toolbar, or with ⌘[ and ⌘]. Click
+the arrow (‹) beside the address in the toolbar to go back to the list. Hold the pointer over a field's name for a
+short explanation; the **?** next to it explains what to enter and which page of FEMA's SDE User Manual covers it.
 
 When you change something that makes other fields irrelevant, SDE clears them, as FEMA's SDE does. For example,
 changing the cause of damage away from flood clears the flood details.
@@ -436,22 +443,23 @@ Final.
 chosen in the sidebar. The count beside it in the sidebar is the number of assessments in review (Draft or Reviewed).
 
 - **Queue** lists the assessments in review, the ones with the most problems first. Each row shows the result, how
-  many quality checks found something (**Checks**) and how many comment threads are open (**Comments**). Choose
-  another status above the list, or **Every status**. Click a column's header to sort by it. Double-click a row to
+  many quality checks found something (**Checks**, with errors in red) and how many comment threads are open
+  (**Comments**). Choose another status in the toolbar, or **Every status**. Click a column's header to sort by it. Double-click a row to
   open the assessment; closing it brings you back to Review.
-- **Quality checks** lists what the checks found, grouped by check, with what each check looks for. Errors, such as an
+- **Checks** (the toolbar's Queue | Checks switch) lists what the checks found, grouped by check; hold the pointer
+  over a check's name to see what it looks for. Errors, such as an
   inspection dated before the damage, should be fixed before you export. Warnings and notes are worth a look.
   - **Go to field** opens the assessment at the field to fix.
   - When something doesn't need fixing (two units on one parcel, say), click **Set Aside…** and say why.
-  - Tick **Show the ones set aside** to see them with their reasons. **Bring Back** lists one again.
+  - Tick **Show Set Aside** in the toolbar to see them with their reasons. **Bring Back** lists one again.
   - Setting aside and bringing back are kept in the history.
-- Select an assessment in the queue to see its open checks and its **comments** beside the list. Write a comment for
+- Select an assessment in the queue to see its open checks (**Show** opens the field) and its **comments** in the
+  inspector at the right. Write a comment for
   the inspector or other reviewers, **Reply** to one, and **Resolve** it when it is settled. In the editor, the
   comments button in the toolbar (or **⋯ > Comments…**) shows the same threads. A comment about a field links to it.
-- **Mark reviewed** sets the ticked assessments (or the selected one) to Reviewed. Final and Letter sent assessments
-  are left alone.
-- The line of counts at the top shows how many are **In review**, the **Open checks**, the **Errors** and the **Open
-  comments**. Click one to see them.
+- **Mark Reviewed** (in the toolbar) sets the ticked assessments (or the selected one) to Reviewed. Final and Letter
+  sent assessments are left alone. **Check Again** runs the checks again.
+- The status bar under the list shows how many assessments, open checks and open comments there are.
 
 The flood map zone and high-water mark checks need an online look-up or a marks file, so the Review page doesn't run
 them.
@@ -1142,6 +1150,7 @@ The menus show each shortcut beside its command, and **Help > Keyboard Shortcuts
 | ⌘1 to ⌘8 | Structures, Map, Summary, Review, Compliance, Assignments, Recently Deleted, Import & Export |
 | ⌘, | Settings |
 | ⌃⌘S | Hide or show the sidebar |
+| ⌥⌘I | Hide or show the inspector (Structures) |
 | ⌘K | Search structures, pages and commands |
 | ⌘[ / ⌘] | Previous / next step in the editor |
 | 0 to 4 | On a damage slider: 0, 25, 50, 75 or 100 percent |

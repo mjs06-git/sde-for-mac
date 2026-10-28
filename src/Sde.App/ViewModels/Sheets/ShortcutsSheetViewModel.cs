@@ -21,6 +21,7 @@ public sealed class ShortcutsSheetViewModel() : SheetViewModel("Keyboard shortcu
 		new Shortcut("⌘1 to ⌘8", "Structures, Map, Summary, Review, Compliance, Assignments, Recently Deleted, Import & Export"),
 		new Shortcut("⌘,", "Settings"),
 		new Shortcut("⌃⌘S", "Hide or show the sidebar"),
+		new Shortcut("⌥⌘I", "Hide or show the inspector"),
 		new Shortcut("⌘K", "Search and commands"),
 		new Shortcut("⌘[  ⌘]", "Previous and next step of the assessment"),
 		new Shortcut("0 to 4", "On a damage slider: 0, 25, 50, 75 or 100 percent"),
