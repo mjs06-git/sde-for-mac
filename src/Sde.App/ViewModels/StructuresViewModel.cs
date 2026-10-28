@@ -7,6 +7,7 @@ using Sde.App.ViewModels.Editor;
 using Sde.App.ViewModels.Sheets;
 using Sde.Core;
 using Sde.Core.Assessments;
+using Sde.Core.Records;
 using Sde.Data;
 
 namespace Sde.App.ViewModels;
@@ -74,6 +75,46 @@ public sealed partial class StructureRowViewModel(StructureSummary s, ReferenceD
 	public string SearchText => string.Join(" | ", Summary.Address, Summary.Owner, Summary.City, Summary.NFIPCID, Summary.NFIPCommunityName, Summary.InspectorName, Summary.DamageMessage, Summary.ExternalId, Summary.ParcelNumber, Summary.ZipCode).ToLowerInvariant();
 }
 
+/// <summary>The figures the inspector shows for one structure, from its latest assessment.</summary>
+public sealed class StructureDetail
+{
+	private StructureDetail(StructureRowViewModel row, string kind, AssessmentRecord assessment)
+	{
+		Row = row;
+		Kind = kind;
+		ReplacementCost = assessment?.TotalReplacementCost;
+		ActualCashValue = assessment?.ComputedActualCashValue;
+		Damages = assessment?.ComputedDamages;
+	}
+
+	public StructureRowViewModel Row { get; }
+
+	/// <summary>"Single Family Residence", or the non-residential use.</summary>
+	public string Kind { get; }
+
+	public decimal? ReplacementCost { get; }
+
+	public decimal? ActualCashValue { get; }
+
+	public decimal? Damages { get; }
+
+	public bool HasAssessment => Row.AssessmentID != null;
+
+	/// <summary>The percent damaged for the threshold bar, 0 to 100.</summary>
+	public double PercentValue => Row.HasPercent ? (double)Math.Clamp(Row.Summary.PercentDamage ?? 0m, 0m, 100m) : 0;
+
+	public static StructureDetail Read(SdeStore store, StructureRowViewModel row)
+	{
+		AssessmentFile file = row.AssessmentID is Guid id ? store.LoadAssessment(id) : null;
+		PropertyRecord property = file?.Property ?? store.GetProperty(row.Summary.PropertyID);
+		ReferenceData reference = store.Reference;
+		string kind = property == null ? row.Type
+			: property.StructureTypeID == 1 ? reference.LookupName(property.ResidenceTypeID) ?? "Residential"
+			: reference.LookupName(property.StructureUseID) ?? "Non-residential";
+		return new StructureDetail(row, kind, file?.Assessment);
+	}
+}
+
 public enum StructureFilter
 {
 	All,
@@ -125,7 +166,7 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	private static readonly (string Key, string Header, bool Visible)[] OptionalColumns =
 	{
 		("Owner", "Owner", true),
-		("Community", "Community", true),
+		("Community", "Community", false),
 		("Type", "Type", true),
 		("Inspected", "Inspected", true),
 		("Inspector", "Inspector", false),
@@ -238,6 +279,25 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	[ObservableProperty]
 	public partial StructureRowViewModel Selected { get; set; }
 
+	/// <summary>The selected structure in the inspector: its kind of building and figures, read when the selection changes.</summary>
+	[ObservableProperty]
+	[NotifyPropertyChangedFor(nameof(HasSelectedDetail), nameof(CanReportSelected))]
+	public partial StructureDetail SelectedDetail { get; private set; }
+
+	public bool HasSelectedDetail => SelectedDetail != null;
+
+	/// <summary>Whether the selected structure has an assessment to print (the inspector's Report menu).</summary>
+	public bool CanReportSelected => SelectedDetail?.HasAssessment == true;
+
+	partial void OnSelectedChanged(StructureRowViewModel value) => SelectedDetail = value == null ? null : StructureDetail.Read(_app.Store, value);
+
+	/// <summary>Whether the inspector is shown at the right of the list (View › Show Inspector, ⌥⌘I).</summary>
+	[ObservableProperty]
+	public partial bool IsInspectorVisible { get; set; } = true;
+
+	[RelayCommand]
+	private void ToggleInspector() => IsInspectorVisible = !IsInspectorVisible;
+
 	[ObservableProperty]
 	public partial int TotalCount { get; set; }
 
@@ -284,11 +344,11 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	public int StructureCount => _all.Select(r => r.Summary.PropertyID).Distinct().Count();
 
 	/// <summary>The empty state's title: there are no structures at all, or none in the chosen event.</summary>
-	public string EmptyTitle => _app.Scope.IsAll ? "No structures yet" : $"Nothing in {_app.Scope.Event.Name} yet";
+	public string EmptyTitle => _app.Scope.IsAll ? "No Structures" : $"No Structures in {_app.Scope.Event.Name}";
 
 	public string EmptyText => _app.Scope.IsAll
-		? "Start a new residential or non-residential assessment, or bring in data from FEMA's SDE or another system on the Import & export page."
-		: "A new assessment started while this event is chosen joins it. To add existing ones, choose All events, tick them, then use Change, Set event.";
+		? "Start one, or import from File › Import."
+		: "New assessments join this event. To add others, use Change › Set Event.";
 
 	public bool HasRows => Rows.Count > 0;
 
@@ -788,6 +848,16 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	[RelayCommand]
 	private async Task Print(string kind) => await _main.PrintAsync(kind, TargetIds());
 
+	/// <summary>The inspector's Report menu: a report of the selected structure's assessment.</summary>
+	[RelayCommand]
+	private async Task PrintSelected(string kind)
+	{
+		if (Selected?.AssessmentID is Guid id)
+		{
+			await _main.PrintAsync(kind, new[] { id });
+		}
+	}
+
 	[RelayCommand]
 	private async Task ExportChecked() => await _main.ImportExport.ExportAsync(TargetIds());
 
@@ -934,7 +1004,7 @@ public sealed partial class StructuresViewModel : ViewModelBase
 		}
 		DeletedItemRecord deleted = _app.Store.GetDeletedItems().FirstOrDefault(d => row.AssessmentID is Guid aid && d.AssessmentID == aid && d.Value == DeletedKind.Assessment
 			|| d.PropertyID == row.Summary.PropertyID && d.Value == DeletedKind.Structure);
-		_app.Dialogs.Notify("Moved to Recently deleted", $"{row.Address} can be restored from Recently deleted for {SdeStore.KeepDays} days.",
+		_app.Dialogs.Notify("Moved to Recently Deleted", $"{row.Address} can be restored from Recently Deleted for {SdeStore.KeepDays} days.",
 			"Undo", () => UndoTrash(deleted, row.Address));
 	}
 

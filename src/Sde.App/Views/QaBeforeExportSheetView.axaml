@@ -21,8 +21,8 @@
     </Border>
     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
       <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Content="Export anyway" Command="{Binding ExportAnywayCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Classes="primary" Content="Show them on Review" Command="{Binding ShowOnReviewCommand}" IsDefault="True" HorizontalContentAlignment="Center" />
+      <Button Content="Export Anyway" Command="{Binding ExportAnywayCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
+      <Button Classes="primary" Content="Show Them on Review" Command="{Binding ShowOnReviewCommand}" IsDefault="True" HorizontalContentAlignment="Center" />
     </StackPanel>
   </StackPanel>
 </UserControl>

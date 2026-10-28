@@ -85,6 +85,7 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 	private readonly MainViewModel _main;
 	private List<ComplianceRowViewModel> _all = new();
 	private List<Guid> _missing = new();
+	private int _iccPaidCount;
 
 	public ComplianceViewModel(AppServices app, MainViewModel main)
 	{
@@ -167,6 +168,52 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 
 	public string CountText => Rows.Count == 1 ? "1 case" : $"{Rows.Count:N0} cases";
 
+	/// <summary>
+	/// The status bar under the list: "2 cases · 1 overdue · 1 ICC claim in progress · $12,000 ICC paid", and how many
+	/// substantially damaged structures still need a case.
+	/// </summary>
+	public string StatusText => string.Join(" · ", new[]
+	{
+		CountText,
+		$"{OverdueCount:N0} overdue",
+		IccInProgressCount == 0 ? null : IccInProgressCount == 1 ? "1 ICC claim in progress" : $"{IccInProgressCount:N0} ICC claims in progress",
+		_iccPaidCount == 0 ? null : $"{IccPaidText} ICC paid",
+		_missing.Count == 0 ? null : _missing.Count == 1 ? "1 structure without a case" : $"{_missing.Count:N0} structures without a case",
+	}.Where(s => s != null));
+
+	/// <summary>The filters on besides open or closed ("Overdue, Elevate, ICC paid"), for the toolbar; null when none.</summary>
+	public string FilterSummary
+	{
+		get
+		{
+			List<string> on = new();
+			if (OverdueOnly)
+			{
+				on.Add("Overdue");
+			}
+			if (PathFilter == 1)
+			{
+				on.Add("No path chosen");
+			}
+			else if (PathFilter > 1 && PathFilter < PathChoices.Count)
+			{
+				on.Add(PathChoices[PathFilter]);
+			}
+			if (IccFilter == IccInProgress)
+			{
+				on.Add("ICC in progress");
+			}
+			else if (IccFilter > IccInProgress && IccFilter < IccChoices.Count)
+			{
+				on.Add("ICC " + IccChoices[IccFilter].ToLowerInvariant());
+			}
+			return on.Count == 0 ? null : string.Join(", ", on);
+		}
+	}
+
+	/// <summary>True while a path, ICC or overdue filter is on (the toolbar's filter button then names them).</summary>
+	public bool HasFilters => FilterSummary != null;
+
 	public bool HasRows => Rows.Count > 0;
 
 	/// <summary>No cases at all in scope.</summary>
@@ -175,8 +222,8 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 	public bool NoMatches => _all.Count > 0 && Rows.Count == 0;
 
 	public string EmptyText => HasMissing
-		? "Open a case for each substantially damaged structure to track its permit, deadline, ICC claim and final inspection."
-		: "Substantially damaged structures appear here once a compliance case is opened for them, from the editor or with the button above.";
+		? "Open a case for each substantially damaged structure."
+		: "Cases appear here once opened, from the editor or the button above.";
 
 	/// <summary>Every case in scope: all of them, or for an event its assessments' cases and the SI cases of its structures.</summary>
 	public static List<ComplianceCaseRecord> CasesInScope(AppServices app)
@@ -208,6 +255,7 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 		OverdueCount = open.Count(c => c.IsOverdue(DateTime.Today));
 		IccInProgressCount = cases.Count(c => c.IccStatus is IccStatuses.Filed or IccStatuses.Approved);
 		List<ComplianceCaseRecord> paid = cases.Where(c => c.IccStatus == IccStatuses.Paid).ToList();
+		_iccPaidCount = paid.Count;
 		IccPaidText = paid.Sum(c => c.IccAmount ?? 0m).ToString("C0", Us);
 		IccPaidCaption = paid.Count == 1 ? "1 claim paid" : $"{paid.Count:N0} claims paid";
 		Fill();
@@ -247,6 +295,9 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 		OnPropertyChanged(nameof(IsEmpty));
 		OnPropertyChanged(nameof(NoMatches));
 		OnPropertyChanged(nameof(CountText));
+		OnPropertyChanged(nameof(StatusText));
+		OnPropertyChanged(nameof(FilterSummary));
+		OnPropertyChanged(nameof(HasFilters));
 	}
 
 	private bool Matches(ComplianceRowViewModel r)

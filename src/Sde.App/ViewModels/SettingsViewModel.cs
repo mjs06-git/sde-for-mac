@@ -204,6 +204,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
 		? "Automatic backups are off for this database."
 		: $"Backed up automatically into the Backups folder next to the database, once a day when it's opened and when you quit (the newest {Sde.Data.BackupService.Keep} are kept).";
 
+	/// <summary>"On" or "Off", beside Automatic backups (<see cref="BackupsText"/> is its tooltip).</summary>
+	public string BackupsState => _app.Backups == null ? "Off" : "On";
+
 	[RelayCommand]
 	private void RestoreBackup() => _ = _app.Sheets.ShowAsync(new Sheets.RestoreBackupSheetViewModel(_app));
 

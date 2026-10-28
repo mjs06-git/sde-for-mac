@@ -8,6 +8,7 @@ using Sde.App.Services;
 using Sde.App.ViewModels;
 using Sde.App.ViewModels.Editor;
 using Sde.App.ViewModels.Sheets;
+using Sde.App.ViewModels.Shell;
 using Sde.Core.Assessments;
 
 namespace Sde.App.Tests;
@@ -113,16 +114,17 @@ public class AccessibilityTests
 			problems.AddRange(Unnamed(ui.Window).Distinct().Select(p => part + ": " + p));
 		}
 
-		// Named for VoiceOver: each sidebar page by its title, the switchers by what they show, ⌘K and New.
-		List<string> names = ui.Window.GetVisualDescendants().OfType<Control>().Where(c => c.IsEffectivelyVisible && c is Button)
+		// Named for VoiceOver: each row of the source list by its title, the toolbar's search, view switch and New.
+		List<string> names = ui.Window.GetVisualDescendants().OfType<Control>().Where(c => c.IsEffectivelyVisible && (c is Button or TextBox or ListBox))
 			.Select(c => ControlAutomationPeer.CreatePeerForElement(c).GetName()).ToList();
-		foreach (string title in ui.Main.SidebarItems.Select(i => i.Title))
+		foreach (string title in ui.Main.SourceSections.SelectMany(s => s.Rows).Select(r => r switch { SourceRowViewModel row => row.Title, NavItemViewModel nav => nav.Title, _ => null })
+			.Append("Recently Deleted"))
 		{
 			Assert.Contains(title, names);
 		}
-		Assert.Contains("Event: All events. Choose an event", names);
-		Assert.Contains("Database: sde.sqlite. Database actions", names);
-		Assert.Contains("Search structures, pages and commands", names);
+		Assert.Contains("Hide sidebar", names);
+		Assert.Contains("View", names);
+		Assert.Contains("Search structures", names);
 		Assert.Contains("New", names);
 		Check("Shell");
 
@@ -132,7 +134,7 @@ public class AccessibilityTests
 			Check(page.ToString());
 		}
 
-		foreach (string switcher in new[] { "EventSwitcher", "DatabaseButton" })
+		foreach (string switcher in new[] { "NewButton" })
 		{
 			Button button = ui.Window.GetVisualDescendants().OfType<Button>().Single(b => b.Name == switcher);
 			PopupFlyoutBase flyout = (PopupFlyoutBase)button.Flyout;

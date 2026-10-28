@@ -31,14 +31,14 @@
     <DataTemplate DataType="f:TextFieldViewModel">
       <StackPanel Classes="field" Classes.wide="{Binding IsWide}" IsVisible="{Binding IsVisible}">
         <DockPanel Classes="fieldHead">
-          <Button DockPanel.Dock="Right" Classes="link sm" Content="Insert snippet" IsVisible="{Binding HasSnippets}" IsEnabled="{Binding IsEnabled}" Padding="0"
+          <Button DockPanel.Dock="Right" Classes="link sm" Content="Insert Snippet" IsVisible="{Binding HasSnippets}" IsEnabled="{Binding IsEnabled}" Padding="0"
                   AutomationProperties.Name="{Binding Label, StringFormat='Insert a snippet into {0}'}">
             <Button.Flyout>
               <MenuFlyout ItemsSource="{Binding SnippetItems}" />
             </Button.Flyout>
           </Button>
           <StackPanel Orientation="Horizontal" Spacing="3">
-            <TextBlock Classes="fieldLabel" Text="{Binding Label}" />
+            <TextBlock Classes="fieldLabel" Text="{Binding Label}" ToolTip.Tip="{Binding Help}" />
             <Button Classes="help" IsVisible="{Binding HasHelp}" Command="{Binding ShowHelpCommand}"
                     AutomationProperties.Name="{Binding Label, StringFormat='Help for {0}'}" ToolTip.Tip="What goes in this field">
               <c:Icon Kind="Info" Size="14" />
@@ -50,7 +50,6 @@
                  Classes.multiline="{Binding IsMultiline}" />
         <TextBlock Classes="issue" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
                    Classes.suggested="{Binding IsSuggestedIssue}" Text="{Binding IssueMessage}" IsVisible="{Binding ShowIssueInline}" />
-        <TextBlock Classes="help" Text="{Binding Help}" IsVisible="{Binding Help, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
       </StackPanel>
     </DataTemplate>
 
@@ -58,7 +57,7 @@
       <StackPanel Classes="field" Classes.wide="{Binding IsWide}" IsVisible="{Binding IsVisible}">
         <DockPanel Classes="fieldHead">
           <StackPanel Orientation="Horizontal" Spacing="3">
-            <TextBlock Classes="fieldLabel" Text="{Binding Label}" />
+            <TextBlock Classes="fieldLabel" Text="{Binding Label}" ToolTip.Tip="{Binding Help}" />
             <Button Classes="help" IsVisible="{Binding HasHelp}" Command="{Binding ShowHelpCommand}"
                     AutomationProperties.Name="{Binding Label, StringFormat='Help for {0}'}" ToolTip.Tip="What goes in this field">
               <c:Icon Kind="Info" Size="14" />
@@ -77,7 +76,6 @@
         </NumericUpDown>
         <TextBlock Classes="issue" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
                    Classes.suggested="{Binding IsSuggestedIssue}" Text="{Binding IssueMessage}" IsVisible="{Binding ShowIssueInline}" />
-        <TextBlock Classes="help" Text="{Binding Help}" IsVisible="{Binding Help, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
       </StackPanel>
     </DataTemplate>
 
@@ -85,7 +83,7 @@
       <StackPanel Classes="field" Classes.wide="{Binding IsWide}" IsVisible="{Binding IsVisible}">
         <DockPanel Classes="fieldHead">
           <StackPanel Orientation="Horizontal" Spacing="3">
-            <TextBlock Classes="fieldLabel" Text="{Binding Label}" />
+            <TextBlock Classes="fieldLabel" Text="{Binding Label}" ToolTip.Tip="{Binding Help}" />
             <Button Classes="help" IsVisible="{Binding HasHelp}" Command="{Binding ShowHelpCommand}"
                     AutomationProperties.Name="{Binding Label, StringFormat='Help for {0}'}" ToolTip.Tip="What goes in this field">
               <c:Icon Kind="Info" Size="14" />
@@ -96,7 +94,6 @@
                             SelectedDateFormat="Custom" CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" />
         <TextBlock Classes="issue" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
                    Classes.suggested="{Binding IsSuggestedIssue}" Text="{Binding IssueMessage}" IsVisible="{Binding ShowIssueInline}" />
-        <TextBlock Classes="help" Text="{Binding Help}" IsVisible="{Binding Help, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
       </StackPanel>
     </DataTemplate>
 
@@ -104,18 +101,17 @@
       <StackPanel Classes="field" Classes.wide="{Binding IsWide}" IsVisible="{Binding IsVisible}">
         <DockPanel Classes="fieldHead">
           <StackPanel Orientation="Horizontal" Spacing="3">
-            <TextBlock Classes="fieldLabel" Text="{Binding Label}" />
+            <TextBlock Classes="fieldLabel" Text="{Binding Label}" ToolTip.Tip="{Binding Help}" />
             <Button Classes="help" IsVisible="{Binding HasHelp}" Command="{Binding ShowHelpCommand}"
                     AutomationProperties.Name="{Binding Label, StringFormat='Help for {0}'}" ToolTip.Tip="What goes in this field">
               <c:Icon Kind="Info" Size="14" />
             </Button>
           </StackPanel>
         </DockPanel>
-        <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}" AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" IsEnabled="{Binding IsEnabled}"
-                  HorizontalAlignment="Stretch" MaxDropDownHeight="360" />
+        <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}" MaxWidth="280" HorizontalAlignment="Left" AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" IsEnabled="{Binding IsEnabled}"
+                  MaxDropDownHeight="360" />
         <TextBlock Classes="issue" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
                    Classes.suggested="{Binding IsSuggestedIssue}" Text="{Binding IssueMessage}" IsVisible="{Binding ShowIssueInline}" />
-        <TextBlock Classes="help" Text="{Binding Help}" IsVisible="{Binding Help, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
       </StackPanel>
     </DataTemplate>
 
@@ -129,17 +125,16 @@
             <c:Icon Kind="Info" Size="14" />
           </Button>
         </StackPanel>
-        <TextBlock Classes="help" Text="{Binding Help}" IsVisible="{Binding Help, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
       </StackPanel>
     </DataTemplate>
   </Application.DataTemplates>
 
   <Application.Styles>
-    <!-- Fluent, compact, with the brand accent (not the Mac's) for check boxes, switches, sliders and selection -->
+    <!-- Fluent, compact; its accent (check boxes, switches, sliders) follows the Mac's, like the tokens (Services/SystemAccent) -->
     <FluentTheme DensityStyle="Compact">
       <FluentTheme.Palettes>
-        <ColorPaletteResources x:Key="Light" Accent="{StaticResource BrandAccentColor}" />
-        <ColorPaletteResources x:Key="Dark" Accent="{StaticResource BrandAccentColor}" />
+        <ColorPaletteResources x:Key="Light" Accent="{StaticResource AccentFallbackColor}" />
+        <ColorPaletteResources x:Key="Dark" Accent="{StaticResource AccentFallbackColor}" />
       </FluentTheme.Palettes>
     </FluentTheme>
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />

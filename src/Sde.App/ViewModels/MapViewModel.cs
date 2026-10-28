@@ -107,7 +107,7 @@ public sealed partial class MapViewModel : ViewModelBase
 		Classes = new ObservableCollection<MapClassViewModel>
 		{
 			new MapClassViewModel(DeterminationClass.Substantial, "Substantially damaged", "50% or more", Apply),
-			new MapClassViewModel(DeterminationClass.Close, "Close to the threshold", "40% to 50%", Apply),
+			new MapClassViewModel(DeterminationClass.Close, "Near threshold", "40% to 50%", Apply),
 			new MapClassViewModel(DeterminationClass.NotSubstantial, "Not substantially damaged", "Under 40%", Apply),
 			new MapClassViewModel(DeterminationClass.Undetermined, "Undetermined", "Damage could not be determined", Apply),
 			new MapClassViewModel(DeterminationClass.Incomplete, "Incomplete", "No assessment or data entry incomplete", Apply),
@@ -266,7 +266,7 @@ public sealed partial class MapViewModel : ViewModelBase
 
 	/// <summary>What happened last ("Placed 12 Oak Street."), read out and shown under the controls.</summary>
 	[ObservableProperty]
-	[NotifyPropertyChangedFor(nameof(HasMessage))]
+	[NotifyPropertyChangedFor(nameof(HasMessage), nameof(StatusMessage), nameof(HasStatusMessage))]
 	public partial string Message { get; set; }
 
 	public bool HasMessage => Message != null;

@@ -14,9 +14,9 @@
       <ComboBox ItemsSource="{Binding Events}" SelectedItem="{Binding Event}" HorizontalAlignment="Stretch" AutomationProperties.Name="Event the assignment is for" />
     </StackPanel>
     <CheckBox IsChecked="{Binding AlsoSetTeamName}" AutomationProperties.Name="Also set FEMA's Team name field on the structures">
-      <TextBlock TextWrapping="Wrap" Text="Also set FEMA's Team name field. It is part of the SDE export." />
+      <TextBlock TextWrapping="Wrap" Text="Also set FEMA's Team name field (exported)." />
     </CheckBox>
-    <TextBlock Classes="muted" TextWrapping="Wrap" Text="A structure already assigned for this event moves to the new team. This is one change in edit history." />
+    <TextBlock Classes="muted" TextWrapping="Wrap" Text="A structure already assigned for this event moves to the new team." />
     <Border Classes="subtle" IsVisible="{Binding HasProblem}">
       <TextBlock Classes="issue required" Text="{Binding Problem}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive" />
     </Border>

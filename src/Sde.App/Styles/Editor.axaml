@@ -19,10 +19,10 @@
     <Setter Property="Height" Value="46" />
   </Style>
 
-  <!-- The step rail -->
+  <!-- The step rail: a source list of the steps -->
   <Style Selector="Border.stepRail">
     <Setter Property="Width" Value="212" />
-    <Setter Property="Background" Value="{DynamicResource BgSidebar}" />
+    <Setter Property="Background" Value="{DynamicResource BgApp}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
     <Setter Property="BorderThickness" Value="0,0,1,0" />
   </Style>
@@ -37,48 +37,79 @@
     <Setter Property="Margin" Value="10,12" />
   </Style>
   <Style Selector="ListBox.steps ListBoxItem">
-    <Setter Property="Padding" Value="8,7" />
-    <Setter Property="Margin" Value="0,1" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
-    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Padding" Value="8,0" />
+    <Setter Property="MinHeight" Value="28" />
+    <Setter Property="Margin" Value="0,0,0,1" />
+    <Setter Property="CornerRadius" Value="6" />
   </Style>
   <Style Selector="ListBox.steps ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
   </Style>
   <Style Selector="ListBox.steps ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource BgHover}" />
+    <Setter Property="Background" Value="Transparent" />
   </Style>
   <Style Selector="ListBox.steps ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, ListBox.steps ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBox.steps ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter, ListBox.steps ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
+    <Setter Property="Background" Value="{DynamicResource SidebarSelection}" />
   </Style>
+  <!-- The step's icon, tinted like the sidebar's (no tile) -->
   <Style Selector="Border.stepIcon">
-    <Setter Property="Width" Value="30" />
-    <Setter Property="Height" Value="30" />
-    <Setter Property="CornerRadius" Value="8" />
-    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
-    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Width" Value="18" />
+    <Setter Property="Height" Value="28" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="Border.stepIcon c|Icon">
+    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- The section's number in the sidebar outline: quiet, tabular, right-aligned -->
+  <Style Selector="ListBox.steps TextBlock.stepNumber">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+    <Setter Property="TextAlignment" Value="Right" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- A group of fields in a step: no box, a hairline under it -->
+  <Style Selector="Border.formGroup">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="0,0,0,18" />
+    <Setter Property="Margin" Value="0,0,0,18" />
+  </Style>
+  <!-- A group inside a group (the Result step's inputs) draws no second rule -->
+  <Style Selector="Border.formGroup Border.formGroup">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0" />
+  </Style>
+  <Style Selector="ListBox.steps TextBlock.stepTitle">
+    <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <!-- How many fields to check: a small grey capsule (red text when some are required) -->
+  <Style Selector="Border.stepCount">
+    <Setter Property="MinWidth" Value="18" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="5,0" />
+    <Setter Property="Background" Value="{DynamicResource BgPressed}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.stepCount TextBlock">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
-  <Style Selector="ListBox.steps ListBoxItem:selected Border.stepIcon">
-    <Setter Property="Background" Value="{DynamicResource AccentFill}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentFill}" />
+  <Style Selector="Border.stepCount.required TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource DangerFg}" />
   </Style>
-  <Style Selector="ListBox.steps ListBoxItem:selected Border.stepIcon c|Icon">
-    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
-  </Style>
-  <Style Selector="ListBox.steps TextBlock.stepTitle">
-    <Setter Property="FontWeight" Value="Medium" />
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
-  </Style>
-  <Style Selector="ListBox.steps ListBoxItem:selected TextBlock.stepTitle">
-    <Setter Property="FontWeight" Value="SemiBold" />
+  <Style Selector="Grid.narrow Border.stepCount">
+    <Setter Property="IsVisible" Value="False" />
   </Style>
   <Style Selector="TextBlock.stepStatus">
     <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
@@ -114,40 +145,45 @@
     <Setter Property="Fill" Value="{DynamicResource DangerFg}" />
   </Style>
 
-  <!-- The live result on the right -->
+  <!-- The live result on the right: an inspector (plain sections divided by hairlines) -->
   <Style Selector="Border.resultPanel">
-    <Setter Property="Width" Value="300" />
-    <Setter Property="Background" Value="{DynamicResource BgSidebar}" />
+    <Setter Property="Width" Value="276" />
+    <Setter Property="Background" Value="{DynamicResource BgApp}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
     <Setter Property="BorderThickness" Value="1,0,0,0" />
   </Style>
-  <Style Selector="Border.resultCard">
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
-    <Setter Property="Padding" Value="16,14,16,16" />
+  <Style Selector="Border.resultCard.rule">
+    <Setter Property="Padding" Value="0,14,0,0" />
   </Style>
   <Style Selector="ProgressBar.threshold">
-    <Setter Property="Height" Value="8" />
-    <Setter Property="MinHeight" Value="8" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
-    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="Height" Value="4" />
+    <Setter Property="MinHeight" Value="4" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="Background" Value="{DynamicResource BgPressed}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="Border.thresholdTick">
-    <Setter Property="Width" Value="2" />
-    <Setter Property="Height" Value="16" />
-    <Setter Property="CornerRadius" Value="1" />
-    <Setter Property="Background" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="Width" Value="1" />
+    <Setter Property="Height" Value="10" />
+    <Setter Property="Background" Value="{DynamicResource TextSecondary}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
   <!-- Rows of the editor's tables (damage by element, cost adjustments) -->
   <Style Selector="Border.tableRow">
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
     <Setter Property="BorderThickness" Value="0,1,0,0" />
-    <Setter Property="Padding" Value="0,7" />
+    <Setter Property="Padding" Value="0,2" />
+    <Setter Property="MinHeight" Value="36" />
   </Style>
   <Style Selector="Border.tableHead">
-    <Setter Property="Padding" Value="0,4,0,8" />
+    <Setter Property="Padding" Value="0,0,0,6" />
+  </Style>
+  <!-- A column heading in the editor's tables (sentence case, quiet) -->
+  <Style Selector="TextBlock.colHead">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="VerticalAlignment" Value="Bottom" />
   </Style>
   <Style Selector="Border.tableFoot">
     <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />

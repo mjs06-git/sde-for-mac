@@ -21,6 +21,10 @@ public partial class App : Application
 	{
 		if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
 		{
+			if (OperatingSystem.IsMacOS())
+			{
+				SystemAccent.Follow(this);
+			}
 			MainWindow window = new MainWindow();
 			AppServices services = new AppServices(window);
 			MainViewModel main = new MainViewModel(services);

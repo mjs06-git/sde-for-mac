@@ -11,6 +11,12 @@ public static class Converters
 	/// <summary>The name of the result's text colour, e.g. "StatusSubstantialFg", for <see cref="ThemeBrush"/>.</summary>
 	public static readonly IValueConverter StatusForegroundKey = new FuncValueConverter<ResultState, string>(s => $"Status{s}Fg");
 
+	/// <summary>The damaged percentage's colour: red when substantially damaged, otherwise ordinary text (colour is kept for the one result that matters).</summary>
+	public static readonly IValueConverter PercentForegroundKey = new FuncValueConverter<ResultState, string>(s => s == ResultState.Substantial ? "StatusSubstantialFg" : "TextPrimary");
+
+	/// <summary>The result dot's colour: the status hues, brighter than text so a small dot reads.</summary>
+	public static readonly IValueConverter StatusDotKey = new FuncValueConverter<ResultState, string>(s => $"Status{s}Dot");
+
 	/// <summary>The name of the result's background colour, e.g. "StatusSubstantialBg", for <see cref="ThemeBrush"/>.</summary>
 	public static readonly IValueConverter StatusBackgroundKey = new FuncValueConverter<ResultState, string>(s => $"Status{s}Bg");
 
@@ -42,4 +48,46 @@ public static class Converters
 		Sde.Core.Assessments.IssueSeverity.Recommended => "RecommendedFg",
 		_ => "SuggestedFg",
 	});
+
+	/// <summary>A shortcut as a Mac menu shows it: ⌃⌥⇧⌘ then the key, with no plus signs ("⇧⌘N").</summary>
+	public static readonly IValueConverter MacKeyGesture = new FuncValueConverter<Avalonia.Input.KeyGesture, string>(MacGesture);
+
+	public static string MacGesture(Avalonia.Input.KeyGesture gesture)
+	{
+		if (gesture is null)
+		{
+			return null;
+		}
+		Avalonia.Input.KeyModifiers m = gesture.KeyModifiers;
+		string mods = (m.HasFlag(Avalonia.Input.KeyModifiers.Control) ? "⌃" : "") + (m.HasFlag(Avalonia.Input.KeyModifiers.Alt) ? "⌥" : "")
+			+ (m.HasFlag(Avalonia.Input.KeyModifiers.Shift) ? "⇧" : "") + (m.HasFlag(Avalonia.Input.KeyModifiers.Meta) ? "⌘" : "");
+		return mods + MacKey(gesture.Key);
+	}
+
+	private static string MacKey(Avalonia.Input.Key key) => key switch
+	{
+		>= Avalonia.Input.Key.A and <= Avalonia.Input.Key.Z => key.ToString(),
+		>= Avalonia.Input.Key.D0 and <= Avalonia.Input.Key.D9 => ((char)('0' + (key - Avalonia.Input.Key.D0))).ToString(),
+		>= Avalonia.Input.Key.F1 and <= Avalonia.Input.Key.F24 => key.ToString(),
+		Avalonia.Input.Key.OemComma => ",",
+		Avalonia.Input.Key.OemPeriod => ".",
+		Avalonia.Input.Key.OemOpenBrackets => "[",
+		Avalonia.Input.Key.OemCloseBrackets => "]",
+		Avalonia.Input.Key.OemPlus or Avalonia.Input.Key.Add => "+",
+		Avalonia.Input.Key.OemMinus or Avalonia.Input.Key.Subtract => "-",
+		Avalonia.Input.Key.OemQuestion => "/",
+		Avalonia.Input.Key.OemSemicolon => ";",
+		Avalonia.Input.Key.OemQuotes => "'",
+		Avalonia.Input.Key.Enter => "↩",
+		Avalonia.Input.Key.Escape => "⎋",
+		Avalonia.Input.Key.Back => "⌫",
+		Avalonia.Input.Key.Delete => "⌦",
+		Avalonia.Input.Key.Tab => "⇥",
+		Avalonia.Input.Key.Space => "Space",
+		Avalonia.Input.Key.Left => "←",
+		Avalonia.Input.Key.Right => "→",
+		Avalonia.Input.Key.Up => "↑",
+		Avalonia.Input.Key.Down => "↓",
+		_ => key.ToString(),
+	};
 }

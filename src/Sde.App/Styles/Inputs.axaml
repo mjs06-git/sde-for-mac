@@ -1,9 +1,9 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <!--
-    Inputs: text boxes, number boxes, date pickers and pop-up menus are 28 px high (ControlHeight) with a 1 px border;
+    Inputs, in the Mac's look: text boxes, number boxes, date pickers and pop-up menus are 22 px high (ControlHeight) with a 1 px border;
     with the keyboard in them they get a Focus border and a soft halo (FocusHalo). Check boxes, radio buttons, switches
-    and sliders take the accent from the tokens (Fluent's palette is set from BrandAccentColor in App.axaml).
+    and sliders take the accent from the tokens (Fluent's palette follows the Mac's accent, Services/SystemAccent).
   -->
 
   <Style Selector="TextBox">
@@ -25,11 +25,23 @@
   <Style Selector="ComboBox">
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
-  <Style Selector="ComboBox /template/ PathIcon#DropDownGlyph">
-    <Setter Property="Data" Value="{StaticResource IconCaretDown}" />
-    <Setter Property="Width" Value="12" />
-    <Setter Property="Height" Value="12" />
-    <Setter Property="Margin" Value="0,0,8,0" />
+  <!-- A small pop-up button (scope bars): 19 px, 12 pt -->
+  <Style Selector="ComboBox.sm">
+    <Setter Property="MinHeight" Value="{StaticResource ControlHeightSmall}" />
+    <Setter Property="Height" Value="{StaticResource ControlHeightSmall}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
+    <Setter Property="Padding" Value="8,0,0,0" />
+  </Style>
+  <!-- A pop-up button: the Mac's up-and-down chevrons, on a raised white face -->
+  <!-- (two selectors with a pseudo-class, so this outranks the theme's own Data on the glyph) -->
+  <Style Selector="ComboBox:not(:disabled) /template/ PathIcon#DropDownGlyph, ComboBox:disabled /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Data" Value="{StaticResource IconCaretUpDown}" />
+    <Setter Property="Width" Value="10" />
+    <Setter Property="Height" Value="10" />
+    <Setter Property="Margin" Value="0,0,6,0" />
+  </Style>
+  <Style Selector="ComboBox /template/ Border#Background">
+    <Setter Property="BoxShadow" Value="{DynamicResource ShadowControl}" />
   </Style>
   <Style Selector="ComboBox:focus-visible /template/ Border#HighlightBackground">
     <Setter Property="BoxShadow" Value="{DynamicResource FocusHalo}" />
@@ -37,7 +49,7 @@
   <Style Selector="ComboBoxItem">
     <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
     <Setter Property="CornerRadius" Value="4" />
-    <Setter Property="Margin" Value="4,1" />
+    <Setter Property="Margin" Value="5,0" />
   </Style>
 
   <Style Selector="CalendarDatePicker:focus-within:not(CalendarDatePicker:focus) /template/ Border#Background">
@@ -45,8 +57,16 @@
   </Style>
 
   <Style Selector="CheckBox">
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="CornerRadius" Value="3" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+  </Style>
+  <!-- A slider's knob: white with a soft shadow, as on the Mac (the tokens make it 15 px and white) -->
+  <Style Selector="Slider /template/ Thumb">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+    <Setter Property="BorderThickness" Value="0.5" />
+    <Setter Property="Effect">
+      <DropShadowEffect BlurRadius="3" OffsetX="0" OffsetY="0.5" Opacity="0.45" Color="#000000" />
+    </Setter>
   </Style>
   <Style Selector="RadioButton">
     <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
@@ -77,6 +97,7 @@
   <Style Selector="ProgressBar">
     <Setter Property="Foreground" Value="{DynamicResource AccentFill}" />
     <Setter Property="Background" Value="{DynamicResource BgPressed}" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="MinHeight" Value="6" />
   </Style>
 </Styles>

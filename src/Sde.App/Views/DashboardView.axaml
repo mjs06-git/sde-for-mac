@@ -6,174 +6,202 @@
              x:Class="Sde.App.Views.DashboardView"
              x:DataType="vm:DashboardViewModel">
   <UserControl.Resources>
-    <!-- One bar: the label, the bar and the numbers in words. The bar is decoration for people who can see it. -->
+    <!-- One bar: the label, the bar and the numbers in words. The bar is decoration for people who can see it. The label
+         and number columns are shared by the rows of one chart, so its bars start and end together. -->
     <DataTemplate x:Key="BarRow" x:DataType="vm:BarRowViewModel">
-      <Grid ColumnDefinitions="170,*,170" Margin="0,4" AutomationProperties.Name="{Binding SpokenName}">
-        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-        <v:StackedBar Grid.Column="1" Height="12" Margin="10,0" Segments="{Binding Segments}" AutomationProperties.AccessibilityView="Raw" />
-        <TextBlock Grid.Column="2" Classes="muted" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+      <Grid Margin="0,3" AutomationProperties.Name="{Binding SpokenName}">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" SharedSizeGroup="BarLabel" />
+          <ColumnDefinition Width="*" MinWidth="60" />
+          <ColumnDefinition Width="Auto" SharedSizeGroup="BarDetail" />
+        </Grid.ColumnDefinitions>
+        <TextBlock Text="{Binding Label}" MaxWidth="200" Margin="0,0,12,0" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+        <v:StackedBar Grid.Column="1" Height="10" Segments="{Binding Segments}" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" />
+        <TextBlock Grid.Column="2" Classes="secondary num" Text="{Binding Detail}" Margin="12,0,0,0" VerticalAlignment="Center" />
       </Grid>
     </DataTemplate>
   </UserControl.Resources>
 
-  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-    <StackPanel Margin="{StaticResource PagePadding}" Spacing="14">
-      <!-- The title band says "Dashboard"; the header says what it covers and takes the event's name -->
-      <c:PageHeader Margin="0" Subtitle="{Binding Subtitle}">
-        <StackPanel Classes="field" Width="260" Margin="0" IsVisible="{Binding IsAllEvents}">
-          <Panel Classes="fieldHead"><TextBlock Classes="fieldLabel" Text="Event name (optional)" /></Panel>
-          <TextBox Text="{Binding EventName}" PlaceholderText="Shown on the summary" AutomationProperties.Name="Event name" />
-        </StackPanel>
-      </c:PageHeader>
-      <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasDates}" Margin="0,-8,0,0">
-        <c:Icon Kind="Event" Size="14" Classes="tertiary" VerticalAlignment="Center" />
-        <TextBlock Classes="secondary" Text="{Binding Dates}" VerticalAlignment="Center" />
-      </StackPanel>
+  <UserControl.Styles>
+    <!-- The label of a row in the page's lists (Event summary, Compliance); the list shares the label column -->
+    <Style Selector="TextBlock.summaryLabel">
+      <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+      <Setter Property="Margin" Value="0,0,24,0" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+  </UserControl.Styles>
 
-      <!-- Headline numbers -->
-      <UniformGrid Columns="4" Margin="-6,0">
-        <Border Classes="card" Margin="6" AutomationProperties.Name="{Binding Structures, StringFormat='Structures: {0}'}">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="kpi" Text="{Binding Structures}" />
-            <TextBlock Classes="medium" Text="Structures" />
-            <TextBlock Classes="muted" Text="{Binding StructuresNote}" TextTrimming="CharacterEllipsis" />
-          </StackPanel>
-        </Border>
-        <Border Classes="card" Margin="6">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="kpi" Text="{Binding SubstantialText}" Foreground="{DynamicResource StatusSubstantialFg}" />
-            <TextBlock Classes="medium" Text="Substantially damaged" />
-            <TextBlock Classes="muted" Text="{Binding SubstantialNote}" TextTrimming="CharacterEllipsis" />
-          </StackPanel>
-        </Border>
-        <Border Classes="card" Margin="6">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="kpi" Text="{Binding BuildingValue}" />
-            <TextBlock Classes="medium" Text="Building value" />
-            <TextBlock Classes="muted" Text="Of assessed structures" />
-          </StackPanel>
-        </Border>
-        <Border Classes="card" Margin="6">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="kpi" Text="{Binding RepairCost}" />
-            <TextBlock Classes="medium" Text="Repair cost" />
-            <TextBlock Classes="muted" Text="Of assessed structures" />
-          </StackPanel>
-        </Border>
-      </UniformGrid>
-
-      <!-- Compliance: shown once a case is open for a structure in scope -->
-      <UniformGrid Columns="4" Margin="-6,-14,-6,0" IsVisible="{Binding HasCompliance}">
-        <Border Classes="card" Margin="6" AutomationProperties.Name="{Binding ComplianceOpen, StringFormat='Open compliance cases: {0}'}">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="kpi" Text="{Binding ComplianceOpen}" />
-            <TextBlock Classes="medium" Text="Open compliance cases" />
-            <TextBlock Classes="muted" Text="{Binding ComplianceOpenNote}" TextTrimming="CharacterEllipsis" />
-          </StackPanel>
-        </Border>
-        <Border Classes="card" Margin="6" AutomationProperties.Name="{Binding ComplianceOverdue, StringFormat='Overdue compliance cases: {0}'}">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="kpi" Text="{Binding ComplianceOverdue}" Classes.danger="{Binding HasOverdue}" />
-            <TextBlock Classes="medium" Text="Overdue" />
-            <TextBlock Classes="muted" Text="Deadline passed, still open" TextTrimming="CharacterEllipsis" />
-          </StackPanel>
-        </Border>
-        <Border Classes="card" Margin="6">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="kpi" Text="{Binding IccInProgress}" />
-            <TextBlock Classes="medium" Text="ICC claims in progress" />
-            <TextBlock Classes="muted" Text="Filed or approved, not paid" TextTrimming="CharacterEllipsis" />
-          </StackPanel>
-        </Border>
-        <Border Classes="card" Margin="6">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="kpi" Text="{Binding IccPaid}" />
-            <TextBlock Classes="medium" Text="ICC paid" />
-            <TextBlock Classes="muted" Text="{Binding IccPaidNote}" TextTrimming="CharacterEllipsis" />
-          </StackPanel>
-        </Border>
-      </UniformGrid>
-
-      <!-- Reports and GIS files -->
-      <Border Classes="card">
-        <StackPanel Spacing="10">
-          <StackPanel Spacing="2">
-            <TextBlock Classes="h3" Text="Share this event" />
-            <TextBlock Classes="muted" TextWrapping="Wrap"
-                       Text="The GIS files hold one point per assessed structure in latitude and longitude (WGS 84), with a QGIS style file beside them. Structures without coordinates are left out." />
-          </StackPanel>
-          <WrapPanel>
-            <Button Classes="primary" Margin="0,0,8,6" Command="{Binding SummaryPdfCommand}" IsEnabled="{Binding HasAnything}" AutomationProperties.Name="Event summary PDF">
-              <StackPanel Orientation="Horizontal" Spacing="6"><c:Icon Kind="Pdf" Size="14" /><TextBlock Text="Event summary PDF…" /></StackPanel>
-            </Button>
-            <Button Margin="0,0,8,6" Command="{Binding GeoPackageCommand}" IsEnabled="{Binding HasAnything}" AutomationProperties.Name="GeoPackage for GIS">
-              <StackPanel Orientation="Horizontal" Spacing="6"><c:Icon Kind="Layers" Size="14" /><TextBlock Text="GeoPackage for GIS…" /></StackPanel>
-            </Button>
-            <Button Margin="0,0,8,6" Command="{Binding GeoJsonCommand}" IsEnabled="{Binding HasAnything}" AutomationProperties.Name="GeoJSON">
-              <StackPanel Orientation="Horizontal" Spacing="6"><c:Icon Kind="Export" Size="14" /><TextBlock Text="GeoJSON…" /></StackPanel>
-            </Button>
-          </WrapPanel>
-          <CheckBox IsChecked="{Binding IncludeOwnerNames}" Content="Include owner names" AutomationProperties.Name="Include owner names in the GIS files" />
-          <c:Banner Tone="Warning" IsVisible="{Binding IncludeOwnerNames}" Text="{Binding OwnerWarning}" />
-          <TextBlock Text="{Binding LastResult}" IsVisible="{Binding HasResult}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-        </StackPanel>
-      </Border>
-
-      <Border Classes="card" IsVisible="{Binding !HasAnything}">
-        <c:EmptyState Icon="Dashboard" Title="No structures yet" Text="Add or import structures and their assessments, and the numbers appear here." />
-      </Border>
-
-      <!-- Bars -->
-      <StackPanel Spacing="14" IsVisible="{Binding HasAnything}">
-        <Grid ColumnDefinitions="*,*">
-          <Border Classes="card" Margin="0,0,7,0">
-            <StackPanel Spacing="8">
-              <TextBlock Classes="h3" Text="Results" />
-              <ItemsControl ItemsSource="{Binding ByResult}" ItemTemplate="{StaticResource BarRow}" />
-            </StackPanel>
-          </Border>
-          <Border Grid.Column="1" Classes="card" Margin="7,0,0,0">
-            <StackPanel Spacing="8">
-              <TextBlock Classes="h3" Text="{Binding ProgressTitle}" />
-              <ItemsControl ItemsSource="{Binding Progress}" ItemTemplate="{StaticResource BarRow}" />
-            </StackPanel>
-          </Border>
-        </Grid>
-        <Border Classes="card" IsVisible="{Binding HasTeams}">
-          <StackPanel Spacing="8">
-            <TextBlock Classes="h3" Text="Field teams" />
-            <TextBlock Classes="muted" Text="Structures each team has, and how many have an assessment since they were assigned." TextWrapping="Wrap" />
-            <ItemsControl ItemsSource="{Binding ByTeam}" ItemTemplate="{StaticResource BarRow}" />
-          </StackPanel>
-        </Border>
-        <Border Classes="card">
-          <StackPanel Spacing="8">
-            <TextBlock Classes="h3" Text="Streets with the most assessments (top 10)" />
-            <ItemsControl ItemsSource="{Binding ByStreet}" ItemTemplate="{StaticResource BarRow}" />
-          </StackPanel>
-        </Border>
-        <Grid ColumnDefinitions="*,*">
-          <Border Classes="card" Margin="0,0,7,0">
-            <StackPanel Spacing="8">
-              <TextBlock Classes="h3" Text="By community" />
-              <ItemsControl ItemsSource="{Binding ByCommunity}" ItemTemplate="{StaticResource BarRow}" />
-            </StackPanel>
-          </Border>
-          <Border Grid.Column="1" Classes="card" Margin="7,0,0,0">
-            <StackPanel Spacing="8">
-              <TextBlock Classes="h3" Text="By inspector" />
-              <ItemsControl ItemsSource="{Binding ByInspector}" ItemTemplate="{StaticResource BarRow}" />
-            </StackPanel>
-          </Border>
-        </Grid>
-        <StackPanel Orientation="Horizontal" Spacing="16" Margin="2,0">
-          <TextBlock Classes="muted" Text="Bars are split by result:" />
-          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="10" Height="10" Fill="{DynamicResource StatusSubstantialFg}" /><TextBlock Classes="muted" Text="Substantial" /></StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="10" Height="10" Fill="{DynamicResource StatusCloseFg}" /><TextBlock Classes="muted" Text="Close" /></StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="10" Height="10" Fill="{DynamicResource StatusNotSubstantialFg}" /><TextBlock Classes="muted" Text="Not substantial" /></StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="10" Height="10" Fill="{DynamicResource StatusIncompleteFg}" /><TextBlock Classes="muted" Text="Incomplete or undetermined" /></StackPanel>
-        </StackPanel>
-      </StackPanel>
+  <!-- In the window's toolbar: the exports -->
+  <v:PageChrome.Toolbar>
+    <StackPanel Classes="pageToolbar">
+      <DropDownButton Content="Export" IsEnabled="{Binding HasAnything}" AutomationProperties.Name="Export"
+                      ToolTip.Tip="The event summary PDF and files for GIS">
+        <DropDownButton.Flyout>
+          <MenuFlyout Placement="BottomEdgeAlignedRight">
+            <MenuItem Header="Event Summary PDF…" Command="{Binding SummaryPdfCommand}" />
+            <Separator />
+            <MenuItem Header="GeoPackage…" Command="{Binding GeoPackageCommand}"
+                      ToolTip.Tip="One point per assessed structure (WGS 84), with a QGIS style. Structures without coordinates are left out." />
+            <MenuItem Header="GeoJSON…" Command="{Binding GeoJsonCommand}"
+                      ToolTip.Tip="One point per assessed structure (WGS 84), with a QGIS style. Structures without coordinates are left out." />
+            <MenuItem Header="Include Owner Names" ToggleType="CheckBox" IsChecked="{Binding IncludeOwnerNames, Mode=TwoWay}"
+                      ToolTip.Tip="In the GeoPackage and GeoJSON files" />
+          </MenuFlyout>
+        </DropDownButton.Flyout>
+      </DropDownButton>
     </StackPanel>
-  </ScrollViewer>
+  </v:PageChrome.Toolbar>
+
+  <Panel>
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasAnything}">
+      <StackPanel Margin="{StaticResource PagePadding}" Spacing="28">
+        <!-- What the last export did, and the warning while owner names are going into the GIS files -->
+        <StackPanel Spacing="8">
+          <StackPanel.IsVisible>
+            <MultiBinding Converter="{x:Static BoolConverters.Or}">
+              <Binding Path="IncludeOwnerNames" />
+              <Binding Path="HasResult" />
+            </MultiBinding>
+          </StackPanel.IsVisible>
+          <c:Banner Tone="Warning" IsVisible="{Binding IncludeOwnerNames}" Text="{Binding OwnerWarning}" />
+          <TextBlock Classes="secondary" Text="{Binding LastResult}" IsVisible="{Binding HasResult}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+        </StackPanel>
+
+        <!-- The headline numbers as a list, and the results -->
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="40">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="h3" Text="Event summary" ToolTip.Tip="{Binding Subtitle}" />
+            <Border Classes="hairline" />
+            <StackPanel Spacing="7" Grid.IsSharedSizeScope="True">
+              <Grid IsVisible="{Binding IsAllEvents}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="SummaryLabel" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <TextBlock Classes="summaryLabel" Text="Event name" />
+                <TextBox Grid.Column="1" Text="{Binding EventName}" PlaceholderText="Optional" Width="240" HorizontalAlignment="Left"
+                         AutomationProperties.Name="Event name" ToolTip.Tip="Printed on the event summary and used as the GIS layer's title" />
+              </Grid>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="SummaryLabel" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <TextBlock Classes="summaryLabel" Text="Structures" />
+                <TextBlock Grid.Column="1" Classes="num" Text="{Binding Structures}" ToolTip.Tip="{Binding StructuresNote}"
+                           AutomationProperties.Name="{Binding Structures, StringFormat='Structures: {0}'}" />
+              </Grid>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="SummaryLabel" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <TextBlock Classes="summaryLabel" Text="Substantially damaged" />
+                <TextBlock Grid.Column="1" Classes="num medium" Text="{Binding SubstantialText}" Foreground="{DynamicResource StatusSubstantialFg}"
+                           ToolTip.Tip="{Binding SubstantialNote}" AutomationProperties.Name="{Binding SubstantialText, StringFormat='Substantially damaged: {0}'}" />
+              </Grid>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="SummaryLabel" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <TextBlock Classes="summaryLabel" Text="Building value" />
+                <TextBlock Grid.Column="1" Classes="num" Text="{Binding BuildingValue}" ToolTip.Tip="Of the assessed structures" />
+              </Grid>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="SummaryLabel" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <TextBlock Classes="summaryLabel" Text="Repair cost" />
+                <TextBlock Grid.Column="1" Classes="num" Text="{Binding RepairCost}" ToolTip.Tip="Of the assessed structures" />
+              </Grid>
+              <Grid IsVisible="{Binding DamageDates, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="SummaryLabel" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <TextBlock Classes="summaryLabel" Text="Damage occurred" />
+                <TextBlock Grid.Column="1" Classes="num" Text="{Binding DamageDates}" />
+              </Grid>
+              <Grid IsVisible="{Binding InspectionDates, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="SummaryLabel" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <TextBlock Classes="summaryLabel" Text="Inspected" />
+                <TextBlock Grid.Column="1" Classes="num" Text="{Binding InspectionDates}" />
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+
+          <StackPanel Grid.Column="1" Spacing="8">
+            <TextBlock Classes="h3" Text="Results" />
+            <Border Classes="hairline" />
+            <ItemsControl ItemsSource="{Binding ByResult}" ItemTemplate="{StaticResource BarRow}" Grid.IsSharedSizeScope="True" />
+          </StackPanel>
+        </Grid>
+
+        <!-- Progress, and who assessed what -->
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="40">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="h3" Text="{Binding ProgressTitle}" />
+            <Border Classes="hairline" />
+            <ItemsControl ItemsSource="{Binding Progress}" ItemTemplate="{StaticResource BarRow}" Grid.IsSharedSizeScope="True" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="8">
+            <TextBlock Classes="h3" Text="Inspectors" />
+            <Border Classes="hairline" />
+            <ItemsControl ItemsSource="{Binding ByInspector}" ItemTemplate="{StaticResource BarRow}" Grid.IsSharedSizeScope="True" />
+          </StackPanel>
+        </Grid>
+
+        <!-- Where -->
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="40">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="h3" Text="Streets" ToolTip.Tip="The 10 streets with the most assessments" />
+            <Border Classes="hairline" />
+            <ItemsControl ItemsSource="{Binding ByStreet}" ItemTemplate="{StaticResource BarRow}" Grid.IsSharedSizeScope="True" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="8">
+            <TextBlock Classes="h3" Text="Communities" />
+            <Border Classes="hairline" />
+            <ItemsControl ItemsSource="{Binding ByCommunity}" ItemTemplate="{StaticResource BarRow}" Grid.IsSharedSizeScope="True" />
+          </StackPanel>
+        </Grid>
+
+        <!-- Field teams and compliance, once there are any -->
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="40">
+          <Grid.IsVisible>
+            <MultiBinding Converter="{x:Static BoolConverters.Or}">
+              <Binding Path="HasTeams" />
+              <Binding Path="HasCompliance" />
+            </MultiBinding>
+          </Grid.IsVisible>
+          <StackPanel Spacing="8" IsVisible="{Binding HasTeams}">
+            <TextBlock Classes="h3" Text="Field teams" ToolTip.Tip="Structures per team, and how many are assessed since they were assigned" />
+            <Border Classes="hairline" />
+            <ItemsControl ItemsSource="{Binding ByTeam}" ItemTemplate="{StaticResource BarRow}" Grid.IsSharedSizeScope="True" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="8" IsVisible="{Binding HasCompliance}">
+            <TextBlock Classes="h3" Text="Compliance" />
+            <Border Classes="hairline" />
+            <StackPanel Spacing="7" Grid.IsSharedSizeScope="True">
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="ComplianceLabel" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <TextBlock Classes="summaryLabel" Text="Open cases" />
+                <TextBlock Grid.Column="1" Classes="num" Text="{Binding ComplianceOpen}" ToolTip.Tip="{Binding ComplianceOpenNote}"
+                           AutomationProperties.Name="{Binding ComplianceOpen, StringFormat='Open compliance cases: {0}'}" />
+              </Grid>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="ComplianceLabel" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <TextBlock Classes="summaryLabel" Text="Overdue" />
+                <TextBlock Grid.Column="1" Classes="num" Text="{Binding ComplianceOverdue}" ToolTip.Tip="Deadline passed, still open"
+                           AutomationProperties.Name="{Binding ComplianceOverdue, StringFormat='Overdue compliance cases: {0}'}" />
+              </Grid>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="ComplianceLabel" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <TextBlock Classes="summaryLabel" Text="ICC claims in progress" />
+                <TextBlock Grid.Column="1" Classes="num" Text="{Binding IccInProgress}" ToolTip.Tip="Filed or approved, not paid" />
+              </Grid>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" SharedSizeGroup="ComplianceLabel" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <TextBlock Classes="summaryLabel" Text="ICC paid" />
+                <TextBlock Grid.Column="1" Classes="num" Text="{Binding IccPaid}" ToolTip.Tip="{Binding IccPaidNote}" />
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+        </Grid>
+
+        <!-- What the bar colours mean -->
+        <StackPanel Orientation="Horizontal" Spacing="16" ToolTip.Tip="Bars are split by result">
+          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusSubstantialFg}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Substantial" /></StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusCloseFg}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Near threshold" /></StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusNotSubstantialFg}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Not substantial" /></StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusIncompleteFg}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Incomplete or undetermined" /></StackPanel>
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+
+    <c:EmptyState IsVisible="{Binding !HasAnything}" Title="No Structures" />
+  </Panel>
 </UserControl>

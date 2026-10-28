@@ -62,22 +62,23 @@ public class KeyboardTests
 		Assert.Equal("SearchBox", focused.Name);
 	}
 
-	/// <summary>⌘1 to ⌘9 open the sidebar's pages in its order, and View lists them in that order with those keys.</summary>
+	/// <summary>⌘1 to ⌘8 open the pages in the View menu's order, and View lists them with those keys (Settings is ⌘,).</summary>
 	[AvaloniaFact]
 	public void CmdNumbers_FollowTheSidebarOrder()
 	{
 		using UiSession ui = new UiSession();
-		List<NavItemViewModel> sidebar = ui.Main.SidebarItems.ToList();
-		Assert.Equal(new[] { "Structures", "Map", "Dashboard", "Review", "Compliance", "Assignments", "Import & export", "Settings", "Recently deleted" },
-			sidebar.Select(i => i.Title));
-		PhysicalKey[] digits = { PhysicalKey.Digit1, PhysicalKey.Digit2, PhysicalKey.Digit3, PhysicalKey.Digit4, PhysicalKey.Digit5, PhysicalKey.Digit6, PhysicalKey.Digit7, PhysicalKey.Digit8, PhysicalKey.Digit9 };
+		Assert.Equal(new[] { "Structures", "Map", "Summary", "Review", "Compliance", "Assignments", "Recently Deleted", "Import & Export", "Settings" },
+			ui.Main.SidebarItems.Select(i => i.Title));
+		Assert.Null(ui.Main.SidebarItems.Single(i => i.Page == ViewModels.Page.Settings).Shortcut);
+		List<NavItemViewModel> sidebar = ui.Main.SidebarItems.Where(i => i.Shortcut != null).ToList();
+		PhysicalKey[] digits = { PhysicalKey.Digit1, PhysicalKey.Digit2, PhysicalKey.Digit3, PhysicalKey.Digit4, PhysicalKey.Digit5, PhysicalKey.Digit6, PhysicalKey.Digit7, PhysicalKey.Digit8 };
 		for (int i = digits.Length - 1; i >= 0; i--)
 		{
 			ui.Window.KeyPressQwerty(digits[i], RawInputModifiers.Meta);
 			ui.Pump();
 			Assert.Equal(sidebar[i].Page, ui.Main.ActivePage);
 			Assert.True(sidebar[i].IsActive);
-			Assert.Single(sidebar, n => n.IsActive);
+			Assert.Single(ui.Main.SidebarItems, n => n.IsActive);
 			Assert.Equal("⌘" + (i + 1), sidebar[i].Shortcut);
 		}
 

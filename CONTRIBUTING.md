@@ -12,6 +12,9 @@ Thanks for helping. SDE for Mac is used to make substantial damage determination
   `src/Sde.Calculation`, `src/Sde.Data/Seed` or the export formats.
 - The UI tests render the real windows off-screen. On macOS they refresh `docs/screenshots/`; restore those files
   unless your change is meant to alter the UI.
+- The tests never touch your own SDE folder: each test process sets `SDE_HOME` and `HOME` to a scratch folder
+  (`tests/Sde.TestSupport/TestHome.cs`), and `IsolationTests` checks it. Keep it that way in new test projects (they
+  get it from `tests/Directory.Build.props`).
 
 ## Rules that keep the results trustworthy
 - `src/Sde.Calculation` is a port of FEMA's engine and must keep giving identical results. Don't "improve" it.

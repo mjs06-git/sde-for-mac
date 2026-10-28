@@ -3,456 +3,497 @@
              xmlns:vm="using:Sde.App.ViewModels"
              xmlns:maps="using:Sde.App.Maps"
              xmlns:app="using:Sde.App"
+             xmlns:v="using:Sde.App.Views"
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.MapView"
              x:DataType="vm:MapViewModel">
-  <DockPanel Margin="{StaticResource PagePadding}">
-    <!-- What a click or drag does, the basemap and the zoom buttons -->
-    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" Margin="0,0,0,12">
-      <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
-        <RadioButton GroupName="MapMode" Content="Open" IsChecked="{Binding IsBrowse, Mode=OneWay}"
-                     Command="{Binding SetModeCommand}" CommandParameter="{x:Static vm:MapMode.Browse}"
-                     AutomationProperties.Name="Open mode: click a structure to open it" />
-        <RadioButton GroupName="MapMode" Content="Select" IsChecked="{Binding IsSelect, Mode=OneWay}"
-                     Command="{Binding SetModeCommand}" CommandParameter="{x:Static vm:MapMode.Select}"
-                     AutomationProperties.Name="Select mode: drag a box to check structures" />
-        <RadioButton GroupName="MapMode" Content="Set location" IsChecked="{Binding IsSetLocation, Mode=OneWay}"
-                     Command="{Binding SetModeCommand}" CommandParameter="{x:Static vm:MapMode.SetLocation}"
-                     AutomationProperties.Name="Set location mode: click the map to place a structure" />
-        <RadioButton GroupName="MapMode" Content="Measure" IsChecked="{Binding IsMeasure, Mode=OneWay}"
-                     Command="{Binding SetModeCommand}" CommandParameter="{x:Static vm:MapMode.Measure}"
-                     AutomationProperties.Name="Measure mode: click points to measure a distance or an area" />
-        <RadioButton GroupName="MapMode" Content="Edit" IsChecked="{Binding IsEdit, Mode=OneWay}"
-                     Command="{Binding SetModeCommand}" CommandParameter="{x:Static vm:MapMode.Edit}"
-                     AutomationProperties.Name="Edit mode: draw and change the shapes of your own layers" />
-      </StackPanel>
-      <!-- The hint has a line of its own under the tools, so the toolbar never squeezes it -->
-      <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Classes="muted" Text="{Binding Hint}" TextWrapping="Wrap" Margin="0,8,0,0" />
-      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-        <DropDownButton Name="BookmarksButton" Content="Bookmarks" AutomationProperties.Name="Bookmarks: saved views of the map">
-          <DropDownButton.Flyout>
-            <Flyout Placement="BottomEdgeAlignedRight">
-              <StackPanel Spacing="8" Width="280">
-                <TextBlock Classes="muted" Text="No bookmarks yet. Save the view the map shows now." TextWrapping="Wrap" IsVisible="{Binding !HasBookmarks}" />
-                <ItemsControl ItemsSource="{Binding Bookmarks}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:MapBookmarkViewModel">
-                      <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,2">
-                        <Button Classes="subtle" Content="{Binding Name}" Command="{Binding GoCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                AutomationProperties.Name="{Binding GoName}" />
-                        <Button Grid.Column="1" Classes="icon sm" Command="{Binding RemoveCommand}" AutomationProperties.Name="{Binding RemoveName}">
-                          <c:Icon Kind="Close" />
-                        </Button>
-                      </Grid>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                  <TextBox Text="{Binding NewBookmarkName}" PlaceholderText="Name this view" AutomationProperties.Name="Name for the new bookmark">
-                    <TextBox.KeyBindings>
-                      <KeyBinding Gesture="Enter" Command="{Binding AddBookmarkCommand}" />
-                    </TextBox.KeyBindings>
-                  </TextBox>
-                  <Button Grid.Column="1" Content="Add" Command="{Binding AddBookmarkCommand}" AutomationProperties.Name="Save the view the map shows now as a bookmark" />
-                </Grid>
-              </StackPanel>
-            </Flyout>
-          </DropDownButton.Flyout>
-        </DropDownButton>
-        <ComboBox ItemsSource="{Binding Basemaps}" SelectedItem="{Binding Basemap}" MinWidth="190" AutomationProperties.Name="Basemap">
-          <ComboBox.ItemTemplate>
-            <DataTemplate x:DataType="maps:Basemap">
-              <TextBlock Text="{Binding Name}" />
-            </DataTemplate>
-          </ComboBox.ItemTemplate>
-        </ComboBox>
-        <Button Name="ZoomInButton" Classes="icon" ToolTip.Tip="Zoom in (=)" AutomationProperties.Name="Zoom in">
-          <c:Icon Kind="ZoomIn" />
-        </Button>
-        <Button Name="ZoomOutButton" Classes="icon" ToolTip.Tip="Zoom out (−)" AutomationProperties.Name="Zoom out">
-          <c:Icon Kind="ZoomOut" />
-        </Button>
-        <Button Content="Show all" Command="{Binding FitToStructuresCommand}" AutomationProperties.Name="Zoom to show all structures" />
-        <Button Command="{Binding KeepOfflineCommand}" ToolTip.Tip="Keep the background map of this area on this Mac, for working without a connection"
-                AutomationProperties.Name="Keep this area of the map offline">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <c:Icon Kind="Download" />
-            <TextBlock Text="Offline…" />
-          </StackPanel>
-        </Button>
-        <Button Command="{Binding PrintMapCommand}" ToolTip.Tip="Print the map to a PDF" AutomationProperties.Name="Print the map to a PDF">
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <c:Icon Kind="Print" />
-            <TextBlock Text="Print…" />
-          </StackPanel>
-        </Button>
-      </StackPanel>
-    </Grid>
+  <UserControl.Styles>
+    <!-- The side pane's lists (what to show, the layers): Mac-size 14 px check boxes, not the 20 px form ones -->
+    <Style Selector="CheckBox.compact /template/ Border#NormalRectangle">
+      <Setter Property="Width" Value="14" />
+      <Setter Property="Height" Value="14" />
+    </Style>
+    <Style Selector="CheckBox.compact /template/ Viewbox">
+      <Setter Property="Width" Value="14" />
+      <Setter Property="Height" Value="14" />
+    </Style>
+  </UserControl.Styles>
 
-    <Grid ColumnDefinitions="*,320">
-      <!-- The map, with the attribute table under it when open -->
-      <Grid RowDefinitions="*,Auto">
-        <Border Classes="card flush" ClipToBounds="True">
-          <Grid>
-            <maps:MapCanvas Name="Surface" Background="{DynamicResource SubtleBg}"
-                            AutomationProperties.Name="Map of the structures. The list beside the map has the same structures." />
-            <Border Classes="card compact" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10" Padding="8,3" MaxWidth="620"
-                    IsVisible="{Binding HasAttribution}" ToolTip.Tip="{Binding Attribution}">
-              <TextBlock Classes="muted xs" Text="{Binding Attribution}" TextTrimming="CharacterEllipsis" />
-            </Border>
-            <Border Classes="card" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="10" Padding="12,6" IsVisible="{Binding HasBasemapProblem}">
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <TextBlock Classes="secondary" Text="{Binding BasemapProblem}" TextWrapping="Wrap" MaxWidth="420" VerticalAlignment="Center" />
-                <Button Classes="link" Content="Try again" Command="{Binding RetryTilesCommand}" VerticalAlignment="Center"
-                        AutomationProperties.Name="Try downloading the map tiles again" />
-              </StackPanel>
-            </Border>
-            <Border Classes="card" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="20,14" IsHitTestVisible="False"
-                    IsVisible="{Binding OnMapCount, Converter={x:Static app:Converters.IsZero}}">
-              <StackPanel Spacing="4" MaxWidth="360">
-                <TextBlock Classes="h3" Text="No structures on the map yet" HorizontalAlignment="Center" />
-                <TextBlock Classes="secondary" TextWrapping="Wrap" TextAlignment="Center"
-                           Text="A structure appears here once it has a latitude and longitude. Use Set location to click each one on the map, or add coordinates in bulk." />
-              </StackPanel>
-            </Border>
-
-            <!-- Tools for the mode, and what is selected -->
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Spacing="8" MaxWidth="600">
-              <Border Classes="card compact" IsVisible="{Binding IsSelect}">
-                <WrapPanel ItemSpacing="8" LineSpacing="6">
-                  <TextBlock Classes="secondary" Text="Select in" VerticalAlignment="Center" />
-                  <ComboBox ItemsSource="{Binding SelectableLayers}" SelectedItem="{Binding SelectTarget}" PlaceholderText="Structures" MinWidth="150"
-                            AutomationProperties.Name="Layer that clicks, boxes and areas select in">
-                    <ComboBox.ItemTemplate>
-                      <DataTemplate x:DataType="vm:MapLayerViewModel">
-                        <TextBlock Text="{Binding Name}" />
-                      </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                  </ComboBox>
-                  <ToggleButton Content="Draw an area" IsChecked="{Binding IsPolygonSelect}" AutomationProperties.Name="Select by drawing an area: click its corners" />
-                  <Button Content="By attribute…" Command="{Binding SelectByAttributeCommand}" AutomationProperties.Name="Select by the values of a field" />
-                  <Button Content="By location…" Command="{Binding SelectByLocationCommand}" AutomationProperties.Name="Select by where features are compared with other features" />
-                </WrapPanel>
-              </Border>
-              <Border Name="EditBar" Classes="card compact" IsVisible="{Binding IsEdit}" HorizontalAlignment="Left">
-                <StackPanel Spacing="8">
-                  <WrapPanel ItemSpacing="8" LineSpacing="6">
-                    <TextBlock Classes="secondary" Text="Edit" VerticalAlignment="Center" />
-                    <ComboBox ItemsSource="{Binding EditableLayers}" SelectedItem="{Binding EditLayer}" PlaceholderText="No layer to edit" MinWidth="150"
-                              IsVisible="{Binding HasEditableLayers}" AutomationProperties.Name="Layer to edit">
-                      <ComboBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:MapLayerViewModel">
-                          <TextBlock Text="{Binding Name}" />
-                        </DataTemplate>
-                      </ComboBox.ItemTemplate>
-                    </ComboBox>
-                    <ListBox Classes="segmented" ItemsSource="{Binding EditTools}" SelectedItem="{Binding SelectedEditTool}"
-                             IsVisible="{Binding EditLayer, Converter={x:Static ObjectConverters.IsNotNull}}"
-                             AutomationProperties.Name="Edit tool: change shapes or add new ones" />
-                    <Button Content="New layer…" Command="{Binding NewLayerCommand}" AutomationProperties.Name="Make a new layer to draw on" />
-                  </WrapPanel>
-                  <WrapPanel ItemSpacing="6" LineSpacing="6" IsVisible="{Binding EditLayer, Converter={x:Static ObjectConverters.IsNotNull}}">
-                    <CheckBox Content="Snap" IsChecked="{Binding SnapToShapes}" ToolTip.Tip="New corners snap to nearby corners and edges, and to structures"
-                              AutomationProperties.Name="Snap new corners to nearby corners, edges and structures" />
-                    <Button Classes="icon" Command="{Binding UndoEditCommand}" ToolTip.Tip="{Binding UndoEditText}" AutomationProperties.Name="{Binding UndoEditText}">
-                      <c:Icon Kind="Undo" />
-                    </Button>
-                    <Button Classes="icon" Command="{Binding RedoEditCommand}" ToolTip.Tip="{Binding RedoEditText}" AutomationProperties.Name="{Binding RedoEditText}">
-                      <c:Icon Kind="Redo" />
-                    </Button>
-                    <Button Content="Delete shape" Command="{Binding DeleteEditFeatureCommand}" IsVisible="{Binding HasEditFeature}"
-                            AutomationProperties.Name="Delete the picked shape" />
-                    <TextBlock Classes="muted" Text="{Binding EditStatus}" VerticalAlignment="Center" Margin="4,0" AutomationProperties.LiveSetting="Polite" />
-                    <Button Classes="subtle" Content="Discard…" Command="{Binding DiscardEditsCommand}" AutomationProperties.Name="Discard the unsaved edits" />
-                    <Button Classes="primary" Content="Save" Command="{Binding SaveEditsCommand}" AutomationProperties.Name="Save the edits to the map layers file" />
-                  </WrapPanel>
-                </StackPanel>
-              </Border>
-              <Border Classes="card compact" IsVisible="{Binding IsMeasure}" Width="300" HorizontalAlignment="Left">
-                <StackPanel Spacing="6">
-                  <ListBox Classes="segmented" SelectedIndex="{Binding MeasureKindIndex}" AutomationProperties.Name="Measure a distance or an area">
-                    <ListBoxItem Content="Distance" />
-                    <ListBoxItem Content="Area" />
-                  </ListBox>
-                  <TextBlock Name="MeasurementText" Classes="medium" Text="{Binding Measurement}" IsVisible="{Binding HasMeasurement}" TextWrapping="Wrap"
-                             AutomationProperties.LiveSetting="Polite" />
-                  <TextBlock Classes="muted xs" Text="{Binding MeasureMethod}" TextWrapping="Wrap" />
-                  <Button Classes="link" Content="Clear" Command="{Binding ClearMeasurementCommand}" IsVisible="{Binding HasMeasurement}" HorizontalAlignment="Left"
-                          AutomationProperties.Name="Clear the measurement" />
-                </StackPanel>
-              </Border>
-              <Border Classes="card compact" IsVisible="{Binding HasChecked}" HorizontalAlignment="Left">
-                <StackPanel Spacing="6">
-                  <TextBlock Classes="medium" Text="{Binding SelectionText}" AutomationProperties.LiveSetting="Polite" />
-                  <WrapPanel ItemSpacing="6" LineSpacing="6">
-                    <Button Content="Show in Structures" Command="{Binding ShowCheckedCommand}" AutomationProperties.Name="Show the selected structures in the Structures list" />
-                    <Button Content="Set a field…" Command="{Binding SetFieldOnSelectionCommand}" AutomationProperties.Name="Set a field on the selected structures" />
-                    <Button Content="Assign to team…" Command="{Binding AssignSelectionCommand}" AutomationProperties.Name="Assign the selected structures to a team" />
-                    <DropDownButton Content="Reports" AutomationProperties.Name="Reports for the selected structures">
-                      <DropDownButton.Flyout>
-                        <MenuFlyout Placement="BottomEdgeAlignedLeft">
-                          <MenuItem Header="Summary report" Command="{Binding PrintSelectionCommand}" CommandParameter="Summary" />
-                          <MenuItem Header="Summary report (no photos)" Command="{Binding PrintSelectionCommand}" CommandParameter="Summary-NoPhotos" />
-                          <MenuItem Header="Detailed report" Command="{Binding PrintSelectionCommand}" CommandParameter="Detail" />
-                          <MenuItem Header="Detailed report (no photos)" Command="{Binding PrintSelectionCommand}" CommandParameter="Detail-NoPhotos" />
-                          <MenuItem Header="Structure &amp; percent damaged list" Command="{Binding PrintSelectionCommand}" CommandParameter="PercentDamaged" />
-                          <MenuItem Header="Community report" Command="{Binding PrintSelectionCommand}" CommandParameter="Community" />
-                        </MenuFlyout>
-                      </DropDownButton.Flyout>
-                    </DropDownButton>
-                    <Button Content="Add to web map…" Command="{Binding WebMapOfSelectionCommand}" AutomationProperties.Name="Make a web map of the selected structures" />
-                    <Button Content="Copy values…" Command="{Binding CopyValuesCommand}" AutomationProperties.Name="Copy values from a layer of areas onto the selected structures" />
-                    <Button Classes="subtle" Content="Clear" Command="{Binding ClearCheckedCommand}" AutomationProperties.Name="Clear the selected structures" />
-                  </WrapPanel>
-                </StackPanel>
-              </Border>
-              <Border Classes="card compact" IsVisible="{Binding HasLayerSelection}" HorizontalAlignment="Left">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <TextBlock Classes="medium" Text="{Binding LayerSelectionText}" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
-                  <Button Content="Show in the table" Command="{Binding ShowSelectionInTableCommand}" AutomationProperties.Name="Show the selected features in the attribute table" />
-                  <Button Classes="subtle" Content="Clear" Command="{Binding ClearSelectionCommand}" AutomationProperties.Name="Clear the selected features" />
-                </StackPanel>
-              </Border>
+  <!-- In the window's toolbar: what a click or drag does, zoom, bookmarks, and More (the basemap, offline, print) -->
+  <v:PageChrome.Toolbar>
+    <StackPanel Classes="pageToolbar">
+      <Border Classes="segmentedGroup" VerticalAlignment="Center" ToolTip.Tip="{Binding Hint}">
+        <StackPanel Orientation="Horizontal" Spacing="2">
+          <RadioButton Classes="segment" GroupName="MapMode" Content="Open" IsChecked="{Binding IsBrowse, Mode=OneWay}"
+                       Command="{Binding SetModeCommand}" CommandParameter="{x:Static vm:MapMode.Browse}"
+                       AutomationProperties.Name="Open mode: click a structure to open it" />
+          <RadioButton Classes="segment" GroupName="MapMode" Content="Select" IsChecked="{Binding IsSelect, Mode=OneWay}"
+                       Command="{Binding SetModeCommand}" CommandParameter="{x:Static vm:MapMode.Select}"
+                       AutomationProperties.Name="Select mode: drag a box to check structures" />
+          <RadioButton Classes="segment" GroupName="MapMode" Content="Set Location" IsChecked="{Binding IsSetLocation, Mode=OneWay}"
+                       Command="{Binding SetModeCommand}" CommandParameter="{x:Static vm:MapMode.SetLocation}"
+                       AutomationProperties.Name="Set location mode: click the map to place a structure" />
+          <RadioButton Classes="segment" GroupName="MapMode" Content="Measure" IsChecked="{Binding IsMeasure, Mode=OneWay}"
+                       Command="{Binding SetModeCommand}" CommandParameter="{x:Static vm:MapMode.Measure}"
+                       AutomationProperties.Name="Measure mode: click points to measure a distance or an area" />
+          <RadioButton Classes="segment" GroupName="MapMode" Content="Edit" IsChecked="{Binding IsEdit, Mode=OneWay}"
+                       Command="{Binding SetModeCommand}" CommandParameter="{x:Static vm:MapMode.Edit}"
+                       AutomationProperties.Name="Edit mode: draw and change the shapes of your own layers" />
+        </StackPanel>
+      </Border>
+      <Border Classes="toolbarGroup" VerticalAlignment="Center">
+        <StackPanel Orientation="Horizontal">
+          <Button Name="ZoomOutButton" Classes="icon toolbar" ToolTip.Tip="Zoom Out (−)" AutomationProperties.Name="Zoom out">
+            <c:Icon Kind="ZoomOut" Size="16" />
+          </Button>
+          <Button Name="ZoomInButton" Classes="icon toolbar" ToolTip.Tip="Zoom In (=)" AutomationProperties.Name="Zoom in">
+            <c:Icon Kind="ZoomIn" Size="16" />
+          </Button>
+          <Button Classes="icon toolbar" Command="{Binding FitToStructuresCommand}" ToolTip.Tip="Show All Structures" AutomationProperties.Name="Zoom to show all structures">
+            <c:Icon Kind="Structures" Size="16" />
+          </Button>
+        </StackPanel>
+      </Border>
+      <DropDownButton Name="BookmarksButton" Classes="ghost toolbar" VerticalAlignment="Center" ToolTip.Tip="Bookmarks" AutomationProperties.Name="Bookmarks: saved views of the map">
+        <c:Icon Kind="Bookmark" Size="16" />
+        <DropDownButton.Flyout>
+          <Flyout Placement="BottomEdgeAlignedRight">
+            <StackPanel Spacing="8" Width="280">
+              <TextBlock Classes="secondary" Text="No Bookmarks" IsVisible="{Binding !HasBookmarks}" />
+              <ItemsControl ItemsSource="{Binding Bookmarks}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:MapBookmarkViewModel">
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,2">
+                      <Button Classes="subtle" Content="{Binding Name}" Command="{Binding GoCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                              AutomationProperties.Name="{Binding GoName}" />
+                      <Button Grid.Column="1" Classes="icon sm" Command="{Binding RemoveCommand}" AutomationProperties.Name="{Binding RemoveName}">
+                        <c:Icon Kind="Close" />
+                      </Button>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                <TextBox Text="{Binding NewBookmarkName}" PlaceholderText="Name this view" AutomationProperties.Name="Name for the new bookmark">
+                  <TextBox.KeyBindings>
+                    <KeyBinding Gesture="Enter" Command="{Binding AddBookmarkCommand}" />
+                  </TextBox.KeyBindings>
+                </TextBox>
+                <Button Grid.Column="1" Content="Add" Command="{Binding AddBookmarkCommand}" AutomationProperties.Name="Save the view the map shows now as a bookmark" />
+              </Grid>
             </StackPanel>
+          </Flyout>
+        </DropDownButton.Flyout>
+      </DropDownButton>
+      <Button Classes="icon toolbar" VerticalAlignment="Center" ToolTip.Tip="More" AutomationProperties.Name="More map actions">
+        <c:Icon Kind="More" Size="18" />
+        <Button.Flyout>
+          <MenuFlyout Placement="BottomEdgeAlignedRight">
+            <!-- The basemaps, the one shown ticked (MapView.axaml.cs) -->
+            <MenuItem Header="Background Map" ItemsSource="{Binding Basemaps}" AutomationProperties.Name="Basemap"
+                      ContainerPrepared="OnBasemapItemPrepared" SubmenuOpened="OnBasemapMenuOpened" Click="OnBasemapChosen">
+              <MenuItem.ItemTemplate>
+                <DataTemplate x:DataType="maps:Basemap">
+                  <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+              </MenuItem.ItemTemplate>
+            </MenuItem>
+            <Separator />
+            <MenuItem Header="Keep This Area Offline…" Command="{Binding KeepOfflineCommand}"
+                      ToolTip.Tip="Keep the background map of this area on this Mac, for working without a connection" />
+            <MenuItem Header="Print Map…" Command="{Binding PrintMapCommand}" ToolTip.Tip="Print the map to a PDF" />
+          </MenuFlyout>
+        </Button.Flyout>
+      </Button>
+    </StackPanel>
+  </v:PageChrome.Toolbar>
 
-            <!-- Identify: the clicked feature's values -->
-            <Border Classes="card" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" Width="280" MaxHeight="380"
-                    DataContext="{Binding Identified}" x:DataType="vm:IdentifyViewModel" IsVisible="{Binding Converter={x:Static ObjectConverters.IsNotNull}}">
-              <DockPanel>
-                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,6">
-                  <StackPanel>
-                    <TextBlock Classes="eyebrow" Text="{Binding LayerName}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Classes="medium" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-                  </StackPanel>
-                  <Button Grid.Column="1" Classes="icon sm" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).CloseIdentifyCommand}" VerticalAlignment="Top"
-                          AutomationProperties.Name="Close the feature's details">
-                    <c:Icon Kind="Close" />
-                  </Button>
-                </Grid>
-                <Button DockPanel.Dock="Bottom" Classes="link" Content="Show in the table" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).ShowIdentifiedInTableCommand}"
-                        Margin="0,6,0,0" AutomationProperties.Name="Select this feature and show it in the attribute table" />
-                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-                  <ItemsControl ItemsSource="{Binding Lines}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="vm:IdentifyLine">
-                        <Grid ColumnDefinitions="110,*" ColumnSpacing="8" Margin="0,1" AutomationProperties.Name="{Binding SpokenName}">
-                          <TextBlock Classes="muted" Text="{Binding Field}" TextTrimming="CharacterEllipsis" />
-                          <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" />
-                        </Grid>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </ScrollViewer>
-              </DockPanel>
-            </Border>
+  <Grid ColumnDefinitions="*,Auto">
+    <!-- The map: the mode's options above it, the attribute table and the status bar under it -->
+    <DockPanel>
+      <!-- How many are on the map, or what is selected (with its actions); then the result of the last action -->
+      <Border DockPanel.Dock="Bottom" Classes="statusBar">
+        <Grid ColumnDefinitions="*,Auto,*" Margin="12,0">
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="18" VerticalAlignment="Center">
+            <TextBlock Text="{Binding CountText}">
+              <TextBlock.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                  <Binding Path="!HasChecked" />
+                  <Binding Path="!HasLayerSelection" />
+                </MultiBinding>
+              </TextBlock.IsVisible>
+            </TextBlock>
+            <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding HasChecked}">
+              <TextBlock Text="{Binding SelectionText}" AutomationProperties.LiveSetting="Polite" />
+              <Button Classes="link" Content="Show in Structures" Command="{Binding ShowCheckedCommand}" AutomationProperties.Name="Show the selected structures in the Structures list" />
+              <Button Classes="link" Content="Set a Field…" Command="{Binding SetFieldOnSelectionCommand}" AutomationProperties.Name="Set a field on the selected structures" />
+              <Button Classes="link" Content="Assign to Team…" Command="{Binding AssignSelectionCommand}" AutomationProperties.Name="Assign the selected structures to a team" />
+              <Button Classes="link" AutomationProperties.Name="Reports and more for the selected structures">
+                <StackPanel Orientation="Horizontal" Spacing="3">
+                  <TextBlock Text="More" Foreground="{DynamicResource Accent}" />
+                  <c:Icon Kind="CaretDown" Size="8" Foreground="{DynamicResource Accent}" VerticalAlignment="Center" />
+                </StackPanel>
+                <Button.Flyout>
+                  <MenuFlyout Placement="TopEdgeAlignedLeft">
+                    <MenuItem Header="Reports">
+                      <MenuItem Header="Summary Report" Command="{Binding PrintSelectionCommand}" CommandParameter="Summary" />
+                      <MenuItem Header="Summary Report, No Photos" Command="{Binding PrintSelectionCommand}" CommandParameter="Summary-NoPhotos" />
+                      <MenuItem Header="Detailed Report" Command="{Binding PrintSelectionCommand}" CommandParameter="Detail" />
+                      <MenuItem Header="Detailed Report, No Photos" Command="{Binding PrintSelectionCommand}" CommandParameter="Detail-NoPhotos" />
+                      <MenuItem Header="Structure &amp; Percent Damaged List" Command="{Binding PrintSelectionCommand}" CommandParameter="PercentDamaged" />
+                      <MenuItem Header="Community Report" Command="{Binding PrintSelectionCommand}" CommandParameter="Community" />
+                    </MenuItem>
+                    <Separator />
+                    <MenuItem Header="Add to Web Map…" Command="{Binding WebMapOfSelectionCommand}" />
+                    <MenuItem Header="Copy Values…" Command="{Binding CopyValuesCommand}" ToolTip.Tip="From a layer of areas onto the selected structures" />
+                  </MenuFlyout>
+                </Button.Flyout>
+              </Button>
+              <Button Classes="link" Content="Clear" Command="{Binding ClearCheckedCommand}" AutomationProperties.Name="Clear the selected structures" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding HasLayerSelection}">
+              <TextBlock Text="{Binding LayerSelectionText}" AutomationProperties.LiveSetting="Polite" />
+              <Button Classes="link" Content="Show in Table" Command="{Binding ShowSelectionInTableCommand}" AutomationProperties.Name="Show the selected features in the attribute table" />
+              <Button Classes="link" Content="Clear" Command="{Binding ClearSelectionCommand}" AutomationProperties.Name="Clear the selected features" />
+            </StackPanel>
+          </StackPanel>
+          <Grid Grid.Column="2" ColumnDefinitions="Auto,*" ColumnSpacing="6" Margin="18,0,0,0" IsVisible="{Binding HasStatusMessage}">
+            <TextBlock Text="·" />
+            <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding StatusMessage}" AutomationProperties.LiveSetting="Polite" />
           </Grid>
-        </Border>
+        </Grid>
+      </Border>
 
-        <!-- The attribute table (values can be typed in while its layer is being edited) -->
-        <Border Grid.Row="1" Classes="card flush" Height="250" Margin="0,10,0,0" IsVisible="{Binding IsTableOpen}">
-          <DockPanel>
-            <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="10" Margin="12,8">
-              <TextBlock Classes="medium" Text="Table" VerticalAlignment="Center" />
-              <ComboBox Grid.Column="1" ItemsSource="{Binding SelectableLayers}" SelectedItem="{Binding TableLayer}" MinWidth="170" AutomationProperties.Name="Layer shown in the table">
+      <!-- The attribute table (values can be typed in while its layer is being edited) -->
+      <Border DockPanel.Dock="Bottom" Height="250" BorderBrush="{DynamicResource BorderDefault}" BorderThickness="0,1,0,0" IsVisible="{Binding IsTableOpen}">
+        <DockPanel>
+          <Border DockPanel.Dock="Top" Classes="scopeBar">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="8">
+              <TextBlock Classes="secondary sm" Text="Table" VerticalAlignment="Center" />
+              <ComboBox Grid.Column="1" Classes="sm" ItemsSource="{Binding SelectableLayers}" SelectedItem="{Binding TableLayer}" MinWidth="160" VerticalAlignment="Center"
+                        AutomationProperties.Name="Layer shown in the table">
                 <ComboBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:MapLayerViewModel">
                     <TextBlock Text="{Binding Name}" />
                   </DataTemplate>
                 </ComboBox.ItemTemplate>
               </ComboBox>
-              <TextBox Grid.Column="2" Text="{Binding TableFilter}" PlaceholderText="Filter rows" MaxWidth="260" HorizontalAlignment="Left"
+              <TextBox Grid.Column="2" Text="{Binding TableFilter}" PlaceholderText="Filter rows" Width="220" HorizontalAlignment="Left" VerticalAlignment="Center"
                        AutomationProperties.Name="Show only rows containing" />
-              <CheckBox Grid.Column="3" Content="Selected only" IsChecked="{Binding TableSelectedOnly}" AutomationProperties.Name="Show only the selected features" />
+              <CheckBox Grid.Column="3" Classes="compact" Content="Selected only" IsChecked="{Binding TableSelectedOnly}" VerticalAlignment="Center" AutomationProperties.Name="Show only the selected features" />
               <TextBlock Grid.Column="4" Classes="muted" Text="{Binding TableCountText}" VerticalAlignment="Center" />
-              <Button Grid.Column="5" Classes="icon sm" Command="{Binding CloseTableCommand}" AutomationProperties.Name="Close the table">
+              <Button Grid.Column="5" Classes="icon sm" Command="{Binding CloseTableCommand}" VerticalAlignment="Center" ToolTip.Tip="Close Table" AutomationProperties.Name="Close the table">
                 <c:Icon Kind="Close" />
               </Button>
             </Grid>
-            <DataGrid Name="TableGrid" ItemsSource="{Binding TableRows}" IsReadOnly="{Binding !TableEditable}" AutoGenerateColumns="False" SelectionMode="Extended"
-                      CanUserSortColumns="True" CanUserResizeColumns="True" CanUserReorderColumns="False" GridLinesVisibility="Horizontal"
-                      AutomationProperties.Name="Attribute table" />
-          </DockPanel>
-        </Border>
-      </Grid>
+          </Border>
+          <DataGrid Name="TableGrid" ItemsSource="{Binding TableRows}" IsReadOnly="{Binding !TableEditable}" AutoGenerateColumns="False" SelectionMode="Extended"
+                    CanUserSortColumns="True" CanUserResizeColumns="True" CanUserReorderColumns="False" GridLinesVisibility="Horizontal"
+                    AutomationProperties.Name="Attribute table" />
+        </DockPanel>
+      </Border>
 
-      <!-- Beside the map: the structures, or the layers -->
-      <DockPanel Grid.Column="1" Margin="14,0,0,0">
-        <ListBox DockPanel.Dock="Top" Classes="segmented" SelectedIndex="{Binding PanelIndex}" Margin="0,0,0,12"
-                 AutomationProperties.Name="Show the structures or the map layers beside the map">
-          <ListBoxItem Content="Structures" />
-          <ListBoxItem Content="Layers" />
-        </ListBox>
-
-        <!-- Layers -->
-        <DockPanel IsVisible="{Binding IsLayersPanel}">
-          <StackPanel DockPanel.Dock="Top" Spacing="8">
-            <c:Banner Classes="stacked" Tone="Warning" IsVisible="{Binding HasLayersWarning}" Text="{Binding LayersWarning}">
-              <Button Classes="link" Content="These layers belong to this database" Command="{Binding KeepLayersCommand}" HorizontalAlignment="Left"
-                      AutomationProperties.Name="Keep these map layers with this database" />
-            </c:Banner>
-            <DropDownButton Content="Add layer" HorizontalAlignment="Left" AutomationProperties.Name="Add a map layer">
-              <DropDownButton.Flyout>
-                <MenuFlyout Placement="BottomEdgeAlignedLeft">
-                  <MenuItem Header="From a file…" Command="{Binding AddFileLayerCommand}" ToolTip.Tip="A Shapefile, GeoJSON, GeoPackage or CSV with latitude and longitude" />
-                  <MenuItem Header="From an ArcGIS web address…" Command="{Binding AddOnlineLayerCommand}" />
-                  <Separator />
-                  <MenuItem Header="FEMA flood zones" Command="{Binding AddFloodZonesCommand}" />
-                  <Separator />
-                  <MenuItem Header="New layer to draw on…" Command="{Binding NewLayerCommand}" />
-                </MenuFlyout>
-              </DropDownButton.Flyout>
-            </DropDownButton>
-            <TextBlock Classes="eyebrow" Text="LAYERS, TOP FIRST" />
-          </StackPanel>
-          <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl ItemsSource="{Binding Layers}">
-              <ItemsControl.ItemTemplate>
+      <!-- The mode's options: one quiet bar under the toolbar (what a click does is the mode's tooltip) -->
+      <Border DockPanel.Dock="Top" Classes="scopeBar" IsVisible="{Binding IsSelect}" ToolTip.Tip="{Binding Hint}">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <TextBlock Classes="secondary sm" Text="Select in" VerticalAlignment="Center" />
+          <ComboBox Classes="sm" ItemsSource="{Binding SelectableLayers}" SelectedItem="{Binding SelectTarget}" PlaceholderText="Structures" MinWidth="150"
+                    AutomationProperties.Name="Layer that clicks, boxes and areas select in">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:MapLayerViewModel">
+                <TextBlock Text="{Binding Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <ToggleButton Classes="sm" Content="Draw an Area" IsChecked="{Binding IsPolygonSelect}" AutomationProperties.Name="Select by drawing an area: click its corners" />
+          <Button Classes="sm" Content="By Attribute…" Command="{Binding SelectByAttributeCommand}" AutomationProperties.Name="Select by the values of a field" />
+          <Button Classes="sm" Content="By Location…" Command="{Binding SelectByLocationCommand}" AutomationProperties.Name="Select by where features are compared with other features" />
+        </StackPanel>
+      </Border>
+      <Border DockPanel.Dock="Top" Classes="scopeBar" IsVisible="{Binding IsSetLocation}" ToolTip.Tip="{Binding Hint}">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <TextBlock Classes="secondary sm" Text="Structure to place" VerticalAlignment="Center" />
+          <ComboBox Classes="sm" ItemsSource="{Binding PlaceChoices}" SelectedItem="{Binding PlaceTarget}" Width="280"
+                    PlaceholderText="Structures without coordinates" AutomationProperties.Name="Structure to place">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:MapPointViewModel">
+                <TextBlock Text="{Binding Address}" TextTrimming="CharacterEllipsis" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </StackPanel>
+      </Border>
+      <Border DockPanel.Dock="Top" Classes="scopeBar" IsVisible="{Binding IsMeasure}" ToolTip.Tip="{Binding Hint}">
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+          <ListBox Classes="segmented" SelectedIndex="{Binding MeasureKindIndex}" ToolTip.Tip="{Binding MeasureMethod}" AutomationProperties.Name="Measure a distance or an area">
+            <ListBoxItem Content="Distance" />
+            <ListBoxItem Content="Area" />
+          </ListBox>
+          <TextBlock Name="MeasurementText" Classes="medium" Text="{Binding MeasurementLine}" IsVisible="{Binding HasMeasurement}" VerticalAlignment="Center"
+                     ToolTip.Tip="{Binding MeasureMethod}" AutomationProperties.LiveSetting="Polite" />
+          <Button Classes="link" Content="Clear" Command="{Binding ClearMeasurementCommand}" IsVisible="{Binding HasMeasurement}" VerticalAlignment="Center"
+                  AutomationProperties.Name="Clear the measurement" />
+        </StackPanel>
+      </Border>
+      <!-- Edit: wraps only in a narrow window; nothing in it comes and goes while shapes are picked, so the map never jumps -->
+      <Border Name="EditBar" DockPanel.Dock="Top" Classes="scopeBar" Height="NaN" MinHeight="34" Padding="12,5" IsVisible="{Binding IsEdit}" ToolTip.Tip="{Binding Hint}">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+          <WrapPanel ItemSpacing="8" LineSpacing="6" VerticalAlignment="Center">
+            <ComboBox Classes="sm" ItemsSource="{Binding EditableLayers}" SelectedItem="{Binding EditLayer}" PlaceholderText="Layer to Edit" MinWidth="140"
+                      VerticalAlignment="Center" IsVisible="{Binding HasEditableLayers}" AutomationProperties.Name="Layer to edit">
+              <ComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:MapLayerViewModel">
-                  <Border Classes="card compact" Margin="0,0,0,6">
-                    <StackPanel Spacing="6">
-                      <Grid ColumnDefinitions="Auto,Auto,*,Auto">
-                        <CheckBox IsChecked="{Binding IsVisible}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Name, StringFormat='Show {0}'}" />
-                        <Border Grid.Column="1" Width="14" Height="14" CornerRadius="3" Margin="0,0,8,0" VerticalAlignment="Center"
-                                Background="{Binding SwatchFill}" BorderBrush="{Binding SwatchStroke}" BorderThickness="1.5"
-                                IsVisible="{Binding IsFeatures}" />
-                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                          <TextBlock Classes="medium" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                          <TextBlock Classes="muted" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Detail}" />
-                        </StackPanel>
-                        <Button Grid.Column="3" Classes="icon sm" VerticalAlignment="Center" AutomationProperties.Name="{Binding Name, StringFormat='More for {0}'}">
-                          <c:Icon Kind="More" />
-                          <Button.Flyout>
-                            <MenuFlyout Placement="BottomEdgeAlignedRight">
-                              <MenuItem Header="Style…" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).StyleLayerCommand}" CommandParameter="{Binding}"
-                                        IsVisible="{Binding !IsTiles}" />
-                              <MenuItem Header="Attribute table" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).ShowTableCommand}" CommandParameter="{Binding}"
-                                        IsVisible="{Binding !IsTiles}" />
-                              <MenuItem Header="Zoom to layer" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).ZoomToLayerCommand}" CommandParameter="{Binding}"
-                                        IsVisible="{Binding IsFeatures}" />
-                              <MenuItem Header="Copy values onto structures…" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).CopyValuesCommand}" CommandParameter="{Binding}"
-                                        IsVisible="{Binding IsAreaLayer}" />
-                              <MenuItem Header="Move up" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).MoveLayerUpCommand}" CommandParameter="{Binding}"
-                                        IsVisible="{Binding !IsStructures}" />
-                              <MenuItem Header="Move down" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).MoveLayerDownCommand}" CommandParameter="{Binding}"
-                                        IsVisible="{Binding !IsStructures}" />
-                              <Separator IsVisible="{Binding CanRemove}" />
-                              <MenuItem Header="Remove…" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).RemoveLayerCommand}" CommandParameter="{Binding}"
-                                        IsVisible="{Binding CanRemove}" />
-                            </MenuFlyout>
-                          </Button.Flyout>
-                        </Button>
-                      </Grid>
-                      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" IsVisible="{Binding !IsStructures}">
-                        <TextBlock Classes="muted" Text="Opacity" VerticalAlignment="Center" />
-                        <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding OpacityPercent}" VerticalAlignment="Center"
-                                AutomationProperties.Name="{Binding Name, StringFormat='Opacity of {0}'}" />
-                        <TextBlock Grid.Column="2" Classes="muted" Text="{Binding OpacityText}" VerticalAlignment="Center" MinWidth="32" />
-                      </Grid>
-                      <ItemsControl ItemsSource="{Binding Legend}" IsVisible="{Binding HasLegend}" Margin="24,0,0,0">
-                        <ItemsControl.ItemTemplate>
-                          <DataTemplate x:DataType="vm:LegendLineViewModel">
-                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,1">
-                              <Border Width="12" Height="12" CornerRadius="2" Background="{Binding Fill}" BorderBrush="{Binding Stroke}" BorderThickness="1" VerticalAlignment="Center" />
-                              <TextBlock Classes="secondary" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-                          </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                      </ItemsControl>
-                    </StackPanel>
-                  </Border>
+                  <TextBlock Text="{Binding Name}" />
                 </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </ScrollViewer>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <ListBox Classes="segmented" ItemsSource="{Binding EditTools}" SelectedItem="{Binding SelectedEditTool}" VerticalAlignment="Center"
+                     IsVisible="{Binding EditLayer, Converter={x:Static ObjectConverters.IsNotNull}}"
+                     AutomationProperties.Name="Edit tool: change shapes or add new ones" />
+            <Button Classes="sm" Content="New Layer…" Command="{Binding NewLayerCommand}" VerticalAlignment="Center" AutomationProperties.Name="Make a new layer to draw on" />
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" IsVisible="{Binding EditLayer, Converter={x:Static ObjectConverters.IsNotNull}}">
+              <CheckBox Classes="compact" Content="Snap" IsChecked="{Binding SnapToShapes}" ToolTip.Tip="New corners snap to nearby corners and edges, and to structures"
+                        AutomationProperties.Name="Snap new corners to nearby corners, edges and structures" />
+              <Button Classes="icon sm" Command="{Binding UndoEditCommand}" ToolTip.Tip="{Binding UndoEditText}" AutomationProperties.Name="{Binding UndoEditText}">
+                <c:Icon Kind="Undo" />
+              </Button>
+              <Button Classes="icon sm" Command="{Binding RedoEditCommand}" ToolTip.Tip="{Binding RedoEditText}" AutomationProperties.Name="{Binding RedoEditText}">
+                <c:Icon Kind="Redo" />
+              </Button>
+              <Button Classes="icon sm" Command="{Binding DeleteEditFeatureCommand}" IsEnabled="{Binding HasEditFeature}" ToolTip.Tip="Delete Shape"
+                      AutomationProperties.Name="Delete the picked shape">
+                <c:Icon Kind="Trash" />
+              </Button>
+            </StackPanel>
+          </WrapPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding EditLayer, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <TextBlock Classes="muted" Text="{Binding EditStatus}" MinWidth="110" TextAlignment="Right" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+            <Button Classes="sm" Content="Discard…" Command="{Binding DiscardEditsCommand}" AutomationProperties.Name="Discard the unsaved edits" />
+            <Button Classes="sm primary" Content="Save" Command="{Binding SaveEditsCommand}" AutomationProperties.Name="Save the edits to the map layers file" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Grid ClipToBounds="True">
+        <maps:MapCanvas Name="Surface" Background="{DynamicResource SubtleBg}" AutomationProperties.HelpText="{Binding Hint}"
+                        AutomationProperties.Name="Map of the structures. The list beside the map has the same structures." />
+        <!-- The map's sources, small in the corner -->
+        <Panel HorizontalAlignment="Right" VerticalAlignment="Bottom" IsVisible="{Binding HasAttribution}" ToolTip.Tip="{Binding Attribution}">
+          <Border Background="{DynamicResource BgSurface}" Opacity="0.8" />
+          <TextBlock Classes="muted xs" Text="{Binding Attribution}" TextTrimming="CharacterEllipsis" Margin="6,1" />
+        </Panel>
+        <Border HorizontalAlignment="Center" VerticalAlignment="Center" Background="{DynamicResource BgSurface}" CornerRadius="{StaticResource RadiusControl}"
+                IsHitTestVisible="False" IsVisible="{Binding OnMapCount, Converter={x:Static app:Converters.IsZero}}">
+          <c:EmptyState Title="No Structures on the Map" Padding="16,8" />
+        </Border>
+        <!-- Over the map's top edge (the map doesn't move when it comes and goes) -->
+        <c:Banner Tone="Warning" CornerRadius="0" Padding="12,6" VerticalAlignment="Top" IsVisible="{Binding HasBasemapProblem}" Text="{Binding BasemapProblem}">
+          <Button Classes="link" Content="Try Again" Command="{Binding RetryTilesCommand}" AutomationProperties.Name="Try downloading the map tiles again" />
+        </c:Banner>
+      </Grid>
+    </DockPanel>
+
+    <!-- Beside the map: the structures or the layers; a clicked shape's values cover them until closed -->
+    <Border Grid.Column="1" Classes="inspector">
+      <Panel>
+        <DockPanel>
+          <ListBox DockPanel.Dock="Top" Classes="segmented" SelectedIndex="{Binding PanelIndex}" HorizontalAlignment="Center" Margin="0,12"
+                   AutomationProperties.Name="Show the structures or the map layers beside the map">
+            <ListBoxItem Content="Structures" />
+            <ListBoxItem Content="Layers" />
+          </ListBox>
+          <Border DockPanel.Dock="Top" Classes="hairline" />
+
+          <Panel>
+            <!-- Layers: a plain list, top first -->
+            <DockPanel IsVisible="{Binding IsLayersPanel}">
+              <StackPanel DockPanel.Dock="Top">
+                <c:Banner Classes="stacked" Tone="Warning" Margin="12,12,12,0" IsVisible="{Binding HasLayersWarning}" Text="{Binding LayersWarning}">
+                  <Button Classes="link" Content="These Layers Belong to This Database" Command="{Binding KeepLayersCommand}" HorizontalAlignment="Left"
+                          AutomationProperties.Name="Keep these map layers with this database" />
+                </c:Banner>
+                <Grid ColumnDefinitions="*,Auto" Margin="16,8,10,6">
+                  <TextBlock Classes="eyebrow" Text="Layers" VerticalAlignment="Center" ToolTip.Tip="Top first" />
+                  <DropDownButton Grid.Column="1" Classes="ghost sm" ToolTip.Tip="Add Layer" AutomationProperties.Name="Add a map layer">
+                    <c:Icon Kind="Plus" Size="14" />
+                    <DropDownButton.Flyout>
+                      <MenuFlyout Placement="BottomEdgeAlignedRight">
+                        <MenuItem Header="From a File…" Command="{Binding AddFileLayerCommand}" ToolTip.Tip="A Shapefile, GeoJSON, GeoPackage or CSV with latitude and longitude" />
+                        <MenuItem Header="From an ArcGIS Web Address…" Command="{Binding AddOnlineLayerCommand}" />
+                        <Separator />
+                        <MenuItem Header="FEMA Flood Zones" Command="{Binding AddFloodZonesCommand}" />
+                        <Separator />
+                        <MenuItem Header="New Layer to Draw On…" Command="{Binding NewLayerCommand}" />
+                      </MenuFlyout>
+                    </DropDownButton.Flyout>
+                  </DropDownButton>
+                </Grid>
+                <Border Classes="hairline" />
+              </StackPanel>
+              <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding Layers}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:MapLayerViewModel">
+                      <Border Classes="listRow" Padding="16,6,10,7">
+                        <StackPanel Spacing="4">
+                          <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                            <CheckBox Classes="compact" IsChecked="{Binding IsVisible}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Name, StringFormat='Show {0}'}" />
+                            <Border Grid.Column="1" Width="12" Height="12" CornerRadius="3" Margin="0,0,8,0" VerticalAlignment="Center"
+                                    Background="{Binding SwatchFill}" BorderBrush="{Binding SwatchStroke}" BorderThickness="1.5"
+                                    IsVisible="{Binding IsFeatures}" />
+                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                              <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Classes="muted" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Detail}" />
+                            </StackPanel>
+                            <Button Grid.Column="3" Classes="icon sm" VerticalAlignment="Center" ToolTip.Tip="More" AutomationProperties.Name="{Binding Name, StringFormat='More for {0}'}">
+                              <c:Icon Kind="More" />
+                              <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                  <MenuItem Header="Style…" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).StyleLayerCommand}" CommandParameter="{Binding}"
+                                            IsVisible="{Binding !IsTiles}" />
+                                  <MenuItem Header="Attribute Table" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).ShowTableCommand}" CommandParameter="{Binding}"
+                                            IsVisible="{Binding !IsTiles}" />
+                                  <MenuItem Header="Zoom to Layer" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).ZoomToLayerCommand}" CommandParameter="{Binding}"
+                                            IsVisible="{Binding IsFeatures}" />
+                                  <MenuItem Header="Copy Values Onto Structures…" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).CopyValuesCommand}" CommandParameter="{Binding}"
+                                            IsVisible="{Binding IsAreaLayer}" />
+                                  <MenuItem Header="Move Up" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).MoveLayerUpCommand}" CommandParameter="{Binding}"
+                                            IsVisible="{Binding !IsStructures}" />
+                                  <MenuItem Header="Move Down" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).MoveLayerDownCommand}" CommandParameter="{Binding}"
+                                            IsVisible="{Binding !IsStructures}" />
+                                  <Separator IsVisible="{Binding CanRemove}" />
+                                  <MenuItem Header="Remove…" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).RemoveLayerCommand}" CommandParameter="{Binding}"
+                                            IsVisible="{Binding CanRemove}" />
+                                </MenuFlyout>
+                              </Button.Flyout>
+                            </Button>
+                          </Grid>
+                          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="20,0,0,0" IsVisible="{Binding !IsStructures}">
+                            <TextBlock Classes="muted" Text="Opacity" VerticalAlignment="Center" />
+                            <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding OpacityPercent}" VerticalAlignment="Center"
+                                    AutomationProperties.Name="{Binding Name, StringFormat='Opacity of {0}'}" />
+                            <TextBlock Grid.Column="2" Classes="muted" Text="{Binding OpacityText}" VerticalAlignment="Center" MinWidth="32" />
+                          </Grid>
+                          <ItemsControl ItemsSource="{Binding Legend}" IsVisible="{Binding HasLegend}" Margin="20,0,0,0">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="vm:LegendLineViewModel">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,1">
+                                  <Border Width="10" Height="10" CornerRadius="2" Background="{Binding Fill}" BorderBrush="{Binding Stroke}" BorderThickness="1" VerticalAlignment="Center" />
+                                  <TextBlock Grid.Column="1" Classes="secondary sm" Text="{Binding Label}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}" />
+                                </Grid>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+
+            <!-- Structures: which results to show, how they are coloured, and the list -->
+            <DockPanel IsVisible="{Binding IsStructuresPanel}">
+              <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="16,10,16,12">
+                <TextBlock Classes="eyebrow" Text="Show" />
+                <ItemsControl ItemsSource="{Binding Classes}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:MapClassViewModel">
+                      <CheckBox Classes="compact" IsChecked="{Binding IsOn}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,1"
+                                AutomationProperties.Name="{Binding SpokenName}">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                          <Ellipse Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center"
+                                   app:ThemeBrush.Fill="{Binding ColourKey}" />
+                          <TextBlock Grid.Column="1" Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="2" Classes="secondary num" Text="{Binding Count}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                        </Grid>
+                      </CheckBox>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <StackPanel Spacing="4" Margin="0,4,0,0" IsVisible="{Binding HasStructureLegend}">
+                  <TextBlock Classes="eyebrow" Text="{Binding StructureLegendHeader}" />
+                  <ItemsControl ItemsSource="{Binding StructureLegend}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:LegendLineViewModel">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,1">
+                          <Ellipse Width="10" Height="10" Fill="{Binding Fill}" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="1" Text="{Binding Label}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Label}" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+                <CheckBox Classes="compact" IsChecked="{Binding ShowAddressLabels}" Content="Show addresses" Margin="0,4,0,0"
+                          ToolTip.Tip="Beside the dots, when zoomed in" AutomationProperties.Name="Show addresses beside the dots when zoomed in" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Classes="sm" Content="Style…" Command="{Binding StyleLayerCommand}" CommandParameter="{Binding StructuresLayer}"
+                          AutomationProperties.Name="Choose what the structure dots are coloured and labelled by" />
+                  <Button Classes="sm" Content="Table" Command="{Binding ShowTableCommand}" CommandParameter="{Binding StructuresLayer}"
+                          AutomationProperties.Name="Show the structures in the attribute table" />
+                </StackPanel>
+                <StackPanel Spacing="2" Margin="0,4,0,0" IsVisible="{Binding HasUnplaced}">
+                  <TextBlock Classes="secondary" Text="{Binding UnplacedText}" TextWrapping="Wrap" />
+                  <Button Classes="link" Content="Add Coordinates in Import &amp; Export" Command="{Binding ShowCoordinateToolsCommand}" HorizontalAlignment="Left"
+                          AutomationProperties.Name="Open Import and export to add coordinates in bulk" />
+                </StackPanel>
+              </StackPanel>
+              <Border DockPanel.Dock="Top" Classes="hairline" />
+
+              <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource BorderDefault}" BorderThickness="0,1,0,0" Padding="16,8">
+                <Button Content="Open Assessment" Command="{Binding OpenSelectedCommand}" IsEnabled="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}"
+                        HorizontalAlignment="Right" />
+              </Border>
+              <ListBox Name="PointList" Classes="rows" ItemsSource="{Binding Visible}" SelectedItem="{Binding Selected}" Background="Transparent"
+                       AutomationProperties.Name="Structures on the map">
+                <ListBox.KeyBindings>
+                  <KeyBinding Gesture="Enter" Command="{Binding OpenSelectedCommand}" />
+                </ListBox.KeyBindings>
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:MapPointViewModel">
+                    <StackPanel Margin="16,4" AutomationProperties.Name="{Binding SpokenName}">
+                      <TextBlock Text="{Binding Address}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="muted" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </DockPanel>
+          </Panel>
         </DockPanel>
 
-        <!-- Structures: legend, messages and the list -->
-        <DockPanel IsVisible="{Binding IsStructuresPanel}">
-          <StackPanel DockPanel.Dock="Top" Spacing="8">
-            <TextBlock Classes="eyebrow" Text="SHOW" />
-            <ItemsControl ItemsSource="{Binding Classes}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:MapClassViewModel">
-                  <CheckBox IsChecked="{Binding IsOn}" Margin="0,0,0,2" AutomationProperties.Name="{Binding SpokenName}">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
-                      <Ellipse Width="12" Height="12" Margin="0,0,8,0" VerticalAlignment="Center"
-                               app:ThemeBrush.Fill="{Binding ColourKey}" />
-                      <TextBlock Grid.Column="1" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-                      <TextBlock Grid.Column="2" Classes="muted" Text="{Binding Count}" Margin="8,0,0,0" VerticalAlignment="Center" />
-                    </Grid>
-                  </CheckBox>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <StackPanel Spacing="4" IsVisible="{Binding HasStructureLegend}">
-              <TextBlock Classes="eyebrow" Text="{Binding StructureLegendTitle}" />
-              <ItemsControl ItemsSource="{Binding StructureLegend}">
+        <!-- Identify: the clicked shape's values, over the pane -->
+        <Border Background="{DynamicResource BgInspector}" DataContext="{Binding Identified}" x:DataType="vm:IdentifyViewModel"
+                IsVisible="{Binding Converter={x:Static ObjectConverters.IsNotNull}}">
+          <DockPanel Margin="16,12">
+            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,0,10">
+              <StackPanel Spacing="2">
+                <TextBlock Classes="semibold" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Classes="secondary sm" Text="{Binding LayerName}" TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+              <Button Grid.Column="1" Classes="icon sm" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).CloseIdentifyCommand}" VerticalAlignment="Top"
+                      ToolTip.Tip="Close" AutomationProperties.Name="Close the feature's details">
+                <c:Icon Kind="Close" />
+              </Button>
+            </Grid>
+            <Border DockPanel.Dock="Top" Classes="hairline" Margin="0,0,0,8" />
+            <Button DockPanel.Dock="Bottom" Classes="link" Content="Show in Table" Command="{Binding $parent[UserControl].((vm:MapViewModel)DataContext).ShowIdentifiedInTableCommand}"
+                    Margin="0,10,0,0" HorizontalAlignment="Left" AutomationProperties.Name="Select this feature and show it in the attribute table" />
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+              <ItemsControl ItemsSource="{Binding Lines}">
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:LegendLineViewModel">
-                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,1">
-                      <Ellipse Width="12" Height="12" Fill="{Binding Fill}" VerticalAlignment="Center" />
-                      <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
+                  <DataTemplate x:DataType="vm:IdentifyLine">
+                    <Grid ColumnDefinitions="110,*" ColumnSpacing="8" Margin="0,2" AutomationProperties.Name="{Binding SpokenName}">
+                      <TextBlock Classes="secondary" Text="{Binding Field}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Field}" />
+                      <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap" />
+                    </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-            </StackPanel>
-            <CheckBox IsChecked="{Binding ShowAddressLabels}" Content="Show addresses on the map" AutomationProperties.Name="Show addresses beside the dots when zoomed in" />
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Content="Style…" Command="{Binding StyleLayerCommand}" CommandParameter="{Binding StructuresLayer}"
-                      AutomationProperties.Name="Choose what the structure dots are coloured and labelled by" />
-              <Button Content="Table" Command="{Binding ShowTableCommand}" CommandParameter="{Binding StructuresLayer}"
-                      AutomationProperties.Name="Show the structures in the attribute table" />
-            </StackPanel>
-
-            <StackPanel Spacing="2" IsVisible="{Binding HasUnplaced}">
-              <TextBlock Classes="medium" Text="{Binding UnplacedText}" TextWrapping="Wrap" />
-              <Button Classes="link" Content="Add coordinates in Import &amp; export" Command="{Binding ShowCoordinateToolsCommand}" HorizontalAlignment="Left"
-                      AutomationProperties.Name="Open Import and export to add coordinates in bulk" />
-            </StackPanel>
-
-            <!-- Set location -->
-            <StackPanel Spacing="6" IsVisible="{Binding IsSetLocation}">
-              <TextBlock Classes="eyebrow" Text="STRUCTURE TO PLACE" />
-              <ComboBox ItemsSource="{Binding PlaceChoices}" SelectedItem="{Binding PlaceTarget}" HorizontalAlignment="Stretch"
-                        PlaceholderText="Structures without coordinates" AutomationProperties.Name="Structure to place">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate x:DataType="vm:MapPointViewModel">
-                    <TextBlock Text="{Binding Address}" TextTrimming="CharacterEllipsis" />
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
-            </StackPanel>
-
-            <!-- Result of the last action -->
-            <Border Classes="subtle" IsVisible="{Binding HasMessage}">
-              <StackPanel Spacing="4">
-                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-              </StackPanel>
-            </Border>
-            <TextBlock Classes="eyebrow" Text="{Binding CountText, StringFormat='STRUCTURES, {0}'}" Margin="0,6,0,0" />
-          </StackPanel>
-
-          <Button DockPanel.Dock="Bottom" Content="Open assessment" Command="{Binding OpenSelectedCommand}" IsEnabled="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}"
-                  Margin="0,8,0,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
-          <Border Classes="card flush" Margin="0,4,0,0">
-            <ListBox Name="PointList" Classes="rows" ItemsSource="{Binding Visible}" SelectedItem="{Binding Selected}" Background="Transparent"
-                     AutomationProperties.Name="Structures on the map">
-              <ListBox.KeyBindings>
-                <KeyBinding Gesture="Enter" Command="{Binding OpenSelectedCommand}" />
-              </ListBox.KeyBindings>
-              <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="vm:MapPointViewModel">
-                  <StackPanel Margin="4,2" AutomationProperties.Name="{Binding SpokenName}">
-                    <TextBlock Classes="medium" Text="{Binding Address}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Classes="muted" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" />
-                  </StackPanel>
-                </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
-          </Border>
-        </DockPanel>
-      </DockPanel>
-    </Grid>
-  </DockPanel>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
+      </Panel>
+    </Border>
+  </Grid>
 </UserControl>

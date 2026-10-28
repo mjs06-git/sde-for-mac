@@ -26,7 +26,7 @@
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>
-            <Button Content="+ New project" Command="{Binding NewProjectCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+            <Button Content="+ New Project" Command="{Binding NewProjectCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
           </StackPanel>
 
           <Border Grid.Column="1" Classes="subtle">
@@ -54,8 +54,8 @@
               <TextBox Text="{Binding ExclusionReason}" IsVisible="{Binding !Included}" PlaceholderText="Why it doesn't count (for example: routine maintenance)"
                        AutomationProperties.Name="Why the project doesn't count" />
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Classes="primary" Content="Save project" Command="{Binding SaveProjectCommand}" />
-                <Button Content="Delete project…" Command="{Binding DeleteProjectCommand}" IsVisible="{Binding !IsNewProject}" />
+                <Button Classes="primary" Content="Save Project" Command="{Binding SaveProjectCommand}" />
+                <Button Content="Delete Project…" Command="{Binding DeleteProjectCommand}" IsVisible="{Binding !IsNewProject}" />
                 <TextBlock Classes="muted" Text="Not saved yet" VerticalAlignment="Center" IsVisible="{Binding IsProjectDirty}" />
               </StackPanel>
             </StackPanel>
@@ -72,10 +72,10 @@
               <TextBlock Classes="adorn" Text="$" Margin="10,0,0,0" />
             </NumericUpDown.InnerLeftContent>
           </NumericUpDown>
-          <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding MarketValueBasis}" PlaceholderText="For example: professional appraisal, or adjusted tax assessed value"
+          <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding MarketValueBasis}" PlaceholderText="For example: professional appraisal"
                    AutomationProperties.Name="Where the market value came from" />
         </Grid>
-        <TextBlock Classes="help" Text="The building only, not the land, before the improvement. It starts as the building value of the latest damage assessment." />
+        <TextBlock Classes="help" Text="The building only, before the improvement." />
 
         <!-- Result -->
         <Border Classes="card" BorderThickness="0" Padding="16,12" app:ThemeBrush.Background="{Binding State, Converter={x:Static app:Converters.StatusBackgroundKey}}">
@@ -84,7 +84,7 @@
               <TextBlock Classes="display bold" Text="{Binding PercentText}" VerticalAlignment="Center"
                          app:ThemeBrush.Foreground="{Binding State, Converter={x:Static app:Converters.StatusForegroundKey}}" />
               <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                <TextBlock Classes="eyebrow" Text="IMPROVEMENT COST AS A PERCENT OF MARKET VALUE" />
+                <TextBlock Classes="eyebrow" Text="Improvement Cost as a Percent of Market Value" />
                 <TextBlock Classes="lg semibold" Text="{Binding ResultText}"
                            app:ThemeBrush.Foreground="{Binding State, Converter={x:Static app:Converters.StatusForegroundKey}}" />
               </StackPanel>
@@ -112,7 +112,7 @@
           </StackPanel>
         </Border>
         <TextBlock Classes="muted xs" TextWrapping="Wrap"
-                   Text="Substantial improvement is a separate finding. It doesn't change any damage assessment, its percent damaged or FEMA's determination." />
+                   Text="A separate finding: damage assessments don't change." />
 
         <StackPanel Spacing="4">
           <TextBlock Classes="fieldLabel" Text="Notes for the determination" />
@@ -143,10 +143,10 @@
 
     <TextBlock Classes="medium" Text="{Binding SavedText}" TextWrapping="Wrap" IsVisible="{Binding SavedText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
     <DockPanel>
-      <Button DockPanel.Dock="Left" Content="SI determination PDF…" Command="{Binding SavePdfCommand}" />
+      <Button DockPanel.Dock="Left" Content="SI Determination PDF…" Command="{Binding SavePdfCommand}" />
       <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
         <Button Content="Done" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-        <Button Classes="primary" Content="Save determination" Command="{Binding SaveDeterminationCommand}" HorizontalContentAlignment="Center" />
+        <Button Classes="primary" Content="Save Determination" Command="{Binding SaveDeterminationCommand}" HorizontalContentAlignment="Center" />
       </StackPanel>
     </DockPanel>
   </StackPanel>
