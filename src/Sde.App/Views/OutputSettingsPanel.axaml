@@ -7,8 +7,8 @@
   <StackPanel Spacing="14">
     <Border Classes="card">
       <StackPanel Spacing="12">
-        <c:CardHeader Icon="Building" Title="Substantial improvement"
-                      Text="How improvement projects count. NFIP minimum: 50% of market value, each project on its own." />
+        <TextBlock Classes="h3" Text="Substantial improvement"
+                   ToolTip.Tip="How improvement projects count. NFIP minimum: 50% of market value, each project on its own." />
         <WrapPanel>
           <StackPanel Classes="field">
             <TextBlock Classes="fieldLabel" Text="Threshold" />
@@ -20,14 +20,14 @@
             </NumericUpDown>
           </StackPanel>
           <StackPanel Classes="field">
-            <TextBlock Classes="fieldLabel" Text="Look-back period" />
+            <TextBlock Classes="fieldLabel" Text="Look-back period" ToolTip.Tip="0 counts each project on its own" />
             <NumericUpDown Value="{Binding SiLookbackYears}" Minimum="0" Maximum="100" FormatString="0" Increment="1" ShowButtonSpinner="False" Classes="number"
-                           AutomationProperties.Name="Substantial improvement look-back period in years (0 counts this project only)">
+                           AutomationProperties.Name="Substantial improvement look-back period in years (0 counts this project only)"
+                           ToolTip.Tip="0 counts each project on its own">
               <NumericUpDown.InnerRightContent>
                 <TextBlock Classes="adorn" Text="years" Margin="0,0,10,0" />
               </NumericUpDown.InnerRightContent>
             </NumericUpDown>
-            <TextBlock Classes="help" Text="0 counts each project on its own." />
           </StackPanel>
         </WrapPanel>
         <CheckBox IsChecked="{Binding SiIncludePrior}" Content="Add earlier projects in the look-back period (cumulative)" />
@@ -36,8 +36,8 @@
 
     <Border Classes="card">
       <StackPanel Spacing="12">
-        <c:CardHeader Icon="Letter" Title="Owner letters"
-                      Text="Word templates for owner letters. Placeholders such as «OwnerName» are filled in." />
+        <TextBlock Classes="h3" Text="Owner letters"
+                   ToolTip.Tip="Word templates for owner letters. Placeholders such as «OwnerName» are filled in." />
         <StackPanel Spacing="2">
           <TextBlock Classes="fieldLabel" Text="Templates folder" />
           <SelectableTextBlock Text="{Binding TemplatesFolder}" TextWrapping="Wrap" />
@@ -49,14 +49,14 @@
           <Button Content="Show Folder" Command="{Binding ShowTemplatesFolderCommand}" />
         </StackPanel>
         <c:Banner Tone="Accent" Icon="Info"
-                  Text="Starter letters are based on FEMA P-758 and are not legal advice. Review them with your counsel." />
+                  Text="Starter letters follow FEMA P-758 and are not legal advice; review them with your counsel." />
       </StackPanel>
     </Border>
 
     <Border Classes="card">
       <StackPanel Spacing="12">
-        <c:CardHeader Icon="Layers" Title="Cumulative damage"
-                      Text="Only if your ordinance adds damage across events. A separate finding: FEMA's result, reports and exports don't change." />
+        <TextBlock Classes="h3" Text="Cumulative damage"
+                   ToolTip.Tip="Only if your ordinance adds damage across events. A separate finding: FEMA's result, reports and exports don't change." />
         <ToggleSwitch IsChecked="{Binding CumulativeEnabled}" OnContent="" OffContent="" AutomationProperties.Name="Count damage cumulatively">
           <ToggleSwitch.Content>
             <TextBlock Classes="medium" Text="Count damage from several events together" />
@@ -69,14 +69,14 @@
                       AutomationProperties.Name="How cumulative damage is added up" />
           </StackPanel>
           <StackPanel Classes="field">
-            <TextBlock Classes="fieldLabel" Text="Look-back period" />
+            <TextBlock Classes="fieldLabel" Text="Look-back period" ToolTip.Tip="0 counts every event on record" />
             <NumericUpDown Value="{Binding CumulativeLookbackYears}" Minimum="0" Maximum="100" FormatString="0" Increment="1" ShowButtonSpinner="False" Classes="number"
-                           AutomationProperties.Name="Cumulative damage look-back period in years (0 counts every event)">
+                           AutomationProperties.Name="Cumulative damage look-back period in years (0 counts every event)"
+                           ToolTip.Tip="0 counts every event on record">
               <NumericUpDown.InnerRightContent>
                 <TextBlock Classes="adorn" Text="years" Margin="0,0,10,0" />
               </NumericUpDown.InnerRightContent>
             </NumericUpDown>
-            <TextBlock Classes="help" Text="0 counts every event on record." />
           </StackPanel>
           <StackPanel Classes="field">
             <TextBlock Classes="fieldLabel" Text="Threshold" />

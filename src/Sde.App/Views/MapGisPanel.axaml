@@ -12,10 +12,8 @@
         <Border Classes="settingsRow">
           <Grid ColumnDefinitions="Auto,*,Auto">
             <Border Classes="rowIcon"><c:Icon Kind="Map" Size="16" /></Border>
-            <StackPanel Grid.Column="1" Margin="12,0,16,0" Spacing="1" VerticalAlignment="Center">
-              <TextBlock Classes="medium" Text="Background map" />
-              <TextBlock Classes="muted" TextWrapping="Wrap" Text="The background under the structures and layers." />
-            </StackPanel>
+            <TextBlock Grid.Column="1" Classes="medium" Text="Background map" Margin="12,0,16,0" VerticalAlignment="Center"
+                       ToolTip.Tip="The background under the structures and layers" />
             <ComboBox Grid.Column="2" ItemsSource="{Binding BasemapChoices}" SelectedItem="{Binding Basemap}" MinWidth="220" VerticalAlignment="Center"
                       AutomationProperties.Name="Background map">
               <ComboBox.ItemTemplate>
@@ -27,12 +25,10 @@
           </Grid>
         </Border>
         <Border Classes="settingsRow">
-          <ToggleSwitch IsChecked="{Binding FloodZonesAtStart}" OnContent="" OffContent="" AutomationProperties.Name="Start the map with FEMA flood zones on">
+          <ToggleSwitch IsChecked="{Binding FloodZonesAtStart}" OnContent="" OffContent="" AutomationProperties.Name="Start the map with FEMA flood zones on"
+                        ToolTip.Tip="FEMA flood zones over the background. Needs the internet.">
             <ToggleSwitch.Content>
-              <StackPanel Spacing="1">
-                <TextBlock Classes="medium" Text="Start the map with FEMA flood zones on" />
-                <TextBlock Classes="muted" TextWrapping="Wrap" Text="FEMA flood zones over the background (needs the internet)." />
-              </StackPanel>
+              <TextBlock Classes="medium" Text="Start the map with FEMA flood zones on" />
             </ToggleSwitch.Content>
           </ToggleSwitch>
         </Border>
@@ -46,8 +42,7 @@
           <Grid ColumnDefinitions="Auto,*,Auto,Auto">
             <Border Classes="rowIcon"><c:Icon Kind="Download" Size="16" /></Border>
             <StackPanel Grid.Column="1" Margin="12,0,16,0" Spacing="1" VerticalAlignment="Center">
-              <TextBlock Classes="medium" Text="Saved map pieces" />
-              <TextBlock Classes="muted" TextWrapping="Wrap" Text="Map tiles kept on this Mac for offline use, shared by every database." />
+              <TextBlock Classes="medium" Text="Saved map pieces" ToolTip.Tip="Map tiles kept on this Mac for offline use, shared by every database" />
               <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding TileMessage}" IsVisible="{Binding TileMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
             </StackPanel>
             <TextBlock Grid.Column="2" Classes="secondary" Text="{Binding TileCacheText}" VerticalAlignment="Center" Margin="0,0,12,0" />
@@ -62,12 +57,10 @@
     <Border Classes="card settings">
       <StackPanel Classes="settingsGroup">
         <Border Classes="settingsRow">
-          <ToggleSwitch IsChecked="{Binding LeaveOutOwnerNames}" OnContent="" OffContent="" AutomationProperties.Name="Leave owner names out of GIS files">
+          <ToggleSwitch IsChecked="{Binding LeaveOutOwnerNames}" OnContent="" OffContent="" AutomationProperties.Name="Leave owner names out of GIS files"
+                        ToolTip.Tip="Unless you include them when you export">
             <ToggleSwitch.Content>
-              <StackPanel Spacing="1">
-                <TextBlock Classes="medium" Text="Leave owner names out of GIS files" />
-                <TextBlock Classes="muted" TextWrapping="Wrap" Text="Owner names are left out of GIS files unless you include them." />
-              </StackPanel>
+              <TextBlock Classes="medium" Text="Leave owner names out of GIS files" />
             </ToggleSwitch.Content>
           </ToggleSwitch>
         </Border>
