@@ -57,8 +57,11 @@ public sealed partial class MapViewModel
 
 	/// <summary>The length or area of what has been drawn so far, in feet, miles, acres or square feet.</summary>
 	[ObservableProperty]
-	[NotifyPropertyChangedFor(nameof(HasMeasurement))]
+	[NotifyPropertyChangedFor(nameof(HasMeasurement), nameof(MeasurementLine))]
 	public partial string Measurement { get; set; }
+
+	/// <summary>The measurement on one line, for the Measure bar: "Area: 2.1 acres (91,476 sq ft) · Perimeter: …".</summary>
+	public string MeasurementLine => Measurement?.Replace(Environment.NewLine, " · ", StringComparison.Ordinal);
 
 	public bool HasMeasurement => Measurement != null;
 

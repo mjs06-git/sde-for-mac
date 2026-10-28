@@ -486,7 +486,8 @@ In the editor, **Edit > Undo** (⌘Z) and **Edit > Redo** (⇧⌘Z) step back an
 - To delete a structure or assessment, use **⋯ > Move to Recently Deleted** in the editor, or right-click its row on
   Structures.
 - Deleted items stay in **Recently Deleted** (at the bottom of the sidebar, ⌘7) for 30 days. Click **Restore** beside
-  one to bring it back, or **Delete Now…** to remove it for good. **Empty Recently deleted…** removes everything there.
+  one to bring it back, or **Delete Now…** to remove it for good. **Empty Recently Deleted…** in the toolbar removes
+  everything there.
 
 ---
 
@@ -657,28 +658,30 @@ When an event's marks use a different datum from your elevation certificates, se
 **Map** (⌘2, or **Map** in the toolbar's switch) shows every structure that has coordinates, coloured by its result,
 over a background map and any layers you add.
 
-What a click does depends on the mode above the map:
+What a click does depends on the mode in the toolbar (its tooltip says what a click and a drag do). A mode's own
+options show in a bar above the map:
 - **Open**: click a dot to open that structure's assessment, or click a layer's shape to see its values. Hold ⌘ and
   drag to select structures.
 - **Select**: click a dot or drag a box to select structures (hold ⌘ to add to the selection). **Select in** picks a
-  layer to select its shapes instead. **Draw an area** selects what is inside the corners you click (double-click or
+  layer to select its shapes instead. **Draw an Area** selects what is inside the corners you click (double-click or
   press Return to finish). **By Attribute…** selects by the values of fields, for example *flood_zone = AE* and
   *land_value > 30000*.
-- **Set location**: pick the structure under **Structure to Place**, then click where it is on the map.
+- **Set Location**: pick the structure under **Structure to place**, then click where it is on the map.
 - **Measure**: click points to measure a distance, or choose **Area** for an area and its perimeter. Double-click or
   press Return to finish. Distances are measured along the earth's surface, areas on an equal-area projection.
 
-Selected structures are the ones checked in the Structures list. The bar on the map acts on them: **Show in
-Structures**, **Set a Field…**, **Assign to Team…**, **Reports** and **Add to Web Map…**.
+Selected structures are the ones checked in the Structures list. The status bar under the map acts on them: **Show in
+Structures**, **Set a Field…**, **Assign to Team…**, and **More** for **Reports**, **Add to Web Map…** and **Copy
+Values…**. The status bar also shows the result of the last action.
 
-When the map has focus, the arrow keys move it and = and - zoom. **Bookmarks** saves the view and goes back to it.
-**Show All** zooms to every structure. The basemap menu next to **Bookmarks** picks the background map: USGS
-topographic map, USGS aerial imagery, OpenStreetMap or none.
+When the map has focus, the arrow keys move it and = and - zoom. In the toolbar, the zoom buttons and **Show All
+Structures** (the house) zoom the map, and **Bookmarks** saves the view and goes back to it. **More > Background
+Map** picks the background map: USGS topographic map, USGS aerial imagery, OpenStreetMap or none.
 
 ![The map with a parcel layer and FEMA flood zones](screenshots/56-map.png)
 
 #### Layers
-Click **Layers** beside the map:
+Click **Layers** beside the map. The list is top first; **+** adds a layer:
 - **Add Layer > From a File…** reads a Shapefile, GeoJSON, GeoPackage, or CSV with latitude and longitude (or WKT).
   SDE copies the shapes into a GeoPackage next to the database (`sde.sqlite.layers.gpkg`), which QGIS and ArcGIS
   open too.
@@ -697,10 +700,10 @@ The background map, the flood zones and ArcGIS layers need an internet connectio
 offline.
 
 #### Drawing and changing shapes
-Choose **Edit** above the map to draw on a layer or change its shapes. Layers from files and layers you make in SDE can
+Choose **Edit** in the toolbar to draw on a layer or change its shapes. Layers from files and layers you make in SDE can
 be edited; ArcGIS layers and FEMA's flood zones can't.
 
-1. Pick the layer next to **Edit**. To start a layer of your own, click **New Layer…**, give it a name and choose
+1. Pick the layer in the Edit bar above the map. To start a layer of your own, click **New Layer…**, give it a name and choose
    whether it holds **Points**, **Lines** or **Areas**. Each shape has a name and notes.
 2. Choose a tool:
    - **Change**: click a shape to pick it. Drag a corner to move it, or drag the small dot between two corners to add
@@ -709,7 +712,8 @@ be edited; ArcGIS layers and FEMA's flood zones can't.
    - **Add points**, **Add lines** or **Add areas**: click the corners, then double-click or press Return to finish.
      Delete takes away the last corner while you draw.
 3. With **Snap** ticked, new corners and moved corners land exactly on nearby corners, edges and structures.
-4. ⌘Z and ⇧⌘Z (or the arrows in the Edit bar) undo and redo each change.
+4. ⌘Z and ⇧⌘Z (or the arrows in the Edit bar) undo and redo each change. The bin button in the Edit bar deletes the
+   picked shape.
 5. Click **Save** to keep the edits in the map layers file next to the database. **Discard…** throws them away.
 
 Nothing is written until you click **Save**. If you leave the Map page, choose another layer or quit with edits not
@@ -721,7 +725,7 @@ letters in a number field, isn't taken, and SDE says why.
 ![Editing a parcel layer](screenshots/56f-map-edit.png)
 
 #### Moving a structure
-If a dot is in the wrong place, choose **Set location** and drag the dot to where the structure really is. SDE asks
+If a dot is in the wrong place, choose **Set Location** and drag the dot to where the structure really is. SDE asks
 before saving, for example *Move 123 River Street about 40 ft north-east?*, and shows the old and new latitude and
 longitude. **Move** saves the new coordinates, and the change is listed in the assessment's history.
 
@@ -746,8 +750,8 @@ double-click or press Return to finish.
 
 #### Copying values onto structures
 A layer of areas, such as parcels or flood zones, can fill in a field of the structures that sit inside each area.
-Choose **Copy Values Onto Structures…** from the layer's **⋯** menu, or select structures and click **Copy Values…** in
-the bar on the map.
+Choose **Copy Values Onto Structures…** from the layer's **⋯** menu, or select structures and choose **More > Copy
+Values…** in the status bar.
 
 1. Choose **From the areas of** (the layer), **Their field**, and **Into the structure field**. SDE suggests the
    structure field from the layer's field name: a FEMA *FLD_ZONE* goes into the FIRM zone, a parcel number into Parcel
@@ -765,7 +769,7 @@ and checked-out assessments are left as they are and counted.
 ![Copy values preview](screenshots/56i-map-copy-values.png)
 
 #### Printing the map
-**Print…** at the top of the Map page makes a Letter-size PDF of the area the map shows now.
+**More > Print Map…** in the Map page's toolbar makes a Letter-size PDF of the area the map shows now.
 
 1. Type a **Title** (it starts as the event's name, or *Structures*) and choose **Portrait** or **Landscape**.
 2. Click **Save as PDF…** and choose where to save it. SDE opens the PDF when it is done.
@@ -780,8 +784,8 @@ arrive are left blank, and the page says how many.
 #### Keeping an area for use offline
 Before going somewhere without a connection, keep the background map for the area on the Mac you take:
 
-1. Show the area on the map and click **Offline…** (or, on **Assignments**, choose a team and choose **⋯ > Keep Map
-   Offline…** for its structures and about 400 m around them).
+1. Show the area on the map and choose **More > Keep This Area Offline…** in the toolbar (or, on **Assignments**,
+   choose a team and choose **⋯ > Keep Map Offline…** for its structures and about 400 m around them).
 2. Choose **USGS topographic map** or **USGS aerial imagery**. Only USGS maps can be kept: OpenStreetMap's rules don't
    allow downloading areas.
 3. SDE says how many map pieces that is for zooms 12 to 16 (at most 5,000; for a large area the closest zooms are left
@@ -791,7 +795,7 @@ The map then shows the area with no connection. Kept pieces are used until SDE c
 
 #### Map and GIS settings
 **Settings > Map & GIS** has:
-- **Background map**: the same choice as the basemap menu on the Map page.
+- **Background map**: the same choice as **More > Background Map** on the Map page.
 - **Start the map with FEMA flood zones on**: each time this database's map opens, the flood zones show.
 - **Saved map pieces**: how much room the background map pieces kept on this Mac take. **Clear** deletes them; the
   map downloads them again as it needs them.
@@ -819,7 +823,7 @@ A web map is a folder with a web page of structures on a map. Open it in any bro
 any web server. The page works offline; only the background map needs the internet.
 
 1. On Structures, check the structures (or filter the list), then choose **Export ▾ > Web Map…**. On the map, select
-   structures and click **Add to Web Map…**. With an event chosen in the sidebar, the title is the event's name.
+   structures and choose **More > Add to Web Map…** in the status bar. With an event chosen in the sidebar, the title is the event's name.
 2. Choose **Who it is for**:
    - **Office and partners**: a dot for each structure with its address, result and percent damaged. Tick the
      other fields to show in each structure's popup, such as the inspection date or the depth above the lowest floor.

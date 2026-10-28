@@ -266,7 +266,7 @@ public sealed partial class MapViewModel : ViewModelBase
 
 	/// <summary>What happened last ("Placed 12 Oak Street."), read out and shown under the controls.</summary>
 	[ObservableProperty]
-	[NotifyPropertyChangedFor(nameof(HasMessage))]
+	[NotifyPropertyChangedFor(nameof(HasMessage), nameof(StatusMessage), nameof(HasStatusMessage))]
 	public partial string Message { get; set; }
 
 	public bool HasMessage => Message != null;

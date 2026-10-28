@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NetTopologySuite.Geometries;
@@ -96,6 +97,16 @@ public sealed partial class MapViewModel
 
 	/// <summary>"12 selected in Parcels".</summary>
 	public string LayerSelectionText => LayerWithSelection is MapLayerViewModel l ? $"{l.SelectedCount} selected in {l.Name}" : null;
+
+	/// <summary>
+	/// The status bar's message: <see cref="Message"/>, except a selection count ("5 selected in parcels.", "2 structures
+	/// are checked in the Structures list."): the status bar shows the selection itself, always up to date.
+	/// </summary>
+	public string StatusMessage => Message is string m && !SelectionCount.IsMatch(m) ? m : null;
+
+	public bool HasStatusMessage => StatusMessage != null;
+
+	private static readonly Regex SelectionCount = new Regex(@"^(\d[\d,]* selected in .+|\d[\d,]* structures? (is|are) (checked in the Structures list|selected))\.$", RegexOptions.CultureInvariant);
 
 	/// <summary>A layer's selection changed: the map redraws the highlight and the selection bar follows.</summary>
 	private void NotifyLayerSelection()
