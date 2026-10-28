@@ -175,24 +175,18 @@
     <Setter Property="Foreground" Value="{DynamicResource TextDisabled}" />
   </Style>
 
-  <!-- Destructive: solid red, for the button that confirms a deletion -->
+  <!-- Destructive: the button that confirms a deletion, as in a Mac alert: an ordinary push button with red text -->
   <Style Selector="Button.destructive">
     <Setter Property="FontWeight" Value="Normal" />
   </Style>
   <Style Selector="Button.destructive /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource DangerFill}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource DangerFill}" />
-    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+    <Setter Property="Foreground" Value="{DynamicResource DangerFg}" />
   </Style>
   <Style Selector="Button.destructive:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource DangerFillHover}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource DangerFillHover}" />
-    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+    <Setter Property="Foreground" Value="{DynamicResource DangerFg}" />
   </Style>
   <Style Selector="Button.destructive:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource DangerFillPressed}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource DangerFillPressed}" />
-    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+    <Setter Property="Foreground" Value="{DynamicResource DangerFg}" />
   </Style>
   <Style Selector="Button.destructive:disabled /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgSubtle}" />

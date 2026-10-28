@@ -344,7 +344,7 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	public int StructureCount => _all.Select(r => r.Summary.PropertyID).Distinct().Count();
 
 	/// <summary>The empty state's title: there are no structures at all, or none in the chosen event.</summary>
-	public string EmptyTitle => _app.Scope.IsAll ? "No Structures" : $"Nothing in {_app.Scope.Event.Name}";
+	public string EmptyTitle => _app.Scope.IsAll ? "No Structures" : $"No Structures in {_app.Scope.Event.Name}";
 
 	public string EmptyText => _app.Scope.IsAll
 		? "Start one, or import from File › Import."
