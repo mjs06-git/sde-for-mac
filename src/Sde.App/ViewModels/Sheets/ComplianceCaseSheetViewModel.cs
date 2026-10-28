@@ -379,9 +379,9 @@ public sealed partial class ComplianceCaseSheetViewModel : SheetViewModel
 
 	private static string LetterLabel(string kind) => kind switch
 	{
-		LetterKinds.ComplianceOptions => "Options and deadline",
-		LetterKinds.IccSupport => "ICC support",
-		_ => "Deadline reminder",
+		LetterKinds.ComplianceOptions => "Options and Deadline",
+		LetterKinds.IccSupport => "ICC Support",
+		_ => "Deadline Reminder",
 	};
 
 	/// <summary>
