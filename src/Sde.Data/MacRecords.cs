@@ -216,7 +216,13 @@ public sealed class SavedViewRecord
 public sealed class AssessmentLockedException : InvalidOperationException
 {
 	public AssessmentLockedException(Guid assessmentId, AssessmentStatus status, IReadOnlyList<FieldDiff> changes)
-		: base($"This assessment is {AssessmentStatuses.Label(status)}, so it can't be changed. Reopen it first (Status, then Reopen) and give a reason.")
+		: this(assessmentId, status, changes, $"This assessment is {AssessmentStatuses.Label(status)}, so it can't be changed. Reopen it first (Status, then Reopen) and give a reason.")
+	{
+	}
+
+	/// <summary>The same, with a message of its own (e.g. when the locked assessment is another one of the structure).</summary>
+	public AssessmentLockedException(Guid assessmentId, AssessmentStatus status, IReadOnlyList<FieldDiff> changes, string message)
+		: base(message)
 	{
 		AssessmentID = assessmentId;
 		Status = status;

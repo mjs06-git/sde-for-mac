@@ -30,7 +30,7 @@ public sealed record AssignmentDto(Guid AssignmentId, string ShortCode, int? Rou
 
 /// <summary>An assessment as the phone edits it: only the fields that apply to it now.</summary>
 public sealed record AssessmentDto(Guid AssessmentId, Guid PropertyId, string Address, string StructureType, string Status, bool Locked,
-	string Result, int PhotoCount, IReadOnlyList<StepDto> Steps);
+	string LockedMessage, string Result, int PhotoCount, IReadOnlyList<StepDto> Steps);
 
 /// <summary>A change sent by the phone: a field key and its new value as text (empty or null clears it).</summary>
 public sealed record ChangeDto(string Key, string Value);
@@ -139,9 +139,26 @@ public static class FieldApi
 		}
 		PropertyRecord p = file.Property;
 		string address = string.Join(" ", new[] { p.StreetNumber, p.StreetName, r.LookupName(p.StreetSuffixID) }.Where(x => !string.IsNullOrWhiteSpace(x)));
+		string locked = LockedMessage(store, file.Assessment.AssessmentID);
 		return new AssessmentDto(file.Assessment.AssessmentID, p.PropertyID, Blank(address, "(no address)"), TypeName(p.StructureTypeID),
-			AssessmentStatuses.Label(status.Value), status.IsLocked, ResultText(file.Assessment.PercentDamage, file.Assessment.DamageMessage),
+			AssessmentStatuses.Label(status.Value), locked != null, locked, ResultText(file.Assessment.PercentDamage, file.Assessment.DamageMessage),
 			file.Attachments.Count, steps);
+	}
+
+	/// <summary>
+	/// Why the phone can't change an assessment (Final or Letter sent, or checked out to another Mac in a work
+	/// package), or null when it can.
+	/// </summary>
+	public static string LockedMessage(SdeStore store, Guid assessmentId)
+	{
+		AssessmentStatusRecord status = store.GetStatus(assessmentId);
+		if (status.IsLocked)
+		{
+			return $"This assessment is {AssessmentStatuses.Label(status.Value)}, so it can't be changed here. It can be reopened on the Mac.";
+		}
+		CheckOutRecord checkOut = store.GetCheckOut(assessmentId);
+		return checkOut == null ? null
+			: $"This assessment is checked out to {(string.IsNullOrWhiteSpace(checkOut.CheckedOutTo) ? "another Mac" : checkOut.CheckedOutTo)} in a work package, so it can't be changed here.";
 	}
 
 	/// <summary>

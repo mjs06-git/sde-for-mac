@@ -76,8 +76,10 @@ internal sealed class PhoneSession : IAsyncDisposable
 		return Client.SendAsync(req, TestContext.Current.CancellationToken);
 	}
 
-	public Task<HttpResponseMessage> Change(string key, string value) =>
-		Post($"/api/assessments/{AssessmentId}/changes", new { changes = new[] { new { key, value } } });
+	public Task<HttpResponseMessage> Change(string key, string value) => Change(AssessmentId, key, value);
+
+	public Task<HttpResponseMessage> Change(Guid assessmentId, string key, string value) =>
+		Post($"/api/assessments/{assessmentId}/changes", new { changes = new[] { new { key, value } } });
 
 	public Task<HttpResponseMessage> Upload(byte[] bytes, string fileName, string contentType, bool csrf = true)
 	{
@@ -99,14 +101,20 @@ internal sealed class PhoneSession : IAsyncDisposable
 
 	public static async Task<string> Error(HttpResponseMessage res) => (await Json(res)).GetProperty("error").GetString();
 
-	/// <summary>A file that starts like a JPEG.</summary>
+	/// <summary>
+	/// A file with a JPEG's headers (start of image, JFIF, a 1×1 frame header) and then padding: enough for the phone
+	/// form's check, which reads the structure up to the frame header.
+	/// </summary>
 	public static byte[] Jpeg(int size)
 	{
+		byte[] header =
+		{
+			0xFF, 0xD8,
+			0xFF, 0xE0, 0x00, 0x10, (byte)'J', (byte)'F', (byte)'I', (byte)'F', 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
+			0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01, 0x11, 0x00,
+		};
 		byte[] b = new byte[size];
-		b[0] = 0xFF;
-		b[1] = 0xD8;
-		b[2] = 0xFF;
-		b[3] = 0xE0;
+		header.AsSpan(0, Math.Min(size, header.Length)).CopyTo(b);
 		return b;
 	}
 
