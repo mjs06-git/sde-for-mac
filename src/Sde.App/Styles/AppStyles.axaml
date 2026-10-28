@@ -65,6 +65,19 @@
     <Setter Property="Height" Value="1" />
     <Setter Property="Background" Value="{DynamicResource BorderDefault}" />
   </Style>
+  <!-- In an inspector: the big figure (the percent damaged) and label/value lists at footnote size -->
+  <Style Selector="TextBlock.inspectorFigure">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeLargeTitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+  </Style>
+  <Style Selector="Grid.facts">
+    <Setter Property="RowSpacing" Value="6" />
+    <Setter Property="ColumnSpacing" Value="8" />
+  </Style>
+  <Style Selector="Grid.facts TextBlock">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
+  </Style>
   <!-- A page's toolbar items (PageChrome.Toolbar): a row of controls beside the window's title -->
   <Style Selector="StackPanel.pageToolbar">
     <Setter Property="Orientation" Value="Horizontal" />

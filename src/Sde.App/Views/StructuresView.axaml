@@ -1,23 +1,73 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Sde.App.ViewModels"
+             xmlns:v="using:Sde.App.Views"
              xmlns:app="using:Sde.App"
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.StructuresView"
              x:DataType="vm:StructuresViewModel">
 
+  <!-- In the window's toolbar: what to do with the list (the checked structures, or the whole list when none are checked) -->
+  <v:PageChrome.Toolbar>
+    <StackPanel Classes="pageToolbar">
+          <DropDownButton Content="Change" ToolTip.Tip="The checked structures, or the whole list when none are checked">
+                  <DropDownButton.Flyout>
+                    <MenuFlyout>
+                      <MenuItem Header="Set a Field…" Command="{Binding BulkEditCommand}" />
+                      <MenuItem Header="Set Event…" Command="{Binding SetEventCommand}" />
+                      <MenuItem Header="Assign to Team…" Command="{Binding AssignToTeamCommand}" ToolTip.Tip="A field team's route and worksheets" />
+                      <MenuItem Header="Search and Replace…" Command="{Binding SearchReplaceCommand}" />
+                      <Separator />
+                      <MenuItem Header="Look Up Flood Data Online…" Command="{Binding LookUpFloodDataCommand}" ToolTip.Tip="Census geocoder coordinates and FEMA NFHL flood zones, for you to review" />
+                      <MenuItem Header="Flood Depth from High-Water Marks…" Command="{Binding FloodDepthCommand}" ToolTip.Tip="A file of marks, USGS marks for an event, or a water-surface grid, for you to review" />
+                    </MenuFlyout>
+                  </DropDownButton.Flyout>
+                </DropDownButton>
+          <DropDownButton Content="Reports">
+                  <DropDownButton.Flyout>
+                    <MenuFlyout>
+                      <MenuItem Header="Summary Report" Command="{Binding PrintCommand}" CommandParameter="Summary" />
+                      <MenuItem Header="Summary Report, No Photos" Command="{Binding PrintCommand}" CommandParameter="Summary-NoPhotos" />
+                      <MenuItem Header="Detailed Report" Command="{Binding PrintCommand}" CommandParameter="Detail" />
+                      <MenuItem Header="Detailed Report, No Photos" Command="{Binding PrintCommand}" CommandParameter="Detail-NoPhotos" />
+                      <Separator />
+                      <MenuItem Header="Percent Damaged List" Command="{Binding PrintCommand}" CommandParameter="PercentDamaged" />
+                      <MenuItem Header="Community Report" Command="{Binding PrintCommand}" CommandParameter="Community" />
+                    </MenuFlyout>
+                  </DropDownButton.Flyout>
+                </DropDownButton>
+          <DropDownButton Content="Export" ToolTip.Tip="The checked structures, or the whole list when none are checked">
+                  <DropDownButton.Flyout>
+                    <MenuFlyout>
+                      <MenuItem Header="FEMA SDE Export Folder…" Command="{Binding ExportCheckedCommand}" />
+                      <MenuItem Header="Excel…" Command="{Binding ExportCheckedToExcelCommand}" />
+                      <MenuItem Header="Web Map…" Command="{Binding WebMapCommand}" ToolTip.Tip="A web page of these structures on a map" />
+                      <Separator />
+                      <MenuItem Header="Submission Folder…" Command="{Binding OpenSubmissionCommand}" ToolTip.Tip="Reports and the FEMA package in one folder" />
+                      <MenuItem Header="Work Package for the Field…" Command="{Binding WorkPackageCommand}" ToolTip.Tip="Take these assessments to a Mac in the field and bring them back" />
+                      <Separator />
+                      <MenuItem Header="Owner Letters…" Command="{Binding OwnerLettersCommand}" />
+                    </MenuFlyout>
+                  </DropDownButton.Flyout>
+                </DropDownButton>
+      <Button Classes="icon toolbar" Command="{Binding ToggleInspectorCommand}" AutomationProperties.Name="Show or hide the inspector" ToolTip.Tip="Show or Hide Inspector (⌥⌘I)">
+        <c:Icon Kind="Inspector" Size="18" />
+      </Button>
+    </StackPanel>
+  </v:PageChrome.Toolbar>
+
   <!-- The toolbar names the list (and the sidebar's smart groups filter it); the page is the table, edge to edge. -->
   <DockPanel>
-    <!-- Scope bar: what to show on the left; what to do with the list on the right -->
+    <!-- Scope bar: what to show -->
     <Border DockPanel.Dock="Top" Classes="scopeBar">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-          <ComboBox Classes="sm" SelectedIndex="{Binding TypeFilter}" Width="132" AutomationProperties.Name="Structure type filter">
+          <ComboBox Classes="sm" SelectedIndex="{Binding TypeFilter}" AutomationProperties.Name="Structure type filter">
             <ComboBoxItem Content="All Types" />
             <ComboBoxItem Content="Residential" />
             <ComboBoxItem Content="Non-Residential" />
           </ComboBox>
-          <ComboBox Classes="sm" SelectedIndex="{Binding SourceFilter}" Width="132" IsVisible="{Binding HasImported}" AutomationProperties.Name="Source filter">
+          <ComboBox Classes="sm" SelectedIndex="{Binding SourceFilter}" IsVisible="{Binding HasImported}" AutomationProperties.Name="Source filter">
             <ComboBoxItem Content="All Sources" />
             <ComboBoxItem Content="Imported" />
             <ComboBoxItem Content="Entered in SDE" />
@@ -102,48 +152,6 @@
             </StackPanel>
           </Button>
         </StackPanel>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-          <DropDownButton Classes="sm" Content="Change" ToolTip.Tip="The checked structures, or the whole list when none are checked">
-                  <DropDownButton.Flyout>
-                    <MenuFlyout>
-                      <MenuItem Header="Set a Field…" Command="{Binding BulkEditCommand}" />
-                      <MenuItem Header="Set Event…" Command="{Binding SetEventCommand}" />
-                      <MenuItem Header="Assign to Team…" Command="{Binding AssignToTeamCommand}" ToolTip.Tip="A field team's route and worksheets" />
-                      <MenuItem Header="Search and Replace…" Command="{Binding SearchReplaceCommand}" />
-                      <Separator />
-                      <MenuItem Header="Look Up Flood Data Online…" Command="{Binding LookUpFloodDataCommand}" ToolTip.Tip="Census geocoder coordinates and FEMA NFHL flood zones, for you to review" />
-                      <MenuItem Header="Flood Depth from High-Water Marks…" Command="{Binding FloodDepthCommand}" ToolTip.Tip="A file of marks, USGS marks for an event, or a water-surface grid, for you to review" />
-                    </MenuFlyout>
-                  </DropDownButton.Flyout>
-                </DropDownButton>
-          <DropDownButton Classes="sm" Content="Reports">
-                  <DropDownButton.Flyout>
-                    <MenuFlyout>
-                      <MenuItem Header="Summary Report" Command="{Binding PrintCommand}" CommandParameter="Summary" />
-                      <MenuItem Header="Summary Report, No Photos" Command="{Binding PrintCommand}" CommandParameter="Summary-NoPhotos" />
-                      <MenuItem Header="Detailed Report" Command="{Binding PrintCommand}" CommandParameter="Detail" />
-                      <MenuItem Header="Detailed Report, No Photos" Command="{Binding PrintCommand}" CommandParameter="Detail-NoPhotos" />
-                      <Separator />
-                      <MenuItem Header="Percent Damaged List" Command="{Binding PrintCommand}" CommandParameter="PercentDamaged" />
-                      <MenuItem Header="Community Report" Command="{Binding PrintCommand}" CommandParameter="Community" />
-                    </MenuFlyout>
-                  </DropDownButton.Flyout>
-                </DropDownButton>
-          <DropDownButton Classes="sm" Content="Export" ToolTip.Tip="The checked structures, or the whole list when none are checked">
-                  <DropDownButton.Flyout>
-                    <MenuFlyout>
-                      <MenuItem Header="FEMA SDE Export Folder…" Command="{Binding ExportCheckedCommand}" />
-                      <MenuItem Header="Excel…" Command="{Binding ExportCheckedToExcelCommand}" />
-                      <MenuItem Header="Web Map…" Command="{Binding WebMapCommand}" ToolTip.Tip="A web page of these structures on a map" />
-                      <Separator />
-                      <MenuItem Header="Submission Folder…" Command="{Binding OpenSubmissionCommand}" ToolTip.Tip="Reports and the FEMA package in one folder" />
-                      <MenuItem Header="Work Package for the Field…" Command="{Binding WorkPackageCommand}" ToolTip.Tip="Take these assessments to a Mac in the field and bring them back" />
-                      <Separator />
-                      <MenuItem Header="Owner Letters…" Command="{Binding OwnerLettersCommand}" />
-                    </MenuFlyout>
-                  </DropDownButton.Flyout>
-                </DropDownButton>
-        </StackPanel>
       </Grid>
     </Border>
 
@@ -174,7 +182,9 @@
       </StackPanel>
     </Border>
 
-    <!-- The list, with a status bar under it: how many are shown and in what order, or how many are checked -->
+    <!-- The list, with a status bar under it (how many are shown and in what order, or how many are checked), and the
+         selected structure in the inspector at the right -->
+    <Grid ColumnDefinitions="*,Auto">
     <DockPanel>
         <Panel DockPanel.Dock="Bottom">
           <Border Classes="statusBar">
@@ -194,7 +204,7 @@
         <Grid>
           <DataGrid Name="Grid" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}" IsVisible="{Binding HasRows}"
                     IsReadOnly="True" CanUserSortColumns="True" CanUserReorderColumns="False" CanUserResizeColumns="True" SelectionMode="Single"
-                    GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
+                    GridLinesVisibility="None" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
                     AutomationProperties.Name="Structures" Sorting="OnSorting" DoubleTapped="OnRowDoubleTapped" KeyDown="OnListKeyDown">
             <DataGrid.ContextMenu>
               <ContextMenu>
@@ -323,16 +333,88 @@
           </DataGrid>
 
           <!-- Empty states -->
-          <c:EmptyState IsVisible="{Binding IsEmpty}" Icon="Structures" Title="{Binding EmptyTitle}" Text="{Binding EmptyText}">
+          <c:EmptyState IsVisible="{Binding IsEmpty}" Title="{Binding EmptyTitle}">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Button Classes="primary" Content="New Residential" Command="{Binding NewStructureCommand}" CommandParameter="1" />
               <Button Content="New Non-Residential" Command="{Binding NewStructureCommand}" CommandParameter="2" />
             </StackPanel>
           </c:EmptyState>
-          <c:EmptyState IsVisible="{Binding NoMatches}" Icon="Search" Title="No Matches">
+          <c:EmptyState IsVisible="{Binding NoMatches}" Title="No Matches">
             <Button Content="Show All Structures" Command="{Binding ShowEverythingCommand}" />
           </c:EmptyState>
         </Grid>
     </DockPanel>
+
+    <Border Grid.Column="1" Classes="inspector" Width="264" IsVisible="{Binding IsInspectorVisible}">
+      <Grid>
+        <DockPanel Margin="16" IsVisible="{Binding HasSelectedDetail}">
+          <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <DropDownButton Content="Report" IsEnabled="{Binding CanReportSelected}" AutomationProperties.Name="Report of the selected structure">
+              <DropDownButton.Flyout>
+                <MenuFlyout>
+                  <MenuItem Header="Summary Report" Command="{Binding PrintSelectedCommand}" CommandParameter="Summary" />
+                  <MenuItem Header="Detailed Report" Command="{Binding PrintSelectedCommand}" CommandParameter="Detail" />
+                </MenuFlyout>
+              </DropDownButton.Flyout>
+            </DropDownButton>
+            <Button Classes="primary" Content="Open" Command="{Binding OpenCommand}" CommandParameter="{Binding Selected}" AutomationProperties.Name="Open the selected structure" />
+          </StackPanel>
+          <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="12" DataContext="{Binding SelectedDetail}" x:DataType="vm:StructureDetail">
+              <StackPanel Spacing="2">
+                <TextBlock Classes="semibold" Text="{Binding Row.Address}" TextWrapping="Wrap" />
+                <TextBlock Classes="secondary sm" Text="{Binding Kind}" TextWrapping="Wrap" />
+              </StackPanel>
+              <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Classes="inspectorFigure" Text="{Binding Row.PercentText}" IsVisible="{Binding Row.HasPercent}"
+                             app:ThemeBrush.Foreground="{Binding Row.State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
+                  <TextBlock Classes="secondary sm" Text="{Binding Row.Result}" VerticalAlignment="Bottom" Margin="0,0,0,3" TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Spacing="4" IsVisible="{Binding Row.HasPercent}">
+                  <Panel>
+                    <ProgressBar Classes="threshold" Minimum="0" Maximum="100" Value="{Binding PercentValue}"
+                                 app:ThemeBrush.Foreground="{Binding Row.State, Converter={x:Static app:Converters.StatusDotKey}}"
+                                 AutomationProperties.Name="Percent damaged against the 50% threshold" />
+                    <Grid ColumnDefinitions="*,Auto,*">
+                      <Border Grid.Column="1" Classes="thresholdTick" />
+                    </Grid>
+                  </Panel>
+                  <Grid ColumnDefinitions="*,Auto,*">
+                    <TextBlock Classes="xs secondary num" Text="0%" />
+                    <TextBlock Grid.Column="1" Classes="xs secondary num" Text="50%" />
+                    <TextBlock Grid.Column="2" Classes="xs secondary num" Text="100%" HorizontalAlignment="Right" />
+                  </Grid>
+                </StackPanel>
+              </StackPanel>
+              <Border Classes="hairline" />
+              <Grid Classes="facts" ColumnDefinitions="96,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                <TextBlock Classes="secondary" Text="Owner" />
+                <TextBlock Grid.Column="1" Text="{Binding Row.Owner}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="1" Classes="secondary" Text="Community" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Row.Place}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="2" Classes="secondary" Text="Inspected" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Row.Inspected}" />
+                <TextBlock Grid.Row="3" Classes="secondary" Text="Inspector" />
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Row.Inspector}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="4" Classes="secondary" Text="Status" />
+                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Row.Status}" />
+              </Grid>
+              <Border Classes="hairline" IsVisible="{Binding HasAssessment}" />
+              <Grid Classes="facts" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" IsVisible="{Binding HasAssessment}">
+                <TextBlock Classes="secondary" Text="Replacement cost" />
+                <TextBlock Grid.Column="1" Classes="money" Text="{Binding ReplacementCost, Converter={x:Static app:Converters.MoneyWhole}}" />
+                <TextBlock Grid.Row="1" Classes="secondary" Text="Actual cash value" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Classes="money" Text="{Binding ActualCashValue, Converter={x:Static app:Converters.MoneyWhole}}" />
+                <TextBlock Grid.Row="2" Classes="secondary" Text="Damages" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Classes="money" Text="{Binding Damages, Converter={x:Static app:Converters.MoneyWhole}}" />
+              </Grid>
+            </StackPanel>
+          </ScrollViewer>
+        </DockPanel>
+        <c:EmptyState IsVisible="{Binding !HasSelectedDetail}" Title="No Selection" />
+      </Grid>
+    </Border>
+    </Grid>
   </DockPanel>
 </UserControl>

@@ -62,8 +62,30 @@
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
+  <!-- The section's number in the sidebar outline: quiet, tabular, right-aligned -->
+  <Style Selector="ListBox.steps TextBlock.stepNumber">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+    <Setter Property="TextAlignment" Value="Right" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- A group of fields in a step: no box, a hairline under it -->
+  <Style Selector="Border.formGroup">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="0,0,0,18" />
+    <Setter Property="Margin" Value="0,0,0,18" />
+  </Style>
+  <!-- A group inside a group (the Result step's inputs) draws no second rule -->
+  <Style Selector="Border.formGroup Border.formGroup">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0" />
+  </Style>
   <Style Selector="ListBox.steps TextBlock.stepTitle">
     <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
     <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
@@ -151,7 +173,8 @@
   <Style Selector="Border.tableRow">
     <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
     <Setter Property="BorderThickness" Value="0,1,0,0" />
-    <Setter Property="Padding" Value="0,5" />
+    <Setter Property="Padding" Value="0,2" />
+    <Setter Property="MinHeight" Value="36" />
   </Style>
   <Style Selector="Border.tableHead">
     <Setter Property="Padding" Value="0,0,0,6" />

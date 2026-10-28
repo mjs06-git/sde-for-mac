@@ -59,6 +59,12 @@
     <Setter Property="CornerRadius" Value="3" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
   </Style>
+  <!-- A slider's knob: white with a soft shadow, as on the Mac (the tokens make it 15 px and white) -->
+  <Style Selector="Slider /template/ Thumb">
+    <Setter Property="Effect">
+      <DropShadowEffect BlurRadius="3" OffsetX="0" OffsetY="0.5" Opacity="0.45" Color="#000000" />
+    </Setter>
+  </Style>
   <Style Selector="RadioButton">
     <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
   </Style>

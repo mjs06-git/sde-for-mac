@@ -29,6 +29,9 @@ public class ScreenTourTests
 		ui.Snapshot("00-structures-empty");
 		AddSamples(ui.Store);
 		ui.Services.RaiseDataChanged();
+		ui.Main.Structures.Selected = ui.Main.Structures.Rows[0];
+		ui.Pump();
+		Assert.True(ui.Main.Structures.HasSelectedDetail);
 		ui.Snapshot("01-structures");
 
 		Guid ranch = ui.Main.Structures.Rows.First(r => r.Address.StartsWith("123")).AssessmentID!.Value;
@@ -71,6 +74,8 @@ public class ScreenTourTests
 		using UiSession ui = new UiSession(ThemeVariant.Dark);
 		AddSamples(ui.Store);
 		ui.Services.RaiseDataChanged();
+		ui.Main.Structures.Selected = ui.Main.Structures.Rows[0];
+		ui.Pump();
 		ui.Snapshot("40-dark-structures");
 		ui.Main.OpenAssessment(ui.Main.Structures.Rows.First(r => r.Address.StartsWith("48")).AssessmentID!.Value);
 		ui.Main.Editor.SelectedSection = ui.Main.Editor.Sections.OfType<DamageSectionViewModel>().Single();
@@ -109,14 +114,10 @@ public class ScreenTourTests
 		ui.Main.OpenAssessment(ui.Main.Structures.Rows.First(r => r.Address.StartsWith("123")).AssessmentID!.Value);
 		ui.Pump();
 		ProgressBar bar = ui.Window.GetVisualDescendants().OfType<ProgressBar>().First(p => p.IsEffectivelyVisible && p.Classes.Contains("threshold"));
-		Ellipse issueDot = ui.Window.GetVisualDescendants().OfType<Ellipse>().First(d => d.IsEffectivelyVisible && d.DataContext is IssueItem);
-		string issueKey = ((IssueItem)issueDot.DataContext).Severity + "Fg";
 		string barKey = "Status" + ui.Main.Editor.State + "Dot";
 		AssertThemeColour(barKey, bar.Foreground);
-		AssertThemeColour(issueKey, issueDot.Fill);
 		SwitchTheme(ui, ThemeVariant.Light);
 		AssertThemeColour(barKey, bar.Foreground);
-		AssertThemeColour(issueKey, issueDot.Fill);
 
 		ui.Main.ShowCommand.Execute(Page.Map);
 		ui.Pump();

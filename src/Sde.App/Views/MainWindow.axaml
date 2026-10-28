@@ -64,6 +64,7 @@
         <!-- The pages, ⌘1 to ⌘8 in BuildPages' order, are put first by MainWindow.axaml.cs. -->
         <NativeMenu>
           <NativeMenuItem Header="Hide or Show Sidebar" Gesture="Ctrl+Cmd+S" Command="{Binding ToggleSidebarCommand}" />
+          <NativeMenuItem Header="Hide or Show Inspector" Gesture="Alt+Cmd+I" Command="{Binding Structures.ToggleInspectorCommand}" />
           <NativeMenuItem Header="Search and Commands…" Gesture="Cmd+K" Command="{Binding Palette.OpenCommand}" />
           <NativeMenuItemSeparator />
           <NativeMenuItem Header="Previous Step" Gesture="Cmd+OemOpenBrackets" Command="{Binding PreviousStepCommand}" />
@@ -373,6 +374,7 @@
     <KeyBinding Gesture="Escape" Command="{Binding EscapeCommand}" />
     <KeyBinding Gesture="Cmd+K" Command="{Binding Palette.OpenCommand}" />
     <KeyBinding Gesture="Ctrl+Cmd+S" Command="{Binding ToggleSidebarCommand}" />
+    <KeyBinding Gesture="Alt+Cmd+I" Command="{Binding Structures.ToggleInspectorCommand}" />
     <KeyBinding Gesture="Cmd+S" Command="{Binding SaveCommand}" />
     <KeyBinding Gesture="Cmd+Z" Command="{Binding UndoCommand}" />
     <KeyBinding Gesture="Cmd+Shift+Z" Command="{Binding RedoCommand}" />
@@ -401,16 +403,38 @@
             </Button>
           </Panel>
 
-          <Button DockPanel.Dock="Bottom" Classes="nav" Margin="10,4,10,10" DataContext="{Binding TrashItem}" x:DataType="shell:NavItemViewModel"
-                  Classes.active="{Binding IsActive}" Command="{Binding ShowCommand}" AutomationProperties.Name="{Binding Title}" ToolTip.Tip="{Binding ToolTip}">
-            <Grid ColumnDefinitions="Auto,*,Auto">
-              <c:Icon Kind="{Binding Icon}" Size="16" Margin="0,0,8,0" />
-              <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-              <TextBlock Grid.Column="2" Classes="sourceCount" Text="{Binding CountText}" IsVisible="{Binding HasCount}" />
-            </Grid>
-          </Button>
+          <Panel DockPanel.Dock="Bottom" IsVisible="{Binding !IsEditorPage}">
+            <Button Classes="nav" Margin="10,4,10,10" DataContext="{Binding TrashItem}" x:DataType="shell:NavItemViewModel"
+                    Classes.active="{Binding IsActive}" Command="{Binding ShowCommand}" AutomationProperties.Name="{Binding Title}" ToolTip.Tip="{Binding ToolTip}">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <c:Icon Kind="{Binding Icon}" Size="16" Margin="0,0,8,0" />
+                <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="2" Classes="sourceCount" Text="{Binding CountText}" IsVisible="{Binding HasCount}" />
+              </Grid>
+            </Button>
+          </Panel>
 
-          <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <!-- While an assessment is open the sidebar is its outline: the sections, numbered, with how many fields to check -->
+          <Panel IsVisible="{Binding IsEditorPage}">
+          <StackPanel Margin="10,0" Spacing="1" DataContext="{Binding Editor}" x:DataType="ed:AssessmentEditorViewModel">
+            <TextBlock Classes="sourceHeader" Text="Assessment" />
+            <ListBox Classes="steps" Margin="0" ItemsSource="{Binding Sections}" SelectedItem="{Binding SelectedSection}" AutomationProperties.Name="Steps">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="ed:SectionViewModel">
+                  <Grid ColumnDefinitions="18,*,Auto" ColumnSpacing="8" ToolTip.Tip="{Binding StatusText}">
+                    <TextBlock Classes="stepNumber" Text="{Binding Number}" />
+                    <TextBlock Grid.Column="1" Classes="stepTitle" Text="{Binding Title}" />
+                    <Border Grid.Column="2" Classes="stepCount" Classes.required="{Binding HasRequiredIssues}" IsVisible="{Binding HasIssues}">
+                      <TextBlock Text="{Binding IssueCount}" />
+                    </Border>
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </StackPanel>
+          </Panel>
+
+          <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !IsEditorPage}">
             <ItemsControl ItemsSource="{Binding SourceSections}" Margin="10,0">
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="shell:SourceSectionViewModel">

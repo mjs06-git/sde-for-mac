@@ -76,8 +76,17 @@
     <Setter Property="Background" Value="{DynamicResource BgHover}" />
   </Style>
   <!-- Two toolbar buttons that belong together (previous and next step) -->
+  <!-- Paired toolbar buttons (Previous / Next step): one segmented control, as the Mac draws them -->
   <Style Selector="Border.toolbarGroup">
     <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Background" Value="{DynamicResource SegmentedTrack}" />
+    <Setter Property="Padding" Value="2" />
+  </Style>
+  <Style Selector="Border.toolbarGroup Button.icon.toolbar">
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="MinHeight" Value="22" />
+    <Setter Property="CornerRadius" Value="4" />
   </Style>
   <Style Selector="ListBox.segmented.toolbar">
     <Setter Property="Padding" Value="2" />

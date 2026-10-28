@@ -231,8 +231,11 @@ public sealed partial class AssessmentEditorViewModel : ViewModelBase
 	// ───────────── Result panel ─────────────
 
 	[ObservableProperty]
-	[NotifyPropertyChangedFor(nameof(HasPercent))]
+	[NotifyPropertyChangedFor(nameof(HasPercent), nameof(ShowStateHint))]
 	public partial ResultState State { get; set; }
+
+	/// <summary>Whether the hint under the result is shown: only when it says what to do (incomplete or undetermined); otherwise it is the result's tooltip.</summary>
+	public bool ShowStateHint => State is ResultState.Incomplete or ResultState.Undetermined;
 
 	[ObservableProperty]
 	public partial string PercentText { get; set; }

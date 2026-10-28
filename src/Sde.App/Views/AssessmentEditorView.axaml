@@ -8,15 +8,12 @@
              x:DataType="ed:AssessmentEditorViewModel">
 
   <UserControl.DataTemplates>
-    <!-- A card of fields, two to a row (one when the card is narrow) -->
+    <!-- A group of fields, two to a row (one when the editor is narrow), on a hairline -->
     <DataTemplate DataType="ed:FieldGroupViewModel">
-      <Border Classes="card" IsVisible="{Binding IsVisible}" Margin="0,0,0,14">
+      <Border Classes="formGroup" IsVisible="{Binding IsVisible}">
         <StackPanel Spacing="12">
           <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasTitle}">
-            <StackPanel Spacing="2">
-              <TextBlock Classes="h3" Text="{Binding Title}" />
-              <TextBlock Classes="muted" Text="{Binding Note}" IsVisible="{Binding HasNote}" TextWrapping="Wrap" />
-            </StackPanel>
+            <TextBlock Classes="h3" Text="{Binding Title}" ToolTip.Tip="{Binding Note}" VerticalAlignment="Center" />
             <Button Grid.Column="1" Classes="link" Content="{Binding ActionText}" Command="{Binding ActionCommand}" IsVisible="{Binding HasAction}" VerticalAlignment="Top" />
           </Grid>
           <ItemsControl Classes="fields" ItemsSource="{Binding Fields}">
@@ -33,7 +30,7 @@
       <StackPanel>
         <TextBlock Classes="h2" Text="{Binding Title}" Margin="0,0,0,14" />
 
-        <Border Classes="card" Margin="0,0,0,14">
+        <Border Classes="formGroup">
           <StackPanel Spacing="12">
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Spacing="2">
@@ -114,7 +111,7 @@
 
         <ContentControl Content="{Binding Basics}" />
 
-        <Border Classes="card" Margin="0,0,0,14" IsVisible="{Binding Editor.CostAdjustments.Count, Converter={x:Static app:Converters.IsPositive}}">
+        <Border Classes="formGroup" IsVisible="{Binding Editor.CostAdjustments.Count, Converter={x:Static app:Converters.IsPositive}}">
           <StackPanel>
             <StackPanel Spacing="2" Margin="0,0,0,10">
               <TextBlock Classes="h3" Text="Cost adjustments" />
@@ -149,7 +146,7 @@
           </StackPanel>
         </Border>
 
-        <Border Classes="card" Margin="0,0,0,14">
+        <Border Classes="formGroup">
           <StackPanel>
             <StackPanel Spacing="2" Margin="0,0,0,10">
               <TextBlock Classes="h3" Text="Additional adjustments" />
@@ -184,7 +181,7 @@
 
         <ContentControl Content="{Binding Depreciation}" />
 
-        <Border Classes="card" Margin="0,0,0,14">
+        <Border Classes="formGroup">
           <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
             <TextBlock Grid.Row="0" Text="Base cost × square footage × geographic adjustment" Classes="secondary" />
             <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Editor.Cost, Converter={x:Static app:Converters.Money}}" Classes="money" />
@@ -208,13 +205,10 @@
         <TextBlock Classes="h2" Text="{Binding Title}" Margin="0,0,0,14" />
         <c:Banner Tone="Violet" Icon="Info" Margin="0,0,0,14" IsVisible="{Binding Editor.IsUndetermined}"
                   Text="Damage is undetermined (Inspection step), so these values don't affect the result." />
-        <Border Classes="card" Margin="0,0,0,14" IsVisible="{Binding Editor.HasDepthTables}">
+        <Border Classes="formGroup" IsVisible="{Binding Editor.HasDepthTables}">
           <StackPanel Spacing="10">
             <Grid ColumnDefinitions="*,Auto">
-              <StackPanel Spacing="2">
-                <TextBlock Classes="h3" Text="Depth table" />
-                <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding Editor.DepthHelperText}" />
-              </StackPanel>
+              <TextBlock Classes="h3" Text="Depth table" VerticalAlignment="Center" ToolTip.Tip="{Binding Editor.DepthHelperText}" />
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top" Margin="12,0,0,0">
                 <ComboBox ItemsSource="{Binding Editor.DepthTableChoices}" SelectedItem="{Binding Editor.SelectedDepthTable}" IsVisible="{Binding Editor.HasSeveralDepthTables}"
                           Width="200" AutomationProperties.Name="Depth table to use">
@@ -233,28 +227,28 @@
             </Grid>
           </StackPanel>
         </Border>
-        <Border Classes="card" Margin="0,0,0,14">
+        <Border Margin="0,0,0,14">
           <StackPanel>
             <Border Classes="tableHead">
               <Grid>
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition Width="1*" MinWidth="112" />
-                  <ColumnDefinition Width="48" />
-                  <ColumnDefinition Width="84" />
-                  <ColumnDefinition Width="2*" />
-                  <ColumnDefinition Width="108" />
+                  <ColumnDefinition Width="52" />
+                  <ColumnDefinition Width="104" />
+                  <ColumnDefinition Width="1.1*" />
+                  <ColumnDefinition Width="100" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Classes="colHead" Text="Element" ToolTip.Tip="0% untouched, 100% must be fully replaced" />
                 <TextBlock Grid.Column="1" Classes="colHead" Text="Share" TextAlignment="Right" Margin="0,0,10,0" ToolTip.Tip="Share of the replacement cost (FEMA's table)" />
-                <TextBlock Grid.Column="2" Classes="colHead" Text="Damaged" />
-                <c:TickPanel Grid.Column="3" Inset="9" Margin="10,0,10,0" Name="DamageRuler">
+                <TextBlock Grid.Column="2" Classes="colHead" Text="Damaged" TextAlignment="Right" />
+                <c:TickPanel Grid.Column="3" Inset="7" Margin="12,0,6,0" Name="DamageRuler">
                   <TextBlock Classes="colHead num" Text="0" />
                   <TextBlock Classes="colHead num" Text="25" />
                   <TextBlock Classes="colHead num" Text="50" />
                   <TextBlock Classes="colHead num" Text="75" />
                   <TextBlock Classes="colHead num" Text="100" />
                 </c:TickPanel>
-                <TextBlock Grid.Column="4" Classes="colHead" Text="Damage" TextAlignment="Right" ToolTip.Tip="The damage, and the element's share of the replacement cost below it" />
+                <TextBlock Grid.Column="4" Classes="colHead" Text="Damage" TextAlignment="Right" ToolTip.Tip="Damage in dollars; hover a row for the element's cost" />
               </Grid>
             </Border>
             <ItemsControl ItemsSource="{Binding Editor.Elements}">
@@ -264,10 +258,10 @@
                     <Grid>
                       <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="1*" MinWidth="112" />
-                        <ColumnDefinition Width="48" />
-                        <ColumnDefinition Width="84" />
-                        <ColumnDefinition Width="2*" />
-                        <ColumnDefinition Width="108" />
+                        <ColumnDefinition Width="52" />
+                        <ColumnDefinition Width="104" />
+                        <ColumnDefinition Width="1.1*" />
+                        <ColumnDefinition Width="100" />
                       </Grid.ColumnDefinitions>
                       <StackPanel VerticalAlignment="Center" Margin="0,0,8,0" Spacing="2">
                         <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
@@ -278,14 +272,12 @@
                         </StackPanel>
                       </StackPanel>
                       <TextBlock Grid.Column="1" Text="{Binding Share, Converter={x:Static app:Converters.Percent}}" Classes="money secondary" VerticalAlignment="Center" Margin="0,0,10,0" />
-                      <NumericUpDown Grid.Column="2" Value="{Binding UserDamage}" AutomationProperties.Name="{Binding Name, StringFormat='{}{0} percent damaged'}" Minimum="0" Maximum="100" Increment="5" FormatString="0.##" ShowButtonSpinner="False" Classes="number" VerticalAlignment="Center">
+                      <NumericUpDown Grid.Column="2" Value="{Binding UserDamage}" AutomationProperties.Name="{Binding Name, StringFormat='{}{0} percent damaged'}" Minimum="0" Maximum="100" Increment="5" FormatString="0.##" ShowButtonSpinner="False" Classes="number" Width="64" HorizontalAlignment="Right" VerticalAlignment="Center">
                         <NumericUpDown.InnerRightContent><TextBlock Classes="adorn" Text="%" Margin="0,0,8,0" /></NumericUpDown.InnerRightContent>
                       </NumericUpDown>
-                      <Slider Grid.Column="3" Minimum="0" Maximum="100" Value="{Binding UserDamageDouble}" AutomationProperties.Name="{Binding Name, StringFormat='{}{0} percent damaged'}" TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="10,0" ToolTip.Tip="Drag, or type an exact value. 0 to 4 jump to 0, 25, 50, 75 and 100." />
-                      <StackPanel Grid.Column="4" VerticalAlignment="Center" Spacing="1">
-                        <TextBlock Text="{Binding DamageValue, Converter={x:Static app:Converters.Money}}" Classes="money" />
-                        <TextBlock Text="{Binding ItemCost, Converter={x:Static app:Converters.Money}, StringFormat='of {0}'}" Classes="money caption" />
-                      </StackPanel>
+                      <Slider Grid.Column="3" Classes="small" Minimum="0" Maximum="100" Value="{Binding UserDamageDouble}" AutomationProperties.Name="{Binding Name, StringFormat='{}{0} percent damaged'}" TickFrequency="5" IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="12,0,6,0" ToolTip.Tip="Drag, or type an exact value. 0 to 4 jump to 0, 25, 50, 75 and 100." />
+                      <TextBlock Grid.Column="4" Text="{Binding DamageValue, Converter={x:Static app:Converters.Money}}" Classes="money" VerticalAlignment="Center"
+                                 ToolTip.Tip="{Binding ItemCost, Converter={x:Static app:Converters.Money}, StringFormat='Element cost {0}'}" />
                     </Grid>
                   </Border>
                 </DataTemplate>
@@ -294,10 +286,8 @@
             <Border Classes="tableFoot">
               <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Classes="semibold" Text="Total" />
-                <StackPanel Grid.Column="1" Spacing="1">
-                  <TextBlock Text="{Binding Editor.Assessment.ComputedDamages, Converter={x:Static app:Converters.Money}}" Classes="money semibold" />
-                  <TextBlock Text="{Binding Editor.Assessment.TotalReplacementCost, Converter={x:Static app:Converters.Money}, StringFormat='of {0} replacement cost'}" Classes="money caption" />
-                </StackPanel>
+                <TextBlock Grid.Column="1" Text="{Binding Editor.Assessment.ComputedDamages, Converter={x:Static app:Converters.Money}}" Classes="money semibold"
+                           ToolTip.Tip="{Binding Editor.Assessment.TotalReplacementCost, Converter={x:Static app:Converters.Money}, StringFormat='Replacement cost {0}'}" />
               </Grid>
             </Border>
           </StackPanel>
@@ -310,7 +300,7 @@
       <StackPanel>
         <TextBlock Classes="h2" Text="{Binding Title}" Margin="0,0,0,14" ToolTip.Tip="Percent damaged = cost of repairs ÷ value of the building before the damage" />
 
-        <Border Classes="card" Margin="0,0,0,14">
+        <Border Classes="formGroup">
           <StackPanel Spacing="10">
             <TextBlock Classes="h3" Text="Value of the building (before damage)" />
             <RadioButton GroupName="value" IsChecked="{Binding Editor.IsValueAcv, Mode=OneWay}" Command="{Binding Editor.SetValueBasisCommand}" CommandParameter="390">
@@ -320,10 +310,7 @@
               </StackPanel>
             </RadioButton>
             <RadioButton GroupName="value" IsChecked="{Binding Editor.IsValueAppraisal, Mode=OneWay}" Command="{Binding Editor.SetValueBasisCommand}" CommandParameter="391">
-              <StackPanel Spacing="1">
-                <TextBlock Classes="medium" Text="Professional market appraisal" />
-                <TextBlock Classes="muted" Text="Value of the structure only, from a licensed appraiser" />
-              </StackPanel>
+              <TextBlock Classes="medium" Text="Professional market appraisal" ToolTip.Tip="Value of the structure only, from a licensed appraiser" />
             </RadioButton>
             <RadioButton GroupName="value" IsChecked="{Binding Editor.IsValueTax, Mode=OneWay}" Command="{Binding Editor.SetValueBasisCommand}" CommandParameter="392">
               <StackPanel Spacing="1">
@@ -335,7 +322,7 @@
           </StackPanel>
         </Border>
 
-        <Border Classes="card" Margin="0,0,0,14">
+        <Border Classes="formGroup">
           <StackPanel Spacing="10">
             <TextBlock Classes="h3" Text="Cost of repairs" />
             <RadioButton GroupName="repair" IsChecked="{Binding Editor.IsRepairComputed, Mode=OneWay}" Command="{Binding Editor.SetRepairBasisCommand}" CommandParameter="393">
@@ -360,7 +347,7 @@
     <DataTemplate DataType="ed:PhotosSectionViewModel">
       <StackPanel>
         <TextBlock Classes="h2" Text="{Binding Title}" Margin="0,0,0,14" />
-        <Border Classes="card" Margin="0,0,0,14">
+        <Border Classes="formGroup">
           <StackPanel Spacing="14">
             <Border Name="DropZone" Classes="dropZone" DragDrop.AllowDrop="True">
               <StackPanel HorizontalAlignment="Center" Spacing="8">
@@ -430,7 +417,7 @@
             </ItemsControl>
           </StackPanel>
         </Border>
-        <Border Classes="card" Margin="0,0,0,14">
+        <Border Classes="formGroup">
           <StackPanel Spacing="12">
             <StackPanel Spacing="2">
               <TextBlock Classes="h3" Text="Your fields" />
@@ -485,35 +472,10 @@
 
   <DockPanel>
     <!-- The window's toolbar shows the address, what the structure is and the editor's actions (MainWindow.axaml). -->
-    <!-- "narrow" (set in code when the editor is narrow) shows the steps as icons only -->
-    <Grid Name="EditorGrid" ColumnDefinitions="Auto,*,Auto">
-      <!-- Steps -->
-      <Border Classes="stepRail">
-        <ListBox Classes="steps" ItemsSource="{Binding Sections}" SelectedItem="{Binding SelectedSection}" AutomationProperties.Name="Steps">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="ed:SectionViewModel">
-              <!-- A source-list row: the step's icon, its name, and how many of its fields to check -->
-              <Grid ColumnDefinitions="Auto,*,Auto" ToolTip.Tip="{Binding StatusText, StringFormat='{}{0}'}">
-                <Panel>
-                  <Border Classes="stepIcon">
-                    <c:Icon Kind="{Binding Icon}" Size="16" />
-                  </Border>
-                  <Ellipse Classes="stepDot" Classes.required="{Binding HasRequiredIssues}" Classes.check="{Binding NeedsCheck}" />
-                </Panel>
-                <StackPanel Grid.Column="1" Classes="stepText" Margin="8,0,0,0" VerticalAlignment="Center">
-                  <TextBlock Classes="stepTitle" Text="{Binding Title}" />
-                </StackPanel>
-                <Border Grid.Column="2" Classes="stepCount" Classes.required="{Binding HasRequiredIssues}" IsVisible="{Binding HasIssues}">
-                  <TextBlock Text="{Binding IssueCount}" />
-                </Border>
-              </Grid>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
-      </Border>
-
+    <!-- The sections are listed in the window's sidebar (MainWindow.axaml); here, the current one and the live result -->
+    <Grid Name="EditorGrid" ColumnDefinitions="*,Auto">
       <!-- Current step -->
-      <ScrollViewer Grid.Column="1" Name="StepScroller" HorizontalScrollBarVisibility="Disabled">
+      <ScrollViewer Name="StepScroller" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="24,20,24,28" MaxWidth="900" HorizontalAlignment="Stretch">
           <c:Banner Classes="stacked" Tone="Accent" Icon="Lock" Margin="0,0,0,14" IsVisible="{Binding IsLocked}" Text="{Binding LockText}"
                     AutomationProperties.Name="Locked">
@@ -540,33 +502,18 @@
             </StackPanel>
           </c:Banner>
           <ContentControl Content="{Binding SelectedSection}" IsEnabled="{Binding IsEditable}" />
-          <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,0">
-            <Button Command="{Binding BackCommand}" IsVisible="{Binding CanGoBack}" AutomationProperties.Name="Back">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <c:Icon Kind="CaretLeft" Size="14" />
-                <TextBlock Text="Back" />
-              </StackPanel>
-            </Button>
-            <Button Grid.Column="2" Classes="primary" Command="{Binding NextCommand}" IsVisible="{Binding CanGoNext}"
-                    AutomationProperties.Name="{Binding NextTitle, StringFormat='Next: {0}'}">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock Text="{Binding NextTitle, StringFormat='Next: {0}'}" />
-                <c:Icon Kind="CaretRight" Size="14" />
-              </StackPanel>
-            </Button>
-          </Grid>
         </StackPanel>
       </ScrollViewer>
 
       <!-- Live result -->
-      <Border Grid.Column="2" Classes="resultPanel">
+      <Border Grid.Column="1" Classes="resultPanel">
         <ScrollViewer>
           <StackPanel Margin="16,16" Spacing="14">
             <Border Classes="resultCard">
               <StackPanel Spacing="1">
                 <TextBlock Classes="eyebrow" Text="Percent Damaged" />
                 <TextBlock Classes="display" Text="{Binding PercentText}" app:ThemeBrush.Foreground="{Binding State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
-                <TextBlock Text="{Binding Determination}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Determination}" TextWrapping="Wrap" ToolTip.Tip="{Binding StateHint}" />
                 <!-- Where the result sits against FEMA's 50% threshold -->
                 <StackPanel IsVisible="{Binding HasPercent}" Margin="0,12,0,0" Spacing="4">
                   <Panel>
@@ -583,7 +530,7 @@
                     <TextBlock Grid.Column="2" Classes="xs secondary num" Text="100%" HorizontalAlignment="Right" />
                   </Grid>
                 </StackPanel>
-                <TextBlock Text="{Binding StateHint}" TextWrapping="Wrap" Classes="secondary sm" Margin="0,6,0,0" />
+                <TextBlock Text="{Binding StateHint}" TextWrapping="Wrap" Classes="secondary sm" Margin="0,6,0,0" IsVisible="{Binding ShowStateHint}" />
               </StackPanel>
             </Border>
 
@@ -623,18 +570,18 @@
                   <TextBlock Grid.Column="1" Classes="money" Text="{Binding Assessment.ComputedActualCashValue, Converter={x:Static app:Converters.MoneyWhole}}" />
                 </Grid>
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Classes="secondary" Text="Computed damages" />
+                  <TextBlock Classes="secondary" Text="Damages" />
                   <TextBlock Grid.Column="1" Classes="money" Text="{Binding Assessment.ComputedDamages, Converter={x:Static app:Converters.MoneyWhole}}" />
                 </Grid>
-                <Border Classes="divider" Margin="0,3" />
-                <StackPanel Spacing="1">
+                <!-- Which figures the percentage uses, said only when they aren't FEMA's computed ones above -->
+                <StackPanel Spacing="1" Margin="0,4,0,0" IsVisible="{Binding !IsRepairComputed}">
                   <TextBlock Classes="caption" Text="Repair cost used" />
                   <Grid ColumnDefinitions="*,Auto">
                     <TextBlock Classes="sm" Text="{Binding RepairBasisName}" TextWrapping="Wrap" />
                     <TextBlock Grid.Column="1" Classes="money semibold" Text="{Binding RepairBasisAmount, Converter={x:Static app:Converters.MoneyWhole}}" />
                   </Grid>
                 </StackPanel>
-                <StackPanel Spacing="1">
+                <StackPanel Spacing="1" Margin="0,4,0,0" IsVisible="{Binding !IsValueAcv}">
                   <TextBlock Classes="caption" Text="Building value used" />
                   <Grid ColumnDefinitions="*,Auto">
                     <TextBlock Classes="sm" Text="{Binding ValueBasisName}" TextWrapping="Wrap" />
@@ -655,16 +602,8 @@
                 <ItemsControl ItemsSource="{Binding Issues}" Margin="-6,0">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="ed:IssueItem">
-                      <Button Classes="subtle" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="6,5"
-                              Command="{Binding Go}" CommandParameter="{Binding Issue}">
-                        <Grid ColumnDefinitions="14,*">
-                          <Ellipse Width="7" Height="7" app:ThemeBrush.Fill="{Binding Severity, Converter={x:Static app:Converters.IssueBrushKey}}" VerticalAlignment="Top" Margin="0,5,0,0" />
-                          <StackPanel Grid.Column="1" Spacing="1">
-                            <TextBlock Classes="sm accent" Text="{Binding FieldName}" TextWrapping="Wrap" />
-                            <TextBlock Text="{Binding Message}" Classes="xs secondary" TextWrapping="Wrap" />
-                          </StackPanel>
-                        </Grid>
-                      </Button>
+                      <Button Classes="link" Content="{Binding FieldName}" Command="{Binding Go}" CommandParameter="{Binding Issue}"
+                              ToolTip.Tip="{Binding Message}" HorizontalAlignment="Left" Margin="6,2" />
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
