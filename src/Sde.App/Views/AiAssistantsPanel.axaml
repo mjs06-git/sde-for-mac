@@ -8,13 +8,10 @@
     <Border Classes="card settings">
       <StackPanel Classes="settingsGroup">
         <Border Classes="settingsRow">
-          <ToggleSwitch IsChecked="{Binding AllowEdits}" OnContent="" OffContent="" AutomationProperties.Name="Let AI assistants change this database">
+          <ToggleSwitch IsChecked="{Binding AllowEdits}" OnContent="" OffContent="" AutomationProperties.Name="Let AI assistants change this database"
+                        ToolTip.Tip="Off: read, check and report only. On: can also edit fields, statuses, structures, events, comments and teams. Every change is in History; locked assessments stay locked; nothing is deleted.">
             <ToggleSwitch.Content>
-              <StackPanel Spacing="1">
-                <TextBlock Classes="medium" Text="Let AI assistants change this database" />
-                <TextBlock Classes="muted" TextWrapping="Wrap"
-                           Text="Off: read, check and report only. On: can also edit fields, statuses, structures, events, comments and teams. Every change is in History; locked assessments stay locked; nothing is deleted." />
-              </StackPanel>
+              <TextBlock Classes="medium" Text="Let AI assistants change this database" />
             </ToggleSwitch.Content>
           </ToggleSwitch>
         </Border>
@@ -23,8 +20,8 @@
 
     <Border Classes="card">
       <StackPanel Spacing="12">
-        <c:CardHeader Icon="Link" Title="Connect an assistant"
-                      Text="Needs SDE in Applications and this database opened in it once. Copy the setup again after switching databases." />
+        <TextBlock Classes="h3" Text="Connect an assistant"
+                   ToolTip.Tip="Needs SDE in Applications and this database opened in it once. Copy the setup again after switching databases." />
         <c:Banner Tone="Warning" Icon="Warning" Text="{Binding TranslocationWarning}" IsVisible="{Binding HasTranslocationWarning}" />
 
         <StackPanel Spacing="6">
@@ -33,26 +30,25 @@
             <SelectableTextBlock Classes="mono sm" Text="{Binding ClaudeCodeCommand}" TextWrapping="Wrap" />
           </Border>
           <Button Content="Copy Command" Command="{Binding CopyClaudeCodeCommand}" HorizontalAlignment="Left"
-                  AutomationProperties.Name="Copy the Claude Code command" />
+                  AutomationProperties.Name="Copy the Claude Code command" ToolTip.Tip="Paste it into Terminal" />
         </StackPanel>
 
         <StackPanel Spacing="6">
-          <TextBlock Classes="semibold" Text="Claude Desktop" />
-          <TextBlock Classes="muted" TextWrapping="Wrap" Text="Add to claude_desktop_config.json, then restart Claude Desktop." />
+          <TextBlock Classes="semibold" Text="Claude Desktop" ToolTip.Tip="Add to claude_desktop_config.json, then restart Claude Desktop" />
           <Border Background="{DynamicResource BgSubtle}" CornerRadius="6" Padding="10,8">
             <SelectableTextBlock Classes="mono sm" Text="{Binding ClaudeDesktopConfig}" TextWrapping="Wrap" />
           </Border>
           <Button Content="Copy Setup" Command="{Binding CopyClaudeDesktopCommand}" HorizontalAlignment="Left"
-                  AutomationProperties.Name="Copy the Claude Desktop setup" />
+                  AutomationProperties.Name="Copy the Claude Desktop setup" ToolTip.Tip="Add to claude_desktop_config.json, then restart Claude Desktop" />
         </StackPanel>
       </StackPanel>
     </Border>
 
     <Border Classes="card">
       <StackPanel Spacing="12">
-        <c:CardHeader Icon="History" Title="Recent changes by AI assistants"
-                      Text="Each line is one change. Revert restores the values from before it." />
-        <TextBlock Classes="muted" Text="No AI assistant has changed this database." IsVisible="{Binding HasNoChanges}" />
+        <TextBlock Classes="h3" Text="Recent changes by AI assistants"
+                   ToolTip.Tip="Each line is one change. Revert restores the values from before it." />
+        <TextBlock Classes="secondary" Text="No Changes" IsVisible="{Binding HasNoChanges}" />
         <ItemsControl ItemsSource="{Binding Changes}" IsVisible="{Binding HasChanges}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:AiChangeRowViewModel">

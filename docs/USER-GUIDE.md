@@ -131,7 +131,7 @@ These are in **Settings > General**.
   typed with a wrong sign or swapped.
 - **Your fields**: three extra fields on every assessment. Name them for what your office tracks, such as *Permit
   number* or *Inspection team*.
-- **Note snippets**: text you type often (for example a standard note about water lines). Click **Add a snippet**,
+- **Note snippets**: text you type often (for example a standard note about water lines). Click **Add Snippet**,
   give it a name and the text. In an assessment, **Insert Snippet** above any notes box adds it.
 
 ### 2.5 Things to set up only if you need them
@@ -244,7 +244,7 @@ FEMA's SDE has a simpler import that makes one structure per row of a parcel or 
 for compatibility; for anything you will import again, use [3.3](#33-from-a-permit-system-spreadsheet-or-assessor-roll)
 instead.
 
-1. Open **Import & Export** and find **Create structures from a parcel spreadsheet**.
+1. Open **Import & Export** and find **Structures from a parcel spreadsheet** under **Other systems**.
 2. Click **Choose Spreadsheet…** and pick a `.xlsx` or `.csv` file. Choose the **Sheet** and whether the **First row
    has the column names**.
 3. Match columns to fields, or pick a **Saved mapping**.
@@ -258,9 +258,9 @@ Structures need a latitude and longitude to appear on the map and in GIS files. 
 - [Click each one on the map](#the-map) with **Set location**.
 - Use a photo's GPS position ([chapter 5](#5-photos)).
 - Add them in bulk with a spreadsheet:
-  1. **Import & Export > Add coordinates in bulk > Save Coordinates Spreadsheet…**
+  1. **Import & Export > Coordinates > Save Coordinates Spreadsheet…**
   2. Fill in the **Latitude** and **Longitude** columns, by hand or with a geocoder.
-  3. Click **Read Coordinates…**. SDE shows each structure's coordinates **Now** and **From Spreadsheet**.
+  3. Click **Read Coordinates…**. SDE shows each structure's coordinates **Now** and **From spreadsheet**.
   4. Untick anything wrong and click **Save Checked Coordinates**.
 
 ---
@@ -405,7 +405,7 @@ looked at but not changed.
 ### Matching a whole folder of photos to structures
 When field teams bring back a folder of photos:
 
-1. Open **Import & Export > Photos from the field** and click **Match a Photo Folder to Structures…**.
+1. Open **Import & Export > From the field > Photos** and click **Match a Photo Folder to Structures…**.
 2. Choose the folder. SDE matches each photo by a record ID, parcel number or address in its file name, or otherwise
    by its GPS position (within 40 metres).
 3. Check the list (**Photo**, **Structure**, **Why**, **Distance**). Photos that match no structure, or two structures
@@ -559,7 +559,7 @@ A work package takes assessments to a Mac in the field and brings the work back.
 3. When you're done, click **Send Back to the Office…** in the banner and save the file.
 
 **Back at the office**
-1. On **Import & Export**, under **Work packages**, click **Check in a Work Package…** and choose the file. The field's
+1. On **Import & Export**, under **From the field**, click **Check In a Work Package…** and choose the file. The field's
    work replaces the copies here, and History shows each change as the field made it.
 2. An assessment someone changed here meanwhile, or took back early, isn't checked in; SDE lists it.
 
@@ -784,8 +784,8 @@ The map then shows the area with no connection. Kept pieces are used until SDE c
 - **Start the map with FEMA flood zones on**: each time this database's map opens, the flood zones show.
 - **Saved map pieces**: how much room the background map pieces kept on this Mac take. **Clear** deletes them; the
   map downloads them again as it needs them.
-- **Leave owner names out of GIS files**: on by default. Turn it off to have **Include owner names** on the summary
-  start ticked.
+- **Leave owner names out of GIS files**: on by default. Turn it off to have **Include Owner Names** in the summary's
+  **Export** menu start on.
 
 ![Map and GIS settings](screenshots/31g-settings-map-gis.png)
 
@@ -794,11 +794,12 @@ The map then shows the area with no connection. Kept pieces are used until SDE c
 database, or for the event chosen in the sidebar: how many structures, how many substantially damaged, the total
 building value and repair cost, and bars by result, by street (top ten), by community and by inspector.
 
-Under **Share this event**:
-- **Event summary PDF…**: the same numbers as a report (type an **Event name** to show on it).
-- **GeoPackage for GIS…** and **GeoJSON…**: one point per assessed structure, in latitude and longitude (WGS 84), with
-  a QGIS style beside it. Owner names are left out unless you tick **Include owner names** (Settings > Map & GIS
-  can have it start ticked).
+The **Export** menu in the toolbar has:
+- **Event Summary PDF…**: the same numbers as a report. With no event chosen, type an **Event name** under **Event
+  summary** to show on it.
+- **GeoPackage…** and **GeoJSON…**: one point per assessed structure, in latitude and longitude (WGS 84), with a QGIS
+  style beside it. Owner names are left out unless you turn on **Include Owner Names** in the same menu (Settings >
+  Map & GIS can have it start on).
 
 ![The summary](screenshots/57-dashboard.png)
 
@@ -1083,7 +1084,7 @@ when it's over.
 - For inspectors in the field, use the [phone form](#15-the-phone-form).
 
 ### Share your setup
-**Import & Export > Share your setup** gives colleagues your **Saved notes**, **Spreadsheet import mappings** and
+**Import & Export > Your setup** gives colleagues your **Saved notes**, **Spreadsheet import mappings** and
 **Default values**:
 
 1. Tick what to include and click **Save Settings File…**.

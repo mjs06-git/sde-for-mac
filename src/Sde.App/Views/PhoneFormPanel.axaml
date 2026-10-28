@@ -6,10 +6,11 @@
              x:DataType="svc:PhoneFormService">
   <Border Classes="card">
     <StackPanel Spacing="12">
-      <c:CardHeader Icon="Phone" Title="Pair a phone"
-                    Text="Inspectors use a phone's browser over this Mac's Wi-Fi. Changes show in History as Phone. Stops after 12 hours or when SDE quits.">
-        <Button Classes="primary" Content="Start Phone Form" Command="{Binding StartCommand}" IsVisible="{Binding IsStopped}" />
-      </c:CardHeader>
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <TextBlock Classes="h3" Text="Pair a phone" VerticalAlignment="Center"
+                   ToolTip.Tip="Inspectors use a phone's browser over this Mac's Wi-Fi. Changes show in History as Phone. Stops after 12 hours or when SDE quits." />
+        <Button Grid.Column="1" Classes="primary" Content="Start Phone Form" Command="{Binding StartCommand}" IsVisible="{Binding IsStopped}" />
+      </Grid>
       <c:Banner Tone="Warning" Text="Traffic is not encrypted. Use it only on a network you trust." />
 
       <!-- Stopped -->
@@ -22,11 +23,10 @@
                  AutomationProperties.Name="QR code to pair a phone" />
         </Border>
         <StackPanel Grid.Column="1" Spacing="4">
-          <TextBlock Classes="fieldLabel" Text="Scan the QR code, or open this address and type the PIN" TextWrapping="Wrap" />
+          <TextBlock Classes="fieldLabel" Text="Address" ToolTip.Tip="Scan the QR code, or open this address on the phone and type the PIN" />
           <SelectableTextBlock Classes="xl semibold" Text="{Binding Address}" AutomationProperties.Name="Phone form address" />
-          <TextBlock Classes="fieldLabel" Text="PIN" Margin="0,8,0,0" />
+          <TextBlock Classes="fieldLabel" Text="PIN" Margin="0,8,0,0" ToolTip.Tip="The QR code and PIN work once, for 10 minutes" />
           <SelectableTextBlock Classes="display" Text="{Binding Pin}" FontFamily="Menlo, Consolas, monospace" AutomationProperties.Name="Pairing PIN" />
-          <TextBlock Classes="muted" TextWrapping="Wrap" Text="The QR code and PIN work once, for 10 minutes." />
           <c:Banner Tone="Danger" Text="{Binding PinWarning}" IsVisible="{Binding HasPinWarning}" Margin="0,4,0,0" />
           <TextBlock Classes="secondary" Text="{Binding TimeLeft}" Margin="0,6,0,0" />
           <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
@@ -38,7 +38,7 @@
 
       <StackPanel Spacing="6" IsVisible="{Binding IsRunning}">
         <TextBlock Classes="h3" Text="Paired phones" />
-        <TextBlock Classes="muted" Text="No phones paired yet." IsVisible="{Binding !HasPhones}" />
+        <TextBlock Classes="secondary" Text="No Phones" IsVisible="{Binding !HasPhones}" />
         <ItemsControl ItemsSource="{Binding Phones}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="svc:PairedPhoneViewModel">

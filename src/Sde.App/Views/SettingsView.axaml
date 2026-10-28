@@ -23,7 +23,8 @@
     </DataTemplate>
   </UserControl.DataTemplates>
 
-  <!-- In the style of the Mac's System Settings: the categories on the left, one shown on the right -->
+  <!-- In the style of the Mac's System Settings: the categories on the left, one shown on the right. Each row is a
+       label and its control; what a setting does is in its tooltip. -->
   <Grid ColumnDefinitions="Auto,*">
     <Border Classes="stepRail">
       <ListBox Classes="steps" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" AutomationProperties.Name="Settings categories">
@@ -41,224 +42,212 @@
     </Border>
 
     <ScrollViewer Grid.Column="1" Name="SettingsScroller" HorizontalScrollBarVisibility="Disabled">
-      <StackPanel Margin="{StaticResource PagePadding}" Spacing="14" MaxWidth="840" HorizontalAlignment="Left">
-        <TextBlock Classes="h2" Text="{Binding SelectedCategory.Title}" ToolTip.Tip="{Binding SelectedCategory.Subtitle}" />
+      <!-- A column at most 840 wide, against the left edge, the same width in every category -->
+      <Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="840" /></Grid.ColumnDefinitions>
+        <StackPanel Margin="{StaticResource PagePadding}" Spacing="14">
+          <TextBlock Classes="h2" Text="{Binding SelectedCategory.Title}" ToolTip.Tip="{Binding SelectedCategory.Subtitle}" />
 
-        <!-- General -->
-        <StackPanel Spacing="14" IsVisible="{Binding IsGeneral}">
-          <Border Classes="card settings">
-            <StackPanel Classes="settingsGroup">
-              <Border Classes="settingsRow">
-                <Grid ColumnDefinitions="*,Auto">
-                  <StackPanel VerticalAlignment="Center" Spacing="1" Margin="0,0,16,0">
-                    <TextBlock Classes="medium" Text="Your name" />
-                    <TextBlock Classes="muted" Text="Shown in History next to your changes." TextWrapping="Wrap" />
-                  </StackPanel>
-                  <TextBox Grid.Column="1" Text="{Binding YourName}" Width="260" VerticalAlignment="Center" AutomationProperties.Name="Your name, shown in edit history" />
-                </Grid>
-              </Border>
-              <Border Classes="settingsRow">
-                <ToggleSwitch IsChecked="{Binding CheckLatLong}" OnContent="" OffContent="" AutomationProperties.Name="Check that latitude and longitude are inside the structure's state">
-                  <ToggleSwitch.Content>
-                    <StackPanel Spacing="1">
+          <!-- General -->
+          <StackPanel Spacing="14" IsVisible="{Binding IsGeneral}">
+            <Border Classes="card settings">
+              <StackPanel Classes="settingsGroup">
+                <Border Classes="settingsRow">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                    <TextBlock Classes="medium" Text="Your name" VerticalAlignment="Center" ToolTip.Tip="Shown in History next to your changes" />
+                    <TextBox Grid.Column="1" Text="{Binding YourName}" Width="260" VerticalAlignment="Center" AutomationProperties.Name="Your name, shown in edit history" />
+                  </Grid>
+                </Border>
+                <Border Classes="settingsRow">
+                  <ToggleSwitch IsChecked="{Binding CheckLatLong}" OnContent="" OffContent="" AutomationProperties.Name="Check that latitude and longitude are inside the structure's state"
+                                ToolTip.Tip="FEMA's Lat/Long Validation">
+                    <ToggleSwitch.Content>
                       <TextBlock Classes="medium" Text="Check coordinates are in the structure's state" />
-                      <TextBlock Classes="muted" Text="FEMA's “Lat/Long Validation”." />
-                    </StackPanel>
-                  </ToggleSwitch.Content>
-                </ToggleSwitch>
-              </Border>
-            </StackPanel>
-          </Border>
-
-          <Border Classes="card">
-            <StackPanel Spacing="12">
-              <c:CardHeader Icon="Edit" Title="Your fields" Text="Three extra fields on every assessment." />
-              <ItemsControl Classes="fields" ItemsSource="{Binding CustomFieldNames}">
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate><c:FieldGrid Columns="3" MinColumnWidth="160" /></ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:CustomFieldNameViewModel">
-                    <StackPanel Classes="field">
-                      <Panel Classes="fieldHead"><TextBlock Classes="fieldLabel" Text="{Binding Slot}" /></Panel>
-                      <TextBox Text="{Binding Name}" MaxLength="50" AutomationProperties.Name="{Binding Slot, StringFormat='Custom {0} name'}" />
-                    </StackPanel>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </StackPanel>
-          </Border>
-
-          <Border Classes="card">
-            <StackPanel Spacing="12">
-              <c:CardHeader Icon="Comment" Title="Note snippets" Text="Text to insert into notes.">
-                <Button Command="{Binding AddSnippetCommand}" AutomationProperties.Name="Add a snippet">
-                  <StackPanel Orientation="Horizontal" Spacing="6">
-                    <c:Icon Kind="Plus" Size="12" />
-                    <TextBlock Text="Add a snippet" />
-                  </StackPanel>
-                </Button>
-              </c:CardHeader>
-              <TextBlock Classes="muted" Text="No snippets yet." IsVisible="{Binding Snippets.Count, Converter={x:Static app:Converters.IsZero}}" />
-              <ItemsControl ItemsSource="{Binding Snippets}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:SnippetViewModel">
-                    <Grid ColumnDefinitions="200,*,Auto" ColumnSpacing="10" Margin="0,0,0,8">
-                      <TextBox Text="{Binding Name}" MaxLength="50" VerticalAlignment="Top" AutomationProperties.Name="Snippet name" />
-                      <TextBox Grid.Column="1" Text="{Binding Text}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="34" AutomationProperties.Name="{Binding Name, StringFormat='Text of snippet {0}'}" />
-                      <Button Grid.Column="2" Classes="icon" VerticalAlignment="Top" ToolTip.Tip="Delete"
-                              Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteSnippetCommand}" CommandParameter="{Binding}"
-                              AutomationProperties.Name="{Binding Name, StringFormat='Delete snippet {0}'}">
-                        <c:Icon Kind="Trash" Size="14" />
-                      </Button>
-                    </Grid>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </StackPanel>
-          </Border>
-
-          <Border Classes="card">
-            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
-              <Image Source="/Assets/icon-1024.png" Width="64" Height="64" VerticalAlignment="Top"
-                     RenderOptions.BitmapInterpolationMode="HighQuality" AutomationProperties.Name="App icon" />
-              <StackPanel Grid.Column="1" Spacing="4">
-                <TextBlock Classes="h3" Text="Substantial Damage Estimator for Mac" />
-                <TextBlock Classes="secondary"><Run Text="Version " /><Run Text="{Binding Version}" /></TextBlock>
-                <TextBlock Classes="secondary" TextWrapping="Wrap"
-                           Text="Unofficial Mac port of FEMA's SDE 3.0.0, using FEMA's engine, cost tables and rules. Not produced or endorsed by FEMA. Determinations remain the floodplain administrator's." />
+                    </ToggleSwitch.Content>
+                  </ToggleSwitch>
+                </Border>
               </StackPanel>
-            </Grid>
-          </Border>
-        </StackPanel>
+            </Border>
 
-        <!-- Defaults -->
-        <StackPanel Spacing="14" IsVisible="{Binding IsDefaults}">
-          <Border Classes="card settings">
-            <StackPanel Classes="settingsGroup">
-              <Border Classes="settingsRow">
-                <ToggleSwitch IsChecked="{Binding UseDefaults}" OnContent="" OffContent="" AutomationProperties.Name="Fill new structures with my default values">
-                  <ToggleSwitch.Content>
-                    <StackPanel Spacing="1">
-                      <TextBlock Classes="medium" Text="Fill new structures with my default values" />
-                      <TextBlock Classes="muted" TextWrapping="Wrap" Text="FEMA's Enter Default Data. Saved as you type." />
+            <Border Classes="card">
+              <StackPanel Spacing="12">
+                <TextBlock Classes="h3" Text="Your fields" ToolTip.Tip="Three extra fields on every assessment" />
+                <ItemsControl Classes="fields" ItemsSource="{Binding CustomFieldNames}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><c:FieldGrid Columns="3" MinColumnWidth="160" /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CustomFieldNameViewModel">
+                      <StackPanel Classes="field">
+                        <Panel Classes="fieldHead"><TextBlock Classes="fieldLabel" Text="{Binding Slot}" /></Panel>
+                        <TextBox Text="{Binding Name}" MaxLength="50" AutomationProperties.Name="{Binding Slot, StringFormat='Custom {0} name'}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+
+            <Border Classes="card">
+              <StackPanel Spacing="12">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                  <TextBlock Classes="h3" Text="Note snippets" VerticalAlignment="Center" ToolTip.Tip="Text to insert into notes" />
+                  <Button Grid.Column="1" Command="{Binding AddSnippetCommand}" AutomationProperties.Name="Add snippet">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <c:Icon Kind="Plus" Size="12" />
+                      <TextBlock Text="Add Snippet" />
                     </StackPanel>
-                  </ToggleSwitch.Content>
-                </ToggleSwitch>
-              </Border>
-            </StackPanel>
-          </Border>
-          <ItemsControl ItemsSource="{Binding DefaultGroups}">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><StackPanel Spacing="14" /></ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-          </ItemsControl>
-        </StackPanel>
-
-        <!-- Reports & letters -->
-        <Panel IsVisible="{Binding IsReportsAndLetters}"><v:OutputSettingsPanel DataContext="{Binding Outputs}" /></Panel>
-
-        <!-- Online services -->
-        <StackPanel Spacing="14" IsVisible="{Binding IsOnlineServices}">
-          <Border Classes="card settings">
-            <StackPanel Classes="settingsGroup">
-              <Border Classes="settingsRow">
-                <Grid ColumnDefinitions="Auto,*">
-                  <Border Classes="rowIcon"><c:Icon Kind="MapPin" Size="16" /></Border>
-                  <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="1">
-                    <TextBlock Classes="medium" Text="U.S. Census Bureau geocoder" />
-                    <TextBlock Classes="muted" TextWrapping="Wrap" Text="Coordinates from a street address." />
-                  </StackPanel>
+                  </Button>
                 </Grid>
-              </Border>
-              <Border Classes="settingsRow">
-                <Grid ColumnDefinitions="Auto,*">
-                  <Border Classes="rowIcon"><c:Icon Kind="Flood" Size="16" /></Border>
-                  <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="1">
-                    <TextBlock Classes="medium" Text="FEMA National Flood Hazard Layer" />
-                    <TextBlock Classes="muted" TextWrapping="Wrap" Text="Flood zone, FIRM panel and NFIP community at a structure's coordinates." />
-                  </StackPanel>
-                </Grid>
-              </Border>
-            </StackPanel>
-          </Border>
-          <Border Classes="card settings">
-            <StackPanel Classes="settingsGroup">
-              <Border Classes="settingsRow">
-                <Grid ColumnDefinitions="Auto,*,280">
-                  <Border Classes="rowIcon"><c:Icon Kind="Flood" Size="16" /></Border>
-                  <StackPanel Grid.Column="1" Margin="12,0,12,0" Spacing="1">
-                    <TextBlock Classes="medium" Text="USGS high-water marks (STN)" />
-                    <TextBlock Classes="muted" TextWrapping="Wrap" Text="USGS high-water marks (provisional data)." />
-                  </StackPanel>
-                  <TextBox Grid.Column="2" Text="{Binding UsgsStnUrl}" PlaceholderText="{Binding UsgsStnDefault}" VerticalAlignment="Center"
-                           AutomationProperties.Name="USGS high-water mark service address" />
-                </Grid>
-              </Border>
-            </StackPanel>
-          </Border>
-          <c:Banner Tone="Info" Title="Only when you ask"
-                    Text="Contacted only when you look something up. Sends only addresses, coordinates, or the event and states. You review every value." />
-        </StackPanel>
+                <TextBlock Classes="secondary" Text="No Snippets" IsVisible="{Binding Snippets.Count, Converter={x:Static app:Converters.IsZero}}" />
+                <ItemsControl ItemsSource="{Binding Snippets}" IsVisible="{Binding Snippets.Count, Converter={x:Static app:Converters.IsPositive}}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SnippetViewModel">
+                      <Grid ColumnDefinitions="200,*,Auto" ColumnSpacing="10" Margin="0,0,0,8">
+                        <TextBox Text="{Binding Name}" MaxLength="50" VerticalAlignment="Top" AutomationProperties.Name="Snippet name" />
+                        <TextBox Grid.Column="1" Text="{Binding Text}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="34" AutomationProperties.Name="{Binding Name, StringFormat='Text of snippet {0}'}" />
+                        <Button Grid.Column="2" Classes="icon" VerticalAlignment="Top" ToolTip.Tip="Delete"
+                                Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).DeleteSnippetCommand}" CommandParameter="{Binding}"
+                                AutomationProperties.Name="{Binding Name, StringFormat='Delete snippet {0}'}">
+                          <c:Icon Kind="Trash" Size="14" />
+                        </Button>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
 
-        <!-- Phone form -->
-        <Panel IsVisible="{Binding IsPhoneForm}"><v:PhoneFormPanel DataContext="{Binding PhoneForm}" /></Panel>
-
-        <!-- AI assistants -->
-        <Panel IsVisible="{Binding IsAiAssistants}"><v:AiAssistantsPanel DataContext="{Binding AiAssistants}" /></Panel>
-
-        <!-- Map & GIS -->
-        <Panel IsVisible="{Binding IsMapAndGis}"><v:MapGisPanel DataContext="{Binding MapGis}" /></Panel>
-
-        <!-- Depth tables -->
-        <Panel IsVisible="{Binding IsDepthTables}"><v:DepthTablesPanel DataContext="{Binding DepthTables}" /></Panel>
-
-        <!-- Backups -->
-        <StackPanel Spacing="14" IsVisible="{Binding IsBackups}">
-          <Border Classes="card settings">
-            <StackPanel Classes="settingsGroup">
-              <Border Classes="settingsRow">
-                <Grid ColumnDefinitions="*,Auto">
-                  <StackPanel Spacing="1" Margin="0,0,16,0">
-                    <TextBlock Classes="medium" Text="Database file" />
-                    <SelectableTextBlock Classes="sm" Text="{Binding DatabasePath}" TextWrapping="Wrap" />
-                  </StackPanel>
-                  <Button Grid.Column="1" Content="Show in Finder" Command="{Binding RevealDatabaseCommand}" VerticalAlignment="Center" />
-                </Grid>
-              </Border>
-              <Border Classes="settingsRow">
-                <StackPanel Spacing="1">
-                  <TextBlock Classes="medium" Text="Photos folder" />
-                  <SelectableTextBlock Classes="sm" Text="{Binding AttachmentsPath}" TextWrapping="Wrap" />
+            <Border Classes="card">
+              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                <Image Source="/Assets/icon-1024.png" Width="64" Height="64" VerticalAlignment="Top"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" AutomationProperties.Name="App icon" />
+                <StackPanel Grid.Column="1" Spacing="4">
+                  <TextBlock Classes="h3" Text="Substantial Damage Estimator for Mac" />
+                  <TextBlock Classes="secondary"><Run Text="Version " /><Run Text="{Binding Version}" /></TextBlock>
+                  <TextBlock Classes="secondary" TextWrapping="Wrap"
+                             Text="Unofficial Mac port of FEMA's SDE 3.0.0, using FEMA's engine, cost tables and rules. Not produced or endorsed by FEMA. Determinations remain the floodplain administrator's." />
                 </StackPanel>
-              </Border>
-              <Border Classes="settingsRow">
-                <Grid ColumnDefinitions="Auto,*">
-                  <Border Classes="rowIcon"><c:Icon Kind="History" Size="16" /></Border>
-                  <StackPanel Grid.Column="1" Margin="12,0,0,0" Spacing="1">
-                    <TextBlock Classes="medium" Text="Automatic backups" />
-                    <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding BackupsText}" />
-                  </StackPanel>
-                </Grid>
-              </Border>
-            </StackPanel>
-          </Border>
+              </Grid>
+            </Border>
+          </StackPanel>
 
-          <Border Classes="card">
-            <StackPanel Spacing="12">
-              <c:CardHeader Icon="Database" Title="This database"
-                            Text="Tip: one database per event; share through Import &amp; Export." />
-              <WrapPanel>
-                <Button Margin="0,0,8,8" Content="Save a Copy…" Command="{Binding BackUpCommand}" />
-                <Button Margin="0,0,8,8" Content="Restore from Backup…" Command="{Binding RestoreBackupCommand}" />
-                <Button Margin="0,0,8,8" Content="Move…" Command="{Binding MoveDatabaseCommand}" AutomationProperties.Name="Move the database" />
-                <Button Margin="0,0,8,8" Content="Open Another…" Command="{Binding OpenDatabaseCommand}" />
-                <Button Margin="0,0,8,8" Content="New Empty Database…" Command="{Binding NewDatabaseCommand}" />
-              </WrapPanel>
-            </StackPanel>
-          </Border>
+          <!-- Defaults -->
+          <StackPanel Spacing="14" IsVisible="{Binding IsDefaults}">
+            <Border Classes="card settings">
+              <StackPanel Classes="settingsGroup">
+                <Border Classes="settingsRow">
+                  <ToggleSwitch IsChecked="{Binding UseDefaults}" OnContent="" OffContent="" AutomationProperties.Name="Fill new structures with my default values"
+                                ToolTip.Tip="FEMA's Enter Default Data. Saved as you type.">
+                    <ToggleSwitch.Content>
+                      <TextBlock Classes="medium" Text="Fill new structures with my default values" />
+                    </ToggleSwitch.Content>
+                  </ToggleSwitch>
+                </Border>
+              </StackPanel>
+            </Border>
+            <ItemsControl ItemsSource="{Binding DefaultGroups}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><StackPanel Spacing="14" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+            </ItemsControl>
+          </StackPanel>
+
+          <!-- Reports & letters -->
+          <Panel IsVisible="{Binding IsReportsAndLetters}"><v:OutputSettingsPanel DataContext="{Binding Outputs}" /></Panel>
+
+          <!-- Online services -->
+          <StackPanel Spacing="14" IsVisible="{Binding IsOnlineServices}">
+            <Border Classes="card settings">
+              <StackPanel Classes="settingsGroup">
+                <Border Classes="settingsRow">
+                  <Grid ColumnDefinitions="Auto,*">
+                    <Border Classes="rowIcon"><c:Icon Kind="MapPin" Size="16" /></Border>
+                    <TextBlock Grid.Column="1" Classes="medium" Text="U.S. Census Bureau geocoder" Margin="12,0,0,0" VerticalAlignment="Center"
+                               ToolTip.Tip="Coordinates from a street address" />
+                  </Grid>
+                </Border>
+                <Border Classes="settingsRow">
+                  <Grid ColumnDefinitions="Auto,*">
+                    <Border Classes="rowIcon"><c:Icon Kind="Flood" Size="16" /></Border>
+                    <TextBlock Grid.Column="1" Classes="medium" Text="FEMA National Flood Hazard Layer" Margin="12,0,0,0" VerticalAlignment="Center"
+                               ToolTip.Tip="Flood zone, FIRM panel and NFIP community at a structure's coordinates" />
+                  </Grid>
+                </Border>
+              </StackPanel>
+            </Border>
+            <Border Classes="card settings">
+              <StackPanel Classes="settingsGroup">
+                <Border Classes="settingsRow">
+                  <Grid ColumnDefinitions="Auto,*,280">
+                    <Border Classes="rowIcon"><c:Icon Kind="Flood" Size="16" /></Border>
+                    <TextBlock Grid.Column="1" Classes="medium" Text="USGS high-water marks (STN)" Margin="12,0,12,0" VerticalAlignment="Center"
+                               ToolTip.Tip="Provisional data from USGS. Leave the address empty to use USGS's own." />
+                    <TextBox Grid.Column="2" Text="{Binding UsgsStnUrl}" PlaceholderText="{Binding UsgsStnDefault}" VerticalAlignment="Center"
+                             AutomationProperties.Name="USGS high-water mark service address" />
+                  </Grid>
+                </Border>
+              </StackPanel>
+            </Border>
+            <c:Banner Tone="Info" Text="Used only when you look something up, and sends only addresses, coordinates, or the event and states."
+                      ToolTip.Tip="You review every value before it's saved" />
+          </StackPanel>
+
+          <!-- Phone form -->
+          <Panel IsVisible="{Binding IsPhoneForm}"><v:PhoneFormPanel DataContext="{Binding PhoneForm}" /></Panel>
+
+          <!-- AI assistants -->
+          <Panel IsVisible="{Binding IsAiAssistants}"><v:AiAssistantsPanel DataContext="{Binding AiAssistants}" /></Panel>
+
+          <!-- Map & GIS -->
+          <Panel IsVisible="{Binding IsMapAndGis}"><v:MapGisPanel DataContext="{Binding MapGis}" /></Panel>
+
+          <!-- Depth tables -->
+          <Panel IsVisible="{Binding IsDepthTables}"><v:DepthTablesPanel DataContext="{Binding DepthTables}" /></Panel>
+
+          <!-- Backups -->
+          <StackPanel Spacing="14" IsVisible="{Binding IsBackups}">
+            <Border Classes="card settings">
+              <StackPanel Classes="settingsGroup">
+                <Border Classes="settingsRow">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                    <StackPanel Spacing="1">
+                      <TextBlock Classes="medium" Text="Database file" />
+                      <SelectableTextBlock Classes="sm" Text="{Binding DatabasePath}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Content="Show in Finder" Command="{Binding RevealDatabaseCommand}" VerticalAlignment="Center" />
+                  </Grid>
+                </Border>
+                <Border Classes="settingsRow">
+                  <StackPanel Spacing="1">
+                    <TextBlock Classes="medium" Text="Photos folder" />
+                    <SelectableTextBlock Classes="sm" Text="{Binding AttachmentsPath}" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="settingsRow">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" ToolTip.Tip="{Binding BackupsText}">
+                    <TextBlock Classes="medium" Text="Automatic backups" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Classes="secondary" Text="{Binding BackupsState}" VerticalAlignment="Center" />
+                  </Grid>
+                </Border>
+              </StackPanel>
+            </Border>
+
+            <Border Classes="card">
+              <StackPanel Spacing="12">
+                <TextBlock Classes="h3" Text="This database" ToolTip.Tip="Tip: one database per event; share through Import &amp; Export" />
+                <WrapPanel>
+                  <Button Margin="0,0,8,8" Content="Save a Copy…" Command="{Binding BackUpCommand}" />
+                  <Button Margin="0,0,8,8" Content="Restore from Backup…" Command="{Binding RestoreBackupCommand}" />
+                  <Button Margin="0,0,8,8" Content="Move…" Command="{Binding MoveDatabaseCommand}" AutomationProperties.Name="Move the database" />
+                  <Button Margin="0,0,8,8" Content="Open Another…" Command="{Binding OpenDatabaseCommand}" />
+                  <Button Margin="0,0,8,8" Content="New Empty Database…" Command="{Binding NewDatabaseCommand}" />
+                </WrapPanel>
+              </StackPanel>
+            </Border>
+          </StackPanel>
         </StackPanel>
-      </StackPanel>
+      </Grid>
     </ScrollViewer>
   </Grid>
 </UserControl>
