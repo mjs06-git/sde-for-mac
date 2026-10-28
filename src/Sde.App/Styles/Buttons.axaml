@@ -318,6 +318,27 @@
     <Setter Property="AutomationProperties.Name" Value="{Binding $parent[SplitButton].(AutomationProperties.Name), StringFormat='{}{0}: more choices'}" />
   </Style>
 
+  <!-- A segmented control made of radio buttons (the map's tools): <Border Classes="segmentedGroup"> around RadioButton.segment -->
+  <Style Selector="Border.segmentedGroup">
+    <Setter Property="Background" Value="{DynamicResource SegmentedTrack}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
+    <Setter Property="Padding" Value="2" />
+  </Style>
+  <Style Selector="RadioButton.segment">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="PART_Segment" Background="Transparent" CornerRadius="4" Padding="12,1" MinHeight="20">
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Foreground="{DynamicResource TextPrimary}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="RadioButton.segment:checked /template/ Border#PART_Segment">
+    <Setter Property="Background" Value="{DynamicResource ControlFill}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource ShadowControl}" />
+  </Style>
+
   <!-- Segmented control: <ListBox Classes="segmented"> with a few short items; the selected one is raised -->
   <Style Selector="ListBox.segmented">
     <Setter Property="Background" Value="{DynamicResource SegmentedTrack}" />

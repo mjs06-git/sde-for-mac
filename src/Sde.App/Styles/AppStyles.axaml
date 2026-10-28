@@ -150,15 +150,15 @@
   <!-- Lists -->
   <!-- A row of a plain list in a card.flush (Recently deleted, database backups): an icon, two lines, actions -->
   <Style Selector="Border.listRow">
-    <Setter Property="Padding" Value="16,12" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
   </Style>
+  <!-- A list row's icon: plain, tinted (no tile) -->
   <Style Selector="Border.rowIcon">
-    <Setter Property="Width" Value="32" />
-    <Setter Property="Height" Value="32" />
-    <Setter Property="CornerRadius" Value="8" />
-    <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
+    <Setter Property="Width" Value="24" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="Background" Value="Transparent" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="Border.rowIcon c|Icon">
