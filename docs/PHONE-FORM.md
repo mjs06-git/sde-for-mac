@@ -77,7 +77,8 @@ What protects the phone form:
   a web page elsewhere can't reach it through a look-alike domain name).
 - **Pairing.** Until a phone has paired, the server shows only the pairing screen. Pairing needs the one-time token in
   the QR code or the 6-digit PIN on the Mac's screen, so it needs someone who can see the Mac. Both work once and expire
-  after 10 minutes. After 5 wrong PINs, PIN pairing pauses for 10 minutes (the QR code still works).
+  after 10 minutes. After 5 wrong PINs, PIN pairing pauses for 10 minutes (the QR code still works). Only the page and
+  pairing are open to an unpaired phone; everything else needs pairing, however its address is spelled.
 - **Sessions.** A paired phone gets a random 256-bit session cookie that page scripts can't read (HttpOnly), that the
   browser sends only to this server and only from its own pages (SameSite=Strict), and that ends when the server stops.
   The Mac keeps only a hash of it. The Mac lists every paired phone and can revoke any of them.
@@ -86,9 +87,14 @@ What protects the phone form:
   allows. The page itself is served with a strict Content Security Policy and builds everything from text, never from
   HTML in the data.
 - **Limits.** Requests are limited to 1 MB, photos to 25 MB, and uploaded files must really be JPEG, PNG or HEIC images
-  (checked by their content, not their name).
-- **Same rules as the Mac.** Values are checked like the editor checks them, Final and Letter sent assessments can't be
-  changed, and every change is recorded in edit history.
+  (checked by their content, not their name: a JPEG or PNG must describe a picture with a size, and a HEIC must convert).
+  The Mac converts at most two HEIC photos at a time, and gives up on one after a minute.
+- **Same rules as the Mac.** Values are checked like the editor checks them, including its lowest and highest numbers,
+  Final and Letter sent assessments can't be changed, and every change is recorded in edit history. Assessments checked
+  out in a work package can be read but not changed. A structure's own fields (address, owner, flood zone,
+  elevations) belong to all of its assessments, so the phone can't change them while another assessment of the
+  structure is Final, Letter sent or checked out. It also can't start a second assessment of a structure; that is done
+  on the Mac.
 
 What it doesn't protect against:
 

@@ -31,7 +31,13 @@ public sealed class CheckOutRecord
 public sealed class AssessmentCheckedOutException : InvalidOperationException
 {
 	public AssessmentCheckedOutException(Guid assessmentId, CheckOutRecord record)
-		: base($"This assessment is checked out to {(string.IsNullOrWhiteSpace(record.CheckedOutTo) ? "another Mac" : record.CheckedOutTo)} in a work package. Check the package back in, or take the assessment back, to change it here.")
+		: this(assessmentId, record, $"This assessment is checked out to {CheckedOutTo(record)} in a work package. Check the package back in, or take the assessment back, to change it here.")
+	{
+	}
+
+	/// <summary>The same, with a message of its own (e.g. when the checked-out assessment is another one of the structure).</summary>
+	public AssessmentCheckedOutException(Guid assessmentId, CheckOutRecord record, string message)
+		: base(message)
 	{
 		AssessmentID = assessmentId;
 		CheckOut = record;
@@ -40,6 +46,9 @@ public sealed class AssessmentCheckedOutException : InvalidOperationException
 	public Guid AssessmentID { get; }
 
 	public CheckOutRecord CheckOut { get; }
+
+	/// <summary>Who has a checked-out assessment, for messages: the name given when it was checked out, or "another Mac".</summary>
+	public static string CheckedOutTo(CheckOutRecord record) => string.IsNullOrWhiteSpace(record.CheckedOutTo) ? "another Mac" : record.CheckedOutTo;
 }
 
 public sealed partial class SdeStore

@@ -228,7 +228,7 @@
     $("edit-heading").textContent = a.address;
     $("edit-summary").textContent = [a.structureType, a.status, a.result].filter(function (x) { return x; }).join(" · ");
     $("locked").hidden = !a.locked;
-    $("locked").textContent = a.locked ? "This assessment is " + a.status + ", so it can't be changed here. It can be reopened on the Mac." : "";
+    $("locked").textContent = a.locked ? a.lockedMessage : "";
     $("photo-count").textContent = a.photoCount === 1 ? "1 photo" : a.photoCount + " photos";
     Array.prototype.forEach.call($("photo-form").elements, function (c) { c.disabled = a.locked; });
     if (fresh) { $("save-status").textContent = ""; }

@@ -61,7 +61,6 @@ public sealed class OutputTools(SdeMcpContext sde, ILogger<OutputTools> log)
 		string what = e != null && (assessmentIds == null || assessmentIds.Length == 0)
 			? e.Label
 			: files.Count == 1 ? Describe.Address(files[0].Property, store.Reference) : $"{files.Count} assessments";
-		string path = AiOutputs.FreePath(sde.DatabasePath, fileName, $"{name} for {what}", ".pdf");
 		ReportRequest request = new ReportRequest
 		{
 			Kind = report,
@@ -73,7 +72,15 @@ public sealed class OutputTools(SdeMcpContext sde, ILogger<OutputTools> log)
 				? files.SelectMany(f => store.GetPhotoMarkups(f.Assessment.AssessmentID)).GroupBy(kv => kv.Key).ToDictionary(g => g.Key, g => g.First().Value)
 				: null,
 		};
-		Write(path, () => ReportGenerator.RenderToFile(request, store.Reference, path), "the report");
+		FileStream pdf = AiOutputs.NewFile(sde.DatabasePath, fileName, $"{name} for {what}", ".pdf", out string path);
+		Write(path, pdf, output =>
+		{
+			// Rendered whole first, so a report that fails leaves an empty file, which is given back.
+			using MemoryStream buffer = new MemoryStream();
+			ReportGenerator.Render(request, store.Reference, buffer);
+			buffer.Position = 0;
+			buffer.CopyTo(output);
+		}, "the report");
 		log.LogInformation("make_report wrote {Path} ({Count} assessments)", path, files.Count);
 		return new ReportOutput(sde.DatabasePath, path, ReportGenerator.Title(report), files.Count, includePhotos, skipped,
 			skipped.Count == 0 ? null : $"{skipped.Count} of the IDs given {(skipped.Count == 1 ? "was" : "were")} left out (see skipped).");
@@ -101,7 +108,6 @@ public sealed class OutputTools(SdeMcpContext sde, ILogger<OutputTools> log)
 		List<AssessmentFile> files = Ordered(store, ids);
 		ReferenceData reference = store.Reference;
 		List<GisRow> rows = GisRow.From(files, reference);
-		string path = AiOutputs.FreePath(sde.DatabasePath, fileName, e != null ? e.Label + " structures" : "SDE structures", ".geojson");
 		List<string> properties = new List<string> { "structure_id", "assessment_id", "address", "parcel", "damage_pct", GisExport.ClassField, "building_value", "repair_cost", "inspection_date", "firm_zone" };
 		if (includeOwnerNames)
 		{
@@ -110,7 +116,8 @@ public sealed class OutputTools(SdeMcpContext sde, ILogger<OutputTools> log)
 		properties.AddRange(extra.Select(f => f.Key));
 		int written = 0;
 		int noLocation = 0;
-		Write(path, () =>
+		FileStream geoJson = AiOutputs.NewFile(sde.DatabasePath, fileName, e != null ? e.Label + " structures" : "SDE structures", ".geojson", out string path);
+		Write(path, geoJson, output =>
 		{
 			using MemoryStream buffer = new MemoryStream();
 			using (Utf8JsonWriter w = new Utf8JsonWriter(buffer, new JsonWriterOptions { Indented = true }))
@@ -161,7 +168,8 @@ public sealed class OutputTools(SdeMcpContext sde, ILogger<OutputTools> log)
 				w.WriteEndArray();
 				w.WriteEndObject();
 			}
-			File.WriteAllBytes(path, buffer.ToArray());
+			buffer.Position = 0;
+			buffer.CopyTo(output);
 		}, "the GeoJSON file");
 		log.LogInformation("export_geojson wrote {Path} ({Count} structures)", path, written);
 		string note = written == 0 ? "No structure had coordinates, so the file has no features." : null;
@@ -214,7 +222,7 @@ public sealed class OutputTools(SdeMcpContext sde, ILogger<OutputTools> log)
 			Basemap = background,
 			Summary = e == null ? null : ReadTools.BuildSummary(store, e, out _),
 		};
-		string folder = AiOutputs.FreePath(sde.DatabasePath, heading + " web map", "Web map", "");
+		string folder = AiOutputs.NewFolder(sde.DatabasePath, heading + " web map", "Web map");
 		WebMapResult result = null;
 		Write(folder, () => result = WebMapExport.Write(files, store.Reference, options, folder), "the web map");
 		log.LogInformation("make_web_map wrote {Folder} ({Privacy}, {Count} features)", folder, who, result.Features);
@@ -244,6 +252,18 @@ public sealed class OutputTools(SdeMcpContext sde, ILogger<OutputTools> log)
 		Dictionary<Guid, int> order = ids.Select((id, i) => (id, i)).ToDictionary(x => x.id, x => x.i);
 		return store.LoadAssessments(ids).OrderBy(f => order[f.Assessment.AssessmentID]).ToList();
 	}
+
+	/// <summary>
+	/// Writes a file through the stream <see cref="AiOutputs.NewFile"/> opened, closing it, then as
+	/// <see cref="Write(string, Action, string)"/>.
+	/// </summary>
+	private void Write(string path, FileStream file, Action<Stream> write, string what) => Write(path, () =>
+	{
+		using (file)
+		{
+			write(file);
+		}
+	}, what);
 
 	/// <summary>
 	/// Runs a writer, turning a file system failure into a tool error that names what couldn't be written. When the
