@@ -1,6 +1,6 @@
-<img src="src/Sde.App/Assets/icon-1024.png" width="128" height="128" align="right" alt="">
-
 # SDE for Mac
+
+<img src="src/Sde.App/Assets/icon-1024.png" width="128" height="128" align="right" alt="">
 
 **FEMA's Substantial Damage Estimator, on a Mac.** After a flood or other disaster, communities in the National Flood
 Insurance Program have to decide whether each damaged building is *substantially damaged*: whether repairing it would
