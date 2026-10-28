@@ -1175,7 +1175,7 @@ public sealed partial class AssessmentEditorViewModel : ViewModelBase
 			return;
 		}
 		string what = count > 1 ? "This assessment" : "This structure";
-		_app.Dialogs.Notify("Moved to Recently deleted", $"{what} can be restored from Recently deleted for {SdeStore.KeepDays} days.");
+		_app.Dialogs.Notify("Moved to Recently Deleted", $"{what} can be restored from Recently Deleted for {SdeStore.KeepDays} days.");
 		_app.RaiseDataChanged();
 		_main.ShowStructures(saveEditor: false);
 	}

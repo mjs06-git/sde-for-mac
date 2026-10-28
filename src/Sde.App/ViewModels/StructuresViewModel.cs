@@ -1004,7 +1004,7 @@ public sealed partial class StructuresViewModel : ViewModelBase
 		}
 		DeletedItemRecord deleted = _app.Store.GetDeletedItems().FirstOrDefault(d => row.AssessmentID is Guid aid && d.AssessmentID == aid && d.Value == DeletedKind.Assessment
 			|| d.PropertyID == row.Summary.PropertyID && d.Value == DeletedKind.Structure);
-		_app.Dialogs.Notify("Moved to Recently deleted", $"{row.Address} can be restored from Recently deleted for {SdeStore.KeepDays} days.",
+		_app.Dialogs.Notify("Moved to Recently Deleted", $"{row.Address} can be restored from Recently Deleted for {SdeStore.KeepDays} days.",
 			"Undo", () => UndoTrash(deleted, row.Address));
 	}
 
