@@ -4,14 +4,16 @@
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.ComplianceCaseSheetView"
              x:DataType="sh:ComplianceCaseSheetViewModel">
-  <!-- A compliance case: its fields and letters on the left, its timeline on the right -->
+  <!-- A compliance case: its fields on the left; its letters and timeline on the right -->
   <StackPanel Spacing="12">
-    <StackPanel Spacing="2">
-      <TextBlock Classes="semibold" Text="{Binding Address}" TextWrapping="Wrap" />
-      <TextBlock Classes="muted" Text="{Binding Detail}" TextWrapping="Wrap" />
-      <Button Classes="link" Content="Open the Assessment" Command="{Binding OpenAssessmentCommand}" IsVisible="{Binding CanOpenAssessment}" HorizontalAlignment="Left" Margin="0,2,0,0" />
-    </StackPanel>
-    <c:Banner Tone="Danger" IsVisible="{Binding IsOverdue}" Text="{Binding OverdueText}" AutomationProperties.Name="Overdue" />
+    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+      <StackPanel Spacing="2">
+        <TextBlock Classes="semibold" Text="{Binding Address}" TextWrapping="Wrap" />
+        <TextBlock Classes="secondary sm" Text="{Binding Detail}" TextWrapping="Wrap" />
+        <TextBlock Classes="danger sm" Text="{Binding OverdueText}" IsVisible="{Binding IsOverdue}" TextWrapping="Wrap" />
+      </StackPanel>
+      <Button Grid.Column="1" Content="Open Assessment" Command="{Binding OpenAssessmentCommand}" IsVisible="{Binding CanOpenAssessment}" VerticalAlignment="Top" />
+    </Grid>
 
     <ScrollViewer MaxHeight="540" HorizontalScrollBarVisibility="Disabled">
       <Grid ColumnDefinitions="*,260" ColumnSpacing="20" Margin="0,0,12,0">
@@ -68,34 +70,27 @@
           <TextBlock Classes="danger" Text="{Binding Error}" IsVisible="{Binding HasError}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive" />
         </StackPanel>
 
-        <!-- Letters and the timeline -->
-        <StackPanel Grid.Column="1" Spacing="12">
-          <!-- Letters -->
-          <Border Classes="subtle">
-            <StackPanel Spacing="8">
-              <StackPanel Spacing="2">
-                <TextBlock Classes="h3" Text="Letters" />
-                <TextBlock Classes="muted" TextWrapping="Wrap" Text="From your templates, then added to the timeline." />
-              </StackPanel>
-              <ItemsControl ItemsSource="{Binding Letters}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="sh:ComplianceLetterChoice">
-                    <Button Classes="sm" Margin="0,0,0,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                            Command="{Binding Write}" CommandParameter="{Binding Kind}" AutomationProperties.Name="{Binding AccessibleName}">
-                      <StackPanel Orientation="Horizontal" Spacing="6">
-                        <c:Icon Kind="Letter" Size="12" />
-                        <TextBlock Text="{Binding Label, StringFormat='{}{0}…'}" />
-                      </StackPanel>
-                    </Button>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-              <TextBlock Classes="medium sm" Text="{Binding LetterText}" TextWrapping="Wrap" IsVisible="{Binding LetterText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-              <TextBlock Classes="warning sm" Text="{Binding LetterWarning}" TextWrapping="Wrap" IsVisible="{Binding LetterWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-            </StackPanel>
-          </Border>
+        <!-- Letters and the timeline: plain sections divided by a hairline -->
+        <StackPanel Grid.Column="1" Spacing="10">
+          <TextBlock Classes="eyebrow" Text="Letters" ToolTip.Tip="Written from your templates with this case's fields, then added to the timeline" />
+          <ItemsControl ItemsSource="{Binding Letters}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><StackPanel Spacing="6" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="sh:ComplianceLetterChoice">
+                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                        Command="{Binding Write}" CommandParameter="{Binding Kind}" AutomationProperties.Name="{Binding AccessibleName}">
+                  <TextBlock Text="{Binding Label, StringFormat='{}{0}…'}" />
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="sm" Text="{Binding LetterText}" TextWrapping="Wrap" IsVisible="{Binding LetterText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <TextBlock Classes="warning sm" Text="{Binding LetterWarning}" TextWrapping="Wrap" IsVisible="{Binding LetterWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-          <TextBlock Classes="h3" Text="Timeline" />
+          <Border Classes="hairline" Margin="0,4,0,0" />
+          <TextBlock Classes="eyebrow" Text="Timeline" />
           <Grid ColumnDefinitions="110,*" ColumnSpacing="6" RowDefinitions="Auto,Auto" RowSpacing="6">
             <ComboBox ItemsSource="{x:Static sh:ComplianceCaseSheetViewModel.NoteKinds}" SelectedItem="{Binding NoteKind}" HorizontalAlignment="Stretch"
                       AutomationProperties.Name="Kind of timeline entry" />

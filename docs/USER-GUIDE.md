@@ -528,17 +528,20 @@ Structures…** and **Move to Recently Deleted**.
 The **Assignments** page sends structures out to field teams, each with its structures in a driving order, a route
 sheet and worksheets. With an event chosen in the sidebar, it shows that event's assignments.
 
-1. Click **New team…** and give the team a name, its members and a colour.
+1. Click **New Team…** in the toolbar and give the team a name, its members and a colour.
 2. On Structures, check the structures (or filter the list) and choose **Change ▾ > Assign to Team…**, or select
    structures on the map and click **Assign to Team…**. Pick the team and, if you like, the event.
-3. On **Assignments**, choose the team. **Order the Route** puts its structures in a short driving order
-   (straight-line distance); structures without coordinates go at the end.
+3. On **Assignments**, choose the team in the list at the left. **Order Route** puts its structures in a short
+   driving order (straight-line distance); structures without coordinates go at the end. Double-click a structure to
+   open its assessment.
 4. **Route Sheet…** saves a one-page list of the stops, and **Worksheets…** a page per structure with a short code the
    phone form's search accepts and a small map around it (from the map's background, when it has one). The pin beside
-   a structure opens directions in Maps. **Offline…** keeps the map of the team's area on this Mac for the field.
+   a structure opens directions in Maps. **⋯ > Keep Map Offline…** keeps the map of the team's area on this Mac for
+   the field. **⋯ > Edit Team…** and **Remove Team…** change or remove the team (or right-click it in the list).
 5. As the team works, set each structure's **Status**: Assigned, Visited, Done or Skipped. The team's line shows how
-   many are assigned, assessed and done, and the Summary has a **Field teams** chart with the same numbers.
-6. To take structures off a team, tick them and click **Take the Ticked Structures Off the Team…**.
+   many are assigned, assessed and done (so does the status bar), and the Summary has a **Field teams** chart with
+   the same numbers.
+6. To take structures off a team, check them and click **Remove from Team…** (in the toolbar, or right-click).
 
 ![Assignments](screenshots/115-assignments.png)
 
@@ -769,8 +772,8 @@ arrive are left blank, and the page says how many.
 #### Keeping an area for use offline
 Before going somewhere without a connection, keep the background map for the area on the Mac you take:
 
-1. Show the area on the map and click **Offline…** (or, on **Assignments**, choose a team and click **Offline…** for its
-   structures and about 400 m around them).
+1. Show the area on the map and click **Offline…** (or, on **Assignments**, choose a team and choose **⋯ > Keep Map
+   Offline…** for its structures and about 400 m around them).
 2. Choose **USGS topographic map** or **USGS aerial imagery**. Only USGS maps can be kept: OpenStreetMap's rules don't
    allow downloading areas.
 3. SDE says how many map pieces that is for zooms 12 to 16 (at most 5,000; for a large area the closest zooms are left
@@ -904,24 +907,26 @@ follows each one until it is: the way the owner chooses, the permit and deadline
 (ICC) claim, the elevation certificate and the final inspection. It follows the event chosen in the sidebar, and the
 count beside it in the sidebar is the number of open cases past their deadline.
 
-1. **Open a case.** On the Compliance page, **Open Cases for Every Substantially Damaged Structure…** opens one for
-   each that has none yet. For one assessment, use **⋯ > Compliance Case…** in the editor. For a substantial
+1. **Open a case.** On the Compliance page, **Open Missing Cases…** in the toolbar opens one for each substantially
+   damaged structure that has none yet (the status bar says how many have none). For one assessment, use **⋯ > Compliance Case…** in the editor. For a substantial
    improvement, click **Open compliance case…** beside the determination in **⋯ > Improvements and SI…**.
-2. **Fill it in.** Double-click a case. Choose the **Path** (elevate, relocate, demolish, floodproof for
+2. **Fill it in.** Double-click a case (or select it and click **Open Case…**). Choose the **Path** (elevate, relocate, demolish, floodproof for
    non-residential buildings, or repair below the threshold after an appeal), then the permit, **Deadline**, ICC
    claim and its status and amount, and the dates the elevation certificate, final inspection and certificate of
    compliance came in. **Save** or **Done** keeps it.
 3. **Keep the timeline.** Changes to the path, deadline, ICC status and open or closed are added to the case's
    timeline by themselves. Add calls, inspections and notes with **Add Note**.
-4. **Write a letter.** Under **Letters**, choose *Options and deadline*, *ICC support* or *Deadline reminder*. The
+4. **Write a letter.** Under **Letters**, choose **Options and Deadline…**, **ICC Support…** or **Deadline Reminder…**. The
    first time, SDE offers to create the three starter compliance letters in your templates folder. The letter is
    filled in from the case, opened in Word, and added to the timeline and the letter log. See
    [Owner letters](LETTERS.md) for the fields.
 5. **Close it.** Set **Case** to **Closed** and say why (for example *Elevated and inspected*).
 
-Filter the list by **Open cases**, **Closed cases** or **Every case**, by path, by ICC status, or to **Overdue only**;
-the counts at the top do the same. **Export ▾** saves the cases shown as a **Compliance Report (PDF)…** or a
-**Compliance List (CSV)…**. The Summary shows the open and overdue cases and the ICC claims too.
+The pop-up in the toolbar shows **Open cases**, **Closed cases** or **Every case**. The filter button beside it
+filters by path, by ICC status or to **Overdue Only**, names the filters that are on, and has **Clear Filters**. The
+status bar under the list counts the cases shown, the overdue ones and the ICC claims in progress and paid. **Export ▾**
+saves the cases shown as a **Compliance Report (PDF)…** or a **Compliance List (CSV)…**. The Summary shows the open
+and overdue cases and the ICC claims too.
 
 ![The Compliance page](screenshots/113-compliance.png)
 
