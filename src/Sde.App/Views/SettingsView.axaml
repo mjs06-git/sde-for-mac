@@ -119,16 +119,16 @@
           </Border>
 
           <Border Classes="card">
-            <StackPanel Spacing="8">
-              <c:CardHeader Icon="Info" Title="About" Text="Unofficial Mac port of FEMA's SDE 3.0.0." />
-              <StackPanel Spacing="6" Margin="48,0,0,0">
-                <TextBlock TextWrapping="Wrap">
-                  <Run Text="Substantial Damage Estimator for Mac, version " /><Run Text="{Binding Version}" />
-                </TextBlock>
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+              <Image Source="/Assets/icon-1024.png" Width="64" Height="64" VerticalAlignment="Top"
+                     RenderOptions.BitmapInterpolationMode="HighQuality" AutomationProperties.Name="App icon" />
+              <StackPanel Grid.Column="1" Spacing="4">
+                <TextBlock Classes="h3" Text="Substantial Damage Estimator for Mac" />
+                <TextBlock Classes="secondary"><Run Text="Version " /><Run Text="{Binding Version}" /></TextBlock>
                 <TextBlock Classes="secondary" TextWrapping="Wrap"
-                           Text="Uses FEMA's engine, cost tables and rules, checked to match FEMA's results. Not produced or endorsed by FEMA. Determinations remain the floodplain administrator's." />
+                           Text="Unofficial Mac port of FEMA's SDE 3.0.0, using FEMA's engine, cost tables and rules. Not produced or endorsed by FEMA. Determinations remain the floodplain administrator's." />
               </StackPanel>
-            </StackPanel>
+            </Grid>
           </Border>
         </StackPanel>
 
