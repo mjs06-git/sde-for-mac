@@ -21,6 +21,15 @@ public sealed partial class EditTools
 	/// <summary>The most structures one assign_to_team call takes.</summary>
 	public const int MaxAssign = 500;
 
+	/// <summary>The longest event name create_event takes.</summary>
+	public const int MaxEventName = 200;
+
+	/// <summary>The longest disaster number create_event takes ("DR-4999").</summary>
+	public const int MaxDisasterNumber = 50;
+
+	/// <summary>The largest datum offset, in feet either way, as SDE's New event sheet allows.</summary>
+	public const int MaxDatumOffsetFt = 20;
+
 	private const string Recorded = " Works only while AI edits are turned on in SDE (Settings › AI assistants). Each call is recorded as an AI assistant's change that SDE can revert.";
 
 	[McpServerTool(Name = "create_structure", Title = "Add a structure", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false, UseStructuredContent = true)]
@@ -215,6 +224,16 @@ public sealed partial class EditTools
 		Dictionary<Guid, string> teamNames = store.GetTeams(activeOnly: false).ToDictionary(x => x.TeamID, x => x.Name);
 		// Structures the team already has for this event are left as they are (SdeStore.AssignToTeam does the same).
 		List<Guid> moving = propertyIds.Where(pid => !(before.TryGetValue(pid, out AssignmentRecord a) && a.TeamID == t.TeamID)).ToList();
+		// A structure its team has already visited, finished or skipped for this event stays with that team: moving it
+		// marks it Assigned again, and revert couldn't bring its visit back.
+		List<AssignmentRecord> visited = moving.Select(pid => before.GetValueOrDefault(pid))
+			.Where(a => a != null && a.Status != null && a.Status != AssignmentStatuses.Assigned).ToList();
+		if (visited.Count > 0)
+		{
+			AssignmentRecord first = visited[0];
+			string more = visited.Count == 1 ? "" : $" ({visited.Count - 1} more of these structures are visited, done or skipped too)";
+			throw new McpException($"{Describe.Address(store.GetProperty(first.PropertyID), store.Reference)} is already marked {first.Status} by {teamNames.GetValueOrDefault(first.TeamID) ?? "its team"}{(e == null ? "" : " for " + e.Label)}{more}, so SDE won't let an AI assistant move it to another team: that would mark it Assigned again. A person can reassign it in SDE. Nothing was assigned.");
+		}
 
 		Dictionary<Guid, string> femaNames = alsoSetFemaTeamName ? moving.ToDictionary(pid => pid, pid => store.GetProperty(pid).TeamName) : null;
 		string batchId = null;
@@ -278,6 +297,19 @@ public sealed partial class EditTools
 		if (notes != null && notes.Length > FieldInput.MaxTextLength)
 		{
 			throw new McpException($"Notes can be at most {FieldInput.MaxTextLength.ToString("N0", Describe.Us)} characters.");
+		}
+		if (name.Trim().Length > MaxEventName || (disasterNumber?.Trim().Length ?? 0) > MaxDisasterNumber)
+		{
+			throw new McpException($"An event's name can be at most {MaxEventName} characters, and its disaster number at most {MaxDisasterNumber}.");
+		}
+		if (name.Any(char.IsControl) || (disasterNumber?.Any(char.IsControl) ?? false))
+		{
+			throw new McpException("Write the event's name and disaster number on one line.");
+		}
+		if (datumOffsetFt is decimal offset && Math.Abs(offset) > MaxDatumOffsetFt)
+		{
+			// The same limit as SDE's New event sheet: a datum offset is a few feet at most.
+			throw new McpException($"datumOffsetFt is a number of feet between -{MaxDatumOffsetFt} and {MaxDatumOffsetFt}, for example 0.6.");
 		}
 		EventRecord existing = store.GetEvents().FirstOrDefault(x => string.Equals(x.Name?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase));
 		if (existing != null)

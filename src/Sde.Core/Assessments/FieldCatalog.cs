@@ -50,6 +50,12 @@ public sealed record FieldInfo(FieldModel Model, string Member, string Label, in
 	/// <summary>"$", "ft", "%" … shown with the value.</summary>
 	public string Unit { get; init; }
 
+	/// <summary>The smallest number accepted (as the editor's field allows); null = no limit of its own.</summary>
+	public decimal? Minimum { get; init; }
+
+	/// <summary>The largest number accepted (as the editor's field allows); null = no limit of its own.</summary>
+	public decimal? Maximum { get; init; }
+
 	/// <summary>When the field applies (e.g. only to residential buildings, or only to flood damage). Null = always.</summary>
 	public Func<AssessmentFile, bool> AppliesWhen { get; init; }
 
@@ -141,8 +147,8 @@ public static class FieldCatalog
 			L(nameof(PropertyRecord.ParcelNumber), "Parcel number"),
 			L(nameof(PropertyRecord.LotNumber), "Lot number"),
 			L(nameof(PropertyRecord.Subdivision), "Subdivision"),
-			L(nameof(PropertyRecord.Latitude), "Latitude", FieldKind.Number) with { Format = "0.######" },
-			L(nameof(PropertyRecord.Longitude), "Longitude", FieldKind.Number) with { Format = "0.######" },
+			L(nameof(PropertyRecord.Latitude), "Latitude", FieldKind.Number) with { Format = "0.######", Minimum = -90, Maximum = 90 },
+			L(nameof(PropertyRecord.Longitude), "Longitude", FieldKind.Number) with { Format = "0.######", Minimum = -180, Maximum = 180 },
 		})
 		{
 			Add(f);
@@ -160,7 +166,7 @@ public static class FieldCatalog
 		Add(new FieldInfo(FieldModel.Property, nameof(PropertyRecord.StructureUseID), "Structure use", BuildingStep, FieldKind.Lookup, LookupTypes.StructureUse) { AppliesWhen = nonRes });
 		Add(new FieldInfo(FieldModel.Property, nameof(PropertyRecord.SprinklerSystem), "Sprinkler system", BuildingStep, FieldKind.Lookup, LookupTypes.SprinklerSystem) { AppliesWhen = nonRes });
 		Add(new FieldInfo(FieldModel.Property, nameof(PropertyRecord.Conveyance), "Conveyance (elevators)", BuildingStep, FieldKind.Lookup, LookupTypes.YesNo) { AppliesWhen = nonRes });
-		P(nameof(PropertyRecord.YearOfConstruction), "Year built", BuildingStep, FieldKind.Number);
+		P(nameof(PropertyRecord.YearOfConstruction), "Year built", BuildingStep, FieldKind.Number).WithRange(0, 2200, list);
 		P(nameof(PropertyRecord.StructureQualityID), "Construction quality", BuildingStep, FieldKind.Lookup, LookupTypes.StructureQuality);
 		P(nameof(PropertyRecord.StructureInformation), "Notes about the structure", BuildingStep, FieldKind.MultilineText);
 
@@ -172,7 +178,7 @@ public static class FieldCatalog
 		A(nameof(AssessmentRecord.CauseofDamageID), "Cause of damage", InspectionStep, FieldKind.Lookup, LookupTypes.CauseOfDamage);
 		Add(new FieldInfo(FieldModel.Assessment, nameof(AssessmentRecord.CauseOfDamageDescription), "Describe the cause", InspectionStep, FieldKind.Text)
 		{ AppliesWhen = f => f.Assessment.CauseofDamageID == LookupIds.CauseOther });
-		Add(new FieldInfo(FieldModel.Assessment, nameof(AssessmentRecord.DurationOfFlood), "Flood duration", InspectionStep, FieldKind.Number) { AppliesWhen = flood, Format = "0" });
+		Add(new FieldInfo(FieldModel.Assessment, nameof(AssessmentRecord.DurationOfFlood), "Flood duration", InspectionStep, FieldKind.Number) { AppliesWhen = flood, Format = "0", Minimum = 0 });
 		Add(new FieldInfo(FieldModel.Assessment, nameof(AssessmentRecord.DurationOfFloodUnitsID), "Flood duration units", InspectionStep, FieldKind.Lookup, LookupTypes.DurationUnits) { AppliesWhen = flood });
 		Add(new FieldInfo(FieldModel.Assessment, nameof(AssessmentRecord.DepthOfFlood), "Flood elevation", InspectionStep, FieldKind.Number) { AppliesWhen = flood, Unit = "ft" });
 		Add(new FieldInfo(FieldModel.Assessment, nameof(AssessmentRecord.DepthOfFloodAboveFFE), "Depth above lowest floor", InspectionStep, FieldKind.Number) { AppliesWhen = flood, Unit = "ft" });
@@ -195,12 +201,12 @@ public static class FieldCatalog
 
 		// 5. Cost & depreciation
 		A(nameof(AssessmentRecord.BaseCost), "Base cost per sq ft", CostStep, FieldKind.Number).WithMoney(list);
-		A(nameof(AssessmentRecord.GeographicAdjustment), "Geographic adjustment", CostStep, FieldKind.Number).WithFormat("0.###", list);
+		A(nameof(AssessmentRecord.GeographicAdjustment), "Geographic adjustment", CostStep, FieldKind.Number).WithFormat("0.###", list).WithRange(0, null, list);
 		A(nameof(AssessmentRecord.CostData), "Cost data source", CostStep);
 		A(nameof(AssessmentRecord.CostDataDate), "Cost data date", CostStep, FieldKind.Date);
 		A(nameof(AssessmentRecord.DepreciationRatingID), "Condition rating", CostStep, FieldKind.Lookup, LookupTypes.DepreciationRating);
 		Add(new FieldInfo(FieldModel.Assessment, nameof(AssessmentRecord.DepreciationValue), "Depreciation", CostStep, FieldKind.Number)
-		{ Format = "0.0", Unit = "%", AppliesWhen = f => f.Assessment.DepreciationRatingID == LookupIds.DepreciationOther });
+		{ Format = "0.0", Unit = "%", Minimum = 0, Maximum = 100, AppliesWhen = f => f.Assessment.DepreciationRatingID == LookupIds.DepreciationOther });
 		Add(new FieldInfo(FieldModel.Assessment, nameof(AssessmentRecord.DepreciationExplanation), "Why “Other” depreciation", CostStep, FieldKind.MultilineText)
 		{ AppliesWhen = f => f.Assessment.DepreciationRatingID == LookupIds.DepreciationOther });
 
@@ -209,16 +215,20 @@ public static class FieldCatalog
 		A(nameof(AssessmentRecord.CostOfRepairsID), "Repair cost basis", ResultStep, FieldKind.Lookup, LookupTypes.CostOfRepairsBasis);
 		A(nameof(AssessmentRecord.MarketAppraisal), "Professional market appraisal", ResultStep, FieldKind.Number).WithMoney(list);
 		A(nameof(AssessmentRecord.TaxAssessedValue), "Tax assessed value", ResultStep, FieldKind.Number).WithMoney(list);
-		A(nameof(AssessmentRecord.FactorAdjustment), "Tax factor adjustment", ResultStep, FieldKind.Number);
+		A(nameof(AssessmentRecord.FactorAdjustment), "Tax factor adjustment", ResultStep, FieldKind.Number).WithRange(0, null, list);
 		A(nameof(AssessmentRecord.ContractorEstimate), "Contractor's estimate", ResultStep, FieldKind.Number).WithMoney(list);
 		A(nameof(AssessmentRecord.CommunityEstimate), "Community's estimate", ResultStep, FieldKind.Number).WithMoney(list);
-		A(nameof(AssessmentRecord.ExistingImprovementPercent), "Pre-existing improvements", ResultStep, FieldKind.Number).WithUnit("%", list);
+		A(nameof(AssessmentRecord.ExistingImprovementPercent), "Pre-existing improvements", ResultStep, FieldKind.Number).WithUnit("%", list).WithRange(0, null, list);
 		return list;
 	}
 
 	private static FieldInfo WithUnit(this FieldInfo f, string unit, List<FieldInfo> list) => Replace(f, f with { Unit = unit }, list);
 
-	private static FieldInfo WithMoney(this FieldInfo f, List<FieldInfo> list) => Replace(f, f with { Unit = "$", Format = "N2" }, list);
+	/// <summary>Money as the editor shows it: dollars, two decimals, never below zero.</summary>
+	private static FieldInfo WithMoney(this FieldInfo f, List<FieldInfo> list) => Replace(f, f with { Unit = "$", Format = "N2", Minimum = 0 }, list);
+
+	private static FieldInfo WithRange(this FieldInfo f, decimal? minimum, decimal? maximum, List<FieldInfo> list) =>
+		Replace(f, f with { Minimum = minimum, Maximum = maximum }, list);
 
 	private static FieldInfo WithFormat(this FieldInfo f, string format, List<FieldInfo> list) => Replace(f, f with { Format = format }, list);
 

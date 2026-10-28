@@ -139,6 +139,8 @@ public sealed class FieldServer : IAsyncDisposable
 			}
 		});
 		WebApplication app = builder.Build();
+		// Routing first, so the guard knows which endpoint a request reached, however its path was spelled.
+		app.UseRouting();
 		app.Use(Guard);
 		MapEndpoints(app);
 		await app.StartAsync();
@@ -221,8 +223,10 @@ public sealed class FieldServer : IAsyncDisposable
 			await Fail(ctx, StatusCodes.Status403Forbidden, "Refused: this request didn't come from the phone form.");
 			return;
 		}
-		string path = ctx.Request.Path.Value ?? "";
-		if (path.StartsWith("/api/", StringComparison.Ordinal) && path != "/api/pair")
+		// Decided by the endpoint the request reached, not its path text: routing ignores case and decodes %-escapes, so
+		// "/API/…" or "/%61pi/…" reach the same endpoints as "/api/…". Only the page and pairing are open; everything
+		// else, including a path that matches nothing, needs a paired phone.
+		if (ctx.GetEndpoint()?.Metadata.GetMetadata<OpenToUnpaired>() == null)
 		{
 			PairedPhone phone = Pairing.FindSession(ctx.Request.Cookies[CookieName]);
 			if (phone == null)
@@ -237,7 +241,11 @@ public sealed class FieldServer : IAsyncDisposable
 		{
 			await next();
 		}
-		catch (AssessmentLockedException ex)
+		catch (NotPairedException)
+		{
+			await Fail(ctx, StatusCodes.Status401Unauthorized, "This phone isn't paired. Pair it with the QR code or PIN on the Mac.");
+		}
+		catch (Exception ex) when (ex is AssessmentLockedException or AssessmentCheckedOutException)
 		{
 			await Fail(ctx, StatusCodes.Status409Conflict, ex.Message);
 		}
@@ -275,7 +283,17 @@ public sealed class FieldServer : IAsyncDisposable
 		await ctx.Response.WriteAsJsonAsync(new { error = message });
 	}
 
-	private static PairedPhone PhoneOf(HttpContext ctx) => (PairedPhone)ctx.Items[typeof(PairedPhone)];
+	/// <summary>The paired phone making the request; a request the guard let through unpaired never gets this far.</summary>
+	private static PairedPhone PhoneOf(HttpContext ctx) =>
+		ctx.Items.TryGetValue(typeof(PairedPhone), out object phone) && phone is PairedPhone p ? p : throw new NotPairedException();
+
+	/// <summary>Marks the endpoints a phone may reach before pairing: the page itself and pairing.</summary>
+	private sealed class OpenToUnpaired
+	{
+		public static readonly OpenToUnpaired Yes = new OpenToUnpaired();
+	}
+
+	private sealed class NotPairedException : Exception;
 
 	private static SaveContext ContextFor(HttpContext ctx) => new SaveContext { Via = SaveVia.Phone, User = PhoneOf(ctx).Name };
 
@@ -283,12 +301,12 @@ public sealed class FieldServer : IAsyncDisposable
 
 	private void MapEndpoints(WebApplication app)
 	{
-		app.MapGet("/", () => Asset("index.html"));
-		app.MapGet("/pair", () => Asset("index.html"));
-		app.MapGet("/app.js", () => Asset("app.js"));
-		app.MapGet("/app.css", () => Asset("app.css"));
+		app.MapGet("/", () => Asset("index.html")).WithMetadata(OpenToUnpaired.Yes);
+		app.MapGet("/pair", () => Asset("index.html")).WithMetadata(OpenToUnpaired.Yes);
+		app.MapGet("/app.js", () => Asset("app.js")).WithMetadata(OpenToUnpaired.Yes);
+		app.MapGet("/app.css", () => Asset("app.css")).WithMetadata(OpenToUnpaired.Yes);
 
-		app.MapPost("/api/pair", (HttpContext ctx, PairRequest req) => Pair(ctx, req));
+		app.MapPost("/api/pair", (HttpContext ctx, PairRequest req) => Pair(ctx, req)).WithMetadata(OpenToUnpaired.Yes);
 		app.MapGet("/api/session", (HttpContext ctx) => Results.Json(new { paired = true, name = PhoneOf(ctx).Name }));
 		app.MapGet("/api/lookups", () => Results.Json(FieldApi.Lookups(_store().Reference)));
 		app.MapGet("/api/structures", (HttpContext ctx) => Results.Json(FieldApi.Search(_store(), ctx.Request.Query["q"].ToString())));
@@ -308,8 +326,18 @@ public sealed class FieldServer : IAsyncDisposable
 
 	private static IResult NotFound() => Results.Json(new { error = "That assessment no longer exists." }, statusCode: StatusCodes.Status404NotFound);
 
-	private static IResult Locked(SdeStore store, Guid id) =>
-		Results.Json(new { error = new AssessmentLockedException(id, store.GetStatus(id).Value, Array.Empty<FieldDiff>()).Message }, statusCode: StatusCodes.Status409Conflict);
+	/// <summary>A 409 when the phone can't change the assessment (Final or Letter sent, or checked out to another Mac), or null.</summary>
+	private static IResult Refusal(SdeStore store, Guid id)
+	{
+		AssessmentStatusRecord status = store.GetStatus(id);
+		if (status.IsLocked)
+		{
+			return Conflict(new AssessmentLockedException(id, status.Value, Array.Empty<FieldDiff>()).Message);
+		}
+		return store.GetCheckOut(id) is CheckOutRecord checkOut ? Conflict(new AssessmentCheckedOutException(id, checkOut).Message) : null;
+	}
+
+	private static IResult Conflict(string message) => Results.Json(new { error = message }, statusCode: StatusCodes.Status409Conflict);
 
 	private static AssessmentFile Load(SdeStore store, Guid id)
 	{
@@ -355,6 +383,12 @@ public sealed class FieldServer : IAsyncDisposable
 	private async Task<IResult> AddAssessment(HttpContext ctx, Guid id)
 	{
 		SdeStore store = _store();
+		// The page asks only for a structure with no assessment yet. A second one would share the structure's fields
+		// with the first, and a Final first one must not change through it.
+		if (store.GetAssessmentsForProperty(id).Count > 0)
+		{
+			return Results.Json(new { error = "That structure already has an assessment. Search for it again to open it." }, statusCode: StatusCodes.Status409Conflict);
+		}
 		AssessmentFile file = FieldApi.NewAssessment(store, id);
 		if (file == null)
 		{
@@ -372,9 +406,9 @@ public sealed class FieldServer : IAsyncDisposable
 		{
 			return NotFound();
 		}
-		if (store.IsLocked(id))
+		if (Refusal(store, id) is IResult refused)
 		{
-			return Locked(store, id);
+			return refused;
 		}
 		IReadOnlyList<ChangeDto> changes = req?.Changes ?? Array.Empty<ChangeDto>();
 		if (changes.Count > MaxChanges)
@@ -394,9 +428,9 @@ public sealed class FieldServer : IAsyncDisposable
 		{
 			return NotFound();
 		}
-		if (store.IsLocked(id))
+		if (Refusal(store, id) is IResult refused)
 		{
-			return Locked(store, id);
+			return refused;
 		}
 		const long slack = 1024 * 1024;   // the form's other parts and boundaries
 		if (ctx.Request.ContentLength > PhotoUpload.MaxBytes + slack)
@@ -426,21 +460,11 @@ public sealed class FieldServer : IAsyncDisposable
 		{
 			return Unsupported();
 		}
-		byte[] head = new byte[16];
-		int read;
-		await using (Stream s = photo.OpenReadStream())
-		{
-			read = await s.ReadAtLeastAsync(head, head.Length, throwOnEndOfStream: false, ctx.RequestAborted);
-		}
-		string extension = PhotoUpload.DetectExtension(head.AsSpan(0, read));
-		if (extension == null)
-		{
-			return Unsupported();
-		}
 		string description = PairingManager.CleanText(form["description"].ToString(), 200);
 
 		Directory.CreateDirectory(_tempFolder);
-		string upload = Path.Combine(_tempFolder, Guid.NewGuid().ToString("N") + extension);
+		string name = Guid.NewGuid().ToString("N");
+		string upload = Path.Combine(_tempFolder, name + ".upload");
 		string converted = null;
 		try
 		{
@@ -448,6 +472,19 @@ public sealed class FieldServer : IAsyncDisposable
 			{
 				await photo.CopyToAsync(f, ctx.RequestAborted);
 			}
+			// Checked on the copy (by content, not name), then named for its kind, which the converter goes by.
+			string extension;
+			using (FileStream f = File.OpenRead(upload))
+			{
+				extension = PhotoUpload.Detect(f);
+			}
+			if (extension == null)
+			{
+				return Unsupported();
+			}
+			string typed = Path.Combine(_tempFolder, name + extension);
+			File.Move(upload, typed);
+			upload = typed;
 			try
 			{
 				converted = _photos.ToCompatible(upload, _tempFolder);

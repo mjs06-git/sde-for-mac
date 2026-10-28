@@ -91,7 +91,12 @@ Resources: `sde://assessment/{id}` and `sde://field-help`.
 - Read tools are always on and use read-only SQLite connections. The layers GeoPackage is opened read-only too, and
   is never created by the server.
 - Outputs write only into the "AI outputs" folder beside the database, never where an assistant asks, which also
-  avoids macOS privacy prompts attributed to the assistant's app. A file name can't lead out of the folder.
+  avoids macOS privacy prompts attributed to the assistant's app. A file name can't lead out of the folder: separators
+  and characters that look like them become "-", control characters and invisible ones (such as those that reverse
+  the direction of text) are dropped, leading dots go, and a name is cut to whole characters within 100 characters
+  and 200 bytes (`AiOutputs.SafeName`). A new file is always created new and written through the handle that created
+  it, so it never replaces anything or writes through a link already in the folder (a dangling one included); the
+  name gets " 2", " 3"… instead. An "AI outputs" that is a link or a file is refused.
 - Edits work only while the database's `Mcp.AllowEdits` setting is on (`AiAssistantSettings`), read again on every
   call. Each edit call is one `SaveContext.Batch` with `Via = "AI assistant"` and `User = "<client name> (AI)"`, so
   `AiAssistantSettings.RecentChanges` can list it and `AiAssistantSettings.Revert` can undo it.
@@ -109,17 +114,29 @@ Resources: `sde://assessment/{id}` and `sde://field-help`.
   Anything left alone is counted in `BulkResult.ChangedSince`.
 - The first edit of a session takes a backup named "before AI edits".
 - Final and Letter sent assessments can't be changed (a review comment, which doesn't change them, is allowed as in
-  SDE), and an assistant can't reopen one. Assessments checked out in a work package are refused. Nothing can be deleted, restored, imported, exported to FEMA's format or marked as letter sent, and
-  Settings can't be changed.
+  SDE), and an assistant can't reopen one. Assessments checked out in a work package are refused. A structure's own
+  fields (address, owner, flood zone, elevations…) belong to all its assessments, so `update_fields` refuses to change
+  them while another assessment of the structure is Final, Letter sent or checked out. `assign_to_team` leaves a
+  structure its team has already visited, finished or skipped for that event where it is (moving it would mark it
+  Assigned again, which revert couldn't undo). `create_event` keeps to the New event sheet's limits (a datum offset
+  within 20 feet either way). Nothing can be deleted, restored, imported, exported to FEMA's format or marked as letter
+  sent, and Settings can't be changed.
 - The server holds a shared lease on the database, so SDE won't restore a backup or move it underneath.
 - Tool descriptions and the server's instructions say that free text in the database and in map layers is data,
-  never instructions. Results are paged and long text is shortened to stay under Claude Code's tool-result limit.
+  never instructions. Results are paged and long text is shortened to stay under Claude Code's tool-result limit. A
+  prompt's message reaches the assistant as the person's own words, so prompts name an event or assessment by ID
+  only; its name or address goes only in the prompt's description, on one shortened line.
 
 ## Logs
 
 stdout carries only JSON-RPC; every log line goes to stderr, which Claude Desktop keeps in
 `~/Library/Logs/Claude/mcp-server-sde.log`. The server also writes `sde-mcp-yyyy-MM-dd.log` (information and up) to
 SDE's log folder, `~/Library/Logs/SDE`.
+
+Neither log holds the messages themselves: the SDK logs each request and result in full (owners' names, addresses
+and phone numbers included) at Trace, and those lines are left out, since SDE's Recently deleted, backups and
+permanent deletes never reach the assistant's log file. To debug the protocol, set `SDE_MCP_LOG_TRAFFIC=1` in the
+server's environment (in Claude Desktop's config, an `"env"` entry beside `"args"`), and turn it off again after.
 
 ## Testing
 

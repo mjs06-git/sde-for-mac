@@ -30,6 +30,13 @@ public sealed class SdeMcpOptions
 
 	/// <summary>How much goes to stderr. The assistant keeps stderr as the server's log, so the default is everything.</summary>
 	public LogLevel ConsoleLogLevel { get; init; } = LogLevel.Trace;
+
+	/// <summary>
+	/// Also log every message to and from the assistant in full (the SDK's Trace messages) on stderr. Off unless
+	/// <see cref="SdeMcpServer.TrafficVariable"/> is "1": the messages carry owners' names, addresses and phone numbers,
+	/// and the assistant keeps stderr in a log file that SDE's Recently deleted, backups and permanent deletes never reach.
+	/// </summary>
+	public bool LogProtocolTraffic { get; init; } = Environment.GetEnvironmentVariable(SdeMcpServer.TrafficVariable) == "1";
 }
 
 /// <summary>
@@ -53,6 +60,12 @@ public static class SdeMcpServer
 	{
 		Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
 	};
+
+	/// <summary>The environment variable that turns on logging the protocol traffic in full (see <see cref="SdeMcpOptions.LogProtocolTraffic"/>).</summary>
+	public const string TrafficVariable = "SDE_MCP_LOG_TRAFFIC";
+
+	/// <summary>The MCP SDK's log categories (its types' names), whose Trace messages hold the protocol traffic in full.</summary>
+	private const string SdkCategory = "ModelContextProtocol";
 
 	public const string Usage = "Usage: SDE mcp --db <path to the SDE database>\nRuns SDE's server for AI assistants (Claude Desktop, Claude Code) on stdin and stdout. SDE's Settings › AI assistants has the exact setup to copy.";
 
@@ -167,7 +180,10 @@ public static class SdeMcpServer
 		});
 		builder.Logging.ClearProviders();
 		builder.Logging.SetMinimumLevel(LogLevel.Trace);
-		builder.Logging.AddFilter<ConsoleLoggerProvider>(level => level >= options.ConsoleLogLevel);
+		// The SDK logs each message to and from the assistant, in full, at Trace: owners' names and addresses included.
+		// Those stay out of stderr unless asked for (SDE_MCP_LOG_TRAFFIC=1); SDE's own Trace lines still go there.
+		builder.Logging.AddFilter<ConsoleLoggerProvider>((category, level) => level >= options.ConsoleLogLevel
+			&& (options.LogProtocolTraffic || level > LogLevel.Trace || !IsSdkCategory(category)));
 		builder.Logging.AddSimpleConsole(o =>
 		{
 			o.SingleLine = true;
@@ -220,6 +236,9 @@ public static class SdeMcpServer
 		}));
 		return builder.Build();
 	}
+
+	private static bool IsSdkCategory(string category) => category != null
+		&& (category == SdkCategory || category.StartsWith(SdkCategory + ".", StringComparison.Ordinal));
 
 	/// <summary>A tool result that says why nothing was done.</summary>
 	private static CallToolResult Refusal(string message) => new CallToolResult

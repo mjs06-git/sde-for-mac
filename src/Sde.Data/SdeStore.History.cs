@@ -58,6 +58,10 @@ public sealed partial class SdeStore
 
 		bool shapesChanged = shapes != null && (storedProperty == null || !SameShapes(c, tx, storedProperty.PropertyID, shapes));
 		bool propertyChanged = storedProperty == null || shapesChanged || !SameProperty(storedProperty, file.Property);
+		if (storedProperty != null && propertyChanged && (ctx.Via == SaveVia.Phone || ctx.Via == SaveVia.AiAssistant))
+		{
+			EnsureStructureNotShared(c, tx, storedProperty.PropertyID, id);
+		}
 		if (before != null && !propertyChanged && SameAssessment(c, tx, before, file))
 		{
 			// Nothing to save: keep the stored LastUpdate values, so the caller's copy matches the database.
@@ -98,6 +102,35 @@ public sealed partial class SdeStore
 			WriteDiffs(c, tx, propertyId, assessmentId, diffs, ctx);
 		}
 		return GetStamp(c, tx, assessmentId, propertyId);
+	}
+
+	/// <summary>
+	/// Refuses a change to a structure's own fields (address, owner, flood zone, elevations…) while another of its
+	/// assessments is Final or Letter sent, or checked out to another Mac. Those fields belong to every assessment of
+	/// the structure, so the change would alter what the Final one prints and exports, or be replaced when the
+	/// checked-out one comes back. Used for saves from a phone or an AI assistant; a person at the Mac decides for
+	/// themselves.
+	/// </summary>
+	private static void EnsureStructureNotShared(IDbConnection c, IDbTransaction tx, Guid propertyId, Guid assessmentId)
+	{
+		foreach (AssessmentRecord other in TableMap<AssessmentRecord>.Select(c, "PropertyID = @propertyId AND Active = 1", new { propertyId }, tx))
+		{
+			if (other.AssessmentID == assessmentId)
+			{
+				continue;
+			}
+			AssessmentStatusRecord status = GetStatus(c, tx, other.AssessmentID);
+			if (status.IsLocked)
+			{
+				throw new AssessmentLockedException(other.AssessmentID, status.Value, Array.Empty<FieldDiff>(),
+					$"Another assessment of this structure is {AssessmentStatuses.Label(status.Value)}, so the structure's own fields (address, owner, flood zone, elevations) can't be changed here. This assessment's own fields still can.");
+			}
+			if (TableMap<CheckOutRecord>.Get(c, new { other.AssessmentID }, tx) is CheckOutRecord checkOut)
+			{
+				throw new AssessmentCheckedOutException(other.AssessmentID, checkOut,
+					$"Another assessment of this structure is checked out to {AssessmentCheckedOutException.CheckedOutTo(checkOut)} in a work package, so the structure's own fields (address, owner, flood zone, elevations) can't be changed here. This assessment's own fields still can.");
+			}
+		}
 	}
 
 	/// <summary>

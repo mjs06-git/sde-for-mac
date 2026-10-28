@@ -5,8 +5,8 @@ namespace Sde.Mcp;
 
 /// <summary>
 /// Writes the server's log to "sde-mcp-yyyy-MM-dd.log" in SDE's log folder (the app passes the folder in), next to
-/// the app's own daily logs, which it keeps for 30 days. Information and up only: the protocol traffic, which can
-/// include owners' names, stays in the assistant's own log (stderr). Never throws.
+/// the app's own daily logs, which it keeps for 30 days. Information and up only: the protocol traffic, which carries
+/// owners' names, never comes here (and reaches stderr only when SDE_MCP_LOG_TRAFFIC=1 asks for it). Never throws.
 /// </summary>
 internal sealed class FileLoggerProvider : ILoggerProvider
 {

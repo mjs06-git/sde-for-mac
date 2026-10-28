@@ -126,6 +126,12 @@ public sealed class ServerTests
 		Assert.DoesNotContain("Avalonia", run.Stderr.Split('\n').Single(l => l.Contains("Loaded assemblies:")));
 		string log = Assert.Single(Directory.GetFiles(Path.Combine(db.Folder, "Logs"), "sde-mcp-*.log"));
 		Assert.Contains("AI assistant server (MCP)", File.ReadAllText(log));
+
+		// The messages themselves (find_structures answered with the owner, Pat Example) stay out of both logs: the
+		// assistant keeps stderr in a file SDE's deletes and backups never reach.
+		Assert.Contains("\"find_structures\" completed", run.Stderr);
+		Assert.DoesNotContain("Example", run.Stderr);
+		Assert.DoesNotContain("Example", File.ReadAllText(log));
 	}
 
 	[Fact]
@@ -150,7 +156,9 @@ public sealed class ServerTests
 		Assert.Equal(Path.Combine(db.Folder, "AI outputs"), Path.GetDirectoryName(pdf));
 		Assert.Equal("%PDF", Encoding.ASCII.GetString(File.ReadAllBytes(pdf), 0, 4));
 		Assert.True(File.Exists(run.Response(3).GetProperty("result").GetProperty("structuredContent").GetProperty("indexPath").GetString()));
-		Assert.Contains("123 River Street", run.Response(4).GetProperty("result").GetProperty("messages")[0].GetProperty("content").GetProperty("text").GetString());
+		JsonElement prompt = run.Response(4).GetProperty("result");
+		Assert.Equal("Draft letter for 123 River Street", prompt.GetProperty("description").GetString());
+		Assert.Contains(id.ToString(), prompt.GetProperty("messages")[0].GetProperty("content").GetProperty("text").GetString());
 	}
 
 	[Fact]

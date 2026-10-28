@@ -19,6 +19,13 @@ public static class FieldInput
 	public const int MaxTextLength = 2000;
 
 	/// <summary>
+	/// The largest number (either sign) any field accepts this way, on top of its own <see cref="FieldInfo.Minimum"/> and
+	/// <see cref="FieldInfo.Maximum"/>: far beyond any real value, and well inside what the database's REAL columns hand
+	/// back as a decimal (a value near decimal's limit is stored rounded up past it, and then the assessment can't be read).
+	/// </summary>
+	public const decimal MaxMagnitude = 10_000_000_000m;
+
+	/// <summary>
 	/// Applies changes in order: each key must be a known field that applies to the assessment at that point (after the
 	/// changes before it), and each value must suit the field. Every change then goes through
 	/// <see cref="FieldRules.Apply"/>, so dependent fields reset as they do in the editor. Throws
@@ -68,6 +75,12 @@ public static class FieldInput
 				{
 					throw new FieldInputException($"{f.Label}: type a number.");
 				}
+				decimal min = Math.Max(f.Minimum ?? -MaxMagnitude, -MaxMagnitude);
+				decimal max = Math.Min(f.Maximum ?? MaxMagnitude, MaxMagnitude);
+				if (n < min || n > max)
+				{
+					throw new FieldInputException($"{f.Label}: type a number from {Show(min)} to {Show(max)}.");
+				}
 				try
 				{
 					return FieldCatalog.Convert(n.ToString(CultureInfo.InvariantCulture), type);
@@ -100,4 +113,6 @@ public static class FieldInput
 				return FieldCatalog.Convert(id, type);
 		}
 	}
+
+	private static string Show(decimal n) => n.ToString("#,0.######", CultureInfo.InvariantCulture);
 }
