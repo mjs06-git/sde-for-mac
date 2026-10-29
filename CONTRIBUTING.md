@@ -8,21 +8,21 @@ Thanks for helping. SDE for Mac is used to make substantial damage determination
 - The report tests read PDFs back with poppler (`brew install poppler`); the `.mdb` tests need mdbtools
   (`brew install mdbtools`).
 - The calculation-parity and seed-data tests compare against FEMA's own SDE 3.0. They are skipped until you run
-  `tools/answer-key/setup.sh` with FEMA's installer (see the README). Run them before changing anything in
+  `tools/answer-key/setup.sh` with FEMA's installer (see the README). Run the setup and those tests before changing
   `src/Sde.Calculation`, `src/Sde.Data/Seed` or the export formats.
 - The UI tests render the real windows off-screen. On macOS they refresh `docs/screenshots/`; restore those files
   unless your change is meant to alter the UI.
-- The tests never touch your own SDE folder: each test process sets `SDE_HOME` and `HOME` to a scratch folder
-  (`tests/Sde.TestSupport/TestHome.cs`), and `IsolationTests` checks it. Keep it that way in new test projects (they
-  get it from `tests/Directory.Build.props`).
+- Tests must not touch your own SDE folder. Each test process sets `SDE_HOME` and `HOME` to a scratch folder
+  (`tests/Sde.TestSupport/TestHome.cs`), and `IsolationTests` checks this. Preserve that isolation in new test projects;
+  they get it from `tests/Directory.Build.props`.
 
 ## Rules that keep the results trustworthy
 - `src/Sde.Calculation` is a port of FEMA's engine and must keep giving identical results. Don't "improve" it.
 - Export.json, the `.mdb` import and the SDE_n folders must stay exactly as FEMA's SDE writes and reads them. New
   information goes in the Mac-only tables (`src/Sde.Data/Schema.sql`), which are never exported.
 - A database written by this version must still open in the previous release.
-- Nothing specific to one city, county, state agency or software vendor: anything like that belongs in a profile or a
-  setting the user creates.
+- Do not add behaviour specific to one city, county, state agency or software vendor. Put such details in a profile or
+  a user-created setting instead.
 - Test data is synthetic. Never commit real addresses, owner names or photos.
 - Dependencies must be under a license that fits the MIT license (MIT, Apache-2.0, BSD). Every package version is
   set in `Directory.Packages.props`; project files list packages without versions. PDFsharp and MigraDoc stay

@@ -1,8 +1,8 @@
 # Windows cross-check kit
 
-The Mac version has been checked against FEMA's decompiled code, the screenshots in FEMA's manual, and a populated
-`.mdb` built from FEMA's empty database. It has **not** been checked against FEMA's SDE 3.0 actually running on Windows,
-because none was available. This kit is for whoever has a Windows PC with SDE 3.0 installed. It takes about an hour.
+The Mac version has been checked against FEMA's decompiled code, screenshots in FEMA's manual, and a populated
+`.mdb` built from FEMA's empty database. It has **not** been checked against FEMA's SDE 3.0 running on Windows.
+This kit is for someone with a Windows PC and SDE 3.0 installed. Allow about an hour.
 
 ## What's here
 
@@ -51,8 +51,9 @@ What hasn't been checked is how FEMA's *screens* feed that engine. Hand entry te
 
 1. In SDE on Windows, after Check 2: **Import/Export → Export SDE Data**, all records.
 2. Also copy `SDEDatabase.mdb` from SDE's `Database` folder, together with the `attachments` folder beside it.
-3. On the Mac, in a new database (**Settings → Database → New empty database…**), use **Import & export** to import the export folder,
-   then the `.mdb` in another new database. Importing `.mdb` files needs mdbtools: `brew install mdbtools`.
+3. On the Mac, use **Settings → Database → New empty database…** to create a new database, then use **Import & export**
+   to import the export folder. Create another new database and import the `.mdb`. The packaged app includes mdbtools;
+   if it is not available in your build, install it with `brew install mdbtools`.
 4. Compare with `expected.csv`.
 
 **Pass:** both import without warnings and show the same results.

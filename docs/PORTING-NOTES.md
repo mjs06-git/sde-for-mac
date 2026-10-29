@@ -1,6 +1,6 @@
 # Porting notes: FEMA SDE 3.0 → macOS (.NET 10)
 
-This file is the record of what changed between FEMA's code (decompiled into `decomp/`) and the Mac port in `src/`, and why. Anything not listed here behaves as the original did.
+These notes describe changes between FEMA's code (decompiled into `decomp/`) and the Mac port in `src/`, and why they were made. Some sections record earlier versions of the port; see `docs/TEST-REPORT.md` for dated test results and remaining checks.
 
 ## Layout
 
@@ -106,7 +106,7 @@ This is a port of `DataValidationViewService` driven by FEMA's `ValidationRule` 
 - Currency with 4 decimals;
 - `ItemCost`/`DamageValues` as strings.
 
-`ExchangeTests` checks the key order against `decomp/DAL/DAL.Models/*.cs`, and also checks the byte format and an exact round trip. A folder written here should import into FEMA's SDE on Windows, and vice versa. That direction is not yet tested with a real Windows SDE, because there is no Windows access.
+`ExchangeTests` checks the key order against `decomp/DAL/DAL.Models/*.cs`, the byte format, and an exact round trip. A folder written here should import into FEMA's SDE on Windows, and vice versa. Exchange with a real Windows SDE has not yet been tested; see `docs/windows-crosscheck/`.
 
 **Fixed original bugs** (each change keeps the files compatible):
 
@@ -232,7 +232,7 @@ still opens a 2.0 database.
   imports and the phone form apply exactly the same rules.
 
 ## Tests
-`dotnet test Sde.sln` runs 611 tests (577 pass, 34 need FEMA's installer); the list below describes v1.5's. See `docs/TEST-REPORT.md` for what they establish.
+The v2.0 run of `dotnet test Sde.sln` had 577 passing tests and 34 skips requiring FEMA's installer. The counts in the list below describe v1.5; see `docs/TEST-REPORT.md` for dated results and what the tests establish.
 
 - **`Sde.Tests` (79)**
   - Answer-key parity: 31,500 residential and 10,368 non-residential configurations, plus edge cases.

@@ -1,8 +1,8 @@
 # Phone form
 
-The phone form lets inspectors work from a phone in the field while SDE runs on a Mac nearby (in a vehicle, a field
-office, a shelter). The Mac serves a small web page over its Wi-Fi network; a phone on the same network opens it in its
-browser (Safari on iPhone, Chrome on Android), with nothing to install. From the phone an inspector can:
+The phone form lets inspectors work in the field while SDE runs on a nearby Mac, such as in a vehicle, field office or
+shelter. The Mac serves a web page over its Wi-Fi network. A phone on the same network can open it in a browser (Safari
+on iPhone, Chrome on Android), with nothing to install. From the phone, an inspector can:
 
 - see the structures assigned to their team, in route order (**My assignments**);
 - search for a structure by address, owner, parcel number, record ID or the code on a field worksheet, or add a new
@@ -12,9 +12,9 @@ browser (Safari on iPhone, Chrome on Android), with nothing to install. From the
   on);
 - take photos with the phone's camera, or choose them from the phone, and add them to the assessment.
 
-Every change is saved on the Mac straight away. If the same assessment is open in the Mac's editor, it updates. Edit
-history shows each change with **Phone** as the way it was made and the name the inspector typed when pairing as the
-person.
+Every change is saved on the Mac straight away. If the same assessment is open in the Mac's editor, the editor updates.
+Edit history records **Phone** as the way each change was made and the name the inspector entered when pairing as the
+person who made it.
 
 The phone form doesn't do everything the Mac does: damage percentages by element, cost adjustments, statuses, reports,
 deleting, and import and export stay on the Mac.
@@ -29,8 +29,8 @@ deleting, and import and export stay on the Mac.
 3. The first time, macOS may ask whether SDE may accept incoming network connections, or find devices on your local
    network. Allow it; otherwise phones can't reach the Mac.
 
-While the phone form runs, SDE keeps the Mac from going to sleep. It stops when you press **Stop phone form**, when you
-quit SDE, and by itself after 12 hours (the card shows how long is left).
+While the phone form runs, SDE keeps the Mac from going to sleep. The form stops when you press **Stop phone form**,
+when you quit SDE, or automatically after 12 hours. The card shows how long is left.
 
 ### On a phone
 
@@ -47,9 +47,9 @@ quit SDE, and by itself after 12 hours (the card shows how long is left).
   <img src="screenshots/91-phone-edit.png" alt="An assessment open on the phone" width="260">
 </p>
 
-Several phones can be paired at once. The QR code and PIN work for one phone, for 10 minutes; a new code appears as soon
-as one is used. **New code** on the Mac makes a fresh one at any time. Each paired phone is listed on the Mac with
-**Revoke**, which signs it out immediately.
+Several phones can be paired at once. Each QR code and PIN can pair one phone and expires after 10 minutes; a new code
+appears as soon as one is used. **New code** on the Mac makes a fresh one at any time. Each paired phone is listed on
+the Mac with **Revoke**, which signs it out immediately.
 
 An assessment that is **Final** or **Letter sent** can be read on the phone but not changed; the phone says so, and it
 can be reopened on the Mac.
@@ -79,13 +79,13 @@ What protects the phone form:
   the QR code or the 6-digit PIN on the Mac's screen, so it needs someone who can see the Mac. Both work once and expire
   after 10 minutes. After 5 wrong PINs, PIN pairing pauses for 10 minutes (the QR code still works). Only the page and
   pairing are open to an unpaired phone; everything else needs pairing, however its address is spelled.
-- **Sessions.** A paired phone gets a random 256-bit session cookie that page scripts can't read (HttpOnly), that the
-  browser sends only to this server and only from its own pages (SameSite=Strict), and that ends when the server stops.
-  The Mac keeps only a hash of it. The Mac lists every paired phone and can revoke any of them.
+- **Sessions.** A paired phone gets a random 256-bit session cookie. Page scripts can't read it (HttpOnly), and
+  SameSite=Strict restricts it from being sent with cross-site requests. The session ends when the server stops. The
+  Mac keeps only a hash of the cookie, lists every paired phone and can revoke any of them.
 - **Requests from other sites are refused.** Every request that changes something must carry a custom header
-  (`X-SDE: 1`) that a page on another site can't add without the browser asking the server first, which it never
-  allows. The page itself is served with a strict Content Security Policy and builds everything from text, never from
-  HTML in the data.
+  (`X-SDE: 1`). A page on another site cannot add it without the browser asking the server first, and the server never
+  allows that request. The page itself is served with a strict Content Security Policy and builds everything from
+  text, never from HTML in the data.
 - **Limits.** Requests are limited to 1 MB, photos to 25 MB, and uploaded files must really be JPEG, PNG or HEIC images
   (checked by their content, not their name: a JPEG or PNG must describe a picture with a size, and a HEIC must convert).
   The Mac converts at most two HEIC photos at a time, and gives up on one after a minute.
@@ -108,10 +108,10 @@ What it doesn't protect against:
 
 ### Networks where it won't work
 
-Guest networks and some office networks keep devices from reaching one another ("client isolation"); phones on those
-can't reach the Mac. Use a network without it, or a hotspot from a phone or a travel router. If the Mac has no private
-network address (for example, it is connected only by a cellular modem with a public address), the phone form won't
-start.
+Guest networks and some office networks keep devices from reaching one another ("client isolation"). Phones on those
+networks can't reach the Mac. Use a network without client isolation, or a hotspot from a phone or a travel router. If
+the Mac has no private network address (for example, it is connected only by a cellular modem with a public address),
+the phone form won't start.
 
 ## For developers
 
