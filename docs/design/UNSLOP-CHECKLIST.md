@@ -1,8 +1,8 @@
 # Unslop checklist (v3.0)
 
-v3.0's goal is that SDE looks and behaves like a native Mac tool and not like a generic web or SaaS template. Each row
-below is a pattern found in the 2.5 UI, paired with the Mac-native replacement. Every v3.0 milestone is checked against
-this list, and the anti-slop guard in `tests/Sde.App.Tests/StyleGuardTests.cs` enforces what can be checked mechanically.
+The v3.0 goal was for SDE to look and behave like a native Mac tool rather than a generic web or SaaS template. The
+tables pair patterns found in the 2.5 UI with proposed Mac-native replacements. The outcome below records where the
+finished design differed; `tests/Sde.App.Tests/StyleGuardTests.cs` enforces the mechanical checks listed there.
 
 ## Shell
 
@@ -47,6 +47,8 @@ this list, and the anti-slop guard in `tests/Sde.App.Tests/StyleGuardTests.cs` e
 | Chatty empty states | "Assessments appear here for review as soon as…" | "No Assessments to Review" |
 
 ## Mechanical guard (StyleGuardTests)
+
+The original checklist called for these checks. See **Guard** under Outcome in 3.0 for what was actually enforced.
 
 - No hex or named colours, FontSize or FontWeight literals (already in 2.5).
 - No CornerRadius literals in Views.

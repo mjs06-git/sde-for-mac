@@ -14,8 +14,8 @@ works on databases from 1.0, 1.5 and 2.0, and a 2.0 app can still open a 2.5 dat
 
 ## Events
 - Keep each disaster as an **event** (name, kind, DR number, dates and a datum offset).
-- **Choose an event in the sidebar** and Structures, the map, the Dashboard, exports, letters and web maps show only
-  that event. SDE remembers the choice for each database.
+- **Choose an event in the sidebar** to show only that event in Structures, the map, the Dashboard, exports, letters
+  and web maps. SDE remembers the choice for each database.
 - A new assessment started while an event is chosen joins it, and the editor offers an event from the damage date.
 
 ## The map
@@ -38,8 +38,8 @@ works on databases from 1.0, 1.5 and 2.0, and a 2.0 app can still open a 2.5 dat
   order, and print a route sheet and a worksheet per structure with a small map and a short code the phone form's
   search accepts. The Assignments page and a Dashboard chart show each team's progress, and the phone form shows each
   inspector their team's list.
-- **Work packages**: take assessments to a Mac in the field on a file, work there without a connection, and check the
-  work back in at the office with its history. While out, the assessments are read-only at the office.
+- **Work packages**: take assessments to a Mac in the field in a file and work without a connection. Check the work
+  and its history back in at the office. While the package is out, the assessments are read-only at the office.
 
 ## In the office
 - **Review**: a queue of assessments waiting for review, quality checks that flag likely mistakes (set one aside with
@@ -66,10 +66,10 @@ works on databases from 1.0, 1.5 and 2.0, and a 2.0 app can still open a 2.5 dat
 - **Claude and other AI assistants can work with an SDE database** through SDE's built-in MCP server: find structures,
   read and explain assessments, run the quality checks, summarise an event, list compliance cases and map layers, and
   make reports, GeoJSON files and web maps (into an "AI outputs" folder beside the database).
-- **Changes only when you allow them**, in Settings, AI assistants: fill in fields, set Draft, Reviewed or Appeal, add
-  structures, events and review comments, and assign teams. Every change is recorded in History as the assistant's
-  and can be reverted from Settings; Final and Letter sent assessments stay locked; nothing can be deleted.
-- Settings, AI assistants has the setup to paste into Claude Code or Claude Desktop.
+- **Changes only when you allow them** in Settings, AI assistants: fill in fields, set Draft, Reviewed or Appeal, add
+  structures, events and review comments, and assign teams. History records each change as the assistant's, and you
+  can revert it from Settings. Final and Letter sent assessments stay locked; nothing can be deleted.
+- Settings, AI assistants provides the setup to paste into Claude Code or Claude Desktop.
 
 ## Settings
 - **Map & GIS**: the background map, whether FEMA's flood zones start on, the saved map pieces, and leaving owner names

@@ -6,7 +6,8 @@ needs around them. Everything below works on databases from 1.0 and 1.5, and a 1
 ## Safer to use
 - **Recently deleted.** Deleting a structure, an assessment or a photo moves it to Recently deleted for 30 days.
 - **Undo and redo** in an assessment (Cmd+Z, Shift+Cmd+Z).
-- **Automatic backups** beside the database, once a day and on quitting; File, then Restore from Backup.
+- **Automatic backups** beside the database, once a day and on quitting. To restore one, choose File, then Restore from
+  Backup.
 - **Statuses**: Draft, Reviewed, Final, Letter sent, Appeal. Final and Letter sent lock an assessment; reopening it asks
   for a reason.
 - **Edit history**: who changed what and when, for every assessment, including bulk changes, imports and the phone form.
@@ -14,9 +15,9 @@ needs around them. Everything below works on databases from 1.0 and 1.5, and a 1
 - **Nothing is saved until you start**: a new structure you open and close without typing leaves nothing behind.
 
 ## Faster with many structures
-- **A sortable list** with the columns you choose, filters (inspection dates, percent damaged, street, ZIP, parcel,
-  status) that are remembered, and saved views. The order you sort is the order reports print in.
-- **Set a field on many structures at once**, with an undo, skipping Final assessments.
+- **A sortable list** with your choice of columns, remembered filters (inspection dates, percent damaged, street, ZIP,
+  parcel and status) and saved views. Reports print in the list's sort order.
+- **Set a field on many structures at once**, with undo. Final assessments are skipped.
 - **Search and replace** over the same fields as FEMA's SDE, with a preview.
 - **Copy from another structure** for rows of similar buildings.
 - **Note snippets** for text you type often.

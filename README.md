@@ -5,10 +5,10 @@
 **FEMA's Substantial Damage Estimator, on a Mac.** After a flood or other disaster, communities in the National Flood
 Insurance Program have to decide whether each damaged building is *substantially damaged*: whether repairing it would
 cost 50 percent or more of its value before the damage. FEMA's Substantial Damage Estimator (SDE 3.0) is the standard
-tool for that, and it runs only on Windows. SDE for Mac gives the same results, reads and writes the same files, and
-adds what an office needs during a busy recovery: events, a map you can edit, field teams and work packages, review
-and compliance tracking, imports from permit systems and assessor rolls, owner letters, a phone form for inspectors,
-AI assistants that work only as far as you allow, edit history and automatic backups.
+tool for that, and it runs only on Windows. SDE for Mac gives the same results and reads and writes the same files.
+It also adds tools for recovery work: events, an editable map, field teams and work packages, review and compliance
+tracking, imports from permit systems and assessor rolls, owner letters, a phone form for inspectors, AI assistants
+with permissions you control, edit history and automatic backups.
 
 > **Not a FEMA product.** SDE for Mac is an independent, unofficial port. It is not produced, endorsed or supported by
 > FEMA. It uses FEMA's calculation, cost tables and validation rules and is tested against FEMA's own engine, but every
@@ -88,7 +88,8 @@ moved.
 ### What you need
 - A Mac with **macOS 12 Monterey or later**, either Apple silicon (M1 or newer) or Intel.
 - About 200 MB of disk space for the app, plus room for your photos.
-- An internet connection only for map backgrounds and the optional online look-ups. Everything else works offline.
+- An internet connection for online maps and layers, optional online look-ups and USGS high-water marks. See
+  [SECURITY.md](SECURITY.md#what-sde-sends-over-the-internet) for what these services receive.
 
 ### Step by step
 1. **Check which kind of Mac you have.** Open the Apple menu (top-left corner) and choose **About This Mac**. If it says **Chip: Apple M1** (or
@@ -128,7 +129,7 @@ A first session takes about 15 minutes.
 1. **Practise first.** Choose **Help > Open Sample Database**. It holds made-up buildings, shows a banner so you always
    know you are in it, and never touches your own data. Open a few structures and look around.
 2. **Make a database for your event.** Choose **File > New Database…** and save it in a folder named for the event
-   (for example `2026-09 River flood`). Keep one database per event.
+   (for example `2026-09 River flood`). You can keep separate databases or use events within one database.
 3. **Set it up once.** Choose **SDE > Settings…** (⌘,). Type **Your name** (it goes into edit history), then fill in
    **Defaults** with what is the same for every building in this event: the community, FIRM panel information, cost data
    and so on. Turn on **Fill new structures with my default values**.
@@ -168,8 +169,8 @@ The **[user guide](docs/USER-GUIDE.md)** explains every task step by step:
 19. [Keyboard shortcuts](docs/USER-GUIDE.md#19-keyboard-shortcuts)
 
 ## Getting help
-- **In the app**: the **?** next to any field says what to enter and which page of FEMA's SDE User Manual covers it.
-  **Help > SDE Help** lists all of them and can be searched, and **Help > FEMA SDE User Manual** opens the manual.
+- **In the app**: the **?** next to a field explains what to enter and gives the relevant page of FEMA's SDE User
+  Manual. Search **Help > SDE Help** for field help, or open the manual from **Help > FEMA SDE User Manual**.
 - **Questions about substantial damage rules** (what counts, your ordinance, appeals): your state's NFIP coordinator
   or your FEMA regional office. FEMA's *Substantial Improvement/Substantial Damage Desk Reference* (FEMA P-758) is the
   main reference.

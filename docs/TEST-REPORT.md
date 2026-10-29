@@ -1,14 +1,14 @@
 # Step 4 test report: does the Mac SDE work?
 
-As of 2026-10-28 (v3.0), 1,232 automated tests pass and none are skipped, run on macOS with the answer key installed:
-Core 339, Interop 234, App (UI) 283, Gis 187, Reports 86, Mcp 57 and Field 46. Section "v3.0: the redesign" below
-covers what changed. The paragraph that follows is the v2.0 record.
+On 2026-10-28 (v3.0), 1,232 automated tests passed with none skipped on macOS with the answer key installed:
+Core 339, Interop 234, App (UI) 283, Gis 187, Reports 86, Mcp 57 and Field 46. The "v3.0: the redesign" section
+describes the changes. Earlier results and observations are retained below as a historical record.
 
-As of 2026-10-20 (v2.0), 577 automated tests pass and 34 are skipped, run with `dotnet test Sde.sln` (about two
-minutes). The skipped ones compare against FEMA's own SDE 3.0 and need its installer (`tools/answer-key/setup.sh`);
-they last ran, all passing, on macOS with v1.5, and the 2.0 run was on Linux (Ubuntu 24.04) without the installer, so
-**run the full suite with the answer key on a Mac before releasing**. v1.0 had 175 tests and v1.5 237 (section "v1.5"
-below); what 2.0 adds is in "v2.0: the rest" below.
+On 2026-10-20 (v2.0), `dotnet test Sde.sln` took about two minutes on Linux (Ubuntu 24.04): 577 tests passed and 34
+were skipped. The skipped tests compare against FEMA's SDE 3.0 and require its installer (`tools/answer-key/setup.sh`).
+They had last passed on macOS with v1.5, so the v2.0 record called for a full Mac run with the answer key before
+release; the v3.0 run above subsequently included it. v1.0 had 175 tests and v1.5 had 237; the sections below describe
+what v1.5 and v2.0 added.
 FEMA's own software running on Windows has not been checked, because none was available; `docs/windows-crosscheck/`
 is ready for whoever has it.
 
@@ -172,7 +172,7 @@ v1.5's Accela import became one vendor-neutral importer (`docs/IMPORTING.md`). T
 | Recently deleted and backups | `TrashAndBackupTests`, `DataSafetyUiTests` | Soft delete with FEMA's Active flag hides rows everywhere; restore brings back what was deleted together; purge after 30 days with a test clock removes rows and photo files; imports replace trashed rows with the same IDs; backups keep 14, restore backs up first |
 | Changing many at once | `BulkTests`, `ListPowerUiTests` | Bulk edit follows the editor's rules, skips Final, reverts except values changed since; search and replace changes only the match (FEMA lowercased the rest); copy-from never copies location, owner or damage |
 | The list | `ListPowerUiTests`, `KeyboardTests` | Sorting is the report order; filters and saved views are remembered per database; the keyboard shortcuts work through the window's key bindings |
-| Field data | `FieldDataTests`, `FieldDataUiTests`, `OnlineClientTests`, `PhotoTests`, `XlsAndDbfTests` | Photo order is report order; EXIF date and GPS offered, never applied silently; online look-ups from recorded responses (no network in tests); depth suggestions block Final until accepted; .xls and .dbf read like .xlsx |
+| Field data | `FieldDataTests`, `FieldDataUiTests`, `OnlineClientTests`, `PhotoTests`, `XlsAndDbfTests` | Photo order is report order; EXIF date and GPS offered, never applied silently; online look-ups use fixtures (no network in tests); depth suggestions block Final until accepted; .xls and .dbf read like .xlsx |
 | Outputs | `MapDashboardUiTests`, `GisExportTests` (with `ogrinfo`), `EventSummaryReportTests`, `LetterTests`, `SiDeterminationReportTests`, `ImprovementCalculatorTests`, `CumulativeDamageTests`, `OutputsUiTests` | GeoPackage opens in GDAL; letters merge placeholders split across runs; SI and cumulative arithmetic at the thresholds; appeal what-ifs equal the engine; FEMA's percent and determination never change |
 | Phone form | `Sde.Field.Tests` (real Kestrel on loopback) | Pairing by one-time token and PIN with lockout, cookie and CSRF header required, wrong Host refused, only private addresses served, uploads capped and type-checked, changes saved through the editor with Via Phone |
 | Help | `HelpUiTests` | Every field has help with a manual page; the excerpt PDF is written; the sample database is marked and warns before exporting |
@@ -203,6 +203,6 @@ The packaged app (arm64, and x64 under Rosetta) was opened on a new database and
   (`tools/packaging/build_mdbtools.sh`). On the build Mac, both architectures' copies give byte-identical output to
   Homebrew's mdbtools on every table of the test database and of FEMA's shipped database, and SDE's `.mdb` import ran
   through them with Homebrew left out of the search.
-- **Live online services** (Census geocoder, FEMA NFHL): the tests use recorded responses. See `docs/ONLINE-SERVICES.md`.
+- **Live online services** (Census geocoder, FEMA NFHL): the tests use hand-written fixtures, not live responses. See `docs/ONLINE-SERVICES.md`.
 - **The phone form on a real phone**, the map with live tiles, drag-and-drop with a real mouse, and real camera photos
   (EXIF). See the "check on a Mac" lists in `docs/PHONE-FORM.md` and `docs/ONLINE-SERVICES.md`.

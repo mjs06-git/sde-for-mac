@@ -1,8 +1,8 @@
 # Releasing SDE for Mac
 
-Releases are built by GitHub Actions. Pushing a tag that starts with `v` runs `.github/workflows/release.yml`, which builds
-the app for Apple Silicon and Intel Macs and attaches the zips to a **draft** GitHub release. Nothing is public until you
-open the draft, check it and press Publish.
+Pushing a tag that starts with `v` runs `.github/workflows/release.yml`. GitHub Actions builds the app for Apple Silicon
+and Intel Macs and attaches the zips to a **draft** GitHub release. The release is not public until you check the draft
+and press Publish.
 
 ## Steps
 
@@ -16,7 +16,7 @@ open the draft, check it and press Publish.
    - `SHA256SUMS`
 5. Open the draft, read the generated notes, add anything the commit log does not say, and publish. A tag with a hyphen
    (`v2.1.0-beta1`) is marked as a pre-release.
-6. Re-running the workflow for the same tag replaces the files on the existing release.
+Re-running the workflow for the same tag replaces the files on the existing release.
 
 ## What the workflow does
 
@@ -44,8 +44,8 @@ bash tools/packaging/sign_app.sh osx-arm64 osx-x64
 
 ## Signing and notarization (optional)
 
-Without any secrets the release still builds, with an ad-hoc signature. Mac users then have to open the app with
-right-click, Open (or `xattr -d com.apple.quarantine`) the first time, because Gatekeeper cannot verify the developer.
+Without secrets, the release still builds with an ad-hoc signature. Mac users then have to right-click the app and
+choose Open (or use `xattr -d com.apple.quarantine`) the first time, because Gatekeeper cannot verify the developer.
 With the secrets below the app is signed with a Developer ID Application certificate using the hardened runtime
 (`tools/packaging/entitlements.plist`), notarized by Apple and stapled, so it opens normally.
 

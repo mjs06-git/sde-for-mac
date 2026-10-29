@@ -1,14 +1,14 @@
 # Owner letters
 
-SDE for Mac can write a letter to each owner from a Word (.docx) template: a substantial damage notice, a "not
-substantially damaged" notice, or a substantial improvement determination. You edit the templates in Word (or in
-Pages, saving as .docx) to suit your ordinance and letterhead; SDE fills in the details for each structure.
+SDE for Mac can create owner letters from Word (.docx) templates: a substantial damage notice, a "not substantially
+damaged" notice, or a substantial improvement determination. Edit the templates in Word, or in Pages and save them as
+.docx, to suit your ordinance and letterhead. SDE fills in the details for each structure.
 
 ## Before you send anything
 
-The starter templates are a plain-English starting point written in the spirit of the sample substantial damage
-notice in FEMA P-758 (*Substantial Improvement/Substantial Damage Desk Reference*), Appendix D. They are not legal
-advice. **Review and adapt them with your community's counsel before you use them.** In particular, check:
+The starter templates use plain English and follow the spirit of the sample substantial damage notice in FEMA P-758
+(*Substantial Improvement/Substantial Damage Desk Reference*), Appendix D. They are not legal advice. **Review and
+adapt them with your community's counsel before you use them.** In particular, check:
 
 - the threshold (the starter damage letters say 50 percent, the NFIP minimum; your ordinance may be stricter),
 - what your ordinance requires of a substantially damaged or substantially improved building,
@@ -34,8 +34,8 @@ The Compliance page has three more starter letters for a substantially damaged b
 A compliance letter is recorded on the case's timeline and, for a substantial damage case, in the assessment's
 letter log.
 
-SDE writes the starter templates only when they are missing, so your edits are never overwritten. Each starter
-letter has the community and office in the page header, contact details in the footer, and a table of the facts.
+SDE creates the starter templates only when they are missing, so it does not overwrite your edits. Each starter letter
+has the community and office in the page header, contact details in the footer, and a table of the facts.
 
 ## Placeholders
 
@@ -43,15 +43,14 @@ A placeholder is a field name between guillemets: «OwnerName». On a Mac, type 
 Option-Shift-\. Placeholders work anywhere: body text, tables, headers, footers, footnotes and endnotes. Field
 names are not case-sensitive. Type them as plain text (not as Word mail-merge fields).
 
-The value takes the formatting of the place where the placeholder starts, so make the whole placeholder bold if
-you want the value bold. Word sometimes splits what you type into pieces behind the scenes; SDE handles that.
+The inserted value takes the formatting at the start of the placeholder. Make the whole placeholder bold if you want
+the value bold. Word sometimes splits text into pieces behind the scenes; SDE handles that.
 
-A placeholder that is not a field is left in the letter as it is, and SDE lists it so you can fix the template
-or add the field.
+SDE leaves unrecognized placeholders in the letter and lists them so you can fix the template or add the field.
 
 ## Fields
 
-Every field is always available. A field with nothing to put in it is left blank.
+Every field is always available. If a field has no value, SDE leaves it blank.
 
 **Letter and sender** (Settings)
 
@@ -139,7 +138,7 @@ Your own templates can use extra fields that the app is given (for example «App
 
 ## Writing a batch
 
-SDE writes a new folder named "Letters yyyy-MM-dd HHmm" (with " (2)" added if that name is taken) holding one file
-per letter, named "<address> (<kind>).docx", for example "12 Example Street (Substantial damage).docx". Two letters
-with the same name get " (2)", " (3)" and so on. If you stop the batch, or something goes wrong, the partly written
-folder is removed.
+SDE creates a folder named "Letters yyyy-MM-dd HHmm", adding " (2)" if that name is taken. It contains one file per
+letter, named "<address> (<kind>).docx", for example "12 Example Street (Substantial damage).docx". Letters with the
+same name get " (2)", " (3)" and so on. If you stop the batch or something goes wrong, SDE removes the partly written
+folder.

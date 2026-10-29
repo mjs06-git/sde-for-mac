@@ -1,6 +1,8 @@
 # Online services: what to verify live
 
-The online lookups in `src/Sde.Interop/Online` were written from the services' documented formats on a machine that could not reach census.gov or fema.gov. The tests use hand-written fixtures (`tests/Sde.Interop.Tests/Fixtures/online`). Before relying on them, check each item below on a machine with internet access.
+The online lookups in `src/Sde.Interop/Online` were written using the services' documented formats on a machine that
+could not reach census.gov or fema.gov. Tests use hand-written fixtures in `tests/Sde.Interop.Tests/Fixtures/online`.
+Before relying on the lookups, check each item below on a machine with internet access.
 
 ## Census geocoder
 
@@ -17,9 +19,12 @@ The online lookups in `src/Sde.Interop/Online` were written from the services' d
   - 28: Flood Hazard Zones. Fields used: `FLD_ZONE`, `ZONE_SUBTY`, `STATIC_BFE`, `V_DATUM`.
   - 3: FIRM Panels. Fields used: `FIRM_PAN`, `SUFFIX`, `EFF_DATE` (epoch milliseconds).
   - 22: Political Jurisdictions. Fields used: `CID`, `POL_NAME1`.
-- Confirm `STATIC_BFE` is -9999 when there is no BFE (SDE maps it to none), and that `ZONE_SUBTY` is `FLOODWAY` for floodway polygons (SDE tests for the word, ignoring case).
+- Confirm `STATIC_BFE` is -9999 when there is no BFE (SDE maps it to none), and that `ZONE_SUBTY` is `FLOODWAY` for
+  floodway polygons (SDE tests for the word, ignoring case).
 - Confirm the exact `FLD_ZONE` spellings for zone X, zone A99, and V zones, and what `ZONE_SUBTY` says for shaded X, so `FloodInfoMapper` maps them correctly.
-- A point on a boundary can hit several zone polygons. SDE reports the strictest: a floodway, then a V zone, then any other A zone, then shaded X, then unshaded X (`ZONE_SUBTY` "AREA OF MINIMAL FLOOD HAZARD" or blank), then anything else. Confirm that every shaded X subtype differs from the unshaded one.
+- A point on a boundary can hit several zone polygons. SDE reports the strictest, in this order: floodway, V zone,
+  other A zone, shaded X, unshaded X (`ZONE_SUBTY` "AREA OF MINIMAL FLOOD HAZARD" or blank), then anything else.
+  Confirm that every shaded X subtype differs from the unshaded one.
 - Confirm that a point outside any mapped area returns an empty `features` array, and that an overloaded server returns either an HTTP error or HTTP 200 with an `error` object (both are handled).
 - Check that the service accepts the request without a token or referrer, and note its rate limits before using it for large batches (`OnlineBatch` defaults to 4 at a time).
 - Check that `EFF_DATE` is the date wanted for SDE's FIRM panel date.
@@ -75,4 +80,6 @@ Map, Add layer, From an ArcGIS web address reads any public ArcGIS FeatureServer
 
 ## Photos
 
-`PhotoMetadata` uses the MetadataExtractor library (Apache-2.0). It was tested against synthetic JPEGs only. Try a few real phone and camera photos (including HEIC if those are expected, which MetadataExtractor reads) to confirm the date and GPS position come through.
+`PhotoMetadata` uses the MetadataExtractor library (Apache-2.0). It has been tested only against synthetic JPEGs. Try
+real phone and camera photos to confirm that the date and GPS position come through. Include HEIC photos if you expect
+them; MetadataExtractor reads that format.
