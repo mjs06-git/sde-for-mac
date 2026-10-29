@@ -1,9 +1,9 @@
 # Online service fixtures
 
-These JSON files are hand-written to the documented response formats of the U.S. Census Bureau geocoder and the
-ArcGIS REST API behind FEMA's National Flood Hazard Layer (NFHL). They are not recordings of live responses: the
-values are plausible but invented, and the only real-world fact in them is the position of a public landmark
-(the U.S. Capitol). They exist so the parsing code can be tested without a network.
+The Census and NFHL JSON fixtures are hand-written to the documented response formats of the U.S. Census Bureau
+geocoder and the ArcGIS REST API behind FEMA's National Flood Hazard Layer (NFHL). They are not recordings of live
+responses: their values are invented except for the position of a public landmark (the U.S. Capitol). They let the
+parsing code be tested without a network.
 
 The USGS Short-Term Network (STN) fixtures are hand-written too, with invented values and placeholder text ("Team
 member 1") where the service puts staff names. The high-water mark records copy the field names and value types of
@@ -11,7 +11,7 @@ one live answer from `https://api.waterdata.usgs.gov/stnservices/hwms/filteredhw
 records send their numbers as text, as the service sometimes does. The events file follows the same naming but was not
 checked live.
 
-Verify against the live services on a machine with internet access; see docs/ONLINE-SERVICES.md.
+To verify the integration against live services, use a machine with internet access; see `docs/ONLINE-SERVICES.md`.
 
 | File | Shape |
 | --- | --- |

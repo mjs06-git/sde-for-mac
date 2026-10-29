@@ -1,7 +1,7 @@
 # Security policy
 
-SDE for Mac holds owners' names, addresses and photos of their homes, and its phone form listens on the office
-network while it runs. Security problems are taken seriously.
+SDE for Mac holds owners' names, addresses and photos of their homes. While the phone form is running, it listens on
+the office network.
 
 ## Supported versions
 Only the latest release gets security fixes. Please update before reporting.
@@ -37,15 +37,20 @@ Out of scope:
 - FEMA's, the Census Bureau's and other online services that SDE uses.
 
 ## What SDE sends over the internet
-SDE has no accounts, no analytics and no telemetry. Your database stays on your Mac. The app connects to the internet
-only for these:
+SDE has no accounts, analytics or telemetry. Your database stays on your Mac, but some features contact online
+services. Requests include:
 
 | When | To | What is sent |
 |---|---|---|
 | You use **Look up online** | U.S. Census Bureau geocoder | The structure's address |
 | You use **Look up online** | FEMA National Flood Hazard Layer | The structure's latitude and longitude |
-| The **Map** page is open | USGS National Map (or OpenStreetMap, if chosen) | Requests for the map tiles in view |
+| You use an online basemap | USGS National Map or OpenStreetMap, depending on your selection | Requests for map tiles, which identify the area in view |
+| You use the FEMA flood-zone overlay | FEMA National Flood Hazard Layer | Requests for map tiles, including their geographic bounds |
+| You add a layer from an ArcGIS web address | The selected ArcGIS service | Layer and feature requests, including the map extent |
+| You request USGS high-water marks | USGS Short-Term Network service (or the configured service) | The selected event ID and state codes |
 | You click a FEMA link in Help | FEMA's website | An ordinary web page request |
 
 The phone form serves the local network only. It is off until someone starts it, and it never connects to the
-internet.
+internet. Exported web maps load basemap tiles in the viewer's browser. If you connect an AI assistant, the assistant
+may send information it reads to its provider; check that provider's privacy policy before connecting it to sensitive
+data.

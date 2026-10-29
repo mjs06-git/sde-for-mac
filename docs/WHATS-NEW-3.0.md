@@ -63,8 +63,8 @@ Deleted and ⌘8 Import & Export.
 - A status bar under the table gives the count and the sort, or how many are checked.
 
 ## The editor
-- **The sidebar is the assessment's outline** while it is open: its eight sections, numbered, with a count of the
-  fields left to check (red when one is required).
+- **The sidebar is the assessment's outline** while it is open. It lists the eight numbered sections and the count of
+  fields left to check, in red when a required field remains.
 - **Fields sit on plain sections** divided by hairlines; what each field means is in its tooltip and its **?**.
 - **Damage by element** is a compact table: each element has a percent field and a small slider (0 to 4 still jump to
   0, 25, 50, 75 and 100), and the 0 to 100 ruler appears once, in the header.
@@ -80,8 +80,8 @@ Deleted and ⌘8 Import & Export.
 - Each page's counts are in a status bar under its table, and results and statuses are dots.
 
 ## Summary, Import & Export and Settings
-- **Summary** is plain sections: the event's figures as a short list and the charts, with the exports (Event Summary
-  PDF, GeoPackage, GeoJSON) in the toolbar's **Export** menu.
+- **Summary** shows the event's figures as a short list alongside the charts. The toolbar's **Export** menu offers
+  Event Summary PDF, GeoPackage and GeoJSON exports.
 - **Import & Export** and **Settings** keep their pages but lose the boxes inside boxes and the line of explanation
   under every row; the explanations are tooltips.
 

@@ -2,15 +2,15 @@
 
 > For developers. People using SDE will find the steps in the user guide's [AI assistants](USER-GUIDE.md#16-ai-assistants) chapter.
 
-SDE includes a [Model Context Protocol](https://modelcontextprotocol.io/) server, so an AI assistant such as Claude
-Desktop or Claude Code can read an SDE database and, when allowed, edit it. It is the app itself run with a verb:
+SDE includes a [Model Context Protocol](https://modelcontextprotocol.io/) server that lets an AI assistant such as
+Claude Desktop or Claude Code read an SDE database and, when allowed, edit it. Run the app with the `mcp` verb:
 
 ```
 SDE.app/Contents/MacOS/SDE mcp --db "<path to the database>"
 ```
 
-It speaks JSON-RPC on stdin and stdout and shows no window or Dock icon (`Program.Main` branches before Avalonia
-loads). The code is in `src/Sde.Mcp`, built on the official C# SDK (`ModelContextProtocol`, Apache-2.0).
+The server speaks JSON-RPC on stdin and stdout and shows no window or Dock icon (`Program.Main` branches before
+Avalonia loads). Its code is in `src/Sde.Mcp` and uses the official C# SDK (`ModelContextProtocol`, Apache-2.0).
 
 ## Connecting an assistant
 
@@ -37,8 +37,8 @@ Add `--scope user` to make it available in every project.
 ```
 
 Run SDE from the Applications folder. A copy opened straight from Downloads runs from a temporary path (App
-Translocation) that changes every time; the server warns about it. Open the database in SDE once before connecting:
-the server never upgrades a database's tables and refuses one that needs it.
+Translocation) that changes every time; the server warns about it. Open the database in SDE once before connecting.
+The server does not upgrade database tables and refuses a database that needs an upgrade.
 
 ## What it can do
 
@@ -60,8 +60,8 @@ Read tools (always on; read-only connections):
 | `list_layers` | The Map page's layers (`MapLayer`) with their table in `<db>.layers.gpkg`, geometry type, feature count, fields and extent; warns when the layers file belongs to another database. |
 | `query_layer` | One layer's features by attribute conditions (AND or OR) and/or a bounding box, with their values and boxes; GeoJSON shapes only when asked, and shapes over 2,000 points left out. Paged. |
 
-Outputs (always allowed; they change nothing in the database and write only into `<database folder>/AI outputs/`,
-made when needed, with a free file name; results give the path):
+Output tools are always allowed. They do not change the database; they write only to `<database folder>/AI outputs/`,
+creating the folder when needed and using an available file name. Each result gives the output path:
 
 | Tool | What it does |
 | --- | --- |
@@ -90,20 +90,20 @@ Resources: `sde://assessment/{id}` and `sde://field-help`.
 
 - Read tools are always on and use read-only SQLite connections. The layers GeoPackage is opened read-only too, and
   is never created by the server.
-- Outputs write only into the "AI outputs" folder beside the database, never where an assistant asks, which also
-  avoids macOS privacy prompts attributed to the assistant's app. A file name can't lead out of the folder: separators
-  and characters that look like them become "-", control characters and invisible ones (such as those that reverse
-  the direction of text) are dropped, leading dots go, and a name is cut to whole characters within 100 characters
-  and 200 bytes (`AiOutputs.SafeName`). A new file is always created new and written through the handle that created
-  it, so it never replaces anything or writes through a link already in the folder (a dangling one included); the
-  name gets " 2", " 3"… instead. An "AI outputs" that is a link or a file is refused.
+- Outputs go only into the "AI outputs" folder beside the database, not to an assistant-specified path. This also
+  avoids macOS privacy prompts attributed to the assistant's app. `AiOutputs.SafeName` replaces separators and
+  look-alike characters with "-", removes control and invisible characters (such as text-direction controls) and
+  leading dots, and truncates at whole characters within 100 characters and 200 bytes. The server creates each file
+  as new and writes through the handle that created it. It never replaces an existing file or writes through a link,
+  including a dangling link; it adds " 2", " 3"… to the name instead. It refuses an "AI outputs" path that is a link
+  or a file.
 - Edits work only while the database's `Mcp.AllowEdits` setting is on (`AiAssistantSettings`), read again on every
   call. Each edit call is one `SaveContext.Batch` with `Via = "AI assistant"` and `User = "<client name> (AI)"`, so
   `AiAssistantSettings.RecentChanges` can list it and `AiAssistantSettings.Revert` can undo it.
-- What a call adds outside FEMA's fields (a structure, an event, a comment, an assignment) is kept in its batch's
-  record row: one `EditHistory` row with no structure or assessment (so no history list shows it), `Field = "AI
-  change"`, and the details as JSON (`SdeStore.WriteBatchRecord`). `RecentChanges` names the change from it
-  (`AiChangeBatch.Kind`, `RevertNote`) and `Revert` takes it back:
+- Changes outside FEMA's fields (a structure, an event, a comment or an assignment) are kept in the batch's record
+  row. It is an `EditHistory` row with no structure or assessment, so no history list shows it. It has
+  `Field = "AI change"` and details as JSON (`SdeStore.WriteBatchRecord`). `RecentChanges` names the change from that row
+  (`AiChangeBatch.Kind`, `RevertNote`), and `Revert` undoes it as follows:
   - fields: put back through `SdeStore.RevertBatch`; a status: set back;
   - a new structure: moved to Recently deleted, unless a person has worked on it since;
   - a new event: removed while nothing has been put in it;
@@ -133,10 +133,11 @@ stdout carries only JSON-RPC; every log line goes to stderr, which Claude Deskto
 `~/Library/Logs/Claude/mcp-server-sde.log`. The server also writes `sde-mcp-yyyy-MM-dd.log` (information and up) to
 SDE's log folder, `~/Library/Logs/SDE`.
 
-Neither log holds the messages themselves: the SDK logs each request and result in full (owners' names, addresses
-and phone numbers included) at Trace, and those lines are left out, since SDE's Recently deleted, backups and
-permanent deletes never reach the assistant's log file. To debug the protocol, set `SDE_MCP_LOG_TRAFFIC=1` in the
-server's environment (in Claude Desktop's config, an `"env"` entry beside `"args"`), and turn it off again after.
+By default, neither log holds the protocol messages themselves. The SDK logs full requests and results at Trace,
+including owners' names, addresses and phone numbers, but those lines are excluded so SDE's Recently deleted, backups
+and permanent deletes never reach the assistant's log file. To debug the protocol, set `SDE_MCP_LOG_TRAFFIC=1` in the
+server's environment (in Claude Desktop's config, an `"env"` entry beside `"args"`). This allows those Trace lines on
+stderr; turn it off again after debugging.
 
 ## Testing
 

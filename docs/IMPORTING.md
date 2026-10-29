@@ -1,18 +1,18 @@
 # Importing inspections or parcels → SDE assessments or structures → reports and the FEMA package
 
-SDE for Mac can import records kept in another system: damage inspections from a permit or inspection system, a
-spreadsheet the field teams filled in, a parcel list or assessor roll, or the attribute table of a shapefile. Each
-record becomes an SDE **assessment** (inspections) or an SDE **structure** (parcels). Afterwards, everything a
-community sends after an event can be written into one folder. The flow has three steps:
+SDE for Mac imports records from files produced by other systems, including damage inspections, field-team
+spreadsheets, parcel lists, assessor rolls and shapefile attribute tables. Each inspection becomes an SDE
+**assessment**; each parcel becomes an SDE **structure**. You can then gather the reports and FEMA package in a
+submission folder:
 
 1. **Import** a file (Import & export → *Inspections or parcels*, or File → Import Inspections or Parcels…, ⌘⇧I).
 2. **Review** what came in on the Structures page and finish anything incomplete in the usual editor.
 3. **Write a submission folder** (Structures → Export ▾ → *Submission folder*): a PDF report per assessment, the two
    list reports, the FEMA SDE package and `results.csv`.
 
-It works from **files only**: nothing signs in to another system and nothing is written back to it. No system, city
-or county is built in. Three example profiles come with the app (see *Examples* below), and one of them is laid out
-like an Accela export, because v1.5 started as an Accela import; it is only an example.
+Import works from **files only**: SDE does not sign in to another system or write back to it. No system, city or
+county is built in. The app includes three example profiles (see *Examples* below). One follows an Accela export
+because v1.5 started as an Accela import, but it is only an example.
 
 ![The import page](screenshots/36-accela-mapping.png)
 
@@ -25,23 +25,22 @@ shapefile's attribute table). Two layouts work:
 - **One row per checklist item**: an export of inspection checklists, with a column naming the item and a column with
   its value. The app combines the rows of each record (and inspection) into one.
 
-Include at least a **record ID** that stays the same from one export to the next (a permit number, an inspection
-number, a parcel number). For inspections, also include an **inspection ID** if records can have more than one damage
-inspection. Then whatever else the system holds: address, parcel, owner, building details, flood depth and duration,
-damage by element, a value or a repair estimate, and so on. Anything the file doesn't have can be typed in once for
-all records (below) or filled in later in SDE.
+Include at least a **record ID** that stays the same from one export to the next, such as a permit, inspection or
+parcel number. For inspections, also include an **inspection ID** if a record can have more than one damage inspection.
+Include whatever else the system holds: address, parcel, owner, building details, flood depth and duration, damage by
+element, a value or a repair estimate. Values missing from the file can be entered once for all records during import
+or filled in later in SDE.
 
 ## 2. Importing
 
-Every change re-checks the whole file within a moment, so the preview at the bottom always shows what importing would
-do.
+SDE re-checks the whole file after each change, so the preview at the bottom shows what the import will do.
 
 1. **The file and its profile.** A *profile* remembers how one source's files map to SDE: what the file is, how
-   records are matched, the layout, the columns, fixed values and translations. It is saved when you import, and
-   picked again for the next file that has the same record ID column. Profiles are files in
+   records are matched, the layout, the columns, fixed values and translations. SDE saves it when you import and
+   selects it again for the next file with the same record ID column. Profiles are files in
    `~/Library/Application Support/SDE/Import Profiles/`, outside the database, so they carry over to a new database
    for the next event. Use *Show profiles in Finder* to send one to a colleague, *Use a profile someone shared…* to
-   add one, and *Start from an example* to begin from one of the examples.
+   add one, and *Start from an example* to begin with an example profile.
 2. **What the file is and how it's laid out.**
    - **Source**: the system or list the file comes from, in your words ("Permits", "County assessor"). It's written
      next to every record ID, so two sources with the same IDs never collide, and Structures shows it ("Permits
@@ -50,31 +49,32 @@ do.
      structures uses only the structure's fields (location, building, flood zone); the other field groups are hidden.
    - **New records match** structures already in SDE by record ID only, by parcel number, or by address (see *How
      records are matched*).
-   - The layout: one row per record or per checklist item; the record ID and inspection ID columns; for checklists,
-     the item and value columns. To leave rows out (for example other inspection types), choose the column under
-     *Only rows where* and tick the values to import.
+   - **Layout**: choose one row per record or per checklist item, then select the record ID and, when applicable,
+     inspection ID columns.
+     For checklists, also select the item and value columns. To leave rows out (for example, other inspection types),
+     choose the column under *Only rows where* and tick the values to import.
 3. **Where each SDE field comes from**, grouped like the editor's eight steps. For each field, pick the column, or type
-   a value used for every record: the cause of damage, the base cost per sq ft, the geographic adjustment, the value
-   and repair bases… Each mapped field shows an example from the file. Address and owner columns are split the same
+   a value used for every record, such as the cause of damage, base cost per sq ft, geographic adjustment, or value
+   and repair bases. Each mapped field shows an example from the file. Address and owner columns are split the same
    way as in Enterprise Import (whole address, number and name, "John Doe", "Doe, John").
    - *Start new assessments and structures from my default values* uses Settings → Defaults first, with the
      file's values on top.
    - *Copy the record ID into* a custom field puts the record ID into the FEMA package, so the state can see it.
-4. **The file's words, SDE's choices.** Any text that isn't one of FEMA's choices or a number is listed with how many
-   records use it. Pick what each means (e.g. "Slab on grade" → Slab - on - Grade, "Major" → 75). Until then the field
-   is left as it was and the record still imports. Translations are saved in the profile.
-5. **What will happen.** Each record, with what it will be, its projected % damaged and determination (for
-   inspections), and notes: values that couldn't be used, how many required fields are still empty. Untick any you
-   don't want, then **Import**. The import runs with a progress bar; if an assessment it changes is open in the
-   editor, the editor is saved first and shows the new values afterwards.
+4. **The file's words, SDE's choices.** SDE lists text that isn't a FEMA choice or a number, along with the number of
+   records using it. Pick what each means (e.g. "Slab on grade" → Slab - on - Grade, "Major" → 75). Until you do, the
+   field is left as it was, but the record still imports. SDE saves translations in the profile.
+5. **What will happen.** The preview shows what each record will become, its projected % damaged and determination
+   (for inspections), unusable values and the number of required fields still empty. Untick records you don't want,
+   then select **Import**. A progress bar tracks the import. If an assessment it changes is open in the editor, SDE
+   saves the editor first and shows the new values afterwards.
 
 ### The building value (assessor values)
 
 FEMA's market value is the value of the **building only, never the land**. Assessor rolls often have a land value, a
 building (improvement) value and a total. When a profile uses a column as the building value with the basis *Adj. Tax
 Assessed Value*, the page asks **"Is this the value of the building only, without the land?"** and nothing is imported
-until you confirm it (*Confirm building value…*). The answer is kept in the profile; mapping a different value column
-asks again. A total of land and building would make every percent damaged too low.
+until you confirm it (*Confirm building value…*). SDE saves the answer in the profile and asks again if you map a
+different value column. Using a total that includes land would make the calculated percent damaged too low.
 
 ### What the import understands
 
@@ -117,8 +117,8 @@ ticked; ZIP codes count when both sides have one.
 
 ### Importing an updated file
 
-Each assessment or structure remembers its record and the values last imported. Importing a newer file of the same
-records:
+Each assessment or structure remembers its record and the values last imported. When you import a newer file of the
+same records, SDE:
 
 - updates **only the fields whose value changed** in the source since the last import;
 - **keeps edits made in SDE** to everything else;
@@ -142,8 +142,8 @@ file, and import: the profile is saved under its name (rename it under *Save as*
 
 ## 3. Reviewing
 
-After importing, **Review the N in Structures →** opens the Structures list showing just that import, with a
-*Last import · N ×* chip (click × to see everything again).
+After importing, select **Review the N in Structures →** to open the Structures list filtered to that import. A
+*Last import · N ×* chip shows the filter; click × to see everything again.
 
 - Each imported row shows its source and record under the address ("Pat Example · Permits BLD-2026-00123"), and the
   search box finds record IDs.
@@ -155,10 +155,10 @@ After importing, **Review the N in Structures →** opens the Structures list sh
 
 ## 4. The submission folder
 
-Structures → **Export ▾ → Submission folder (reports + FEMA package)…** works on the checked structures, or on the
-whole current list when none are checked (so the import chip or a filter narrows it). Choose the report for each
-assessment (one-page Summary or Detailed), with or without photos, and whether to include incomplete assessments, then
-a folder. A progress bar shows each report; *Stop* removes the half-written folder.
+Structures → **Export ▾ → Submission folder (reports + FEMA package)…** uses the checked structures, or the whole
+current list if none are checked. The import chip and other filters narrow that list. Choose a one-page Summary or
+Detailed report for each assessment, whether to include photos and incomplete assessments, and a destination folder.
+A progress bar shows each report; *Stop* removes the partly written folder.
 
 ```
 SDE submission 2026-10-08 1430/

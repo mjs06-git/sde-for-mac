@@ -5,7 +5,8 @@ Source: `SDE3_04062018.zip` → `SDE3-Installer.msi` (ProductVersion 3.0.0, FEMA
 - Decompiled C#: `decomp/`, produced by ILSpy 11.1 (`ilspycmd -p`).
 - Database dump: `decomp/database/`, produced by mdbtools 1.0.1.
 
-`file:line` references are relative to `decomp/` unless noted.
+`file:line` references are relative to `decomp/` unless noted. This is an analysis of the original Windows app;
+porting plans in it are historical. See `docs/PORTING-NOTES.md` for the Mac port.
 
 ---
 
@@ -143,7 +144,7 @@ Schema: `decomp/database/schema.access.sql` (also `schema.postgres.sql`). Relati
   - `ALike` → `LIKE`
   - nested `RIGHT JOIN` chains → flat `LEFT JOIN`s
   - `SELECT A.*, B.*` with duplicate column names → explicit column list
-- The full inventory, with file:line for every statement, is in `docs/PORTING-NOTES.md` (written during Step 2).
+- `docs/PORTING-NOTES.md` describes how the data layer was rewritten for SQLite.
 - **Windows-only pieces in DAL/BLL:**
   - `System.Data.OleDb` (every DAL service)
   - `DevExpress.DataAccess.Excel` (`BLL/BLL.Service/EnterpriseImportService.cs` only)
