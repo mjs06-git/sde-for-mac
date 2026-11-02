@@ -26,7 +26,7 @@
     <PackageVersion Include="SkiaSharp" Version="3.119.4" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.4" />
     <!-- Data, documents and reports (PDFsharp and MigraDoc stay on 6.2.x, the last MIT release) -->
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.14" />
     <PackageVersion Include="Dapper" Version="2.1.89" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageVersion Include="ClosedXML" Version="0.105.1" />
@@ -43,7 +43,7 @@
       app ships one copy of each.
     -->
     <PackageVersion Include="ModelContextProtocol" Version="2.3.0" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.14" />
     <!-- v2.5 Track B helpers: the elevation certificate reader (Sde.Interop) uses PDFsharp directly, the same MIT 6.2.x
          release Sde.Reports already ships through PDFsharp-MigraDoc -->
     <PackageVersion Include="PDFsharp" Version="6.2.4" />
