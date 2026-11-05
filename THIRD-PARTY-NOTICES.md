@@ -54,8 +54,8 @@ and https://github.com/harfbuzz/harfbuzz/blob/main/COPYING.
 
 | Package | Version | License | Project |
 | --- | --- | --- | --- |
-| Microsoft.Data.Sqlite, Microsoft.Data.Sqlite.Core | 10.0.12 | MIT | https://learn.microsoft.com/dotnet/standard/data/sqlite/ |
-| SQLitePCLRaw.bundle_e_sqlite3, .core, .lib.e_sqlite3, .provider.e_sqlite3 | 2.1.12 | Apache-2.0 | https://github.com/ericsink/SQLitePCL.raw |
+| Microsoft.Data.Sqlite, Microsoft.Data.Sqlite.Core | 10.0.14 | MIT | https://learn.microsoft.com/dotnet/standard/data/sqlite/ |
+| SQLitePCLRaw.bundle_e_sqlite3, .core, .lib.e_sqlite3, .provider.e_sqlite3 | 2.1.13 | Apache-2.0 | https://github.com/ericsink/SQLitePCL.raw |
 | Dapper | 2.1.89 | Apache-2.0 | https://github.com/DapperLib/Dapper |
 
 `libe_sqlite3` (in SQLitePCLRaw.lib.e_sqlite3) is a build of SQLite, which is in the public domain
@@ -95,7 +95,7 @@ publishes its XMP Toolkit SDK under BSD-3-Clause (https://github.com/adobe/XMP-T
 | --- | --- | --- | --- |
 | ModelContextProtocol, ModelContextProtocol.Core | 2.3.0 | Apache-2.0 | https://github.com/modelcontextprotocol/csharp-sdk |
 | Microsoft.Extensions.AI.Abstractions (pulled in by ModelContextProtocol.Core) | 10.11.0 | MIT | https://github.com/dotnet/extensions |
-| Microsoft.Extensions.Hosting and the Microsoft.Extensions libraries it uses (configuration, dependency injection, logging, options) | 10.0.13 | MIT | https://github.com/dotnet/runtime |
+| Microsoft.Extensions.Hosting and the Microsoft.Extensions libraries it uses (configuration, dependency injection, logging, options) | 10.0.14 | MIT | https://github.com/dotnet/runtime |
 
 The MCP C# SDK ships no NOTICE file (none in the 2.3.0 packages or in its repository at that release). Its `LICENSE`
 says some older contributions remain under the MIT license, and its `THIRD-PARTY-NOTICES.txt` lists the MIT-licensed
@@ -145,8 +145,8 @@ metres. SDE is free; nothing is charged for the dataset.
 
 | Package | Version | License | Project |
 | --- | --- | --- | --- |
-| Microsoft.Extensions.DependencyInjection.Abstractions | 10.0.13 | MIT | https://github.com/dotnet/runtime |
-| Microsoft.Extensions.Logging.Abstractions | 10.0.13 | MIT | https://github.com/dotnet/runtime |
+| Microsoft.Extensions.DependencyInjection.Abstractions | 10.0.14 | MIT | https://github.com/dotnet/runtime |
+| Microsoft.Extensions.Logging.Abstractions | 10.0.14 | MIT | https://github.com/dotnet/runtime |
 | Microsoft.IO.RecyclableMemoryStream | 3.0.1 | MIT | https://github.com/microsoft/Microsoft.IO.RecyclableMemoryStream |
 | System.IO.Packaging | 8.0.1 | MIT | https://github.com/dotnet/runtime |
 | System.Security.Cryptography.Pkcs | 8.0.2 | MIT | https://github.com/dotnet/runtime |

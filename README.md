@@ -180,7 +180,7 @@ The **[user guide](docs/USER-GUIDE.md)** explains every task step by step:
 - **A security problem**: please don't open a public issue. See [SECURITY.md](SECURITY.md).
 
 ## Building from source
-You need the .NET 10 SDK (`brew install dotnet`, or from Microsoft).
+You need the .NET 10 SDK, version 10.0.403 or later (`brew install dotnet`, or from Microsoft); `global.json` checks it.
 
 ```bash
 dotnet build Sde.sln

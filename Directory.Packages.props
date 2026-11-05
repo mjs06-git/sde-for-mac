@@ -39,8 +39,9 @@
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="8.0.2" />
     <!--
       Track B, the AI assistant server (SDE mcp): the MCP SDK and the .NET generic host it runs in. The
-      Microsoft.Extensions.* versions match the ASP.NET Core shared framework the phone form runs on (10.0.13), so the
-      app ships one copy of each.
+      Microsoft.Extensions.* versions match the ASP.NET Core shared framework the phone form runs on (10.0.14), so the
+      app ships one copy of each. The self-contained publish takes that framework from the SDK, so global.json asks for
+      an SDK that carries it (10.0.403, runtime 10.0.14, or later): move global.json together with this version.
     -->
     <PackageVersion Include="ModelContextProtocol" Version="2.3.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.14" />

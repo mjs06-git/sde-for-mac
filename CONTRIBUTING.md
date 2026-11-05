@@ -3,7 +3,8 @@
 Thanks for helping. SDE for Mac is used to make substantial damage determinations, so correctness comes first.
 
 ## Building and testing
-- Install the .NET 10 SDK (on a Mac: `brew install dotnet`).
+- Install the .NET 10 SDK, version 10.0.403 or later (on a Mac: `brew install dotnet`). `global.json` asks for it so the
+  app bundles the same ASP.NET Core version as the Microsoft.Extensions packages.
 - `dotnet build Sde.sln && dotnet test Sde.sln`.
 - The report tests read PDFs back with poppler (`brew install poppler`); the `.mdb` tests need mdbtools
   (`brew install mdbtools`).
