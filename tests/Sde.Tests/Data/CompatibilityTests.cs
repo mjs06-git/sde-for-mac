@@ -46,6 +46,8 @@ public class CompatibilityTests
 			INSERT INTO Document (DocumentID, PropertyID, AssessmentID, Kind, FileName) VALUES ('d1', @pid, @aid, 'ElevationCertificate', 'ec.pdf');
 			INSERT INTO MapLayer (LayerID, Name, SourceKind) VALUES ('l1', 'Parcels', 'File');
 			INSERT INTO MapBookmark (BookmarkID, Name, MinX, MinY, MaxX, MaxY) VALUES ('b1', 'Downtown', -84.2, 39.6, -84.1, 39.7);
+			INSERT INTO Tag (Name, Colour, SortOrder) VALUES ('Revisit', 'Amber', 1);
+			INSERT INTO PropertyTag (PropertyID, TagID) VALUES (@pid, (SELECT TagID FROM Tag WHERE Name = 'Revisit'));
 			""", new { aid, pid });
 	}
 
@@ -82,7 +84,7 @@ public class CompatibilityTests
 			DELETE FROM Property WHERE PropertyID = @pid;
 			""", args);
 		foreach (string table in new[] { "AssessmentStatus", "EditHistory", "PhotoInfo", "DamageSuggestion", "ContractorBid", "Appeal", "LetterLog", "ImprovementProject", "SIDetermination", "StructureLink", "ExternalLink",
-			"EventAssessment", "Assignment", "ReviewComment", "ComplianceCase", "ComplianceEntry", "CheckOut", "Document" })
+			"EventAssessment", "Assignment", "ReviewComment", "ComplianceCase", "ComplianceEntry", "CheckOut", "Document", "PropertyTag" })
 		{
 			Assert.Equal(0, c.ExecuteScalar<int>($"SELECT COUNT(*) FROM {table}"));
 		}

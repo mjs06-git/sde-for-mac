@@ -421,7 +421,7 @@ public static class WorkPackages
 
 	/// <summary>
 	/// Replaces the Mac-only rows of these assessments (status, suggestions, photo details and markup, comments, event,
-	/// links, documents) in <paramref name="to"/> with those in <paramref name="from"/>. Columns are matched by name, so
+	/// links, and their structures' documents and tags) in <paramref name="to"/> with those in <paramref name="from"/>. Columns are matched by name, so
 	/// packages made by another version of the app still work.
 	/// </summary>
 	private static void CopyMacRows(SdeDatabase from, SdeDatabase to, IReadOnlyList<Guid> assessmentIds)
@@ -447,6 +447,19 @@ public static class WorkPackages
 			const string properties = "SELECT PropertyID FROM main.Assessment WHERE AssessmentID IN (SELECT id FROM moving)";
 			c.Execute($"DELETE FROM main.Document WHERE PropertyID IN ({properties})", transaction: tx);
 			c.Execute($"INSERT INTO main.Document ({documentColumns}) SELECT {documentColumns} FROM src.Document WHERE PropertyID IN ({properties})", transaction: tx);
+			// So do the structure's tags. Tags are matched by name (ignoring case), since each database numbers its own:
+			// a tag missing here is added with its colour.
+			c.Execute($"""
+				INSERT INTO main.Tag (Name, Colour, SortOrder)
+				SELECT t.Name, t.Colour, t.SortOrder FROM src.Tag t
+				WHERE t.TagID IN (SELECT TagID FROM src.PropertyTag WHERE PropertyID IN ({properties}))
+				  AND NOT EXISTS (SELECT 1 FROM main.Tag m WHERE m.Name = t.Name)
+				ORDER BY t.TagID;
+				DELETE FROM main.PropertyTag WHERE PropertyID IN ({properties});
+				INSERT OR IGNORE INTO main.PropertyTag (PropertyID, TagID)
+				SELECT pt.PropertyID, m.TagID FROM src.PropertyTag pt JOIN src.Tag t ON t.TagID = pt.TagID JOIN main.Tag m ON m.Name = t.Name
+				WHERE pt.PropertyID IN ({properties});
+				""", transaction: tx);
 			// And the markup of the photos that moved.
 			string markupColumns = SharedColumns(c, tx, "PhotoMarkup");
 			c.Execute($"INSERT OR REPLACE INTO main.PhotoMarkup ({markupColumns}) SELECT {markupColumns} FROM src.PhotoMarkup WHERE FileName IN (SELECT FileName FROM main.Attachment WHERE AssessmentID IN (SELECT id FROM moving))", transaction: tx);

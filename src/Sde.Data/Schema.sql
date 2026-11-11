@@ -779,3 +779,24 @@ CREATE TABLE IF NOT EXISTS MapBookmark (
 	SortOrder  INTEGER NOT NULL DEFAULT 0,
 	CreatedOn  TEXT
 );
+
+-- ───────────────────────── Mac-only, added in v3.5 (MacSchemaVersion 4) ─────────────────────────
+-- Same rules as before: new tables only (no existing table is ever changed, so v3.0 can still open the file), foreign
+-- keys to FEMA's rows use ON DELETE CASCADE, and none of it is ever exported.
+
+-- Tags: a person's own labels for structures ("Revisit", "Owner called"), for filtering the Structures list and
+-- counting in the sidebar. Colour is one of a few names (SdeStore TagColours). A structure keeps its tags while it is
+-- in Recently deleted; they go with it when it is removed for good.
+CREATE TABLE IF NOT EXISTS Tag (
+	TagID     INTEGER PRIMARY KEY AUTOINCREMENT,
+	Name      TEXT NOT NULL UNIQUE COLLATE NOCASE,
+	Colour    TEXT NOT NULL,
+	SortOrder INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS PropertyTag (
+	PropertyID TEXT NOT NULL REFERENCES Property(PropertyID) ON DELETE CASCADE,
+	TagID      INTEGER NOT NULL REFERENCES Tag(TagID) ON DELETE CASCADE,
+	PRIMARY KEY (PropertyID, TagID)
+);
+CREATE INDEX IF NOT EXISTS IX_PropertyTag_Tag ON PropertyTag(TagID);
