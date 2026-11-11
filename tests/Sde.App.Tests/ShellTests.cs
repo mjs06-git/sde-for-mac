@@ -47,8 +47,8 @@ public class ShellTests
 	public void Sidebar_IsASourceList_WithCountsOnStructuresAndRecentlyDeleted()
 	{
 		using UiSession ui = WithSamples();
-		// 3.5: Pinned and Saved Views (hidden while empty) follow Library, and Data holds Import & Export and Recently Deleted.
-		Assert.Equal(new[] { "Library", "Pinned", "Saved Views", "Events", "Workflow", "Data" }, ui.Main.SourceSections.Select(s => s.Title));
+		// 3.5: Pinned, Saved Views and Tags (hidden while empty) follow Library, and Data holds Import & Export and Recently Deleted.
+		Assert.Equal(new[] { "Library", "Pinned", "Saved Views", "Tags", "Events", "Workflow", "Data" }, ui.Main.SourceSections.Select(s => s.Title));
 		Assert.Equal(new[] { "All Structures", "Substantially Damaged", "Near Threshold", "Not Substantial", "Incomplete" },
 			ui.Main.SourceSections[0].Rows.OfType<SourceRowViewModel>().Select(r => r.Title));
 		Assert.Equal(new[] { "Review", "Compliance", "Agenda", "Assignments" }, ui.Main.SourceSections.Single(s => s.Title == "Workflow").Rows.OfType<NavItemViewModel>().Select(r => r.Title));

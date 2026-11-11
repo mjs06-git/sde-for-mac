@@ -114,6 +114,7 @@
     <DataTemplate DataType="vm:DashboardViewModel"><v:DashboardView /></DataTemplate>
     <DataTemplate DataType="vm:AssignmentsViewModel"><v:AssignmentsView /></DataTemplate>
     <v:MapSheetTemplates />
+    <v:StructuresSheetTemplates />
     <DataTemplate DataType="vm:ReviewViewModel"><v:ReviewView /></DataTemplate>
     <DataTemplate DataType="vm:ComplianceViewModel"><v:ComplianceView /></DataTemplate>
     <DataTemplate DataType="vm:CaseFileViewModel"><v:CaseFileView /></DataTemplate>
@@ -522,6 +523,26 @@
                               <Border Classes="navMark" />
                               <c:Icon Kind="Bookmark" Size="16" Classes="navIcon" />
                               <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                        <!-- A tag: its colour dot, name and count; the list filtered to it -->
+                        <DataTemplate DataType="shell:TagRowViewModel">
+                          <Button Classes="nav" Classes.active="{Binding IsActive}" Command="{Binding ShowCommand}"
+                                  AutomationProperties.Name="{Binding Title}" ToolTip.Tip="{Binding ToolTip}">
+                            <Button.ContextMenu>
+                              <ContextMenu>
+                                <MenuItem Header="Show Structures" Command="{Binding ShowCommand}" />
+                                <MenuItem Header="Manage Tags…" Command="{Binding ManageCommand}" />
+                              </ContextMenu>
+                            </Button.ContextMenu>
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                              <Border Classes="navMark" />
+                              <Panel Classes="navDot">
+                                <Ellipse Classes="dot" app:ThemeBrush.Fill="{Binding DotKey}" />
+                              </Panel>
+                              <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="2" Classes="sourceCount" Text="{Binding CountText}" IsVisible="{Binding HasCount}" />
                             </Grid>
                           </Button>
                         </DataTemplate>

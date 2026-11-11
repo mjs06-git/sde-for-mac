@@ -6,7 +6,7 @@ using Sde.Reports;
 namespace Sde.App.ViewModels;
 
 /// <summary>
-/// Export ▾ → Submission folder on the Structures page: a panel with the options, then a progress bar while the
+/// Export ▾ → Submission folder on the Structures page: a sheet with the options, then a progress bar while the
 /// folder is written (one PDF per assessment, the two lists, the FEMA SDE package and results.csv). Wraps
 /// Sde.Reports.SubmissionFolder.
 /// </summary>
@@ -62,12 +62,10 @@ public sealed partial class SubmissionViewModel(AppServices app, MainViewModel m
 	public const string EventSummaryLabel = "Event summary";
 	public const string CaseFilesLabel = "Case files";
 
-	/// <summary>What the last folder written could not include (a letter or document whose file is missing), one line each.</summary>
-	[ObservableProperty]
-	[NotifyPropertyChangedFor(nameof(HasWarnings))]
-	public partial IReadOnlyList<string> LastWarnings { get; set; } = Array.Empty<string>();
+	/// <summary>What the last folder written could not include (a letter or document whose file is missing), one line each; shown in the sheet after a run.</summary>
+	public System.Collections.ObjectModel.ObservableCollection<string> Warnings { get; } = new();
 
-	public bool HasWarnings => LastWarnings.Count > 0;
+	public bool HasWarnings => Warnings.Count > 0;
 
 	[ObservableProperty]
 	[NotifyPropertyChangedFor(nameof(CanWrite), nameof(CancelText))]
@@ -109,6 +107,8 @@ public sealed partial class SubmissionViewModel(AppServices app, MainViewModel m
 		_ready = chosen.Count - _incomplete;
 		ProgressText = null;
 		ProgressValue = 0;
+		Warnings.Clear();
+		OnPropertyChanged(nameof(HasWarnings));
 		IsOpen = true;
 		OnPropertyChanged(nameof(Count));
 		OnPropertyChanged(nameof(CanWrite));
@@ -137,7 +137,8 @@ public sealed partial class SubmissionViewModel(AppServices app, MainViewModel m
 			return;
 		}
 		SubmissionOptions options = BuildOptions();
-		LastWarnings = Array.Empty<string>();
+		Warnings.Clear();
+		OnPropertyChanged(nameof(HasWarnings));
 		_cancel = new CancellationTokenSource();
 		CancellationToken token = _cancel.Token;
 		Progress<SubmissionProgress> progress = new(p =>
@@ -172,12 +173,24 @@ public sealed partial class SubmissionViewModel(AppServices app, MainViewModel m
 		}
 		app.Settings.LastExportFolder = parent;
 		app.Settings.Save();
-		IsOpen = false;
+		foreach (string warning in result.Warnings)
+		{
+			Warnings.Add(warning);
+		}
+		OnPropertyChanged(nameof(HasWarnings));
+		if (Warnings.Count == 0)
+		{
+			IsOpen = false;
+		}
+		else
+		{
+			// The sheet stays, showing what couldn't be added, until it is closed.
+			ProgressText = $"Written to “{Path.GetFileName(result.Folder)}”.";
+		}
 		string message = $"{result.Assessments} report{(result.Assessments == 1 ? "" : "s")}, the percent damaged list, the community report, the FEMA SDE package (SDE_1) and results.csv are in “{Path.GetFileName(result.Folder)}”."
 			+ (result.Skipped.Count > 0 ? $"\n\nLeft out because they're incomplete: {string.Join(", ", result.Skipped.Take(5))}{(result.Skipped.Count > 5 ? $" and {result.Skipped.Count - 5} more" : "")}." : "")
 			+ (result.MissingPhotos.Count > 0 ? $"\n\n{result.MissingPhotos.Count} photo file{(result.MissingPhotos.Count == 1 ? " was" : "s were")} missing." : "")
 			+ (result.Warnings.Count > 0 ? "\n\n" + string.Join("\n", result.Warnings.Take(10)) + (result.Warnings.Count > 10 ? $"\n…and {result.Warnings.Count - 10} more" : "") : "");
-		LastWarnings = result.Warnings.ToList();
 		app.Dialogs.Notify("Submission folder written", message);
 		app.Dialogs.Reveal(result.Folder);
 	}

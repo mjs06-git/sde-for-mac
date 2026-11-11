@@ -112,6 +112,40 @@ public sealed partial class MainViewModel
 		UpdateSidebar();
 	}
 
+	private readonly ObservableCollection<object> _tagRows = new();
+
+	/// <summary>The Tags rows: each tag with its colour and how many structures have it (hidden while there are no tags).</summary>
+	private void RebuildTagRows()
+	{
+		Dictionary<long, int> counts;
+		try
+		{
+			counts = _app.Store.GetTagCounts();
+		}
+		catch (Exception ex) when (ex is not OutOfMemoryException)
+		{
+			AppLog.Write("Couldn't count the tags", ex);
+			counts = new Dictionary<long, int>();
+		}
+		_tagRows.Clear();
+		foreach (TagViewModel tag in Structures.AllTags)
+		{
+			_tagRows.Add(new TagRowViewModel(tag, counts.GetValueOrDefault(tag.Id), ShowTag, () => Structures.ManageTagsCommand.ExecuteAsync(null)));
+		}
+		UpdateSidebar();
+	}
+
+	/// <summary>A tag's row (or the palette's "Tag: …"): Structures, filtered to the structures with that tag.</summary>
+	public void ShowTag(long tagId)
+	{
+		if (ActivePage != Page.Structures)
+		{
+			Show(Page.Structures);
+		}
+		Structures.ShowTag(tagId);
+		UpdateSidebar();
+	}
+
 	/// <summary>Puts a structure first in this database's recent structures (the palette's Recent group).</summary>
 	private void RememberRecent(Guid propertyId)
 	{

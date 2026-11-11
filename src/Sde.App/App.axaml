@@ -165,5 +165,6 @@
     <StyleInclude Source="avares://SDE/Styles/CaseFile.axaml" />
     <StyleInclude Source="avares://SDE/Styles/Workflow.axaml" />
     <StyleInclude Source="avares://SDE/Styles/Map.axaml" />
+    <StyleInclude Source="avares://SDE/Styles/StructuresPage.axaml" />
   </Application.Styles>
 </Application>

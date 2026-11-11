@@ -75,7 +75,15 @@ public sealed partial class StructureRowViewModel(StructureSummary s, ReferenceD
 	[ObservableProperty]
 	public partial bool IsChecked { get; set; }
 
-	public string SearchText => string.Join(" | ", Summary.Address, Summary.Owner, Summary.City, Summary.NFIPCID, Summary.NFIPCommunityName, Summary.InspectorName, Summary.DamageMessage, Summary.ExternalId, Summary.ParcelNumber, Summary.ZipCode).ToLowerInvariant();
+	/// <summary>The structure's tags, in list order (the Tags column and the tag filter).</summary>
+	public IReadOnlyList<TagViewModel> Tags { get; init; } = Array.Empty<TagViewModel>();
+
+	public bool HasTags => Tags.Count > 0;
+
+	/// <summary>"Revisit; Owner called": the tags as text, for the Tags column's tooltip, sorting and exports.</summary>
+	public string TagsText => string.Join("; ", Tags.Select(t => t.Name));
+
+	public string SearchText => string.Join(" | ", Summary.Address, Summary.Owner, Summary.City, Summary.NFIPCID, Summary.NFIPCommunityName, Summary.InspectorName, Summary.DamageMessage, Summary.ExternalId, Summary.ParcelNumber, Summary.ZipCode, TagsText).ToLowerInvariant();
 }
 
 /// <summary>The figures the inspector shows for one structure, from its latest assessment.</summary>
@@ -160,6 +168,12 @@ public sealed class ListViewState
 	public string Parcel { get; set; }
 	/// <summary>A status name, or null for any.</summary>
 	public string Status { get; set; }
+	/// <summary>An inspector's name, or null for any (3.5; 3.0 ignores it).</summary>
+	public string Inspector { get; set; }
+	/// <summary>The tags to filter by, by TagID, or null for none (3.5; 3.0 ignores it).</summary>
+	public List<long> Tags { get; set; }
+	/// <summary>True: a structure needs every one of <see cref="Tags"/>; false: any one of them (3.5).</summary>
+	public bool TagsMatchAll { get; set; }
 	public string SortKey { get; set; }
 	public bool SortDescending { get; set; }
 	public List<string> Columns { get; set; }
@@ -177,6 +191,7 @@ public sealed partial class StructuresViewModel : ViewModelBase
 		("Inspected", "Inspected", true),
 		("Inspector", "Inspector", false),
 		("Status", "Status", true),
+		("Tags", "Tags", false),
 		("Zip", "ZIP", false),
 		("Parcel", "Parcel", false),
 		("FirmZone", "FIRM zone", false),
@@ -387,6 +402,9 @@ public sealed partial class StructuresViewModel : ViewModelBase
 
 	public bool IsEmpty => _all.Count == 0;
 
+	/// <summary>The empty state's Open Sample Database: offered when the database (not just an event) has no structures.</summary>
+	public bool CanOpenSample => _app.Scope.IsAll && !_main.IsSampleDatabase;
+
 	/// <summary>How many structures the list holds (a structure with two assessments is one).</summary>
 	public int StructureCount => _all.Select(r => r.Summary.PropertyID).Distinct().Count();
 
@@ -400,11 +418,6 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	public bool HasRows => Rows.Count > 0;
 
 	public bool NoMatches => !IsEmpty && Rows.Count == 0;
-
-	/// <summary>How many of the extra filters (Filters ▾) are in use.</summary>
-	public int ExtraFilterCount => new object[] { InspectedFrom, InspectedTo, MinPercent, MaxPercent, Blank(StreetFilter), Blank(ZipFilter), Blank(ParcelFilter), StatusFilter == 0 ? null : (object)StatusFilter }.Count(v => v != null);
-
-	public string FiltersButtonText => ExtraFilterCount == 0 ? "Filters" : $"Filters ({ExtraFilterCount})";
 
 	private static string Blank(string s) => string.IsNullOrWhiteSpace(s) ? null : s;
 
@@ -431,6 +444,10 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	partial void OnParcelFilterChanged(string value) => Changed();
 
 	partial void OnStatusFilterChanged(int value) => Changed();
+
+	partial void OnInspectorFilterChanged(string value) => Changed();
+
+	partial void OnTagsMatchAllChanged(bool value) => Changed();
 
 	private void Changed()
 	{
@@ -466,6 +483,7 @@ public sealed partial class StructuresViewModel : ViewModelBase
 
 	public void Reload()
 	{
+		StructureRowViewModel previous = Selected;
 		foreach (StructureRowViewModel r in _all)
 		{
 			r.PropertyChanged -= RowChanged;
@@ -473,9 +491,14 @@ public sealed partial class StructuresViewModel : ViewModelBase
 		HashSet<Guid> checkedIds = _all.Where(r => r.IsChecked && r.AssessmentID != null).Select(r => r.AssessmentID!.Value).ToHashSet();
 		ReferenceData reference = _app.Store.Reference;
 		Everything = _app.Store.ListStructures();
+		ILookup<Guid, TagViewModel> tags = ReadTags();
 		// The event chosen in the sidebar limits the list to its assessments.
 		_all = Everything.Where(s => _app.Scope.Includes(s.AssessmentID))
-			.Select(s => new StructureRowViewModel(s, reference) { IsChecked = s.AssessmentID is Guid id && checkedIds.Contains(id) }).ToList();
+			.Select(s => new StructureRowViewModel(s, reference)
+			{
+				IsChecked = s.AssessmentID is Guid id && checkedIds.Contains(id),
+				Tags = tags[s.PropertyID].ToList(),
+			}).ToList();
 		foreach (StructureRowViewModel r in _all)
 		{
 			r.PropertyChanged += RowChanged;
@@ -488,6 +511,7 @@ public sealed partial class StructuresViewModel : ViewModelBase
 		CheckedCount = _all.Count(r => r.IsChecked);
 		HasImported = _all.Any(r => r.Summary.ExternalId != null);
 		Apply();
+		ReselectAfterReload(previous);
 		OnPropertyChanged(nameof(SelectedIsPinned));
 		Reloaded?.Invoke();
 	}
@@ -615,6 +639,11 @@ public sealed partial class StructuresViewModel : ViewModelBase
 			AssessmentStatus status = Enum.GetValues<AssessmentStatus>()[StatusFilter - 1];
 			rows = rows.Where(r => r.AssessmentID != null && AssessmentStatuses.Parse(r.Summary.Status) == status);
 		}
+		if (Blank(InspectorFilter) is string inspector)
+		{
+			rows = rows.Where(r => string.Equals((r.Inspector ?? "").Trim(), inspector.Trim(), StringComparison.OrdinalIgnoreCase));
+		}
+		rows = FilterByTags(rows);
 		rows = Sort(rows);
 		Rows.Clear();
 		foreach (StructureRowViewModel r in rows)
@@ -622,14 +651,14 @@ public sealed partial class StructuresViewModel : ViewModelBase
 			Rows.Add(r);
 		}
 		OnPropertyChanged(nameof(IsEmpty));
+		OnPropertyChanged(nameof(CanOpenSample));
 		OnPropertyChanged(nameof(EmptyTitle));
 		OnPropertyChanged(nameof(EmptyText));
 		OnPropertyChanged(nameof(HasRows));
 		OnPropertyChanged(nameof(NoMatches));
 		OnPropertyChanged(nameof(CountText));
 		OnPropertyChanged(nameof(AllChecked));
-		OnPropertyChanged(nameof(ExtraFilterCount));
-		OnPropertyChanged(nameof(FiltersButtonText));
+		RefreshFilterChips();
 	}
 
 	private static string Normalize(string parcel) => new string((parcel ?? "").Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
@@ -650,6 +679,8 @@ public sealed partial class StructuresViewModel : ViewModelBase
 			"Inspected" => By(r => r.Summary.DateofInspection ?? DateTime.MinValue),
 			"Damaged" => By(r => r.HasPercent ? r.Summary.PercentDamage ?? -1m : -1m),
 			"Status" => By(r => r.AssessmentID == null ? -1 : (int)AssessmentStatuses.Parse(r.Summary.Status)),
+			"Tags" => Comparer<StructureRowViewModel>.Create((a, b) => a.HasTags != b.HasTags ? (a.HasTags ? -1 : 1)
+				: string.Compare(a.TagsText, b.TagsText, StringComparison.CurrentCultureIgnoreCase)),
 			"Updated" => By(r => r.Summary.LastUpdate ?? DateTime.MinValue),
 			_ => Comparer<StructureRowViewModel>.Create((a, b) => string.Compare(Text(a), Text(b), StringComparison.CurrentCultureIgnoreCase)),
 		};
@@ -709,10 +740,17 @@ public sealed partial class StructuresViewModel : ViewModelBase
 		Changed();
 	}
 
+	/// <summary>The filter bar's Clear: takes off every filter the bar shows (the search and the sidebar's choice stay).</summary>
 	[RelayCommand]
 	private void ClearFilters()
 	{
 		_restoring = true;
+		_pendingFilters.Clear();
+		TypeFilter = 0;
+		SourceFilter = 0;
+		InspectorFilter = null;
+		TagFilter = Array.Empty<long>();
+		TagsMatchAll = false;
 		InspectedFrom = null;
 		InspectedTo = null;
 		MinPercent = null;
@@ -755,6 +793,9 @@ public sealed partial class StructuresViewModel : ViewModelBase
 		Zip = ZipFilter,
 		Parcel = ParcelFilter,
 		Status = StatusFilter == 0 ? null : Enum.GetValues<AssessmentStatus>()[StatusFilter - 1].ToString(),
+		Inspector = Blank(InspectorFilter),
+		Tags = TagFilter.Count == 0 ? null : TagFilter.ToList(),
+		TagsMatchAll = TagsMatchAll,
 		SortKey = SortKey,
 		SortDescending = SortDescending,
 		Columns = Columns.Where(c => c.IsVisible).Select(c => c.Key).ToList(),
@@ -778,11 +819,15 @@ public sealed partial class StructuresViewModel : ViewModelBase
 			ZipFilter = state.Zip;
 			ParcelFilter = state.Parcel;
 			StatusFilter = state.Status == null ? 0 : (int)AssessmentStatuses.Parse(state.Status) + 1;
+			InspectorFilter = state.Inspector;
+			TagFilter = state.Tags?.Distinct().ToList() ?? (IReadOnlyList<long>)Array.Empty<long>();
+			TagsMatchAll = state.TagsMatchAll;
+			_pendingFilters.Clear();
 			SortKey = state.SortKey;
 			SortDescending = state.SortDescending;
 			foreach (ColumnChoice c in Columns)
 			{
-				c.IsVisible = state.Columns == null ? OptionalColumns.First(o => o.Key == c.Key).Visible : state.Columns.Contains(c.Key);
+				c.IsVisible = state.Columns == null ? DefaultVisible(c.Key) : state.Columns.Contains(c.Key);
 			}
 		}
 		finally
@@ -960,9 +1005,23 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	[RelayCommand]
 	private async Task ExportChecked() => await _main.ImportExport.ExportAsync(TargetIds());
 
-	/// <summary>Export ▾, then Submission folder: reports, the FEMA package and results.csv for the checked structures (or the list).</summary>
+	/// <summary>
+	/// Export ▾, then Submission folder: a sheet with the choices, then reports, the FEMA package and results.csv for
+	/// the checked structures (or the list).
+	/// </summary>
 	[RelayCommand]
-	private void OpenSubmission() => Submission.Open(TargetIds(), _all);
+	private void OpenSubmission()
+	{
+		Submission.Open(TargetIds(), _all);
+		if (_submissionSheet == null || _submissionSheet.IsClosed)
+		{
+			_submissionSheet = new SubmissionSheetViewModel(Submission);
+			_ = _app.Sheets.ShowAsync(_submissionSheet);
+		}
+	}
+
+	/// <summary>The Submission folder sheet while it is showing.</summary>
+	private SubmissionSheetViewModel _submissionSheet;
 
 	[RelayCommand]
 	private async Task ExportCheckedToExcel() => await _main.ImportExport.ExportExcelAsync(TargetIds());

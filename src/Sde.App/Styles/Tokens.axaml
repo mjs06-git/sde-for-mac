@@ -686,6 +686,14 @@
       <SolidColorBrush x:Key="MapLegendDotOutline" Color="#FFFFFF" />
       <SolidColorBrush x:Key="MapFloodZoneFill" Color="#B35B8FD9" />
       <SolidColorBrush x:Key="MapFloodZoneStroke" Color="#3D6FB8" />
+      <!-- Structures page (3.5): the tag colours. Only a tag's dot is coloured (its name is ordinary text on a
+           neutral chip), so these need no text contrast pair. Red is a rose, not the gauge red. -->
+      <SolidColorBrush x:Key="TagBlueDot" Color="#1F7AD6" />
+      <SolidColorBrush x:Key="TagGreenDot" Color="#2E9E57" />
+      <SolidColorBrush x:Key="TagAmberDot" Color="#DE8A1B" />
+      <SolidColorBrush x:Key="TagRedDot" Color="#D9485F" />
+      <SolidColorBrush x:Key="TagVioletDot" Color="#8A63C9" />
+      <SolidColorBrush x:Key="TagSlateDot" Color="#6B7A8F" />
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
       <!-- Colours (the brushes below use these) -->
@@ -1211,6 +1219,13 @@
       <SolidColorBrush x:Key="MapLegendDotOutline" Color="#FFFFFF" />
       <SolidColorBrush x:Key="MapFloodZoneFill" Color="#B35B8FD9" />
       <SolidColorBrush x:Key="MapFloodZoneStroke" Color="#3D6FB8" />
+      <!-- Structures page (3.5): the tag colours (dots only, see the light theme) -->
+      <SolidColorBrush x:Key="TagBlueDot" Color="#4DA6FF" />
+      <SolidColorBrush x:Key="TagGreenDot" Color="#5CC983" />
+      <SolidColorBrush x:Key="TagAmberDot" Color="#F5B04A" />
+      <SolidColorBrush x:Key="TagRedDot" Color="#FF7A8C" />
+      <SolidColorBrush x:Key="TagVioletDot" Color="#B39DFF" />
+      <SolidColorBrush x:Key="TagSlateDot" Color="#9AA9BB" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>

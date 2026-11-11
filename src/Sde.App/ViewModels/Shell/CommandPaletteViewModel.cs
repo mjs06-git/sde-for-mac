@@ -156,6 +156,7 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 		{
 			list.AddRange(SettingsPages().Where(p => p.Matches(words)));
 			list.AddRange(EventPages().Where(p => p.Matches(words)));
+			list.AddRange(TagPages().Where(p => p.Matches(words)));
 		}
 		list.AddRange(Commands().Where(c => c.Matches(words)));
 		string group = null;
@@ -216,6 +217,10 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 	private IEnumerable<PaletteItem> EventPages() =>
 		_main.Events.Events.Select(e => new PaletteItem("Pages", e.Name, "Event", "Event", null, () => _main.Events.ChooseCommand.Execute(e), "event show only"));
 
+	/// <summary>Each tag, as "Tag: Revisit", to show the structures with it ("revisit", "tag"); only once something is typed.</summary>
+	private IEnumerable<PaletteItem> TagPages() =>
+		_main.Structures.AllTags.Select(t => new PaletteItem("Pages", "Tag: " + t.Name, "Tag", "Filter", null, () => _main.ShowTag(t.Id), "tag tags label"));
+
 	private IEnumerable<PaletteItem> Commands()
 	{
 		PaletteItem Command(string title, string icon, string shortcut, ICommand command, object parameter = null, string keywords = null) =>
@@ -241,6 +246,9 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 		yield return Command("Set a field on checked structures…", "Edit", null, _main.Structures.BulkEditCommand, keywords: "bulk");
 		yield return Command("Set event for checked structures…", "Event", null, _main.Structures.SetEventCommand, keywords: "disaster");
 		yield return Command("Assign checked structures to a team…", "Assignments", null, _main.Structures.AssignToTeamCommand, keywords: "field route crew");
+		yield return Command("Manage tags…", "Filter", null, _main.Structures.ManageTagsCommand, keywords: "label rename colour color");
+		yield return Command("Export this list to CSV…", "Export", null, _main.Structures.ExportListToCsvCommand, keywords: "spreadsheet table");
+		yield return Command("Export this list to Excel…", "Export", null, _main.Structures.ExportListToExcelCommand, keywords: "spreadsheet table xlsx");
 		yield return Command("New team…", "Assignments", null, _main.Assignments.NewTeamCommand, keywords: "field crew");
 		yield return Command("Add agenda dates to Calendar…", "Agenda", null, _main.Agenda.AddToCalendarCommand, keywords: "ics deadlines calendar export");
 		yield return Command("Make a web map…", "Globe", null, _main.Structures.WebMapCommand, keywords: "share public leaflet html");

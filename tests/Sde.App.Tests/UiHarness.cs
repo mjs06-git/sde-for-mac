@@ -67,7 +67,14 @@ public sealed class TestDialogs : IDialogs
 
 	public Task<string> SaveFileAsync(string title, string suggestedName, string filterName, string extension) => Task.FromResult(Answers.TryDequeue(out object a) ? a as string : null);
 
-	public Task<bool> ConfirmAsync(string title, string message, string confirmText, bool destructive = false) => Task.FromResult(!Answers.TryDequeue(out object a) || a is true);
+	/// <summary>Every confirmation asked, as "title: message".</summary>
+	public List<string> Confirmations { get; } = new();
+
+	public Task<bool> ConfirmAsync(string title, string message, string confirmText, bool destructive = false)
+	{
+		Confirmations.Add(title + ": " + message);
+		return Task.FromResult(!Answers.TryDequeue(out object a) || a is true);
+	}
 
 	public void Notify(string title, string message, bool isError = false) => Notifications.Add((isError ? "ERROR " : "") + title + ": " + message);
 

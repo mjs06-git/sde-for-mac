@@ -51,7 +51,8 @@ public class ListPowerUiTests
 		StructuresViewModel s = ui.Main.Structures;
 		s.MinPercent = 70;
 		Assert.Equal(new[] { "123 River Street" }, s.Rows.Select(r => r.Address));
-		Assert.Equal("Filters (1)", s.FiltersButtonText);
+		// 3.5: the filter shows as a chip in the filter bar (it was a count on a Filters button).
+		Assert.Equal("Damaged: at least 70%", Assert.Single(s.FilterChips).Label);
 		s.MinPercent = null;
 		s.StreetFilter = "river";
 		Assert.Equal(2, s.Rows.Count);

@@ -72,7 +72,8 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		Structures.PropertyChanged += (_, e) =>
 		{
 			if (e.PropertyName is nameof(StructuresViewModel.Filter) or nameof(StructuresViewModel.SubstantialCount) or nameof(StructuresViewModel.CloseCount)
-				or nameof(StructuresViewModel.BelowCount) or nameof(StructuresViewModel.IncompleteCount) or nameof(StructuresViewModel.AppliedView))
+				or nameof(StructuresViewModel.BelowCount) or nameof(StructuresViewModel.IncompleteCount) or nameof(StructuresViewModel.AppliedView)
+				or nameof(StructuresViewModel.TagFilter))
 			{
 				UpdateSidebar();
 			}
@@ -82,6 +83,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 			}
 		};
 		Structures.Reloaded += RebuildPinnedRows;
+		Structures.Reloaded += RebuildTagRows;
 		Structures.SavedViews.CollectionChanged += (_, _) => RebuildSavedViewRows();
 		app.Scope.Changed += OnScopeChanged;
 		DatabaseSwitcher = new DatabaseSwitcherViewModel(app, this);
@@ -119,6 +121,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		RefreshStatus();
 		RebuildPinnedRows();
 		RebuildSavedViewRows();
+		RebuildTagRows();
 		RestoreLayout(_app.Settings.Layout);
 		UpdateSidebar();
 	}
@@ -201,8 +204,8 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	public IReadOnlyList<NavItemViewModel> SidebarItems { get; }
 
 	/// <summary>
-	/// The sidebar's source list, in order: Library (with its smart groups), Pinned, Saved Views, Events, Workflow and
-	/// Data. A section with no rows (no pins, no saved views, no events) is hidden.
+	/// The sidebar's source list, in order: Library (with its smart groups), Pinned, Saved Views, Tags, Events, Workflow
+	/// and Data. A section with no rows (no pins, no saved views, no tags, no events) is hidden.
 	/// </summary>
 	public IReadOnlyList<SourceSectionViewModel> SourceSections { get; }
 
@@ -286,6 +289,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 			new SourceSectionViewModel("Library", new(new object[] { _allStructures }.Concat(_smartGroups))),
 			new SourceSectionViewModel("Pinned", _pinnedRows),
 			new SourceSectionViewModel("Saved Views", _savedViewRows),
+			new SourceSectionViewModel("Tags", _tagRows),
 			new SourceSectionViewModel("Events", _eventRows),
 			new SourceSectionViewModel("Workflow", new(new object[] { Page_(Page.Review), Page_(Page.Compliance), Page_(Page.Agenda), Page_(Page.Assignments) })),
 			new SourceSectionViewModel("Data", new(new object[] { Page_(Page.ImportExport), Page_(Page.Trash) })),
@@ -305,6 +309,11 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	/// <summary>A Library row or an event was chosen: the structure list, filtered to it (and scoped to the event).</summary>
 	private void ShowLibrary(StructureFilter filter, EventChoice scope)
 	{
+		if (_tagRows.OfType<TagRowViewModel>().Any(r => r.IsActive))
+		{
+			// Leaving a tag's row for a Library row or an event: the list stops being limited to the tag.
+			Structures.RemoveFilter(StructuresViewModel.TagsFilterKey);
+		}
 		if (scope != null)
 		{
 			Events.ChooseCommand.Execute(scope);
@@ -346,6 +355,12 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 				row.IsActive = library && string.Equals(view, row.Title, StringComparison.OrdinalIgnoreCase);
 			}
 			library &= view == null;
+			// So is a tag: while the list shows one tag's structures, its row is the one chosen.
+			foreach (TagRowViewModel row in _tagRows.OfType<TagRowViewModel>())
+			{
+				row.IsActive = library && Structures.IsShowingOnlyTag(row.Id);
+			}
+			library &= !_tagRows.OfType<TagRowViewModel>().Any(r => r.IsActive);
 			_allStructures.IsActive = library && Structures.Filter == StructureFilter.All && scope == null;
 			_allStructures.Count = Structures.TotalCount;
 			foreach (SourceRowViewModel group in _smartGroups)

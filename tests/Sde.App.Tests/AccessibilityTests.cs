@@ -123,6 +123,7 @@ public class AccessibilityTests
 				SourceRowViewModel row => row.Title,
 				NavItemViewModel nav => nav.Title,
 				SavedViewRowViewModel view => view.Title,
+				TagRowViewModel tag => tag.Title,
 				PinnedRowViewModel pin => pin.ToolTip,
 				_ => null,
 			})
