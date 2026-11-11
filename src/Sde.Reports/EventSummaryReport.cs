@@ -251,13 +251,13 @@ public static class EventSummaryReport
 		return data?.ToArray();
 	}
 
-	/// <summary>The fill used for a result class in the dot plot.</summary>
+	/// <summary>The fill used for a result class in the dot plot: the app's result dots (light theme).</summary>
 	public static SKColor DotColor(DeterminationClass c) => c switch
 	{
-		DeterminationClass.Substantial => new SKColor(0xC6, 0x28, 0x28),
-		DeterminationClass.Close => new SKColor(0xF0, 0x8C, 0x00),
-		DeterminationClass.NotSubstantial => new SKColor(0x2E, 0x8B, 0x4B),
-		_ => new SKColor(0x8A, 0x94, 0xA3),
+		DeterminationClass.Substantial => new SKColor(0xC8, 0x10, 0x2E),
+		DeterminationClass.Close => new SKColor(0xDE, 0x8A, 0x1B),
+		DeterminationClass.NotSubstantial => new SKColor(0x2E, 0x9E, 0x57),
+		_ => new SKColor(0x9A, 0x95, 0x8B),
 	};
 
 	/// <summary>
@@ -289,8 +289,8 @@ public static class EventSummaryReport
 
 		using SKBitmap bitmap = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
 		using SKCanvas canvas = new SKCanvas(bitmap);
-		canvas.Clear(new SKColor(0xF3, 0xF5, 0xF8));
-		using SKPaint frame = new SKPaint { Style = SKPaintStyle.Stroke, Color = new SKColor(0xD8, 0xDD, 0xE4), StrokeWidth = 2, IsAntialias = true };
+		canvas.Clear(StaffGauge.Sk(Theme.Faint));
+		using SKPaint frame = new SKPaint { Style = SKPaintStyle.Stroke, Color = StaffGauge.Sk(Theme.Rule), StrokeWidth = 2, IsAntialias = true };
 		canvas.DrawRect(1, 1, width - 2, height - 2, frame);
 
 		float radius = points.Count > 2000 ? 5f : points.Count > 300 ? 7f : 10f;
@@ -309,7 +309,7 @@ public static class EventSummaryReport
 		// Legend along the bottom.
 		using SKTypeface face = SKTypeface.Default;
 		using SKFont font = new SKFont(face, 22f);
-		using SKPaint text = new SKPaint { Color = new SKColor(0x1B, 0x22, 0x2C), IsAntialias = true };
+		using SKPaint text = new SKPaint { Color = StaffGauge.Sk(Theme.Ink), IsAntialias = true };
 		float lx = margin;
 		float ly = height - margin - 6f;
 		foreach (DeterminationClass c in new[] { DeterminationClass.Substantial, DeterminationClass.Close, DeterminationClass.NotSubstantial, DeterminationClass.Undetermined })

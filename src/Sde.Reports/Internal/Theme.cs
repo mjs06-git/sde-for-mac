@@ -3,22 +3,38 @@ using Sde.Reports.Fonts;
 
 namespace Sde.Reports.Internal;
 
-/// <summary>Colors, type sizes and paragraph styles shared by all reports.</summary>
+/// <summary>
+/// Colors, type sizes and paragraph styles shared by all reports. The colors are the "High-Water" brand core from the
+/// app's light theme (src/Sde.App/Styles/Tokens.axaml; print is always light): navy ink, water blue, warm rules and
+/// the staff gauge's red. BrandAgreementTests in tests/Sde.App.Tests checks that they still match the app.
+/// </summary>
 internal static class Theme
 {
-	public static readonly Color Ink = new Color(0x1B, 0x22, 0x2C);
-	public static readonly Color Muted = new Color(0x5D, 0x68, 0x78);
-	public static readonly Color Rule = new Color(0xD8, 0xDD, 0xE4);
-	public static readonly Color Faint = new Color(0xF3, 0xF5, 0xF8);
-	public static readonly Color Accent = new Color(0x1C, 0x3A, 0x63);
+	/// <summary>Body text (TextPrimary).</summary>
+	public static readonly Color Ink = new Color(0x14, 0x23, 0x3A);
+	/// <summary>Labels, notes, header and footer (TextSecondary).</summary>
+	public static readonly Color Muted = new Color(0x4A, 0x55, 0x67);
+	/// <summary>Hairlines under fields (BorderDefault).</summary>
+	public static readonly Color Rule = new Color(0xE2, 0xDB, 0xCF);
+	/// <summary>Shaded table headers and placeholder boxes (BgSubtle).</summary>
+	public static readonly Color Faint = new Color(0xF5, 0xF1, 0xEA);
+	/// <summary>Section titles and their rules (the accent as text, Accent).</summary>
+	public static readonly Color Accent = new Color(0x1A, 0x57, 0x91);
 
-	// Determination tones: text/edge color and a light fill.
-	public static readonly Color SubstantialInk = new Color(0xA3, 0x1D, 0x1D);
-	public static readonly Color SubstantialFill = new Color(0xFC, 0xEC, 0xEB);
-	public static readonly Color NotSubstantialInk = new Color(0x1C, 0x6B, 0x35);
-	public static readonly Color NotSubstantialFill = new Color(0xE9, 0xF5, 0xEC);
-	public static readonly Color OtherInk = new Color(0x7A, 0x52, 0x00);
-	public static readonly Color OtherFill = new Color(0xFD, 0xF3, 0xDC);
+	// Determination tones: text/edge color and a light fill (the app's StatusSubstantial, StatusNotSubstantial and
+	// StatusClose pairs, which are DangerFg/DangerBg, SuccessFg/SuccessBg and WarningFg/WarningBg).
+	public static readonly Color SubstantialInk = new Color(0xB5, 0x0E, 0x28);
+	public static readonly Color SubstantialFill = new Color(0xFB, 0xE7, 0xEA);
+	public static readonly Color NotSubstantialInk = new Color(0x1A, 0x6E, 0x37);
+	public static readonly Color NotSubstantialFill = new Color(0xE2, 0xF2, 0xE6);
+	public static readonly Color OtherInk = new Color(0x8A, 0x47, 0x00);
+	public static readonly Color OtherFill = new Color(0xFB, 0xEB, 0xD3);
+
+	// The staff gauge: water blue (AccentFill) below the threshold, amber within 10 points of it, gauge red
+	// (DangerFill) at or above it and for the high-water mark.
+	public static readonly Color GaugeWater = new Color(0x1E, 0x62, 0xA0);
+	public static readonly Color GaugeClose = new Color(0xB8, 0x6E, 0x0A);
+	public static readonly Color GaugeRed = new Color(0xC8, 0x10, 0x2E);
 
 	public const double BodySize = 8;
 	public const double LabelSize = 7;
