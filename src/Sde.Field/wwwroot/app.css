@@ -1,56 +1,92 @@
 /*
-  The phone form. The same colours as the Mac app (src/Sde.App/Styles/Tokens.axaml), in light and dark: a light grey
-  page, white cards with hairline borders, the brand blue for actions. Controls are at least 48 px tall for fingers.
+  The phone form, in SDE's "High-Water" look: the same colours as the Mac app (src/Sde.App/Styles/Tokens.axaml), in
+  light and dark. Warm paper page, white cards with hairline borders, water blue for actions, navy ink for text and
+  the staff gauge's red for substantial damage and errors. Every text colour keeps at least 4.5:1 on the backgrounds
+  it is used on. Controls are at least 48 px tall for fingers; corners are a little rounder than on the Mac for touch.
+  Public Sans is served by the Mac itself (never from the internet); the system font shows until it arrives.
 */
+@font-face {
+  font-family: "Public Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/PublicSans-Regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Public Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/PublicSans-SemiBold.ttf") format("truetype");
+}
+
 :root {
   color-scheme: light dark;
-  --bg: #f7f8fa;
+  --bg: #faf7f2;
   --surface: #ffffff;
-  --subtle: #f2f4f6;
-  --pressed: #ebeef2;
-  --border: #e2e5e9;
-  --border-strong: #c9cfd6;
-  --hairline: #eceef1;
-  --text: #16191d;
-  --text-2: #4b5360;
-  --text-3: #636c78;
-  --accent: #1e5aa8;
-  --accent-fill: #1e5aa8;
-  --accent-fill-pressed: #194e93;
-  --accent-soft: #e7eef8;
+  --subtle: #f5f1ea;
+  --pressed: #e4ded3;
+  --border: #e2dbcf;
+  --border-strong: #cbc2b3;
+  --hairline: #ece6db;
+  --text: #14233a;
+  --text-2: #4a5567;
+  --text-3: #596475;
+  --accent: #1a5791;
+  --accent-fill: #1e62a0;
+  --accent-fill-pressed: #164b7b;
+  --accent-soft: #dce9f5;
+  --focus: #1e62a0;
   --on-accent: #ffffff;
-  --danger: #b42318;
-  --danger-bg: #fdecea;
-  --warning: #935400;
-  --warning-bg: #fff3dc;
-  --success: #1c7432;
+  --danger: #b50e28;
+  --danger-bg: #fbe7ea;
+  --warning: #8a4700;
+  --warning-bg: #fbebd3;
+  --success: #1a6e37;
+  --success-bg: #e2f2e6;
+  /* The staff gauge: track, ticks, water below the line, amber within 10 points of it, red at or above it */
+  --gauge-track: #f0ebe2;
+  --gauge-tick: #596475;
+  --gauge-water: #1e62a0;
+  --gauge-close: #b86e0a;
+  --gauge-red: #c8102e;
+  --gauge-mark: #c8102e;
   --radius: 14px;
   --radius-control: 10px;
-  --shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow: 0 1px 2px rgba(20, 35, 58, 0.06);
+  --font: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #16181b;
-    --surface: #212328;
-    --subtle: #272a30;
-    --pressed: #2b2f35;
-    --border: #31353b;
-    --border-strong: #464b53;
-    --hairline: #2a2d32;
-    --text: #eceef1;
-    --text-2: #b1b8c1;
-    --text-3: #959da7;
-    --accent: #80b1f0;
-    --accent-fill: #2c67b8;
-    --accent-fill-pressed: #3472c6;
-    --accent-soft: #1e3250;
+    --bg: #0f1722;
+    --surface: #1a2535;
+    --subtle: #1c2838;
+    --pressed: #2b3b51;
+    --border: #2a384b;
+    --border-strong: #44546a;
+    --hairline: #212d3d;
+    --text: #e8edf3;
+    --text-2: #a9b4c3;
+    --text-3: #9aa6b6;
+    --accent: #74b6ee;
+    --accent-fill: #256dae;
+    --accent-fill-pressed: #1c598f;
+    --accent-soft: #1b3350;
+    --focus: #74b6ee;
     --on-accent: #ffffff;
-    --danger: #ff8a80;
-    --danger-bg: #43211f;
-    --warning: #f2b65a;
-    --warning-bg: #3e3019;
-    --success: #7fd393;
+    --danger: #ff7c88;
+    --danger-bg: #40202a;
+    --warning: #f5b45c;
+    --warning-bg: #3a2e1c;
+    --success: #6bd08a;
+    --success-bg: #1a3326;
+    --gauge-track: #223043;
+    --gauge-tick: #9aa6b6;
+    --gauge-water: #3f8bd0;
+    --gauge-close: #f5a53b;
+    --gauge-red: #ff5a6b;
+    --gauge-mark: #ff7c88;
     --shadow: none;
   }
 }
@@ -63,7 +99,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 17px/1.45 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  font: 17px/1.45 var(--font);
   padding: 0 env(safe-area-inset-right) 48px env(safe-area-inset-left);
 }
 
@@ -75,7 +111,7 @@ body {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
-.bar h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.2px; }
+.bar h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.2px; }
 .who { margin: 2px 0 0; color: var(--text-2); font-size: 15px; }
 
 /* Notices: the unencrypted connection (amber) and errors (red) */
@@ -95,7 +131,7 @@ body {
   margin-top: 1px;
   border-radius: 50%;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 20px;
   text-align: center;
 }
@@ -108,8 +144,8 @@ body {
 main { padding: 0 16px; }
 
 /* Headings */
-section > h2, form > h2, #mine > h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.2px; margin: 24px 0 10px; }
-h3 { font-size: 17px; font-weight: 700; margin: 16px 0 6px; }
+section > h2, form > h2, #mine > h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.2px; margin: 24px 0 10px; }
+h3 { font-size: 17px; font-weight: 600; margin: 16px 0 6px; }
 
 /* Cards: pairing, my assignments, adding a structure, photos, each step */
 #pair, #mine, #add-form, .photos, details {
@@ -168,7 +204,7 @@ input[type=file]::file-selector-button {
 }
 
 input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, summary:focus-visible {
-  outline: 3px solid var(--accent);
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); }
@@ -293,7 +329,7 @@ summary {
   align-items: center;
   min-height: 56px;
   padding-right: 28px;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 17px;
   list-style: none;
   cursor: pointer;
@@ -322,3 +358,25 @@ details[open] > summary::after { transform: translateY(-30%) rotate(-135deg); }
 /* Photos */
 .photos { margin: 14px 0 0; padding: 2px 16px 16px; }
 .photos > h3 { margin-top: 14px; }
+
+/* The result: percent damaged, the determination and the staff gauge (tick every 10 percent, the 50 percent line in red) */
+.result { margin: 14px 0 0; padding: 14px 16px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.result-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.result-label { flex: 1 0 100%; margin: 0; color: var(--text-2); font-size: 15px; font-weight: 600; }
+.result-value { margin: 0; font-size: 34px; font-weight: 600; line-height: 1.1; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; color: var(--text); }
+.result-text { margin: 0; padding: 3px 10px; border-radius: 999px; font-size: 15px; font-weight: 600; background: var(--subtle); color: var(--text); }
+.result.substantial .result-value { color: var(--danger); }
+.result.substantial .result-text { background: var(--danger-bg); color: var(--danger); }
+.result.close .result-text { background: var(--warning-bg); color: var(--warning); }
+.result.not-substantial .result-text { background: var(--success-bg); color: var(--success); }
+.gauge { margin: 14px 18px 0; }
+.gauge svg { display: block; width: 100%; height: 46px; overflow: visible; }
+.gauge .track { fill: var(--gauge-track); stroke: var(--border-strong); stroke-width: 1; }
+.gauge .water { fill: var(--gauge-water); }
+.result.close .gauge .water { fill: var(--gauge-close); }
+.result.substantial .gauge .water { fill: var(--gauge-red); }
+.gauge .tick { stroke: var(--gauge-tick); stroke-width: 1.5; }
+.gauge .halo { stroke: var(--surface); stroke-width: 7; stroke-linecap: round; }
+.gauge .mark { stroke: var(--gauge-mark); stroke-width: 3; stroke-linecap: round; }
+.gauge text { fill: var(--text-2); font: 13px var(--font); font-variant-numeric: tabular-nums; }
+.gauge text.line { fill: var(--text); font-weight: 600; }

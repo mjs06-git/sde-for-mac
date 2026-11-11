@@ -14,3 +14,6 @@ node tools/phone-screens/shoot.mjs /tmp/sde-phone docs/screenshots
 to "Team North". It does nothing unless `SDE_PHONE_SCREENS` is set. `shoot.mjs` starts headless Chrome at phone size
 (390 × 844 points, 2× pixels), pairs with the one-time token as the QR code would, shows My assignments, opens the first
 structure, and captures each screen in light and dark. It then tells the host to stop.
+
+On Linux, point `CHROME` at the browser (for example `CHROME=/usr/bin/google-chrome`). When run as root, as in a
+container, the script turns off Chrome's sandbox, which Chrome requires there.

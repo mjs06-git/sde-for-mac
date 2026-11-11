@@ -391,6 +391,25 @@ public class FieldServerTests
 	}
 
 	[Fact]
+	public async Task Assessment_CarriesThePercentDamaged_ForTheGauge()
+	{
+		await using PhoneSession s = new PhoneSession();
+		await s.PairAsync();
+		// Nothing entered yet: no percentage for the gauge, only the result line.
+		JsonElement fresh = await PhoneSession.Json(await s.Client.GetAsync($"/api/assessments/{s.AssessmentId}", Ct));
+		Assert.Equal("Data Entry Incomplete", fresh.GetProperty("damageMessage").GetString());
+		Assert.Equal(JsonValueKind.Null, fresh.GetProperty("percentDamage").ValueKind);
+		Assert.Contains("Data Entry Incomplete", fresh.GetProperty("result").GetString());
+
+		AssessmentFile worked = SampleCases.RanchFlood(s.Store);
+		decimal percent = Assert.IsType<decimal>(worked.Assessment.PercentDamage);
+		JsonElement view = await PhoneSession.Json(await s.Client.GetAsync($"/api/assessments/{worked.Assessment.AssessmentID}", Ct));
+		Assert.Equal(percent, view.GetProperty("percentDamage").GetDecimal());
+		Assert.Equal(worked.Assessment.DamageMessage, view.GetProperty("damageMessage").GetString());
+		Assert.StartsWith(percent.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "%", view.GetProperty("result").GetString());
+	}
+
+	[Fact]
 	public async Task Search_AndAddStructure()
 	{
 		await using PhoneSession s = new PhoneSession();

@@ -28,9 +28,14 @@ public sealed record TeamDto(Guid TeamId, string Name, string Color);
 /// <summary>A structure on a team's list, in route order.</summary>
 public sealed record AssignmentDto(Guid AssignmentId, string ShortCode, int? RouteOrder, string Status, string DueDate, StructureDto Structure);
 
-/// <summary>An assessment as the phone edits it: only the fields that apply to it now.</summary>
+/// <summary>
+/// An assessment as the phone edits it: only the fields that apply to it now. <see cref="PercentDamage"/> and
+/// <see cref="DamageMessage"/> are FEMA's result as stored, for the result card and its gauge; the percentage is null
+/// while data entry is incomplete, so the gauge never shows a 0% that was not worked out. <see cref="Result"/> is the
+/// result as one line of text.
+/// </summary>
 public sealed record AssessmentDto(Guid AssessmentId, Guid PropertyId, string Address, string StructureType, string Status, bool Locked,
-	string LockedMessage, string Result, int PhotoCount, IReadOnlyList<StepDto> Steps);
+	string LockedMessage, string Result, decimal? PercentDamage, string DamageMessage, int PhotoCount, IReadOnlyList<StepDto> Steps);
 
 /// <summary>A change sent by the phone: a field key and its new value as text (empty or null clears it).</summary>
 public sealed record ChangeDto(string Key, string Value);
@@ -142,7 +147,7 @@ public static class FieldApi
 		string locked = LockedMessage(store, file.Assessment.AssessmentID);
 		return new AssessmentDto(file.Assessment.AssessmentID, p.PropertyID, Blank(address, "(no address)"), TypeName(p.StructureTypeID),
 			AssessmentStatuses.Label(status.Value), locked != null, locked, ResultText(file.Assessment.PercentDamage, file.Assessment.DamageMessage),
-			file.Attachments.Count, steps);
+			GaugePercent(file.Assessment), file.Assessment.DamageMessage ?? "", file.Attachments.Count, steps);
 	}
 
 	/// <summary>
@@ -213,6 +218,10 @@ public static class FieldApi
 
 	private static string ResultText(decimal? percent, string message) =>
 		percent is decimal pd ? pd.ToString("0.0", CultureInfo.InvariantCulture) + "%" + (string.IsNullOrWhiteSpace(message) ? "" : ", " + message) : (message ?? "");
+
+	/// <summary>The percentage the phone's gauge shows: none while FEMA's calculator says data entry is incomplete.</summary>
+	private static decimal? GaugePercent(AssessmentRecord a) =>
+		string.Equals(a.DamageMessage, "Data Entry Incomplete", StringComparison.OrdinalIgnoreCase) ? null : a.PercentDamage;
 
 	private static string Blank(string s, string fallback) => string.IsNullOrWhiteSpace(s) ? fallback : s.Trim();
 }

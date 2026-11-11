@@ -226,7 +226,9 @@
     var previous = state.assessment;
     state.assessment = a;
     $("edit-heading").textContent = a.address;
-    $("edit-summary").textContent = [a.structureType, a.status, a.result].filter(function (x) { return x; }).join(" · ");
+    var hasPercent = typeof a.percentDamage === "number";
+    $("edit-summary").textContent = [a.structureType, a.status, hasPercent ? null : a.result].filter(function (x) { return x; }).join(" · ");
+    showResult(a);
     $("locked").hidden = !a.locked;
     $("locked").textContent = a.locked ? a.lockedMessage : "";
     $("photo-count").textContent = a.photoCount === 1 ? "1 photo" : a.photoCount + " photos";
@@ -249,6 +251,55 @@
       });
     }
     show("edit");
+  }
+
+  // ───────── The result and its staff gauge ─────────
+
+  var svgNs = "http://www.w3.org/2000/svg";
+  var line = 50;   // FEMA's substantial damage line, in percent
+
+  function svg(tag, attrs, text) {
+    var e = document.createElementNS(svgNs, tag);
+    Object.keys(attrs || {}).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+    if (text) { e.textContent = text; }
+    return e;
+  }
+
+  function percentText(p) { return p.toFixed(1) + "%"; }
+
+  // Water blue below the line, amber within 10 points of it, red at or above it.
+  function toneOf(p) { return p >= line ? "substantial" : p >= line - 10 ? "close" : "not-substantial"; }
+
+  function showResult(a) {
+    var box = $("result");
+    if (typeof a.percentDamage !== "number") { box.hidden = true; return; }
+    var p = a.percentDamage;
+    var message = (a.damageMessage || "").trim();
+    box.className = "result " + toneOf(p);
+    $("result-value").textContent = percentText(p);
+    $("result-text").textContent = message;
+    $("result-text").hidden = !message;
+
+    var fill = Math.max(0, Math.min(100, p));
+    var drawing = svg("svg", { "aria-hidden": "true", focusable: "false" });
+    drawing.appendChild(svg("rect", { "class": "track", x: "0", y: "8", width: "100%", height: "14", rx: "3" }));
+    if (fill > 0) { drawing.appendChild(svg("rect", { "class": "water", x: "0", y: "8", width: fill + "%", height: "14", rx: "3" })); }
+    for (var i = 0; i <= 100; i += 10) {
+      drawing.appendChild(svg("line", { "class": "tick", x1: i + "%", x2: i + "%", y1: "22", y2: i % 50 === 0 ? "31" : "27" }));
+    }
+    // The high-water mark: a red line at 50 percent that stands above and below the track.
+    drawing.appendChild(svg("line", { "class": "halo", x1: line + "%", x2: line + "%", y1: "1", y2: "29" }));
+    drawing.appendChild(svg("line", { "class": "mark", x1: line + "%", x2: line + "%", y1: "1", y2: "29" }));
+    drawing.appendChild(svg("text", { x: "0", y: "45", "text-anchor": "middle" }, "0"));
+    drawing.appendChild(svg("text", { "class": "line", x: line + "%", y: "45", "text-anchor": "middle" }, line + "%"));
+    drawing.appendChild(svg("text", { x: "100%", y: "45", "text-anchor": "middle" }, "100%"));
+
+    var gauge = $("gauge");
+    gauge.setAttribute("aria-label", "Gauge: " + percentText(p) + " damaged, " + (p >= line ? "at or above" : "below") +
+      " the " + line + "% substantial damage line.");
+    gauge.textContent = "";
+    gauge.appendChild(drawing);
+    box.hidden = false;
   }
 
   function control(f, locked) {

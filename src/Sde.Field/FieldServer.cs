@@ -53,6 +53,21 @@ public sealed class FieldServer : IAsyncDisposable
 	public const long MaxJsonBytes = 1024 * 1024;
 	public const int MaxChanges = 200;
 
+	/// <summary>
+	/// Every file the page is made of, by the path it is served at (without the leading slash), with its content type.
+	/// This list is the whole allow-list: each is embedded in the assembly, and nothing else is served. The fonts are
+	/// Public Sans (SIL Open Font License), linked from src/Sde.Reports/Fonts so there is one copy of the files.
+	/// Declared before <see cref="Assets"/>, which is loaded from it.
+	/// </summary>
+	internal static readonly IReadOnlyDictionary<string, string> AssetFiles = new Dictionary<string, string>
+	{
+		["index.html"] = "text/html; charset=utf-8",
+		["app.js"] = "text/javascript; charset=utf-8",
+		["app.css"] = "text/css; charset=utf-8",
+		["fonts/PublicSans-Regular.ttf"] = "font/ttf",
+		["fonts/PublicSans-SemiBold.ttf"] = "font/ttf",
+	};
+
 	private static readonly IReadOnlyDictionary<string, (byte[] Body, string Type)> Assets = LoadAssets();
 
 	private readonly Func<SdeStore> _store;
@@ -203,6 +218,8 @@ public sealed class FieldServer : IAsyncDisposable
 		res.Headers["X-Content-Type-Options"] = "nosniff";
 		res.Headers["Referrer-Policy"] = "no-referrer";
 		res.Headers["X-Frame-Options"] = "DENY";
+		// Nothing is kept by the phone's browser, the page's files and fonts included: one rule for every response, and
+		// the address changes with each start (a new port), so a cached font would rarely be used again anyway.
 		res.Headers["Cache-Control"] = "no-store";
 		res.Headers["Content-Security-Policy"] =
 			"default-src 'self'; img-src 'self' data: blob:; style-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
@@ -303,8 +320,12 @@ public sealed class FieldServer : IAsyncDisposable
 	{
 		app.MapGet("/", () => Asset("index.html")).WithMetadata(OpenToUnpaired.Yes);
 		app.MapGet("/pair", () => Asset("index.html")).WithMetadata(OpenToUnpaired.Yes);
-		app.MapGet("/app.js", () => Asset("app.js")).WithMetadata(OpenToUnpaired.Yes);
-		app.MapGet("/app.css", () => Asset("app.css")).WithMetadata(OpenToUnpaired.Yes);
+		// The page's files, each at its own exact path. Nothing is read from disk, so no path can reach another file.
+		foreach (string name in AssetFiles.Keys.Where(n => n != "index.html"))
+		{
+			string file = name;
+			app.MapGet("/" + file, () => Asset(file)).WithMetadata(OpenToUnpaired.Yes);
+		}
 
 		app.MapPost("/api/pair", (HttpContext ctx, PairRequest req) => Pair(ctx, req)).WithMetadata(OpenToUnpaired.Yes);
 		app.MapGet("/api/session", (HttpContext ctx) => Results.Json(new { paired = true, name = PhoneOf(ctx).Name }));
@@ -540,14 +561,10 @@ public sealed class FieldServer : IAsyncDisposable
 	{
 		Assembly asm = typeof(FieldServer).Assembly;
 		Dictionary<string, (byte[], string)> assets = new();
-		foreach ((string name, string type) in new[]
+		foreach ((string name, string type) in AssetFiles)
 		{
-			("index.html", "text/html; charset=utf-8"),
-			("app.js", "text/javascript; charset=utf-8"),
-			("app.css", "text/css; charset=utf-8"),
-		})
-		{
-			using Stream s = asm.GetManifestResourceStream("Sde.Field.wwwroot." + name) ?? throw new InvalidOperationException("Missing " + name);
+			string resource = "Sde.Field.wwwroot." + name.Replace('/', '.');
+			using Stream s = asm.GetManifestResourceStream(resource) ?? throw new InvalidOperationException("Missing " + name);
 			using MemoryStream m = new MemoryStream();
 			s.CopyTo(m);
 			assets[name] = (m.ToArray(), type);

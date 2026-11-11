@@ -77,6 +77,71 @@ public class SecurityTests
 		Assert.Equal(HttpStatusCode.OK, (await s.Client.GetAsync("/API/structures?q=", Ct)).StatusCode);
 	}
 
+	// ───────────────────────── The page's files ─────────────────────────
+
+	[Fact]
+	public void PageFiles_AreExactlyThese()
+	{
+		string[] expected = { "app.css", "app.js", "fonts/PublicSans-Regular.ttf", "fonts/PublicSans-SemiBold.ttf", "index.html" };
+		Assert.Equal(expected, FieldServer.AssetFiles.Keys.OrderBy(k => k, StringComparer.Ordinal).ToArray());
+	}
+
+	[Theory]
+	[InlineData("/fonts/PublicSans-Regular.ttf")]
+	[InlineData("/fonts/PublicSans-SemiBold.ttf")]
+	public async Task Fonts_AreServedFromTheMac_LikeThePagesOtherFiles(string path)
+	{
+		await using PhoneSession s = new PhoneSession();
+		// Before pairing too: the pairing screen uses them.
+		HttpResponseMessage res = await s.Client.GetAsync(path, Ct);
+		Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+		Assert.Equal("font/ttf", res.Content.Headers.ContentType?.MediaType);
+		byte[] body = await res.Content.ReadAsByteArrayAsync(Ct);
+		Assert.True(body.Length > 10_000);
+		Assert.Equal(new byte[] { 0x00, 0x01, 0x00, 0x00 }, body.Take(4).ToArray());   // a TrueType font
+		// The same headers as every other response: never cached, never sniffed, the same policy.
+		Assert.Equal("no-store", res.Headers.CacheControl?.ToString());
+		Assert.Equal("nosniff", res.Headers.GetValues("X-Content-Type-Options").Single());
+		Assert.Contains("default-src 'self'", res.Headers.GetValues("Content-Security-Policy").Single());
+	}
+
+	[Fact]
+	public async Task Stylesheet_LoadsFontsOnlyFromTheMac()
+	{
+		await using PhoneSession s = new PhoneSession();
+		string css = await s.Client.GetStringAsync("/app.css", Ct);
+		Assert.Contains("url(\"/fonts/PublicSans-Regular.ttf\")", css);
+		Assert.Contains("url(\"/fonts/PublicSans-SemiBold.ttf\")", css);
+		Assert.Contains("font-display: swap", css);
+		Assert.DoesNotContain("://", css);
+		Assert.DoesNotContain("@import", css);
+	}
+
+	[Theory]
+	[InlineData("/fonts/PublicSans-Bold.ttf")]
+	[InlineData("/fonts/PublicSans-Medium.ttf")]
+	[InlineData("/fonts/OFL.txt")]
+	[InlineData("/fonts/")]
+	[InlineData("/fonts")]
+	[InlineData("/fonts/PublicSans-Regular.ttf.map")]
+	[InlineData("/fonts/PublicSans-Regular.ttf/x")]
+	[InlineData("/fonts/..%2fapp.css")]
+	[InlineData("/fonts/..%2F..%2FFieldServer.cs")]
+	[InlineData("/fonts/%2e%2e%2f%2e%2e%2fSde.Field.csproj")]
+	[InlineData("/fonts/..%5c..%5cSde.Field.csproj")]
+	[InlineData("/wwwroot/fonts/PublicSans-Regular.ttf")]
+	[InlineData("/Sde.Field.wwwroot.fonts.PublicSans-Regular.ttf")]
+	[InlineData("/wwwroot/app.css")]
+	public async Task AnyOtherFile_IsNotServed(string path)
+	{
+		await using PhoneSession s = new PhoneSession();
+		Assert.Equal(HttpStatusCode.Unauthorized, (await s.Client.GetAsync(path, Ct)).StatusCode);
+		await s.PairAsync();
+		HttpResponseMessage res = await s.Client.GetAsync(path, Ct);
+		Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+		Assert.Equal(0, (await res.Content.ReadAsByteArrayAsync(Ct)).Length);
+	}
+
 	// ───────────────────────── Numbers ─────────────────────────
 
 	[Fact]

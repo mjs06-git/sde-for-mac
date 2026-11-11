@@ -23,7 +23,10 @@ if (!server) { console.error("No server.json: is PhoneScreensHost running?"); pr
 
 const profile = mkdtempSync(join(tmpdir(), "sde-phone-"));
 const port = 9300 + Math.floor(Math.random() * 500);
-const proc = spawn(chrome, ["--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "--no-first-run", "--hide-scrollbars", "about:blank"], { stdio: "ignore" });
+const args = ["--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "--no-first-run", "--hide-scrollbars"];
+// Chrome refuses to start as root (a Linux container or CI) unless its sandbox is off.
+if (process.getuid?.() === 0) { args.push("--no-sandbox"); }
+const proc = spawn(chrome, [...args, "about:blank"], { stdio: "ignore" });
 
 let version;
 for (let i = 0; i < 100 && !version; i++) {
