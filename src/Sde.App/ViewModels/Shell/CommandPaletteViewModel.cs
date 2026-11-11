@@ -242,6 +242,7 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 		yield return Command("Set event for checked structures…", "Event", null, _main.Structures.SetEventCommand, keywords: "disaster");
 		yield return Command("Assign checked structures to a team…", "Assignments", null, _main.Structures.AssignToTeamCommand, keywords: "field route crew");
 		yield return Command("New team…", "Assignments", null, _main.Assignments.NewTeamCommand, keywords: "field crew");
+		yield return Command("Add agenda dates to Calendar…", "Agenda", null, _main.Agenda.AddToCalendarCommand, keywords: "ics deadlines calendar export");
 		yield return Command("Make a web map…", "Globe", null, _main.Structures.WebMapCommand, keywords: "share public leaflet html");
 		yield return Command("Check in a work package…", "Download", null, _main.ImportExport.CheckInCommand, keywords: "sdework field back");
 		yield return Command("Open a work package…", "Download", null, _main.OpenWorkPackageCommand, keywords: "sdework field offline");

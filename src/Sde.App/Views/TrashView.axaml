@@ -5,43 +5,80 @@
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.TrashView"
              x:DataType="vm:TrashViewModel">
-  <!-- In the window's toolbar: empty it (asks first) -->
+  <!-- In the window's toolbar: restore or remove the selected rows, and empty it all (each asks first where it can't be undone) -->
   <v:PageChrome.Toolbar>
     <StackPanel Classes="pageToolbar">
+      <Button Content="Restore" Command="{Binding RestoreCommand}" AutomationProperties.Name="Restore the selected items" ToolTip.Tip="Put the selected items back" />
+      <Button Content="Delete Now…" Command="{Binding DeleteNowCommand}" AutomationProperties.Name="Permanently delete the selected items" ToolTip.Tip="Remove the selected items for good (Delete)" />
       <Button Content="Empty Recently Deleted…" Command="{Binding EmptyAllCommand}" IsEnabled="{Binding !IsEmpty}"
               ToolTip.Tip="Permanently delete everything here" AutomationProperties.Name="Empty Recently Deleted" />
     </StackPanel>
   </v:PageChrome.Toolbar>
 
-  <!-- The deleted items edge to edge; the count and the 30-day rule in the status bar under them -->
+  <!-- The deleted items on a table card; the count and the 30-day rule in the status line under it -->
   <DockPanel>
-    <Border DockPanel.Dock="Bottom" Classes="statusBar">
+    <Border DockPanel.Dock="Top" Classes="listTopSpace" />
+    <Border DockPanel.Dock="Bottom" Classes="statusBar onPaper">
       <TextBlock Text="{Binding StatusText}" HorizontalAlignment="Center" ToolTip.Tip="{Binding Intro}" />
     </Border>
     <Grid>
-      <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !IsEmpty}">
-        <ItemsControl ItemsSource="{Binding Items}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:DeletedItemViewModel">
-              <Border Classes="listRow" Padding="16,7">
-                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                  <c:Icon Classes="secondary" Kind="{Binding Icon}" Size="16" VerticalAlignment="Center" ToolTip.Tip="{Binding Kind}" />
-                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
-                    <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Classes="muted" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Detail}" />
-                  </StackPanel>
-                  <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <Button Content="Restore" Command="{Binding $parent[UserControl].((vm:TrashViewModel)DataContext).RestoreCommand}" CommandParameter="{Binding}"
-                            AutomationProperties.Name="{Binding Label, StringFormat='Restore {0}'}" />
-                    <Button Content="Delete Now…" Command="{Binding $parent[UserControl].((vm:TrashViewModel)DataContext).DeleteNowCommand}" CommandParameter="{Binding}"
-                            AutomationProperties.Name="{Binding Label, StringFormat='Permanently delete {0}'}" />
-                  </StackPanel>
-                </Grid>
-              </Border>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </ScrollViewer>
+      <Border Classes="tableSheet" IsVisible="{Binding HasItems}">
+        <Border Classes="tableClip">
+          <DataGrid Name="Deleted" ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}"
+                    IsReadOnly="True" CanUserSortColumns="True" CanUserReorderColumns="False" CanUserResizeColumns="True" SelectionMode="Extended"
+                    GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
+                    AutomationProperties.Name="Recently deleted items" ToolTip.Tip="Select one or more. Delete removes them for good."
+                    SelectionChanged="OnSelectionChanged" KeyDown="OnListKeyDown">
+            <DataGrid.ContextMenu>
+              <ContextMenu>
+                <MenuItem Header="Restore" Command="{Binding RestoreCommand}" />
+                <Separator />
+                <MenuItem Header="Delete Now…" Classes="destructive" Command="{Binding DeleteNowCommand}" />
+              </ContextMenu>
+            </DataGrid.ContextMenu>
+            <DataGrid.Columns>
+              <DataGridTemplateColumn Header="What" SortMemberPath="Label" Width="2*" MinWidth="200">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:DeletedItemViewModel">
+                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="10,0,8,0" VerticalAlignment="Center">
+                      <c:Icon Classes="secondary" Kind="{Binding Icon}" Size="16" VerticalAlignment="Center" ToolTip.Tip="{Binding Kind}" />
+                      <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding RecordDetail}" />
+                    </StackPanel>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="Kind" SortMemberPath="Kind" Width="120">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:DeletedItemViewModel">
+                    <TextBlock Classes="cell secondary" Text="{Binding Kind}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="Deleted" SortMemberPath="DeletedOn" Width="190">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:DeletedItemViewModel">
+                    <TextBlock Classes="cell secondary" Text="{Binding DeletedOnText}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="Deleted by" SortMemberPath="DeletedBy" Width="1*" MinWidth="120">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:DeletedItemViewModel">
+                    <TextBlock Classes="cell secondary" Text="{Binding DeletedBy}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="Removed in" SortMemberPath="DaysLeftCount" Width="120">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:DeletedItemViewModel">
+                    <TextBlock Classes="cell secondary num" Text="{Binding DaysLeftText}" ToolTip.Tip="{Binding DaysLeft}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </DataGrid>
+        </Border>
+      </Border>
       <c:EmptyState IsVisible="{Binding IsEmpty}" Title="No Deleted Items" />
     </Grid>
   </DockPanel>

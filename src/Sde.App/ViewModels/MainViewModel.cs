@@ -34,6 +34,8 @@ public enum Page
 	Assignments,
 	/// <summary>One structure across every event (its case file): a sub-page of the page it was opened from.</summary>
 	CaseFile,
+	/// <summary>What is coming up and what is overdue: deadlines, inspections, appeals, letters and event dates.</summary>
+	Agenda,
 }
 
 /// <summary>
@@ -61,6 +63,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		Review = new ReviewViewModel(app, this);
 		Compliance = new ComplianceViewModel(app, this);
 		Assignments = new AssignmentsViewModel(app, this);
+		Agenda = new AgendaViewModel(app, this);
 		SidebarItems = BuildPages();
 		Events = new EventSwitcherViewModel { NewEventCommand = NewEventCommand, ManageEventsCommand = ManageEventsCommand };
 		Events.SelectionChanged += choice => _app.Scope.Set(_app.Store, choice.Id);
@@ -163,6 +166,10 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		{
 			Assignments.Reload();
 		}
+		if (Agenda.IsActive)
+		{
+			Agenda.Reload();
+		}
 	}
 
 	/// <summary>Adds an event and chooses it in the sidebar.</summary>
@@ -187,7 +194,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	}
 
 	/// <summary>
-	/// Every page, in the View menu's order (⌘1 to ⌘8; Settings is ⌘,). The sidebar's source list shows the office pages
+	/// Every page, in the View menu's order (⌘1 to ⌘8; Settings is ⌘,, and Agenda has no number). The sidebar's source list shows the office pages
 	/// (Workflow), Import &amp; Export and Recently Deleted (Data), and Settings at its foot; Structures is Library's All
 	/// Structures, and the map and summary are reached from the toolbar's view switch.
 	/// </summary>
@@ -238,6 +245,9 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	/// <summary>Teams, their structures in route order, and the field kit.</summary>
 	public AssignmentsViewModel Assignments { get; }
 
+	/// <summary>What is coming up and overdue, by week and month.</summary>
+	public AgendaViewModel Agenda { get; }
+
 	private IReadOnlyList<NavItemViewModel> BuildPages()
 	{
 		int n = 0;
@@ -249,6 +259,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 			Item(Page.Dashboard, "Summary", "Dashboard"),
 			Item(Page.Review, "Review", "Review"),
 			Item(Page.Compliance, "Compliance", "Compliance"),
+			Item(Page.Agenda, "Agenda", "Agenda", numbered: false),
 			Item(Page.Assignments, "Assignments", "Assignments"),
 			Item(Page.Trash, "Recently Deleted", "Trash"),
 			Item(Page.ImportExport, "Import & Export", "ImportExport"),
@@ -276,7 +287,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 			new SourceSectionViewModel("Pinned", _pinnedRows),
 			new SourceSectionViewModel("Saved Views", _savedViewRows),
 			new SourceSectionViewModel("Events", _eventRows),
-			new SourceSectionViewModel("Workflow", new(new object[] { Page_(Page.Review), Page_(Page.Compliance), Page_(Page.Assignments) })),
+			new SourceSectionViewModel("Workflow", new(new object[] { Page_(Page.Review), Page_(Page.Compliance), Page_(Page.Agenda), Page_(Page.Assignments) })),
 			new SourceSectionViewModel("Data", new(new object[] { Page_(Page.ImportExport), Page_(Page.Trash) })),
 		};
 	}
@@ -571,6 +582,16 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		// Review counts the assessments waiting (Draft and Reviewed); Compliance, the open cases past their deadline.
 		int waiting = Count("Couldn't count the assessments waiting for review", () => ReviewViewModel.CountWaiting(_app));
 		int overdue = Count("Couldn't count the overdue compliance cases", () => ComplianceViewModel.CountOverdue(_app));
+		// Agenda counts the overdue cases and those due in the next 14 days (red while any are overdue).
+		(int Overdue, int DueSoon) agenda = (0, 0);
+		try
+		{
+			agenda = AgendaViewModel.CountBadge(_app);
+		}
+		catch (Exception ex) when (ex is not OutOfMemoryException)
+		{
+			AppLog.Write("Couldn't count the agenda", ex);
+		}
 		foreach (NavItemViewModel item in SidebarItems)
 		{
 			item.Count = item.Page switch
@@ -579,12 +600,14 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 				Page.Trash => deleted,
 				Page.Review => waiting,
 				Page.Compliance => overdue,
+				Page.Agenda => agenda.Overdue + agenda.DueSoon,
 				_ => 0,
 			};
 			item.CountTone = item.Page switch
 			{
 				Page.Review => Tone.Accent,
 				Page.Compliance => Tone.Danger,
+				Page.Agenda => agenda.Overdue > 0 ? Tone.Danger : Tone.Accent,
 				_ => Tone.Neutral,
 			};
 		}
@@ -630,6 +653,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 			Page.Compliance => Compliance,
 			Page.Assignments => Assignments,
 			Page.CaseFile => (ViewModelBase)CaseFilePage ?? Structures,
+			Page.Agenda => Agenda,
 			_ => Structures,
 		};
 		Map.IsActive = page == Page.Map;
@@ -637,6 +661,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		Review.IsActive = page == Page.Review;
 		Compliance.IsActive = page == Page.Compliance;
 		Assignments.IsActive = page == Page.Assignments;
+		Agenda.IsActive = page == Page.Agenda;
 		RefreshStatus();
 		if (page == Page.Map)
 		{
@@ -662,6 +687,10 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		if (page == Page.Assignments)
 		{
 			Assignments.Reload();
+		}
+		if (page == Page.Agenda)
+		{
+			Agenda.Reload();
 		}
 		if (page == Page.Structures)
 		{

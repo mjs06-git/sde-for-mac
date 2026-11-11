@@ -136,7 +136,7 @@ public class AccessibilityTests
 		Assert.Contains("New", names);
 		Check("Shell");
 
-		foreach (ViewModels.Page page in new[] { ViewModels.Page.Review, ViewModels.Page.Compliance, ViewModels.Page.Assignments, ViewModels.Page.Dashboard, ViewModels.Page.Trash })
+		foreach (ViewModels.Page page in new[] { ViewModels.Page.Review, ViewModels.Page.Compliance, ViewModels.Page.Agenda, ViewModels.Page.Assignments, ViewModels.Page.Dashboard, ViewModels.Page.Trash })
 		{
 			ui.Main.ShowCommand.Execute(page);
 			Check(page.ToString());

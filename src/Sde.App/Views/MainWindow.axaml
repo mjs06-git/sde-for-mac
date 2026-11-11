@@ -64,6 +64,8 @@
       <NativeMenuItem Header="View">
         <!-- The pages, ⌘1 to ⌘8 in BuildPages' order, are put first by MainWindow.axaml.cs. -->
         <NativeMenu>
+          <NativeMenuItem Header="Agenda" Command="{Binding ShowCommand}" CommandParameter="{x:Static vm:Page.Agenda}" />
+          <NativeMenuItemSeparator />
           <NativeMenuItem Header="Hide or Show Sidebar" Gesture="Ctrl+Cmd+S" Command="{Binding ToggleSidebarCommand}" />
           <NativeMenuItem Header="Hide or Show Inspector" Gesture="Alt+Cmd+I" Command="{Binding Structures.ToggleInspectorCommand}" />
           <NativeMenuItem Header="Search and Commands…" Gesture="Cmd+K" Command="{Binding Palette.OpenCommand}" />
@@ -119,7 +121,9 @@
     <DataTemplate DataType="sh:DocumentsSheetViewModel"><v:DocumentsSheetView /></DataTemplate>
     <DataTemplate DataType="sh:QuickLookSheetViewModel"><v:QuickLookSheetView /></DataTemplate>
     <DataTemplate DataType="sh:CompareAssessmentsSheetViewModel"><v:CompareAssessmentsSheetView /></DataTemplate>
+    <DataTemplate DataType="vm:AgendaViewModel"><v:AgendaView /></DataTemplate>
     <DataTemplate DataType="sh:DismissFindingSheetViewModel"><v:DismissFindingSheetView /></DataTemplate>
+    <DataTemplate DataType="sh:MergeStructuresSheetViewModel"><v:MergeStructuresSheetView /></DataTemplate>
     <DataTemplate DataType="sh:CommentsSheetViewModel"><v:CommentsSheetView /></DataTemplate>
     <DataTemplate DataType="sh:QaBeforeExportSheetViewModel"><v:QaBeforeExportSheetView /></DataTemplate>
     <DataTemplate DataType="sh:ComplianceCaseSheetViewModel"><v:ComplianceCaseSheetView /></DataTemplate>

@@ -73,7 +73,7 @@
     <StackPanel Spacing="6">
       <TextBox Text="{Binding NewComment}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="56" PlaceholderText="Add a comment"
                AutomationProperties.Name="New comment" />
-      <Button Classes="primary" HorizontalAlignment="Right" Command="{Binding AddCommand}" AutomationProperties.Name="Add the comment">
+      <Button HorizontalAlignment="Right" Command="{Binding AddCommand}" AutomationProperties.Name="Add the comment">
         <StackPanel Orientation="Horizontal" Spacing="6">
           <c:Icon Kind="Comment" Size="14" />
           <TextBlock Text="Add Comment" />

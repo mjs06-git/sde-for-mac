@@ -1,41 +1,16 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Sde.App.ViewModels"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
              xmlns:v="using:Sde.App.Views"
              xmlns:c="using:Sde.App.Controls"
+             xmlns:letters="using:Sde.Reports.Letters"
              x:Class="Sde.App.Views.ComplianceView"
              x:DataType="vm:ComplianceViewModel">
 
-  <!--
-    In the window's toolbar: open or closed cases; the path, ICC and overdue filters in a pop-up (which names the ones
-    that are on); and the page's actions
-  -->
+  <!-- In the window's toolbar: the page's actions -->
   <v:PageChrome.Toolbar>
     <StackPanel Classes="pageToolbar">
-      <ComboBox ItemsSource="{x:Static vm:ComplianceViewModel.ShowChoices}" SelectedIndex="{Binding ShowFilter}" MinWidth="128"
-                AutomationProperties.Name="Open or closed cases" />
-      <DropDownButton AutomationProperties.Name="Filters" ToolTip.Tip="Filter by path, ICC status or overdue">
-        <StackPanel Orientation="Horizontal" Spacing="6">
-          <c:Icon Kind="Filter" Size="14" VerticalAlignment="Center" />
-          <TextBlock Text="{Binding FilterSummary}" IsVisible="{Binding HasFilters}" MaxWidth="150" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-        </StackPanel>
-        <DropDownButton.Flyout>
-          <Flyout Placement="BottomEdgeAlignedRight">
-            <StackPanel Spacing="4" Width="240">
-              <TextBlock Classes="fieldLabel" Text="Path" />
-              <ComboBox ItemsSource="{x:Static vm:ComplianceViewModel.PathChoices}" SelectedIndex="{Binding PathFilter}" HorizontalAlignment="Stretch"
-                        AutomationProperties.Name="Path filter" />
-              <TextBlock Classes="fieldLabel" Text="ICC status" Margin="0,6,0,0" />
-              <ComboBox ItemsSource="{x:Static vm:ComplianceViewModel.IccChoices}" SelectedIndex="{Binding IccFilter}" HorizontalAlignment="Stretch"
-                        AutomationProperties.Name="ICC status filter" />
-              <Grid ColumnDefinitions="*,Auto" Margin="0,10,0,0">
-                <CheckBox Content="Overdue Only" IsChecked="{Binding OverdueOnly}" VerticalAlignment="Center" />
-                <Button Grid.Column="1" Content="Clear Filters" Command="{Binding ClearFiltersCommand}" VerticalAlignment="Center" />
-              </Grid>
-            </StackPanel>
-          </Flyout>
-        </DropDownButton.Flyout>
-      </DropDownButton>
       <Button Content="Open Missing Cases…" Command="{Binding OpenMissingCasesCommand}" IsVisible="{Binding HasMissing}"
               ToolTip.Tip="{Binding MissingText}" AutomationProperties.Name="Open cases for every substantially damaged structure without one" />
       <Button Content="Open Case…" Command="{Binding OpenSelectedCommand}" AutomationProperties.Name="Open the selected case" />
@@ -47,111 +22,141 @@
           </MenuFlyout>
         </DropDownButton.Flyout>
       </DropDownButton>
+      <Button Classes="icon toolbar" Command="{Binding Shell.Structures.ToggleInspectorCommand}" AutomationProperties.Name="Show or hide the inspector" ToolTip.Tip="Show or Hide Inspector (⌥⌘I)">
+        <c:Icon Kind="Inspector" Size="18" />
+      </Button>
     </StackPanel>
   </v:PageChrome.Toolbar>
 
-  <!-- The cases, edge to edge, with their counts and the last action's result in the status bar -->
-  <DockPanel>
-    <Border DockPanel.Dock="Bottom" Classes="statusBar">
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="12,0">
+  <!-- The cases on a table card, open or closed and the filters above it, the counts under it, the selected case at the right -->
+  <c:ListDetailPage InspectorWidth="{Binding Shell.InspectorWidth}" IsInspectorVisible="{Binding Shell.Structures.IsInspectorVisible}"
+                    ResetInspectorWidthCommand="{Binding Shell.ResetInspectorWidthCommand}">
+    <c:ListDetailPage.FilterBar>
+      <StackPanel Classes="filterRow">
+        <ComboBox Classes="sm" ItemsSource="{x:Static vm:ComplianceViewModel.ShowChoices}" SelectedIndex="{Binding ShowFilter}" MinWidth="128"
+                  AutomationProperties.Name="Open or closed cases" />
+        <DropDownButton Classes="sm" AutomationProperties.Name="Filters" ToolTip.Tip="Filter by path or ICC status">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <c:Icon Kind="Filter" Size="12" VerticalAlignment="Center" />
+            <TextBlock Text="Filters" IsVisible="{Binding !HasFilters}" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding FilterSummary}" IsVisible="{Binding HasFilters}" MaxWidth="180" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+          </StackPanel>
+          <DropDownButton.Flyout>
+            <Flyout Placement="BottomEdgeAlignedLeft">
+              <StackPanel Spacing="4" Width="240">
+                <TextBlock Classes="fieldLabel" Text="Path" />
+                <ComboBox ItemsSource="{x:Static vm:ComplianceViewModel.PathChoices}" SelectedIndex="{Binding PathFilter}" HorizontalAlignment="Stretch"
+                          AutomationProperties.Name="Path filter" />
+                <TextBlock Classes="fieldLabel" Text="ICC status" Margin="0,6,0,0" />
+                <ComboBox ItemsSource="{x:Static vm:ComplianceViewModel.IccChoices}" SelectedIndex="{Binding IccFilter}" HorizontalAlignment="Stretch"
+                          AutomationProperties.Name="ICC status filter" />
+                <Grid ColumnDefinitions="*,Auto" Margin="0,10,0,0">
+                  <CheckBox Content="Overdue Only" IsChecked="{Binding OverdueOnly}" VerticalAlignment="Center" />
+                  <Button Grid.Column="1" Content="Clear Filters" Command="{Binding ClearFiltersCommand}" VerticalAlignment="Center" />
+                </Grid>
+              </StackPanel>
+            </Flyout>
+          </DropDownButton.Flyout>
+        </DropDownButton>
+        <ToggleButton Classes="filterChip" IsChecked="{Binding OverdueOnly}" Content="{Binding OverdueChipText}"
+                      AutomationProperties.Name="Overdue only" ToolTip.Tip="Open cases past their deadline" />
+        <ToggleButton Classes="filterChip" IsChecked="{Binding DueSoonOnly}" Content="{Binding DueSoonChipText}"
+                      AutomationProperties.Name="Due soon only" ToolTip.Tip="Open cases due in the next 14 days" />
+      </StackPanel>
+    </c:ListDetailPage.FilterBar>
+
+    <c:ListDetailPage.Status>
+      <StackPanel Classes="pageStatus" Orientation="Horizontal" Margin="12,0">
         <TextBlock Text="{Binding StatusText}" TextTrimming="CharacterEllipsis" />
         <TextBlock Text="{Binding LastResult, StringFormat=' · {0}'}" IsVisible="{Binding HasResult}" TextTrimming="CharacterEllipsis" MaxWidth="520"
                    ToolTip.Tip="{Binding LastResult}" AutomationProperties.LiveSetting="Polite" />
       </StackPanel>
-    </Border>
+    </c:ListDetailPage.Status>
+
     <Grid>
-      <DataGrid Name="Cases" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}" IsVisible="{Binding HasRows}"
-                IsReadOnly="True" CanUserSortColumns="True" CanUserReorderColumns="False" CanUserResizeColumns="True" SelectionMode="Single"
-                GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
-                AutomationProperties.Name="Compliance cases" ToolTip.Tip="Open cases first, by deadline. Double-click to open."
-                DoubleTapped="OnCasesDoubleTapped" KeyDown="OnCasesKeyDown">
-        <DataGrid.ContextMenu>
-          <ContextMenu>
-            <MenuItem Header="Open Case…" Command="{Binding OpenSelectedCommand}" />
-          </ContextMenu>
-        </DataGrid.ContextMenu>
-        <DataGrid.Columns>
-          <DataGridTemplateColumn Header="Structure" SortMemberPath="Address" Width="1.4*" MinWidth="150">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate x:DataType="vm:ComplianceRowViewModel">
-                <TextBlock Classes="cell" Text="{Binding Address}" ToolTip.Tip="{Binding Owner}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="Owner" SortMemberPath="Owner" Width="0.9*" MinWidth="100">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate x:DataType="vm:ComplianceRowViewModel">
-                <TextBlock Classes="cell" Text="{Binding Owner}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="Kind" SortMemberPath="Kind" Width="52" MinWidth="52">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate x:DataType="vm:ComplianceRowViewModel">
-                <TextBlock Classes="cell" Text="{Binding Kind}" ToolTip.Tip="{Binding KindTip}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="Path" SortMemberPath="PathText" Width="0.9*" MinWidth="100">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate x:DataType="vm:ComplianceRowViewModel">
-                <TextBlock Classes="cell" Text="{Binding PathText}" ToolTip.Tip="{Binding PathText}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="Permit" SortMemberPath="Permit" Width="88" MinWidth="88">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate x:DataType="vm:ComplianceRowViewModel">
-                <TextBlock Classes="cell" Text="{Binding Permit}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="Deadline" SortMemberPath="DeadlineSort" Width="214" MinWidth="214">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate x:DataType="vm:ComplianceRowViewModel">
-                <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,0" VerticalAlignment="Center">
-                  <TextBlock Text="{Binding DeadlineText}" VerticalAlignment="Center" />
-                  <TextBlock Classes="sm danger" Text="{Binding OverdueText}" IsVisible="{Binding IsOverdue}" VerticalAlignment="Center" />
-                </StackPanel>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="ICC" SortMemberPath="IccText" Width="1*" MinWidth="120">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate x:DataType="vm:ComplianceRowViewModel">
-                <TextBlock Classes="cell" Text="{Binding IccText}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="EC Received" SortMemberPath="EcSort" Width="104" MinWidth="104">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate x:DataType="vm:ComplianceRowViewModel">
-                <TextBlock Classes="cell" Text="{Binding EcText}" ToolTip.Tip="Elevation certificate received" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="Final Inspection" SortMemberPath="FinalSort" Width="112" MinWidth="112">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate x:DataType="vm:ComplianceRowViewModel">
-                <TextBlock Classes="cell" Text="{Binding FinalText}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-          <DataGridTemplateColumn Header="Status" SortMemberPath="StatusText" Width="84" MinWidth="84">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate x:DataType="vm:ComplianceRowViewModel">
-                <StackPanel Classes="result" Orientation="Horizontal" Spacing="7" Margin="8,0" VerticalAlignment="Center">
-                  <Panel VerticalAlignment="Center">
-                    <Ellipse Classes="dot" Fill="{DynamicResource Accent}" IsVisible="{Binding IsOpen}" />
-                    <Ellipse Classes="dot" Fill="{DynamicResource StatusIncompleteDot}" IsVisible="{Binding !IsOpen}" />
-                  </Panel>
-                  <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" />
-                </StackPanel>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-        </DataGrid.Columns>
-      </DataGrid>
+      <Border Classes="tableSheet" IsVisible="{Binding HasRows}">
+        <Border Classes="tableClip">
+          <DataGrid Name="Cases" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}"
+                    IsReadOnly="True" CanUserSortColumns="True" CanUserReorderColumns="False" CanUserResizeColumns="True" SelectionMode="Single"
+                    GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
+                    AutomationProperties.Name="Compliance cases" ToolTip.Tip="Open cases first, by deadline. Double-click to open."
+                    DoubleTapped="OnCasesDoubleTapped" KeyDown="OnCasesKeyDown">
+            <DataGrid.ContextMenu>
+              <ContextMenu>
+                <MenuItem Header="Open Case…" Command="{Binding OpenSelectedCommand}" />
+                <MenuItem Header="Open Assessment" Command="{Binding OpenSelectedAssessmentCommand}" />
+              </ContextMenu>
+            </DataGrid.ContextMenu>
+            <DataGrid.Columns>
+              <DataGridTemplateColumn Header="Structure" SortMemberPath="Address" Width="1.4*" MinWidth="150">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:ComplianceRowViewModel">
+                    <TextBlock Classes="cell" Text="{Binding Address}" ToolTip.Tip="{Binding Owner}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="Owner" SortMemberPath="Owner" Width="1*" MinWidth="100">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:ComplianceRowViewModel">
+                    <TextBlock Classes="cell secondary" Text="{Binding Owner}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="Kind" SortMemberPath="Kind" Width="56" MinWidth="56">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:ComplianceRowViewModel">
+                    <TextBlock Classes="cell secondary" Text="{Binding Kind}" ToolTip.Tip="{Binding KindTip}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="Path" SortMemberPath="PathText" Width="1*" MinWidth="100">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:ComplianceRowViewModel">
+                    <TextBlock Classes="cell secondary" Text="{Binding PathText}" ToolTip.Tip="{Binding PathText}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="Permit" SortMemberPath="Permit" Width="0.7*" MinWidth="72">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:ComplianceRowViewModel">
+                    <TextBlock Classes="cell secondary" Text="{Binding Permit}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="Deadline" SortMemberPath="DeadlineSort" Width="1.3*" MinWidth="168">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:ComplianceRowViewModel">
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,0" VerticalAlignment="Center" ToolTip.Tip="{Binding OverdueText}">
+                      <TextBlock Text="{Binding DeadlineText}" VerticalAlignment="Center" />
+                      <TextBlock Classes="sm danger" Text="{Binding LateText}" IsVisible="{Binding IsOverdue}" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="ICC" SortMemberPath="IccText" Width="1*" MinWidth="110">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:ComplianceRowViewModel">
+                    <TextBlock Classes="cell secondary" Text="{Binding IccText}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="Status" SortMemberPath="StatusText" Width="84" MinWidth="84">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:ComplianceRowViewModel">
+                    <StackPanel Classes="result" Orientation="Horizontal" Spacing="7" Margin="8,0" VerticalAlignment="Center">
+                      <Panel VerticalAlignment="Center">
+                        <Ellipse Classes="dot" Fill="{DynamicResource Accent}" IsVisible="{Binding IsOpen}" />
+                        <Ellipse Classes="dot" Fill="{DynamicResource StatusIncompleteDot}" IsVisible="{Binding !IsOpen}" />
+                      </Panel>
+                      <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </DataGrid>
+        </Border>
+      </Border>
 
       <c:EmptyState IsVisible="{Binding IsEmpty}" Title="No Compliance Cases">
         <Button Content="Open Missing Cases…" Command="{Binding OpenMissingCasesCommand}" IsVisible="{Binding HasMissing}" ToolTip.Tip="{Binding MissingText}"
@@ -161,5 +166,87 @@
         <Button Content="Clear Filters" Command="{Binding ClearFiltersCommand}" />
       </c:EmptyState>
     </Grid>
-  </DockPanel>
+
+    <!-- The selected case: its dates and state, the actions, then its timeline newest first -->
+    <c:ListDetailPage.Inspector>
+      <Grid>
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasSelection}">
+          <StackPanel Classes="inspectorStack">
+            <Border Classes="sideCard" Name="CaseCard">
+              <StackPanel Spacing="14">
+                <StackPanel Spacing="2" DataContext="{Binding Selected}" x:DataType="vm:ComplianceRowViewModel">
+                  <TextBlock Classes="cardTitle" Text="{Binding Address}" TextWrapping="Wrap" />
+                  <TextBlock Classes="secondary sm" Text="{Binding Owner}" TextWrapping="Wrap" />
+                </StackPanel>
+                <Grid Classes="facts" ColumnDefinitions="108,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                      DataContext="{Binding Selected}" x:DataType="vm:ComplianceRowViewModel">
+                  <TextBlock Classes="factLabel" Text="Kind" />
+                  <TextBlock Grid.Column="1" Text="{Binding KindText}" TextWrapping="Wrap" />
+                  <TextBlock Grid.Row="1" Classes="factLabel" Text="Status" />
+                  <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding StatusText}" />
+                  <TextBlock Grid.Row="2" Classes="factLabel" Text="Deadline" VerticalAlignment="Top" />
+                  <StackPanel Grid.Row="2" Grid.Column="1" Spacing="1">
+                    <TextBlock Text="{Binding DeadlineOrNone}" />
+                    <TextBlock Classes="danger" Text="{Binding OverdueText}" IsVisible="{Binding IsOverdue}" TextWrapping="Wrap" />
+                  </StackPanel>
+                  <TextBlock Grid.Row="3" Classes="factLabel" Text="Path" />
+                  <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PathText}" TextWrapping="Wrap" />
+                  <TextBlock Grid.Row="4" Classes="factLabel" Text="Permit" />
+                  <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Permit}" TextWrapping="Wrap" />
+                  <TextBlock Grid.Row="5" Classes="factLabel" Text="ICC" />
+                  <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding IccText}" TextWrapping="Wrap" />
+                  <TextBlock Grid.Row="6" Classes="factLabel" Text="Elevation cert." ToolTip.Tip="Elevation certificate received" />
+                  <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding EcOrNone}" />
+                  <TextBlock Grid.Row="7" Classes="factLabel" Text="Final inspection" />
+                  <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding FinalOrNone}" />
+                </Grid>
+                <Border Classes="hairline" />
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                  <DropDownButton Content="Letter" AutomationProperties.Name="Write a compliance letter for the selected case">
+                    <DropDownButton.Flyout>
+                      <MenuFlyout Placement="BottomEdgeAlignedRight">
+                        <MenuItem Header="Options and Deadline…" Command="{Binding WriteLetterCommand}" CommandParameter="{x:Static letters:LetterKinds.ComplianceOptions}" />
+                        <MenuItem Header="ICC Support…" Command="{Binding WriteLetterCommand}" CommandParameter="{x:Static letters:LetterKinds.IccSupport}" />
+                        <MenuItem Header="Deadline Reminder…" Command="{Binding WriteLetterCommand}" CommandParameter="{x:Static letters:LetterKinds.DeadlineReminder}" />
+                      </MenuFlyout>
+                    </DropDownButton.Flyout>
+                  </DropDownButton>
+                  <Button Classes="icon" Command="{Binding OpenSelectedAssessmentCommand}"
+                          AutomationProperties.Name="Open the case's assessment" ToolTip.Tip="Open the Assessment">
+                    <c:Icon Kind="Clipboard" Size="16" />
+                  </Button>
+                  <Button Classes="primary" Content="Open Case…" Command="{Binding OpenSelectedCommand}" HorizontalContentAlignment="Center"
+                          AutomationProperties.Name="Open the case in full" />
+                </StackPanel>
+              </StackPanel>
+            </Border>
+
+            <Border Classes="sideCard">
+              <StackPanel Spacing="10">
+                <TextBlock Classes="cardTitle" Text="Timeline" />
+                <TextBlock Classes="muted" Text="Nothing recorded yet" IsVisible="{Binding !HasTimeline}" />
+                <ItemsControl ItemsSource="{Binding SelectedTimeline}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><StackPanel Spacing="12" /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="sh:ComplianceEntryViewModel">
+                      <Grid Classes="checkRow" ColumnDefinitions="Auto,*">
+                        <c:Icon Kind="{Binding Icon}" Size="14" Classes="secondary" />
+                        <StackPanel Grid.Column="1" Spacing="1">
+                          <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+                          <TextBlock Classes="rowDetail" Text="{Binding Byline}" />
+                        </StackPanel>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+        <c:EmptyState IsVisible="{Binding !HasSelection}" Title="No Selection" />
+      </Grid>
+    </c:ListDetailPage.Inspector>
+  </c:ListDetailPage>
 </UserControl>

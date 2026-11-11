@@ -28,6 +28,15 @@ public sealed partial class StructuresViewModel
 			_app.Dialogs.Notify("Nothing checked", "Check the structures to look up first.");
 			return;
 		}
+		await LookUpFloodDataFor(ids);
+	}
+
+	/// <summary>
+	/// The same look-up for these assessments' structures (Review's Check Online for the flood map check uses it too),
+	/// then the review of what was found. Nothing is saved until the review's Apply.
+	/// </summary>
+	public async Task LookUpFloodDataFor(IReadOnlyList<Guid> ids)
+	{
 		// One look-up per structure (its fields are shared by all its assessments).
 		List<AssessmentFile> structures = _app.Store.LoadAssessments(ids).GroupBy(f => f.Property.PropertyID).Select(g => g.First()).ToList();
 		OnlineLookup lookup = new OnlineLookup(_app.HttpClientFactory(), _app.Store.Reference) { Timeout = LookupTimeout };

@@ -69,6 +69,18 @@ public sealed partial class ReviewRowViewModel : ObservableObject
 
 	public string Result => Structure.Result;
 
+	/// <summary>Whether there is a percent damaged to show in the inspector's hero.</summary>
+	public bool HasPercent => Structure.HasPercent;
+
+	/// <summary>True when the assessment is substantially damaged (the hero's verdict in red).</summary>
+	public bool IsSubstantial => Structure.State == ResultState.Substantial;
+
+	/// <summary>The percent damaged for the hero's gauge, 0 to 100.</summary>
+	public double PercentValue => Structure.HasPercent ? (double)Math.Clamp(Summary.PercentDamage ?? 0m, 0m, 100m) : 0;
+
+	/// <summary>Where the figure stands against the 50 percent line, for the hero.</summary>
+	public string LineText => Structure.HasPercent ? ResultLine.Describe((double)(Summary.PercentDamage ?? 0m)) : "";
+
 	/// <summary>Open (not set aside) quality findings about this assessment or its structure.</summary>
 	public int FindingCount { get; }
 
@@ -120,6 +132,9 @@ public sealed class QaFindingViewModel(QaFinding finding, string address)
 	/// <summary>Brings a finding that was set aside back.</summary>
 	public IRelayCommand<QaFindingViewModel> BringBack { get; init; }
 
+	/// <summary>Opens the merge sheet for a duplicate finding (the Review page's command).</summary>
+	public IAsyncRelayCommand<QaFindingViewModel> Merge { get; init; }
+
 	public bool IsError => Finding.Severity == QaSeverity.Error;
 
 	public bool IsWarning => Finding.Severity == QaSeverity.Warning;
@@ -166,6 +181,38 @@ public sealed class QaFindingViewModel(QaFinding finding, string address)
 	public bool CanDismiss => Rule?.CanDismiss == true && !IsDismissed;
 
 	public bool CanOpen => Finding.AssessmentId != null;
+
+	/// <summary>The checks that find two records of one building: their findings can be merged.</summary>
+	public static bool IsDuplicateRule(string ruleId) =>
+		ruleId is QaRuleIds.DuplicateParcel or QaRuleIds.DuplicateAddress or QaRuleIds.DuplicateLocation;
+
+	/// <summary>
+	/// The other structure of a duplicate finding: the first of the structures its detail names (the detail lists the
+	/// other structures' PropertyIDs), or null for a finding that is not about duplicates.
+	/// </summary>
+	public Guid? OtherPropertyId
+	{
+		get
+		{
+			if (!IsDuplicateRule(Finding.RuleId) || string.IsNullOrEmpty(Finding.Detail))
+			{
+				return null;
+			}
+			foreach (string part in Finding.Detail.Split(','))
+			{
+				if (Guid.TryParseExact(part.Trim(), "N", out Guid id) && id != Finding.PropertyId)
+				{
+					return id;
+				}
+			}
+			return null;
+		}
+	}
+
+	/// <summary>Whether Merge… is offered: an open duplicate finding with another structure to merge with.</summary>
+	public bool CanMerge => Merge != null && !IsDismissed && Finding.PropertyId != null && OtherPropertyId != null;
+
+	public string AccessibleMerge => $"Merge {Address} with its duplicate";
 
 	public string FieldLabel => FieldCatalog.Get(Finding.FieldKey)?.Label;
 
@@ -239,6 +286,24 @@ public sealed class QaGroupViewModel(QaRuleInfo rule, IReadOnlyList<QaFindingVie
 	public bool HasNoDismissNote => NoDismissNote != null;
 }
 
+/// <summary>A quality check that could not run for lack of data, with Check Online where a lookup can supply it.</summary>
+public sealed class QaNotCheckedViewModel(QaNotChecked item)
+{
+	public QaNotChecked Item { get; } = item;
+
+	public string Title => Item.Title;
+
+	/// <summary>"Not checked: no stored flood lookup."</summary>
+	public string Message => Item.Message;
+
+	/// <summary>Opens the online lookup for the structures it needs (the Review page's command).</summary>
+	public IAsyncRelayCommand<QaNotCheckedViewModel> CheckOnline { get; init; }
+
+	public bool CanCheckOnline => Item.CanCheckOnline && CheckOnline != null;
+
+	public string AccessibleCheckOnline => "Check online for " + Title;
+}
+
 /// <summary>
 /// The Review page: the assessments waiting for review (Draft and Reviewed unless another status is chosen) with their
 /// results, open quality findings and comment threads; the quality findings grouped by check, to open, set aside or
@@ -283,6 +348,23 @@ public sealed partial class ReviewViewModel : ViewModelBase
 
 	/// <summary>Every finding of the last run, open and set aside.</summary>
 	public IReadOnlyList<QaFinding> Findings => _findings;
+
+	/// <summary>The checks that could not run for the assessments in scope, shown as a quiet group under the findings.</summary>
+	public ObservableCollection<QaNotCheckedViewModel> NotChecked { get; } = new();
+
+	public bool HasNotChecked => NotChecked.Count > 0;
+
+	/// <summary>The findings list is empty but some checks could not run: one grey line says so above them.</summary>
+	public bool ShowsNoFindingsLine => ChecksEmpty && HasNotChecked;
+
+	/// <summary>Nothing at all to show on the Checks tab: the empty state.</summary>
+	public bool ShowsChecksEmptyState => ChecksEmpty && !HasNotChecked;
+
+	/// <summary>The page's shell, for the shared inspector width and the inspector switch.</summary>
+	public MainViewModel Shell => _main;
+
+	/// <summary>The edit history batch of the last merge made here, which Undo in its toast undoes.</summary>
+	public string LastMergeBatchId { get; private set; }
 
 	/// <summary>0 = the queue, 1 = the quality checks.</summary>
 	[ObservableProperty]
@@ -404,15 +486,27 @@ public sealed partial class ReviewViewModel : ViewModelBase
 		ReferenceData reference = _app.Store.Reference;
 		List<StructureSummary> list = _app.Store.ListStructures().Where(s => s.AssessmentID != null && _app.Scope.Includes(s.AssessmentID)).ToList();
 		List<Guid> ids = list.Select(s => s.AssessmentID!.Value).ToList();
+		List<QaNotChecked> notChecked;
 		try
 		{
-			_findings = QualityChecks.Run(_app.Store, ids);
+			// One read for both: what the checks found and which checks could not run (QualityChecks.Run and NotChecked
+			// would each read every assessment again).
+			QaResult result = ids.Count == 0 ? new QaResult(new List<QaFinding>(), new List<QaNotChecked>()) : QaRules.CheckWithStatus(_app.Store.LoadQaInput(ids));
+			_findings = result.Findings.ToList();
+			notChecked = result.NotChecked.ToList();
 		}
 		catch (Exception ex) when (ex is not OutOfMemoryException)
 		{
 			AppLog.Write("Couldn't run the quality checks", ex);
 			_findings = new List<QaFinding>();
+			notChecked = new List<QaNotChecked>();
 		}
+		NotChecked.Clear();
+		foreach (QaNotChecked n in notChecked)
+		{
+			NotChecked.Add(new QaNotCheckedViewModel(n) { CheckOnline = CheckOnlineCommand });
+		}
+		OnPropertyChanged(nameof(HasNotChecked));
 		_addresses = list.GroupBy(s => s.PropertyID).ToDictionary(g => g.Key, g => new StructureRowViewModel(g.First()).Address);
 		Dictionary<Guid, int> comments = _app.Store.OpenCommentCounts();
 		ILookup<Guid, QaFinding> open = _findings.Where(f => !f.IsDismissed && f.AssessmentId != null).ToLookup(f => f.AssessmentId!.Value);
@@ -513,6 +607,8 @@ public sealed partial class ReviewViewModel : ViewModelBase
 		OnPropertyChanged(nameof(ChecksEmpty));
 		OnPropertyChanged(nameof(ChecksEmptyTitle));
 		OnPropertyChanged(nameof(ChecksEmptyText));
+		OnPropertyChanged(nameof(ShowsNoFindingsLine));
+		OnPropertyChanged(nameof(ShowsChecksEmptyState));
 	}
 
 	private QaFindingViewModel Describe(QaFinding f)
@@ -520,7 +616,7 @@ public sealed partial class ReviewViewModel : ViewModelBase
 		string where = f.PropertyId is Guid p && _addresses.TryGetValue(p, out string address) ? address
 			: f.PropertyId == null ? _app.Store.GetEvent(f.ObjectId)?.Label ?? "This event"
 			: "(no address)";
-		return new QaFindingViewModel(f, where) { Open = OpenFindingCommand, Dismiss = DismissFindingCommand, BringBack = BringBackCommand };
+		return new QaFindingViewModel(f, where) { Open = OpenFindingCommand, Dismiss = DismissFindingCommand, BringBack = BringBackCommand, Merge = MergeFindingCommand };
 	}
 
 	/// <summary>The selected assessment's comments and open findings, for the panel beside the queue.</summary>
@@ -789,4 +885,107 @@ public sealed partial class ReviewViewModel : ViewModelBase
 	}
 
 	private bool CanMarkReviewed() => HasChecked || Selected != null;
+
+	// ───────────── Merging duplicates ─────────────
+
+	/// <summary>
+	/// Merge… on a duplicate finding: the merge sheet for its structure and the duplicate it names. After a merge the
+	/// lists and the sidebar catch up, and the toast's Undo puts both structures back.
+	/// </summary>
+	[RelayCommand]
+	private async Task MergeFinding(QaFindingViewModel finding)
+	{
+		if (finding?.Finding.PropertyId is not Guid first || finding.OtherPropertyId is not Guid second)
+		{
+			return;
+		}
+		MergeStructuresSheetViewModel sheet;
+		try
+		{
+			sheet = new MergeStructuresSheetViewModel(_app, first, second);
+		}
+		catch (ArgumentException ex)
+		{
+			_app.Dialogs.Notify("Not found", ex.Message, isError: true);
+			Reload();
+			return;
+		}
+		if (await _app.Sheets.ShowAsync<MergePropertiesResult>(sheet) is not MergePropertiesResult result)
+		{
+			return;
+		}
+		LastMergeBatchId = result.BatchId;
+		string kept = sheet.Keep.Address;
+		string merged = sheet.Other.Address;
+		AfterChange();
+		_app.Dialogs.Notify("Structures merged", $"{merged} was merged into {kept}.", "Undo", () => UndoMerge(result.BatchId));
+	}
+
+	/// <summary>Undoes a merge made here (the toast's Undo); refused, it says why and changes nothing.</summary>
+	[RelayCommand]
+	private void UndoMerge(string batchId)
+	{
+		if (string.IsNullOrEmpty(batchId))
+		{
+			return;
+		}
+		try
+		{
+			_app.Store.UndoMerge(batchId);
+		}
+		catch (MergeRefusedException ex)
+		{
+			_app.Dialogs.Notify("Couldn't undo the merge", string.Join(" ", ex.Reasons), isError: true);
+			return;
+		}
+		catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+		{
+			_app.Dialogs.Notify("Couldn't undo the merge", ex.Message, isError: true);
+			return;
+		}
+		if (LastMergeBatchId == batchId)
+		{
+			LastMergeBatchId = null;
+		}
+		AfterChange();
+		_app.Dialogs.Notify("Merge undone", "Both structures are back as they were.");
+	}
+
+	/// <summary>Something changed the structures: every list and the sidebar's counts read again (this page too, if it isn't showing).</summary>
+	private void AfterChange()
+	{
+		_app.RaiseDataChanged();
+		if (!IsActive)
+		{
+			Reload();
+		}
+	}
+
+	// ───────────── Checks that could not run ─────────────
+
+	/// <summary>
+	/// Check Online on a check that could not run: the flood map check opens the online flood data lookup for the
+	/// structures in scope; the high-water mark check opens the flood depth sheet (USGS marks or a marks file) for them.
+	/// Nothing is saved until the person applies what was found.
+	/// </summary>
+	[RelayCommand]
+	private async Task CheckOnline(QaNotCheckedViewModel item)
+	{
+		List<Guid> ids = _all.Where(r => _only == null || _only.Contains(r.AssessmentID)).Select(r => r.AssessmentID).ToList();
+		if (item == null || !item.Item.CanCheckOnline || ids.Count == 0)
+		{
+			return;
+		}
+		if (item.Item.Reason == QaNotCheckedReason.NoHighWaterMarks)
+		{
+			if (await _app.Sheets.ShowAsync(new DepthSheetViewModel(_app, ids)) is DepthApplyResult result)
+			{
+				_app.Dialogs.Notify("Flood depths saved", result.Changed == 1 ? "1 assessment changed." : $"{result.Changed:N0} assessments changed.");
+				AfterChange();
+			}
+			return;
+		}
+		await _main.Structures.LookUpFloodDataFor(ids);
+		Reload();
+	}
 }
