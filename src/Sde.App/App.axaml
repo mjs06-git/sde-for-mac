@@ -11,7 +11,7 @@
     <NativeMenu>
       <NativeMenuItem Header="About Substantial Damage Estimator" Click="OnAboutClicked" />
       <NativeMenuItemSeparator />
-      <NativeMenuItem Header="Settings…" Gesture="Cmd+OemComma" Click="OnAboutClicked" />
+      <NativeMenuItem Header="Settings…" Gesture="Cmd+OemComma" Click="OnSettingsClicked" />
     </NativeMenu>
   </NativeMenu.Menu>
 
@@ -161,5 +161,6 @@
     <StyleInclude Source="avares://SDE/Styles/AppStyles.axaml" />
     <StyleInclude Source="avares://SDE/Styles/Shell.axaml" />
     <StyleInclude Source="avares://SDE/Styles/Editor.axaml" />
+    <StyleInclude Source="avares://SDE/Styles/DataPages.axaml" />
   </Application.Styles>
 </Application>

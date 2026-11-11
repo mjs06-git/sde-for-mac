@@ -4,7 +4,7 @@
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.OutputSettingsPanel"
              x:DataType="vm:OutputSettingsViewModel">
-  <StackPanel Spacing="14">
+  <StackPanel Spacing="20">
     <Border Classes="card">
       <StackPanel Spacing="12">
         <TextBlock Classes="h3" Text="Substantial improvement"

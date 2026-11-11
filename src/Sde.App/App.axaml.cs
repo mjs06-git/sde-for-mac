@@ -12,8 +12,15 @@ public partial class App : Application
 {
 	private MainViewModel _main;
 
-	/// <summary>The application menu's About and Settings…: the Settings page (it shows the version).</summary>
-	private void OnAboutClicked(object sender, EventArgs e) => _main?.ShowCommand.Execute(Page.Settings);
+	/// <summary>The application menu's About: Settings, About (the version and what's new).</summary>
+	private void OnAboutClicked(object sender, EventArgs e)
+	{
+		_main?.ShowCommand.Execute(Page.Settings);
+		_main?.Settings.Show(SettingsCategory.About);
+	}
+
+	/// <summary>The application menu's Settings…: the Settings page.</summary>
+	private void OnSettingsClicked(object sender, EventArgs e) => _main?.ShowCommand.Execute(Page.Settings);
 
 	public override void Initialize()
 	{

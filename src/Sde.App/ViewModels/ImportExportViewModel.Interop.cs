@@ -175,6 +175,7 @@ public sealed partial class ImportExportViewModel
 			(problems > 0 ? $" · {problems} row{(problems == 1 ? "" : "s")} can't be used" : "") +
 			(rows.Count - changed - problems > 0 ? $" · {rows.Count - changed - problems} unchanged" : "");
 		LatLongSource = path;
+		Tab = ImportExportTab.FieldWork; // the coordinates' preview is on the Field Work tab
 	}
 
 	[RelayCommand]

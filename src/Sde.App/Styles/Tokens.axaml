@@ -127,6 +127,18 @@
   <x:Double x:Key="DataGridRowSelectedHoveredBackgroundOpacity">1</x:Double>
   <x:Double x:Key="DataGridRowSelectedUnfocusedBackgroundOpacity">1</x:Double>
   <x:Double x:Key="DataGridRowSelectedHoveredUnfocusedBackgroundOpacity">1</x:Double>
+  <!-- Data pages (Settings, Appearance): the swatches beside the accent choices. SDE's blue, whatever accent is showing,
+       and the Mac's multicolour mark for "the Mac's accent colour". Decoration only (no text sits on them). -->
+  <SolidColorBrush x:Key="SwatchBrandAccent" Color="#1769C2" />
+  <ConicGradientBrush x:Key="SwatchMacAccent">
+    <GradientStop Offset="0" Color="#FF3B30" />
+    <GradientStop Offset="0.17" Color="#FF9500" />
+    <GradientStop Offset="0.33" Color="#FFCC00" />
+    <GradientStop Offset="0.5" Color="#34C759" />
+    <GradientStop Offset="0.67" Color="#007AFF" />
+    <GradientStop Offset="0.83" Color="#AF52DE" />
+    <GradientStop Offset="1" Color="#FF3B30" />
+  </ConicGradientBrush>
 
   <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">

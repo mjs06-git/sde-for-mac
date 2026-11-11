@@ -6,6 +6,7 @@ namespace Sde.App.ViewModels;
 public enum SettingsCategory
 {
 	General,
+	Appearance,
 	Defaults,
 	ReportsAndLetters,
 	OnlineServices,
@@ -14,6 +15,7 @@ public enum SettingsCategory
 	MapAndGis,
 	DepthTables,
 	Backups,
+	About,
 }
 
 /// <summary>One entry in the Settings page's list: its name, icon (an icon kind from Styles/Icons.axaml) and what it covers.</summary>
@@ -25,6 +27,7 @@ public sealed partial class SettingsViewModel
 	public IReadOnlyList<SettingsCategoryItem> Categories { get; } = new[]
 	{
 		new SettingsCategoryItem(SettingsCategory.General, "General", "Settings", "Your name, location checks, your own fields and note snippets."),
+		new SettingsCategoryItem(SettingsCategory.Appearance, "Appearance", "Appearance", "Light or dark, the accent colour, and how roomy the controls are."),
 		new SettingsCategoryItem(SettingsCategory.Defaults, "Defaults", "Edit", "Values filled into new structures and assessments, so you type them once per event."),
 		new SettingsCategoryItem(SettingsCategory.ReportsAndLetters, "Reports & letters", "Report", "Substantial improvement, owner letter templates and cumulative damage."),
 		new SettingsCategoryItem(SettingsCategory.OnlineServices, "Online services", "Globe", "The public services SDE asks when you look up a structure online."),
@@ -33,11 +36,12 @@ public sealed partial class SettingsViewModel
 		new SettingsCategoryItem(SettingsCategory.MapAndGis, "Map & GIS", "Map", "The map's background and layers, and files for GIS."),
 		new SettingsCategoryItem(SettingsCategory.DepthTables, "Depth tables", "Flood", "Your community's depth-damage tables, for suggested damage values."),
 		new SettingsCategoryItem(SettingsCategory.Backups, "Backups", "Database", "Where this database is, its backups, and other databases."),
+		new SettingsCategoryItem(SettingsCategory.About, "About", "Info", "The version, what's new, and where to find help."),
 	};
 
 	/// <summary>The category showing. General when the page opens.</summary>
 	[ObservableProperty]
-	[NotifyPropertyChangedFor(nameof(IsGeneral), nameof(IsDefaults), nameof(IsReportsAndLetters), nameof(IsOnlineServices), nameof(IsPhoneForm),
+	[NotifyPropertyChangedFor(nameof(IsGeneral), nameof(IsAppearance), nameof(IsAbout), nameof(IsDefaults), nameof(IsReportsAndLetters), nameof(IsOnlineServices), nameof(IsPhoneForm),
 		nameof(IsAiAssistants), nameof(IsMapAndGis), nameof(IsDepthTables), nameof(IsBackups))]
 	public partial SettingsCategoryItem SelectedCategory { get; set; }
 
@@ -47,6 +51,10 @@ public sealed partial class SettingsViewModel
 	private bool Showing(SettingsCategory category) => (SelectedCategory?.Category ?? SettingsCategory.General) == category;
 
 	public bool IsGeneral => Showing(SettingsCategory.General);
+
+	public bool IsAppearance => Showing(SettingsCategory.Appearance);
+
+	public bool IsAbout => Showing(SettingsCategory.About);
 
 	public bool IsDefaults => Showing(SettingsCategory.Defaults);
 
