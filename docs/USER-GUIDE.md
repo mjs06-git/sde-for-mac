@@ -475,13 +475,22 @@ sidebar. Its sidebar count is the number of assessments in review (Draft or Revi
   sent assessments are left alone. **Check Again** runs the checks again.
 - The status bar under the list shows how many assessments, open checks and open comments there are.
 
-Two checks compare with data SDE doesn't keep in the database: the **flood map zone** check (does the FIRM zone match
-what FEMA's flood map shows at the structure?) and the **high-water mark** check (is the flood elevation near what
-nearby marks suggest?). Checking never goes online by itself. When the data is already at hand, the check runs. When it
-is not, the check is listed as **not checked**, for example "Not checked: no stored flood lookup", so a quiet Review
-page is never mistaken for a clean one. Looking the data up online is a separate step you choose. From a terminal,
-`sde qa --marks FILE` runs the high-water mark check with a marks file, and `sde qa` ends with a "Not checked" line
-(this never changes its exit code).
+Two checks compare with data from outside SDE: the **flood map zone** check (does the FIRM zone match what FEMA's
+flood map shows at the structure?) and the **high-water mark** check (is the flood elevation near what nearby marks
+suggest?). Checking never goes online by itself. It uses what SDE has kept:
+
+- Every time SDE looks a structure up on FEMA's flood map (**Look up online**, the look-up for checked structures, or
+  **Check Online** here), it keeps what the map said, whether or not you apply the values. The structure's own FIRM
+  fields stay as entered. If the structure has moved more than about 25 m since the look-up, the kept answer is too old
+  to use, and the check says "moved since the flood lookup" until you look it up again.
+- High-water marks loaded in the flood depth tool are kept with their event (see
+  [Flood depth from high-water marks](#flood-depth-from-high-water-marks)).
+
+When there is nothing kept for some structures, the check is listed as **not checked**, for example "Not checked: no
+stored flood lookup" or "Not checked for 3 of 40 structures", so a quiet Review page is never mistaken for a clean
+one. **Check Online** on that line looks the data up, a step you choose. From a terminal, `sde qa` uses the same kept
+data, `sde qa --marks FILE` uses a marks file instead, and `sde qa` ends with a "Not checked" line (this never changes
+its exit code).
 
 ![The Review page](screenshots/110-review.png)
 
@@ -662,6 +671,13 @@ SDE can estimate flood depth at each structure from the water-surface elevation.
 4. SDE proposes the flood elevation and the depth above the lowest floor for each structure, with a **Confidence** and
    **How** it got there. Structures with no lowest floor elevation, or too far from any mark, say why.
 5. Tick the depths to use and click **Save the Ticked Depths**. The history lists them as the depth tool's.
+
+Marks loaded from a file or from USGS are kept with the event while **Keep these marks with the event** is ticked (it
+is at first). When the structures aren't all in one event, the choice reads **Keep these marks for every event**, and
+the marks are used for any event without marks of its own. Loading new marks replaces the ones kept before. The next
+time the depth tool opens for that event, the kept marks are loaded already, with where they came from and when, and
+**Remove Stored Marks** forgets them. Kept marks are also what the Review page's high-water mark check and the map's
+water surface use. They stay on your Mac and are never exported.
 
 When an event's marks use a different datum from your elevation certificates, set the event's **datum offset** (see
 [Events](#26-events)).
