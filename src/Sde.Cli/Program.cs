@@ -33,6 +33,15 @@ public static class Program
 		  import PATH [--existing skip|overwrite|copy]
 		                              Import an SDE exchange folder or a FEMA SDE .mdb database
 		  lookups [TYPE-ID]           List lookup values (building types, causes, …)
+		  events                      List events with their dates and assessment counts
+		  qa [--event E] [--all]      Run the quality checks; exit code 1 if any required finding is open
+		  compliance [--overdue] [--due-within DAYS] [--all]
+		                              List compliance cases with status and deadline
+		  report structure ASSESSMENT-ID FILE.pdf [--kind summary|detail] [--no-photos]
+		  report event FILE.pdf [--event E]
+		                              Write a PDF report
+
+		Run 'sde COMMAND --help' for a command's options.
 
 		Default database: ~/Library/Application Support/SDE/sde.sqlite
 		Only init makes a new database. The other commands open one that already exists.
@@ -52,6 +61,11 @@ public static class Program
 		{
 			string command = a[0];
 			List<string> rest = a.Skip(1).ToList();
+			if (rest.Any(x => x is "-h" or "--help") && CommandHelp(command) is string help)
+			{
+				Console.WriteLine(help);
+				return 0;
+			}
 			return command switch
 			{
 				"init" => Init(dbPath),
@@ -64,6 +78,10 @@ public static class Program
 				"export" => Export(Store(dbPath), Arg(rest, 0, "FOLDER"), rest.Skip(1)),
 				"import" => Import(Store(dbPath), rest),
 				"lookups" => Lookups(Store(dbPath), rest.Count > 0 ? int.Parse(rest[0], CultureInfo.InvariantCulture) : null),
+				"events" => ReviewCommands.Events(ReadStore(dbPath)),
+				"qa" => Qa(dbPath, rest),
+				"compliance" => Compliance(dbPath, rest),
+				"report" => Report(dbPath, rest),
 				_ => throw new ArgumentException($"Unknown command '{command}'. Run 'sde help'."),
 			};
 		}
@@ -86,6 +104,91 @@ public static class Program
 		}
 		return new SdeStore(SdeDatabase.Open(dbPath));
 	}
+
+	/// <summary>
+	/// Opens the database for a command that only reads. It is opened read-only when it is up to date, so the command
+	/// cannot change it; a database last opened by an older version is updated first, as the other commands do.
+	/// </summary>
+	private static SdeStore ReadStore(string dbPath)
+	{
+		if (!File.Exists(dbPath))
+		{
+			return Store(dbPath);
+		}
+		return SdeDatabase.NeedsUpgrade(dbPath) ? Store(dbPath) : new SdeStore(SdeDatabase.OpenReadOnly(dbPath));
+	}
+
+	private static string CommandHelp(string command) => command switch
+	{
+		"events" => ReviewCommands.EventsHelp,
+		"qa" => ReviewCommands.QaHelp,
+		"compliance" => ReviewCommands.ComplianceHelp,
+		"report" => ReviewCommands.ReportHelp,
+		_ => null,
+	};
+
+	private static int Qa(string dbPath, List<string> rest)
+	{
+		string eventText = TakeOption(rest, "--event");
+		bool all = TakeFlag(rest, "--all");
+		RejectExtra(rest);
+		return ReviewCommands.Qa(ReadStore(dbPath), eventText, all);
+	}
+
+	private static int Compliance(string dbPath, List<string> rest)
+	{
+		string within = TakeOption(rest, "--due-within");
+		bool overdue = TakeFlag(rest, "--overdue");
+		bool all = TakeFlag(rest, "--all");
+		RejectExtra(rest);
+		int? days = null;
+		if (within != null)
+		{
+			if (!int.TryParse(within, NumberStyles.None, CultureInfo.InvariantCulture, out int n))
+			{
+				throw new ArgumentException($"--due-within needs a whole number of days, not '{within}'.");
+			}
+			days = n;
+		}
+		if (all && (overdue || days != null))
+		{
+			throw new ArgumentException("--all cannot be combined with --overdue or --due-within, which list open cases only.");
+		}
+		return ReviewCommands.Compliance(ReadStore(dbPath), overdue, days, all);
+	}
+
+	private static int Report(string dbPath, List<string> rest)
+	{
+		string what = Arg(rest, 0, "structure or event");
+		rest.RemoveAt(0);
+		string eventText = TakeOption(rest, "--event");
+		string kind = TakeOption(rest, "--kind");
+		bool noPhotos = TakeFlag(rest, "--no-photos");
+		switch (what)
+		{
+			case "structure":
+				string id = Arg(rest, 0, "ASSESSMENT-ID");
+				string file = Arg(rest, 1, "FILE.pdf");
+				RejectExtra(rest.Skip(2).ToList());
+				return ReviewCommands.ReportStructure(ReadStore(dbPath), Guid.Parse(id), file, kind, !noPhotos);
+			case "event":
+				string path = Arg(rest, 0, "FILE.pdf");
+				RejectExtra(rest.Skip(1).ToList());
+				return ReviewCommands.ReportEvent(ReadStore(dbPath), path, eventText);
+			default:
+				throw new ArgumentException($"Unknown report '{what}'. Use 'structure' or 'event'. Run 'sde report --help'.");
+		}
+	}
+
+	private static void RejectExtra(List<string> rest)
+	{
+		if (rest.Count > 0)
+		{
+			throw new ArgumentException($"Unexpected '{rest[0]}'. Run 'sde help'.");
+		}
+	}
+
+	private static bool TakeFlag(List<string> a, string name) => a.Remove(name);
 
 	private static int Init(string dbPath)
 	{
