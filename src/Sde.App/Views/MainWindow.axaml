@@ -197,8 +197,9 @@
       -->
       <Panel Name="SidebarHost" Classes="sidebarHost">
       <Border Classes="sidebar onFrame" Width="{Binding SidebarWidth}" Name="Sidebar">
-        <DockPanel>
-          <Panel DockPanel.Dock="Top" Classes="sidebarTitleBar" Name="SidebarTitleBar"
+        <!-- Rows in reading order, so Tab goes down the sidebar and reaches Settings last -->
+        <Grid RowDefinitions="Auto,Auto,*,Auto">
+          <Panel Classes="sidebarTitleBar" Name="SidebarTitleBar"
                  chrome:WindowDecorationProperties.ElementRole="TitleBar">
             <Button Classes="icon toolbar sidebarToggle" Command="{Binding ToggleSidebarCommand}"
                     AutomationProperties.Name="Hide sidebar" ToolTip.Tip="Hide Sidebar (⌃⌘S)">
@@ -207,7 +208,7 @@
           </Panel>
 
           <!-- The brand: the mark, the product's name and the open database -->
-          <Grid DockPanel.Dock="Top" Classes="brandHeader" ColumnDefinitions="Auto,*" Name="BrandHeader">
+          <Grid Grid.Row="1" Classes="brandHeader" ColumnDefinitions="Auto,*" Name="BrandHeader">
             <c:Icon Kind="BrandMark" Size="26" />
             <StackPanel Grid.Column="1" VerticalAlignment="Center">
               <TextBlock Classes="brandName" Text="SDE" />
@@ -215,20 +216,8 @@
             </StackPanel>
           </Grid>
 
-          <!-- Settings (⌘,), always at the foot -->
-          <Border DockPanel.Dock="Bottom" Classes="sidebarFoot">
-            <Button Classes="nav" DataContext="{Binding SettingsItem}" x:DataType="shell:NavItemViewModel" Name="SettingsRow"
-                    Classes.active="{Binding IsActive}" Command="{Binding ShowCommand}" AutomationProperties.Name="{Binding Title}" ToolTip.Tip="Settings (⌘,)">
-              <Grid ColumnDefinitions="Auto,*,Auto">
-                <Border Classes="navMark" />
-                <c:Icon Kind="{Binding Icon}" Size="16" Classes="navIcon" />
-                <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-              </Grid>
-            </Button>
-          </Border>
-
           <!-- While an assessment is open the sidebar is its outline: the sections, numbered, with how many fields to check -->
-          <Panel IsVisible="{Binding IsEditorPage}">
+          <Panel Grid.Row="2" IsVisible="{Binding IsEditorPage}">
           <StackPanel Classes="sidebarList" Spacing="1" DataContext="{Binding Editor}" x:DataType="ed:AssessmentEditorViewModel">
             <TextBlock Classes="sourceHeader" Text="Assessment" />
             <ListBox Classes="steps" Margin="0" ItemsSource="{Binding Sections}" SelectedItem="{Binding SelectedSection}" AutomationProperties.Name="Steps">
@@ -249,7 +238,7 @@
           </StackPanel>
           </Panel>
 
-          <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !IsEditorPage}">
+          <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !IsEditorPage}">
             <ItemsControl ItemsSource="{Binding SourceSections}" Classes="sidebarList" Name="SourceList">
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="shell:SourceSectionViewModel">
@@ -343,7 +332,19 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </ScrollViewer>
-        </DockPanel>
+
+          <!-- Settings (⌘,), always at the foot -->
+          <Border Grid.Row="3" Classes="sidebarFoot">
+            <Button Classes="nav" DataContext="{Binding SettingsItem}" x:DataType="shell:NavItemViewModel" Name="SettingsRow"
+                    Classes.active="{Binding IsActive}" Command="{Binding ShowCommand}" AutomationProperties.Name="{Binding Title}" ToolTip.Tip="Settings (⌘,)">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Classes="navMark" />
+                <c:Icon Kind="{Binding Icon}" Size="16" Classes="navIcon" />
+                <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+              </Grid>
+            </Button>
+          </Border>
+        </Grid>
       </Border>
       </Panel>
       <!-- The sidebar's trailing edge drags its width; a double-click puts the default back -->
@@ -530,7 +531,7 @@
 
     <!-- Sheets: the rest of the window is dimmed and can't be clicked. Styles/Sheets.axaml has the look and the motion. -->
     <Border IsVisible="{Binding Sheets.HasSheet}" Classes="scrim" Name="SheetLayer">
-      <Border Classes="sheet" Name="SheetCard"
+      <Border Classes="sheet" Name="SheetCard" AutomationProperties.Name="{Binding Sheets.CurrentTitle}"
               Classes.sheetSmall="{Binding Sheets.CurrentSize, Converter={x:Static v:SheetConverters.IsSize}, ConverterParameter=Small}"
               Classes.sheetMedium="{Binding Sheets.CurrentSize, Converter={x:Static v:SheetConverters.IsSize}, ConverterParameter=Medium}"
               Classes.sheetLarge="{Binding Sheets.CurrentSize, Converter={x:Static v:SheetConverters.IsSize}, ConverterParameter=Large}"

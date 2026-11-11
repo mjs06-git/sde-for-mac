@@ -96,7 +96,7 @@
                 <DataGridTemplateColumn Width="34" CanUserSort="False" CanUserResize="False">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:ReviewRowViewModel">
-                      <CheckBox IsChecked="{Binding IsChecked}" HorizontalAlignment="Center" AutomationProperties.Name="{Binding AccessibleCheck}" />
+                      <CheckBox Classes="rowCheck" IsChecked="{Binding IsChecked}" HorizontalAlignment="Center" AutomationProperties.Name="{Binding AccessibleCheck}" />
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>

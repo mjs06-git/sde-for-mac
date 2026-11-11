@@ -1219,3 +1219,18 @@ The menus show each shortcut beside its command, and **Help > Keyboard Shortcuts
 | Return | Open the selected structure |
 | Esc | Close the open panel |
 | ⌘M | Minimise the window |
+| Tab / ⇧Tab | Next / previous control: down the sidebar, across the toolbar, through the page, then its inspector |
+| Space | In a table: check or uncheck the selected row |
+| ↑ / ↓ | In a date field: the next or previous day |
+| ⌥↓ | In a date field: show the calendar |
+
+### Working without a pointer, and other display settings
+- **Full Keyboard Access and VoiceOver.** Every control can be reached with Tab and has a name VoiceOver reads. A sheet
+  keeps Tab inside it while it is open, and puts the cursor back where it was when it closes.
+- **Dates.** Type a date in a date field the way you usually write it: *11/11/2026*, *2026-11-11* or *Nov 11 2026*.
+  It is read when you press Return or leave the field. If SDE can't read it, the field turns red and the date stays as
+  it was. The calendar button picks a day with the mouse; the clear button empties the field.
+- **Increase Contrast.** When **Increase Contrast** is on in System Settings, Accessibility, Display, SDE draws
+  borders, dividers and focus rings more strongly and makes secondary text darker (lighter in dark mode). **Settings >
+  Appearance > Increase contrast** does the same while the Mac's setting is off.
+- **Reduce Motion.** When **Reduce Motion** is on, sheets and the sidebar appear without sliding or fading.

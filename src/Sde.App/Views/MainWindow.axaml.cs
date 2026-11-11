@@ -39,6 +39,8 @@ public partial class MainWindow : Window, IDialogs
 		}
 		this.FindControl<ItemsControl>("ToastList").ItemsSource = Toasts.Items;
 		SetUpWindowDrops();
+		// Tab always moves on; a sheet or the palette keeps Tab inside it and gives focus back when it closes.
+		KeyboardFocus.Attach(this, "SheetLayer", "SheetCard", "PaletteLayer");
 		ContentControl pages = this.FindControl<ContentControl>("PageHost");
 		pages.TemplateApplied += (_, _) =>
 		{

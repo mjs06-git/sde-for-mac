@@ -294,7 +294,8 @@
         <Border Classes="formGroup">
           <StackPanel Spacing="10">
             <TextBlock Classes="h3" Text="Value of the building (before damage)" />
-            <RadioButton GroupName="value" IsChecked="{Binding Editor.IsValueAcv, Mode=OneWay}" Command="{Binding Editor.SetValueBasisCommand}" CommandParameter="390">
+            <RadioButton GroupName="value" IsChecked="{Binding Editor.IsValueAcv, Mode=OneWay}" Command="{Binding Editor.SetValueBasisCommand}" CommandParameter="390"
+                         AutomationProperties.Name="Computed actual cash value">
               <StackPanel Spacing="1">
                 <TextBlock Classes="medium" Text="Computed actual cash value" />
                 <TextBlock Classes="muted" Text="{Binding Editor.Assessment.ComputedActualCashValue, Converter={x:Static app:Converters.Money}, StringFormat='Replacement cost less depreciation: {0}'}" />
@@ -303,7 +304,8 @@
             <RadioButton GroupName="value" IsChecked="{Binding Editor.IsValueAppraisal, Mode=OneWay}" Command="{Binding Editor.SetValueBasisCommand}" CommandParameter="391">
               <TextBlock Classes="medium" Text="Professional market appraisal" ToolTip.Tip="Value of the structure only, from a licensed appraiser" />
             </RadioButton>
-            <RadioButton GroupName="value" IsChecked="{Binding Editor.IsValueTax, Mode=OneWay}" Command="{Binding Editor.SetValueBasisCommand}" CommandParameter="392">
+            <RadioButton GroupName="value" IsChecked="{Binding Editor.IsValueTax, Mode=OneWay}" Command="{Binding Editor.SetValueBasisCommand}" CommandParameter="392"
+                         AutomationProperties.Name="Adjusted tax assessed value">
               <StackPanel Spacing="1">
                 <TextBlock Classes="medium" Text="Adjusted tax assessed value" />
                 <TextBlock Classes="muted" Text="{Binding Editor.AdjustedTaxValue, Converter={x:Static app:Converters.Money}, StringFormat='Tax assessed value × factor adjustment: {0}'}" />
@@ -316,7 +318,8 @@
         <Border Classes="formGroup">
           <StackPanel Spacing="10">
             <TextBlock Classes="h3" Text="Cost of repairs" />
-            <RadioButton GroupName="repair" IsChecked="{Binding Editor.IsRepairComputed, Mode=OneWay}" Command="{Binding Editor.SetRepairBasisCommand}" CommandParameter="393">
+            <RadioButton GroupName="repair" IsChecked="{Binding Editor.IsRepairComputed, Mode=OneWay}" Command="{Binding Editor.SetRepairBasisCommand}" CommandParameter="393"
+                         AutomationProperties.Name="Computed damages">
               <StackPanel Spacing="1">
                 <TextBlock Classes="medium" Text="Computed damages" />
                 <TextBlock Classes="muted" Text="{Binding Editor.Assessment.ComputedDamages, Converter={x:Static app:Converters.Money}, StringFormat='From the damage step: {0}'}" />

@@ -122,7 +122,7 @@
                   <DataGridTemplateColumn Width="34" MinWidth="34" CanUserResize="False">
                     <DataGridTemplateColumn.CellTemplate>
                       <DataTemplate x:DataType="vm:AssignmentRowViewModel">
-                        <CheckBox IsChecked="{Binding IsChecked}" HorizontalAlignment="Center" AutomationProperties.Name="{Binding Address, StringFormat='Check {0}'}" />
+                        <CheckBox Classes="rowCheck" IsChecked="{Binding IsChecked}" HorizontalAlignment="Center" AutomationProperties.Name="{Binding Address, StringFormat='Check {0}'}" />
                       </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                   </DataGridTemplateColumn>
