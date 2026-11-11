@@ -2,6 +2,7 @@ using System.Globalization;
 using Sde.Core;
 using Sde.Core.Assessments;
 using Sde.Core.Records;
+using Sde.Data;
 using Sde.Interop.Online;
 
 namespace Sde.App.Services;
@@ -25,17 +26,26 @@ public sealed record OnlineLookupResult(IReadOnlyList<OnlineProposal> Proposals,
 /// <summary>
 /// The online auto-fill for a structure: when it has an address but no coordinates, the Census geocoder first, then
 /// FEMA's National Flood Hazard Layer at the coordinates. Used by the editor's "Look up online" and by the bulk look-up
-/// on Structures. Failures throw <see cref="OnlineServiceException"/> with a plain-English message.
+/// on Structures. Failures throw <see cref="OnlineServiceException"/> with a plain-English message. Made with a store,
+/// every answer from the flood map is kept as the structure's stored flood lookup, whether or not its values are then
+/// applied, so the Review checks can compare with it later without going online.
 /// </summary>
 public sealed class OnlineLookup
 {
 	private readonly HttpClient _http;
 	private readonly ReferenceData _reference;
+	private readonly SdeStore _store;
 
 	public OnlineLookup(HttpClient http, ReferenceData reference)
 	{
 		_http = http;
 		_reference = reference;
+	}
+
+	/// <summary>A look-up that keeps each flood map answer in <paramref name="store"/> (see <see cref="SdeStore.SaveFloodLookup"/>).</summary>
+	public OnlineLookup(HttpClient http, SdeStore store) : this(http, store.Reference)
+	{
+		_store = store;
 	}
 
 	/// <summary>How long to wait for each answer.</summary>
@@ -70,9 +80,30 @@ public sealed class OnlineLookup
 		{
 			return new OnlineLookupResult(proposals, "FEMA's flood map has no flood zone mapped at this location.", asked);
 		}
+		_store?.SaveFloodLookup(Stored(property.PropertyID, flood, latitude.Value, longitude.Value));
 		proposals.AddRange(FloodInfoMapper.Propose(flood, _reference).Select(p => new OnlineProposal(p, OnlineSource.FemaNfhl)));
 		return new OnlineLookupResult(proposals, null, flood.RetrievedOn);
 	}
+
+	/// <summary>A flood map answer as a stored flood lookup, made at this latitude and longitude.</summary>
+	public static FloodLookupRecord Stored(Guid propertyId, FloodInfo flood, double latitude, double longitude) => new FloodLookupRecord
+	{
+		PropertyID = propertyId,
+		Zone = flood.Zone,
+		ZoneSubtype = flood.ZoneSubtype,
+		InFloodway = flood.InFloodway,
+		Bfe = flood.Bfe,
+		BfeDatum = flood.BfeDatum,
+		FirmPanel = flood.PanelNumber,
+		PanelSuffix = flood.PanelSuffix,
+		PanelEffectiveDate = flood.PanelEffectiveDate,
+		CommunityId = flood.CommunityId,
+		CommunityName = flood.CommunityName,
+		Source = FloodLookupRecord.NfhlSource,
+		Latitude = latitude,
+		Longitude = longitude,
+		RetrievedOn = flood.RetrievedOn,
+	};
 
 	/// <summary>"123 River Street, Exampleville, OH 43702", or null when there is no street name to search for.</summary>
 	public static string OneLineAddress(PropertyRecord p, ReferenceData reference)

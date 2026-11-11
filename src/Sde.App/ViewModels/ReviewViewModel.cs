@@ -966,7 +966,8 @@ public sealed partial class ReviewViewModel : ViewModelBase
 	/// <summary>
 	/// Check Online on a check that could not run: the flood map check opens the online flood data lookup for the
 	/// structures in scope; the high-water mark check opens the flood depth sheet (USGS marks or a marks file) for them.
-	/// Nothing is saved until the person applies what was found.
+	/// Nothing changes on the structures until the person applies what was found, but what the flood map said and the
+	/// marks loaded are kept, so the checks run afterwards.
 	/// </summary>
 	[RelayCommand]
 	private async Task CheckOnline(QaNotCheckedViewModel item)
@@ -983,6 +984,8 @@ public sealed partial class ReviewViewModel : ViewModelBase
 				_app.Dialogs.Notify("Flood depths saved", result.Changed == 1 ? "1 assessment changed." : $"{result.Changed:N0} assessments changed.");
 				AfterChange();
 			}
+			// Marks kept with the event in the sheet turn the check on, whether or not depths were saved.
+			Reload();
 			return;
 		}
 		await _main.Structures.LookUpFloodDataFor(ids);

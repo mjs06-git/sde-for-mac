@@ -75,6 +75,11 @@
     </Expander>
 
     <TextBlock Classes="secondary" Text="{Binding MarksSummary}" TextWrapping="Wrap" IsVisible="{Binding MarksSummary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+    <CheckBox IsChecked="{Binding KeepMarks}" Content="{Binding KeepMarksLabel}" IsVisible="{Binding !IsGrid}" AutomationProperties.Name="{Binding KeepMarksLabel}" />
+    <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding HasStoredMarks}">
+      <TextBlock Classes="secondary" Text="{Binding StoredMarksText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+      <Button Content="Remove Stored Marks" Command="{Binding RemoveStoredMarksCommand}" />
+    </StackPanel>
 
     <Border Classes="sheetTable" IsVisible="{Binding HasRows}">
       <DockPanel>

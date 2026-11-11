@@ -213,7 +213,7 @@ public class WorkflowPagesTests
 		Assert.Equal("Not checked: no stored flood lookup.", zone.Message);
 		Assert.True(zone.CanCheckOnline);
 		QaNotCheckedViewModel marks = r.NotChecked.Single(n => n.Item.RuleId == QaRuleIds.DepthVsHighWaterMarks);
-		Assert.Equal("Not checked: no high-water marks loaded.", marks.Message);
+		Assert.Equal("Not checked: no high-water marks stored.", marks.Message);
 		Assert.Contains(ui.Window.GetVisualDescendants().OfType<TextBlock>(), t => t.IsEffectivelyVisible && t.Text == "Not checked");
 		Assert.Contains(ui.Window.GetVisualDescendants().OfType<Button>(), b => b.IsEffectivelyVisible && Equals(b.Content, "Check Online"));
 		Assert.Empty(AccessibilityTests.Unnamed(ui.Window));
@@ -224,6 +224,22 @@ public class WorkflowPagesTests
 		Assert.IsType<DepthSheetViewModel>(ui.Main.Sheets.Current);
 		ui.Main.Sheets.CancelCurrentCommand.Execute(null);
 		await checking;
+
+		// Check Online for the flood map keeps what the map says, even with nothing applied, so the check then runs.
+		ui.Services.HttpClientFactory = () => new HttpClient(FakeOnline.Recorded());
+		checking = r.CheckOnlineCommand.ExecuteAsync(zone);
+		System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
+		while (ui.Main.Sheets.Current is not BulkAutoFillSheetViewModel)
+		{
+			Assert.True(clock.ElapsedMilliseconds < 15000, "Timed out waiting for the look-up.");
+			ui.Pump();
+			await Task.Delay(10);
+		}
+		ui.Main.Sheets.CancelCurrentCommand.Execute(null);
+		await checking;
+		ui.Pump();
+		Assert.NotEmpty(ui.Store.GetFloodLookups(ui.Store.LoadAllAssessments().Select(f => f.Property.PropertyID)));
+		Assert.DoesNotContain(r.NotChecked, n => n.Item.RuleId == QaRuleIds.ZoneDiffersFromNfhl && n.Item.Count == 0);
 
 		// With no findings left to list, one grey line says so above the group (no empty state over it).
 		r.SeverityFilter = 2;

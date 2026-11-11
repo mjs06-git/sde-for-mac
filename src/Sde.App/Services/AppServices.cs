@@ -248,6 +248,14 @@ public sealed class AppServices
 		PhoneForm = new PhoneFormService(this);
 		Manual = new ManualService(dialogs);
 		Settings = AppSettings.Load();
+		// Marks kept with the chosen event (in the Depth tool) are offered on the map once it is chosen.
+		Scope.Changed += () =>
+		{
+			if (Store != null)
+			{
+				HighWaterMarks.LoadStored(Store, Scope.EventId);
+			}
+		};
 		// SDE_DATABASE=/path/x.sqlite opens a specific database without changing the remembered one (testing, training).
 		string forced = Environment.GetEnvironmentVariable("SDE_DATABASE");
 		if (!string.IsNullOrEmpty(forced))
@@ -258,6 +266,7 @@ public sealed class AppServices
 			Tidy(Store);
 			Store.UserName = UserName;
 			Scope.Restore(Store);
+			HighWaterMarks.LoadStored(Store, Scope.EventId);
 			// Keep everything a test or training session writes next to its database.
 			ImportProfiles = new ImportProfiles(Path.Combine(Path.GetDirectoryName(Store.Database.FilePath)!, ImportProfiles.FolderName));
 			DepthTables = new DepthTables(Path.Combine(Path.GetDirectoryName(Store.Database.FilePath)!, DepthTables.FolderName));
@@ -358,6 +367,12 @@ public sealed class AppServices
 	/// </summary>
 	public Func<HttpClient> HttpClientFactory { get; set; } = () => OnlineLookup.SharedClient.Value;
 
+	/// <summary>
+	/// The online look-up every part of the app uses (the editor's auto-fill, the bulk look-up, Check Online): it keeps
+	/// each flood map answer as the structure's stored flood lookup, whether or not the values are applied.
+	/// </summary>
+	public OnlineLookup CreateOnlineLookup() => new OnlineLookup(HttpClientFactory(), Store);
+
 	/// <summary>Raised after a different database was opened.</summary>
 	public event Action DatabaseChanged;
 
@@ -407,6 +422,7 @@ public sealed class AppServices
 		}
 		Undo.Clear();
 		HighWaterMarks.Clear();
+		HighWaterMarks.LoadStored(store, Scope.EventId);
 		DatabaseChanged?.Invoke();
 	}
 

@@ -64,13 +64,28 @@ public sealed partial class FloodDepthRowViewModel : ObservableObject
 /// Flood depth from high-water marks or a water-surface grid (C4) for the chosen assessments: estimate the water
 /// surface at each structure, compare it with what the assessment has, and save the ticked ones as "Depth tool" in
 /// one edit history batch (the depth table's damage suggestions follow). Each event's datum offset converts marks in
-/// another vertical datum. Closes with the <see cref="DepthApplyResult"/>.
+/// another vertical datum. Marks loaded from a file or USGS are kept with the event (when "Keep these marks with the
+/// event" is ticked, as it is at first), and come back the next time the tool opens for that event, so the Review checks
+/// and the map can use them too. Closes with the <see cref="DepthApplyResult"/>.
 /// </summary>
 public sealed partial class DepthSheetViewModel : SheetViewModel
 {
+	private static readonly CultureInfo Us = CultureInfo.GetCultureInfo("en-US");
+
 	private readonly AppServices _app;
 	private readonly IReadOnlyList<Guid> _assessmentIds;
 	private List<HighWaterMark> _marks = new();
+
+	/// <summary>The event every chosen assessment is in, or null (the set kept for every event) when they aren't all in one.</summary>
+	private readonly Guid? _eventId;
+
+	/// <summary>Where the marks loaded in this sheet came from ("File: marks.csv"), and the datum given for them; null until some are loaded.</summary>
+	private string _loadedSource;
+
+	private string _loadedDatum;
+
+	/// <summary>True when this sheet kept the marks it loaded (so unticking "Keep" removes them again).</summary>
+	private bool _keptHere;
 
 	public DepthSheetViewModel(AppServices app, IReadOnlyList<Guid> assessmentIds) : base("Flood depth from high-water marks")
 	{
@@ -80,6 +95,11 @@ public sealed partial class DepthSheetViewModel : SheetViewModel
 			+ "and proposes the flood elevation and the depth above the lowest floor. Nothing changes until you save.";
 		UsgsStates = string.Join(", ", app.Store.LoadAssessments(assessmentIds)
 			.Select(f => app.Store.Reference.StateAbbreviation(f.Property.StateID)).Where(s => !string.IsNullOrEmpty(s)).Distinct().OrderBy(s => s));
+		Dictionary<Guid, Guid> memberships = app.Store.GetEventMemberships();
+		List<Guid?> events = assessmentIds.Select(id => memberships.TryGetValue(id, out Guid e) ? (Guid?)e : null).Distinct().ToList();
+		_eventId = events.Count == 1 ? events[0] : null;
+		EventName = _eventId is Guid single ? app.Store.GetEvent(single)?.Label : null;
+		LoadStoredMarks();
 	}
 
 	public override SheetSize Size => SheetSize.Large;
@@ -119,6 +139,101 @@ public sealed partial class DepthSheetViewModel : SheetViewModel
 	[ObservableProperty]
 	public partial string MarksSummary { get; set; }
 
+	/// <summary>The event the chosen assessments are in, or null when they aren't all in one.</summary>
+	public string EventName { get; }
+
+	/// <summary>The label of the choice to keep the loaded marks.</summary>
+	public string KeepMarksLabel => EventName != null ? "Keep these marks with the event" : "Keep these marks for every event";
+
+	/// <summary>
+	/// Keep the marks loaded from a file or USGS with the event, replacing any kept before. On at first. Turning it off
+	/// removes the marks this sheet kept.
+	/// </summary>
+	[ObservableProperty]
+	public partial bool KeepMarks { get; set; } = true;
+
+	/// <summary>Where the stored marks came from and when they were loaded, or null when none are stored.</summary>
+	[ObservableProperty]
+	[NotifyPropertyChangedFor(nameof(HasStoredMarks))]
+	public partial string StoredMarksText { get; private set; }
+
+	public bool HasStoredMarks => !string.IsNullOrEmpty(StoredMarksText);
+
+	partial void OnKeepMarksChanged(bool value)
+	{
+		if (value)
+		{
+			KeepLoadedMarks();
+		}
+		else if (_keptHere)
+		{
+			RemoveStoredMarks();
+		}
+	}
+
+	/// <summary>Forgets the marks stored for the event. Marks already loaded in this sheet stay until it closes.</summary>
+	[RelayCommand]
+	private void RemoveStoredMarks()
+	{
+		_app.Store.ClearHighWaterMarks(_eventId);
+		_keptHere = false;
+		StoredMarksText = null;
+	}
+
+	/// <summary>Loads the marks kept with the event, if there are any, and estimates from them.</summary>
+	private void LoadStoredMarks()
+	{
+		StoredHighWaterMarks stored = _app.Store.GetHighWaterMarks(_eventId);
+		if (stored == null)
+		{
+			return;
+		}
+		_marks = stored.Marks.ToList();
+		_app.HighWaterMarks.Set(_marks, SessionHighWaterMarks.SourceName(stored.Set.Source));
+		StoredMarksText = StoredText(stored.Set);
+		MarksSummary = $"Using the stored marks: {stored.Marks.Count:N0} mark{(stored.Marks.Count == 1 ? "" : "s")}.";
+		Estimate();
+	}
+
+	/// <summary>Remembers where newly loaded marks came from, and keeps them when <see cref="KeepMarks"/> is on.</summary>
+	private void Loaded(string source, string datum)
+	{
+		_loadedSource = source;
+		_loadedDatum = datum;
+		_keptHere = false;
+		if (KeepMarks)
+		{
+			KeepLoadedMarks();
+		}
+	}
+
+	private void KeepLoadedMarks()
+	{
+		if (_loadedSource == null || _marks.Count == 0)
+		{
+			return;
+		}
+		try
+		{
+			HighWaterMarkSetRecord set = _app.Store.SaveHighWaterMarks(_eventId, _marks, _loadedSource, _loadedDatum);
+			_keptHere = true;
+			StoredMarksText = StoredText(set);
+		}
+		catch (ArgumentException ex)
+		{
+			Error = "Couldn't keep the marks: " + ex.Message;
+		}
+	}
+
+	/// <summary>"Stored with the event: File: marks.csv, 2 marks, loaded on Sep 21, 2026 by Pat."</summary>
+	private string StoredText(HighWaterMarkSetRecord set)
+	{
+		string when = set.LoadedOn is DateTime d ? " on " + d.ToString("MMM d, yyyy", Us) : "";
+		string who = string.IsNullOrWhiteSpace(set.LoadedBy) ? "" : " by " + set.LoadedBy.Trim();
+		string where = EventName != null ? "Stored with the event" : "Stored for every event";
+		return $"{where}: {set.Source}, {set.MarkCount:N0} mark{(set.MarkCount == 1 ? "" : "s")}, loaded{when}{who}.";
+	}
+
 	/// <summary>Search radius in metres, how many of the nearest marks to use, and the worst USGS quality (1 to 6) to use.</summary>
 	[ObservableProperty]
 	public partial decimal? RadiusMeters { get; set; } = 1000;
@@ -139,11 +254,13 @@ public sealed partial class DepthSheetViewModel : SheetViewModel
 		}
 		try
 		{
-			HighWaterMarkFile file = HighWaterMarkFiles.Read(picked[0], MarksDatum == "Not given" ? null : MarksDatum);
+			string datum = MarksDatum == "Not given" ? null : MarksDatum;
+			HighWaterMarkFile file = HighWaterMarkFiles.Read(picked[0], datum);
 			_marks = file.Marks;
 			_app.HighWaterMarks.Set(_marks, Path.GetFileName(picked[0]));
 			MarksSummary = $"{Path.GetFileName(picked[0])}: {file.Marks.Count:N0} mark{(file.Marks.Count == 1 ? "" : "s")}"
 				+ (file.Skipped > 0 ? $", {file.Skipped:N0} row{(file.Skipped == 1 ? "" : "s")} skipped ({string.Join("; ", file.Problems.Take(3))})" : "") + ".";
+			Loaded("File: " + Path.GetFileName(picked[0]), datum);
 			Estimate();
 		}
 		catch (Exception ex) when (ex is IOException or InvalidDataException or FormatException or UnauthorizedAccessException)
@@ -207,6 +324,7 @@ public sealed partial class DepthSheetViewModel : SheetViewModel
 			_app.HighWaterMarks.Set(_marks, SelectedUsgsEvent.Name);
 			MarksSummary = $"{SelectedUsgsEvent.Name}: {got.Marks.Count:N0} mark{(got.Marks.Count == 1 ? "" : "s")} from USGS" + (got.Skipped > 0 ? $", {got.Skipped:N0} without a usable position or elevation" : "") + ".";
 			UsgsNotice = got.Notice;
+			Loaded($"USGS STN event {SelectedUsgsEvent.Id.ToString(CultureInfo.InvariantCulture)} ({SelectedUsgsEvent.Name})", null);
 			Estimate();
 		});
 	}

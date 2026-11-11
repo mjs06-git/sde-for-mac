@@ -39,7 +39,8 @@ public sealed partial class StructuresViewModel
 	{
 		// One look-up per structure (its fields are shared by all its assessments).
 		List<AssessmentFile> structures = _app.Store.LoadAssessments(ids).GroupBy(f => f.Property.PropertyID).Select(g => g.First()).ToList();
-		OnlineLookup lookup = new OnlineLookup(_app.HttpClientFactory(), _app.Store.Reference) { Timeout = LookupTimeout };
+		OnlineLookup lookup = _app.CreateOnlineLookup();
+		lookup.Timeout = LookupTimeout;
 		JobOutcome<IReadOnlyList<BatchResult<AssessmentFile, OnlineLookupResult>>> outcome = await _app.Jobs.RunTaskAsync(
 			"Looking up flood data online",
 			(progress, ct) =>

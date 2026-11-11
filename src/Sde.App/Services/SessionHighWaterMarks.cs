@@ -1,11 +1,12 @@
 using Sde.Core.Depth;
+using Sde.Data;
 
 namespace Sde.App.Services;
 
 /// <summary>
-/// The high-water marks loaded in this session (from a file or from USGS, in the Depth tool), kept in memory so the
-/// Map page can draw a water surface from them. Nothing is saved: the marks go when the app closes or another database
-/// is opened.
+/// The high-water marks available in this session, so the Map page can draw a water surface from them: those loaded in
+/// the Depth tool (from a file or from USGS), or those kept in the database with the chosen event (see
+/// <see cref="LoadStored"/>). Marks loaded but not kept go when the app closes or another database is opened.
 /// </summary>
 public sealed class SessionHighWaterMarks
 {
@@ -33,4 +34,25 @@ public sealed class SessionHighWaterMarks
 
 	/// <summary>Forgets the marks (another database was opened).</summary>
 	public void Clear() => Set(null, null);
+
+	/// <summary>
+	/// Takes up the marks kept in the database for an event (its own, or else those kept for every event); for all events
+	/// (null), the set loaded most recently. Nothing changes when none are kept, so marks loaded this session stay.
+	/// </summary>
+	public void LoadStored(SdeStore store, Guid? eventId)
+	{
+		StoredHighWaterMarks stored = store.HighWaterMarksFor(eventId);
+		if (stored == null && eventId == null && store.GetHighWaterMarkSets().OrderByDescending(s => s.LoadedOn).FirstOrDefault() is HighWaterMarkSetRecord newest)
+		{
+			stored = store.GetHighWaterMarks(newest.EventID);
+		}
+		if (stored != null)
+		{
+			Set(stored.Marks, SourceName(stored.Set.Source));
+		}
+	}
+
+	/// <summary>A stored set's source as the map names it: "marks.csv" for "File: marks.csv".</summary>
+	public static string SourceName(string source) =>
+		source != null && source.StartsWith("File: ", StringComparison.Ordinal) ? source.Substring(6) : source;
 }
