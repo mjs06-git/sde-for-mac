@@ -106,8 +106,10 @@ public sealed partial class SdeStore
 		Database.Read(c => TableMap<EventAssessmentRecord>.Select(c).ToDictionary(r => r.AssessmentID, r => r.EventID));
 
 	/// <summary>The assessments in an event (active or not).</summary>
-	public HashSet<Guid> AssessmentsInEvent(Guid eventId) =>
-		Database.Read(c => c.Query<Guid>("SELECT AssessmentID FROM EventAssessment WHERE EventID = @eventId", new { eventId }).ToHashSet());
+	public HashSet<Guid> AssessmentsInEvent(Guid eventId) => Database.Read(c => AssessmentsInEvent(c, eventId));
+
+	internal static HashSet<Guid> AssessmentsInEvent(IDbConnection c, Guid eventId) =>
+		c.Query<Guid>("SELECT AssessmentID FROM EventAssessment WHERE EventID = @eventId", new { eventId }).ToHashSet();
 
 	/// <summary>How many active assessments of active structures each event has.</summary>
 	public Dictionary<Guid, int> EventCounts() => Database.Read(c => c.Query<EventCountRow>("""

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Sde.Data;
 
 namespace Sde.Interop;
 
@@ -26,6 +27,9 @@ public enum AgendaKind
 
 	/// <summary>The last day of an event.</summary>
 	EventEnd,
+
+	/// <summary>The date a compliance case's elevation certificate was received.</summary>
+	ElevationCertificateReceived,
 }
 
 /// <summary>One all-day entry for a calendar file: a date with a title and optional notes and place.</summary>
@@ -51,6 +55,38 @@ public sealed class AgendaItem
 
 	/// <summary>The street address, shown as the entry's location. Optional.</summary>
 	public string Address { get; set; }
+
+	/// <summary>
+	/// The calendar entry for an agenda entry from <see cref="SdeStore.GetAgenda"/>, the one list of dates the app, the
+	/// AI assistant and the calendar file share. Its detail becomes the notes; its record keeps the entry's identifier.
+	/// </summary>
+	public static AgendaItem FromEntry(AgendaEntry entry)
+	{
+		ArgumentNullException.ThrowIfNull(entry);
+		return new AgendaItem
+		{
+			Date = entry.Date.Date,
+			Kind = KindOf(entry.Kind),
+			Title = entry.Title,
+			Notes = entry.Detail,
+			RecordId = entry.RecordId.ToString(),
+			Address = entry.Address,
+		};
+	}
+
+	/// <summary>The calendar kind of an agenda kind.</summary>
+	public static AgendaKind KindOf(AgendaEntryKind kind) => kind switch
+	{
+		AgendaEntryKind.ComplianceDeadline => AgendaKind.ComplianceDeadline,
+		AgendaEntryKind.AppealReceived => AgendaKind.AppealReceived,
+		AgendaEntryKind.AppealDecision => AgendaKind.AppealDecision,
+		AgendaEntryKind.LetterSent => AgendaKind.LetterSent,
+		AgendaEntryKind.FinalInspection => AgendaKind.FinalInspection,
+		AgendaEntryKind.EventStart => AgendaKind.EventStart,
+		AgendaEntryKind.EventEnd => AgendaKind.EventEnd,
+		AgendaEntryKind.ElevationCertificateReceived => AgendaKind.ElevationCertificateReceived,
+		_ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Not an agenda kind."),
+	};
 }
 
 /// <summary>

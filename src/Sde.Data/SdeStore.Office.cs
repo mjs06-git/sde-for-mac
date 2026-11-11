@@ -21,19 +21,42 @@ public sealed partial class SdeStore
 		""").ToDictionary(r => r.AssessmentID, r => AssessmentStatuses.Parse(r.Status)));
 
 	/// <summary>The structures that have at least one active assessment in an event.</summary>
-	public HashSet<Guid> PropertiesInEvent(Guid eventId) => Database.Read(c => c.Query<Guid>("""
+	public HashSet<Guid> PropertiesInEvent(Guid eventId) => Database.Read(c => PropertiesInEvent(c, eventId));
+
+	internal static HashSet<Guid> PropertiesInEvent(System.Data.IDbConnection c, Guid eventId) => c.Query<Guid>("""
 		SELECT DISTINCT a.PropertyID FROM EventAssessment e
 		JOIN Assessment a ON a.AssessmentID = e.AssessmentID AND a.Active = 1
 		WHERE e.EventID = @eventId
-		""", new { eventId }).ToHashSet());
+		""", new { eventId }).ToHashSet();
 
 	/// <summary>
 	/// The compliance cases of structures that are not in Recently deleted (and, for a substantial damage case, whose
 	/// assessment isn't either), open ones first, then by deadline. A deleted structure's case comes back with it.
 	/// </summary>
-	public List<ComplianceCaseRecord> GetActiveComplianceCases() => Database.Read(c => TableMap<ComplianceCaseRecord>.Select(c,
+	public List<ComplianceCaseRecord> GetActiveComplianceCases() => Database.Read(c => GetActiveComplianceCases(c));
+
+	internal static List<ComplianceCaseRecord> GetActiveComplianceCases(System.Data.IDbConnection c) => TableMap<ComplianceCaseRecord>.Select(c,
 		"PropertyID IN (SELECT PropertyID FROM Property WHERE Active = 1) AND (AssessmentID IS NULL OR AssessmentID IN (SELECT AssessmentID FROM Assessment WHERE Active = 1))",
-		orderBy: "CASE WHEN Status = 'Closed' THEN 1 ELSE 0 END, COALESCE(Deadline, '9999-12-31'), CreatedOn").ToList());
+		orderBy: "CASE WHEN Status = 'Closed' THEN 1 ELSE 0 END, COALESCE(Deadline, '9999-12-31'), CreatedOn").ToList();
+
+	/// <summary>
+	/// The compliance cases the sidebar and the Compliance page count: those of <see cref="GetActiveComplianceCases()"/>,
+	/// and with an event, a substantial damage case whose assessment is in it or a substantial improvement case whose
+	/// structure has an assessment in it (the app's ComplianceViewModel.CasesInScope).
+	/// </summary>
+	public List<ComplianceCaseRecord> GetComplianceCasesInScope(Guid? eventId) => Database.Read(c => GetComplianceCasesInScope(c, eventId));
+
+	internal static List<ComplianceCaseRecord> GetComplianceCasesInScope(System.Data.IDbConnection c, Guid? eventId)
+	{
+		List<ComplianceCaseRecord> cases = GetActiveComplianceCases(c);
+		if (eventId is not Guid id)
+		{
+			return cases;
+		}
+		HashSet<Guid> members = AssessmentsInEvent(c, id);
+		HashSet<Guid> structures = PropertiesInEvent(c, id);
+		return cases.Where(x => x.AssessmentID is Guid a ? members.Contains(a) : structures.Contains(x.PropertyID)).ToList();
+	}
 
 	/// <summary>The compliance case for a substantial improvement determination, or null.</summary>
 	public ComplianceCaseRecord GetComplianceCaseForImprovement(Guid determinationId) =>
