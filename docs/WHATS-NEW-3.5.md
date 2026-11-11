@@ -40,6 +40,8 @@ show it.
   event summary and a case file for each structure.
 
 ## Each structure
+![A structure's case file](screenshots/80-case-file.png)
+
 - **Case File.** One page for a structure across every event: its current result, a timeline of everything that
   happened to it, and cards for its assessments, compliance case, letters, appeals and bids, improvements, documents
   and photos. Print Case File… writes it as a PDF. Open it from the inspector, the row menu, the editor's More menu or
@@ -51,6 +53,8 @@ show it.
   fields that differ.
 
 ## Workflow
+![Agenda](screenshots/120-agenda.png)
+
 - **Agenda** (new, in the sidebar's Workflow section) lists what is overdue and what is coming up, by week:
   compliance deadlines, final inspections, appeal dates, letters sent and event dates. Add to Calendar… saves the
   dates as a calendar file.
@@ -64,11 +68,15 @@ show it.
 - **Recently Deleted** is a table. Select several rows, then Restore or Delete Now, or press Delete.
 
 ## Summary and the map
+![Summary in 3.5](screenshots/03-summary.png)
+
 - **Summary** opens with the event's headline: how many structures are substantially damaged, the building value,
   the repair cost and how much has been assessed. Two new charts show the spread of percent damaged around the 50
   percent line and progress over time.
 - **The map** fills its page, with the tools, legend, zoom and selection actions floating over it. The attribute
   table is a drawer you can resize.
+![Structures in clusters on the map](screenshots/56o-map-clusters.png)
+
 - **Show structures as** markers, clusters coloured by their worst result, or a heat map of damage. High-water marks
   loaded in the Depth tool can be drawn as a water surface. All three appear in map prints.
 
@@ -89,9 +97,12 @@ show it.
 - **What's New** shows once after an update, and from Help › What's New in SDE.
 - **Help › Check for Updates…** asks GitHub for the latest release, only when you choose it. Nothing checks on its
   own.
-- **Accessibility.** SDE follows the Mac's Reduce Motion and Increase Contrast settings, and every control can be
-  reached with the keyboard.
-- **Dates** are typed in a plain date field ("11/11/2026" works), with a calendar button beside it.
+- **Accessibility.** SDE follows the Mac's Reduce Motion and Increase Contrast settings; Increase contrast is also a
+  switch in Settings › Appearance. Every page can be used from the keyboard, Tab moves through it in reading order,
+  and VoiceOver reads every control by name.
+- **Dates** are typed in a plain date field ("11/11/2026", "Nov 11 2026" and "today" all work). The up and down arrows
+  change the day, and a calendar button sits beside it.
+- **Empty Summary.** With no structures yet, Summary offers New Structure and the sample database.
 - **Online services** were checked against the live FEMA, USGS and Census services. USGS event types and FEMA's
   blank flood zone subtypes are now read correctly.
 
