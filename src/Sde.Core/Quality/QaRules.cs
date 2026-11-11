@@ -84,6 +84,44 @@ public static class QaRules
 	}
 
 	/// <summary>
+	/// <see cref="Check"/>, plus the checks that could not run because the data they compare with is not already
+	/// available: the flood map zone check without a stored lookup, the high-water mark check without marks. Nothing here
+	/// goes online. An unavailable check is listed, never skipped silently.
+	/// </summary>
+	public static QaResult CheckWithStatus(QaInput input) => new QaResult(Check(input), NotChecked(input));
+
+	/// <summary>The checks that cannot run, or cannot run for every structure, with the data they are missing.</summary>
+	public static List<QaNotChecked> NotChecked(QaInput input)
+	{
+		if (input?.Reference == null)
+		{
+			throw new ArgumentException("The quality checks need the reference data.", nameof(input));
+		}
+		Context ctx = new Context(input);
+		List<QaNotChecked> list = new List<QaNotChecked>();
+		if (ctx.Structures.Count > 0)
+		{
+			QaRuleInfo zone = Rule(QaRuleIds.ZoneDiffersFromNfhl);
+			int missing = input.NfhlZones == null ? ctx.Structures.Count : ctx.Structures.Count(p => !input.NfhlZones.ContainsKey(p.PropertyID));
+			if (missing == ctx.Structures.Count)
+			{
+				list.Add(new QaNotChecked(zone.Id, zone.Title, QaNotCheckedReason.NoStoredFloodLookup, "Not checked: no stored flood lookup.", CanCheckOnline: true));
+			}
+			else if (missing > 0)
+			{
+				list.Add(new QaNotChecked(zone.Id, zone.Title, QaNotCheckedReason.NoStoredFloodLookup,
+					$"Not checked for {missing} of {ctx.Structures.Count} structures: no stored flood lookup.", CanCheckOnline: true, missing));
+			}
+		}
+		if (ctx.Files.Count > 0 && input.HighWaterMarkEstimates == null)
+		{
+			QaRuleInfo marks = Rule(QaRuleIds.DepthVsHighWaterMarks);
+			list.Add(new QaNotChecked(marks.Id, marks.Title, QaNotCheckedReason.NoHighWaterMarks, "Not checked: no high-water marks loaded.", CanCheckOnline: true));
+		}
+		return list;
+	}
+
+	/// <summary>
 	/// The findings with any matching dismissal attached. A dismissal matches its rule, object and detail exactly; for a
 	/// check that compares structures it also matches the same group seen from another of its structures. Dismissals of
 	/// checks that can't be set aside are ignored.

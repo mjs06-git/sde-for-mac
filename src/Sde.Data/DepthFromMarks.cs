@@ -56,6 +56,25 @@ public static class DepthFromMarks
 	}
 
 	/// <summary>
+	/// The flood elevation the marks suggest for each assessment that has one, for the quality check "Flood elevation
+	/// unlike high-water marks" (<c>input with { HighWaterMarkEstimates = ... }</c>). Uses marks already loaded and makes
+	/// no online call. Assessments with no usable estimate (not a flood, no position, no marks near, datums differ) are left out.
+	/// </summary>
+	public static Dictionary<Guid, decimal> QaEstimates(SdeStore store, IReadOnlyCollection<Guid> assessmentIds, IReadOnlyList<HighWaterMark> marks,
+		HighWaterMarkOptions options = null)
+	{
+		Dictionary<Guid, decimal> estimates = new();
+		foreach (DepthRow row in Propose(store, assessmentIds, marks, options))
+		{
+			if (row.CanApply && row.Proposal.FloodElevationFt is decimal elevation)
+			{
+				estimates[row.AssessmentID] = elevation;
+			}
+		}
+		return estimates;
+	}
+
+	/// <summary>
 	/// The same from a water-surface elevation grid (a GeoTIFF): <paramref name="waterSurfaceFt"/> samples it at a
 	/// latitude and longitude, in feet in <paramref name="datumName"/> (null outside the grid or where it has no value).
 	/// </summary>

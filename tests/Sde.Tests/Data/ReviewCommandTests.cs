@@ -115,6 +115,38 @@ public class ReviewCommandTests : IDisposable
 	}
 
 	[Fact]
+	public void Qa_SaysWhichChecksCouldNotRun_WithoutChangingTheExitCode()
+	{
+		AssessmentFile f = Seed(null);
+		f.Assessment.DateofInspection = new DateTime(2026, 9, 20);
+		_t.Store.SaveAssessment(f);
+		(int code, string output, string _) = Run("qa");
+		Assert.Equal(0, code);
+		Assert.Contains("Not checked: Zone differs from the flood map (no stored flood lookup); Flood elevation unlike high-water marks (no high-water marks loaded).", output);
+	}
+
+	[Fact]
+	public void Qa_WithAMarksFile_RunsTheHighWaterMarkCheck()
+	{
+		AssessmentFile f = Seed(null);
+		f.Assessment.DateofInspection = new DateTime(2026, 9, 20);
+		f.Assessment.DepthOfFlood = 10m;
+		f.Property.Latitude = 39.7m;
+		f.Property.Longitude = -84.2m;
+		_t.Store.SaveAssessment(f);
+		AssessmentFile saved = _t.Store.LoadAssessment(f.Assessment.AssessmentID);
+		string lat = "39.7";
+		string lon = "-84.2";
+		string marks = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Path_), "marks.csv");
+		File.WriteAllText(marks, "Latitude,Longitude,Elevation,Datum\n" + string.Join("\n", Enumerable.Range(0, 3).Select(_ => $"{lat},{lon},25,{saved.Property.Datum}")) + "\n");
+		(int code, string output, string _) = Run("qa", "--marks", marks);
+		Assert.Equal(0, code);
+		Assert.Contains("Flood elevation unlike", output);
+		Assert.DoesNotContain("high-water marks loaded", output);
+		Assert.Contains("Not checked: Zone differs from the flood map (no stored flood lookup).", output);
+	}
+
+	[Fact]
 	public void Qa_WithARequiredFinding_ExitsNonZero_AndNamesTheStructure()
 	{
 		AssessmentFile f = Seed(null);

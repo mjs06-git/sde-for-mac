@@ -262,6 +262,13 @@ public sealed record QaGroup(string RuleId, string Title, string Severity, strin
 	[property: Description("False for checks only fixing the data clears (they can't be set aside).")] bool CanDismiss,
 	IReadOnlyList<QaFindingItem> Findings);
 
+/// <summary>A check that did not run (or not for every structure) because the data it compares with is not stored in SDE.</summary>
+public sealed record QaNotCheckedItem(string RuleId, string Title,
+	[property: Description("NoStoredFloodLookup, NoHighWaterMarks or InputNotSupplied.")] string Reason,
+	[property: Description("Plain English, such as \"Not checked: no stored flood lookup.\"")] string Message,
+	[property: Description("True when an online lookup in SDE's Review page (Check Online) could supply the data. This tool never goes online.")] bool CanCheckOnline,
+	[property: Description("For a check that ran for some structures only: how many it did not cover. 0 when it did not run at all.")] int Count);
+
 /// <summary>qa_check results.</summary>
 public sealed record QaCheckResult(
 	string Database,
@@ -276,7 +283,8 @@ public sealed record QaCheckResult(
 	[property: Description("Every check that found something, with its counts across all pages.")] IReadOnlyList<QaRuleCount> Rules,
 	[property: Description("This page's findings, grouped by check, errors first.")] IReadOnlyList<QaGroup> Groups,
 	string Next,
-	string Note);
+	string Note,
+	[property: Description("Checks that did not run for lack of stored data, so their silence does not mean all is well.")] IReadOnlyList<QaNotCheckedItem> NotChecked = null);
 
 // ───────────── Compliance ─────────────
 

@@ -462,8 +462,13 @@ sidebar. Its sidebar count is the number of assessments in review (Draft or Revi
   sent assessments are left alone. **Check Again** runs the checks again.
 - The status bar under the list shows how many assessments, open checks and open comments there are.
 
-The Review page doesn't run the flood map zone and high-water mark checks because they need an online look-up or a
-marks file.
+Two checks compare with data SDE doesn't keep in the database: the **flood map zone** check (does the FIRM zone match
+what FEMA's flood map shows at the structure?) and the **high-water mark** check (is the flood elevation near what
+nearby marks suggest?). Checking never goes online by itself. When the data is already at hand, the check runs. When it
+is not, the check is listed as **not checked**, for example "Not checked: no stored flood lookup", so a quiet Review
+page is never mistaken for a clean one. Looking the data up online is a separate step you choose. From a terminal,
+`sde qa --marks FILE` runs the high-water mark check with a marks file, and `sde qa` ends with a "Not checked" line
+(this never changes its exit code).
 
 ![The Review page](screenshots/110-review.png)
 

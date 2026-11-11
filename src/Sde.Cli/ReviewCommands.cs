@@ -1,6 +1,7 @@
 using System.Globalization;
 using Sde.Core;
 using Sde.Core.Assessments;
+using Sde.Core.Depth;
 using Sde.Core.Events;
 using Sde.Core.Quality;
 using Sde.Core.Records;
@@ -29,7 +30,7 @@ public static class ReviewCommands
 		""";
 
 	public const string QaHelp = """
-		Usage: sde [--db PATH] qa [--event NAME-OR-ID] [--all]
+		Usage: sde [--db PATH] qa [--event NAME-OR-ID] [--all] [--marks FILE]
 
 		Runs the quality checks that SDE's Review page runs and prints what they find. By default it checks every
 		active assessment in the database; --event checks only the assessments in one event. Findings that someone
@@ -37,7 +38,9 @@ public static class ReviewCommands
 
 		The exit code is 0 when there are no required findings, and 1 when there is at least one open finding of
 		the most serious level (Required). Other findings never change the exit code.
-		The flood map and high-water mark checks need an online lookup, so they run only in the app.
+		The flood map zone check compares with a flood lookup stored earlier, and the high-water mark check compares
+		with the marks in --marks FILE (a .csv or .geojson file of marks). Neither goes online. A check with nothing
+		to compare with is listed on a "Not checked" line at the end; that never changes the exit code.
 		""";
 
 	public const string ComplianceHelp = """
@@ -74,7 +77,13 @@ public static class ReviewCommands
 	}
 
 	/// <summary>Runs the quality checks and prints the findings.</summary>
-	public static int Qa(SdeStore s, string eventText, bool includeDismissed)
+	public static int Qa(SdeStore s, string eventText, bool includeDismissed) => Qa(s, eventText, includeDismissed, null);
+
+	/// <summary>
+	/// Runs the quality checks and prints the findings. A marks file turns on the high-water mark check; checks that
+	/// have nothing to compare with are named on a "Not checked" line. Nothing goes online.
+	/// </summary>
+	public static int Qa(SdeStore s, string eventText, bool includeDismissed, string marksFile)
 	{
 		EventRecord e = eventText == null ? null : FindEvent(s, eventText);
 		List<Guid> ids = null;
@@ -84,7 +93,17 @@ public static class ReviewCommands
 			ids = s.ListStructures().Where(r => r.AssessmentID != null && members.Contains(r.AssessmentID.Value)).Select(r => r.AssessmentID.Value).ToList();
 		}
 		QaInput input = s.LoadQaInput(ids);
+		if (!string.IsNullOrWhiteSpace(marksFile))
+		{
+			HighWaterMarkFile marks = HighWaterMarkFiles.Read(marksFile);
+			if (marks.Marks.Count == 0)
+			{
+				throw new ArgumentException($"There are no high-water marks in {marksFile}." + (marks.Problems.Count > 0 ? " " + marks.Problems[0] : ""));
+			}
+			input = input with { HighWaterMarkEstimates = DepthFromMarks.QaEstimates(s, input.Assessments.Select(f => f.Assessment.AssessmentID).ToList(), marks.Marks) };
+		}
 		List<QaFinding> all = QaRules.Check(input);
+		List<QaNotChecked> notChecked = QaRules.NotChecked(input);
 		List<QaFinding> shown = includeDismissed ? all : all.Where(f => !f.IsDismissed).ToList();
 		Dictionary<Guid, AssessmentFile> byAssessment = input.Assessments.ToDictionary(f => f.Assessment.AssessmentID);
 		Dictionary<Guid, AssessmentFile> byProperty = input.Assessments.GroupBy(f => f.Property.PropertyID).ToDictionary(g => g.Key, g => g.First());
@@ -100,6 +119,10 @@ public static class ReviewCommands
 		int notes = all.Count(f => f.Severity == QaSeverity.Info && !f.IsDismissed);
 		int setAside = all.Count(f => f.IsDismissed);
 		Console.WriteLine($"{required} required, {warnings} warnings, {notes} notes, {setAside} set aside");
+		if (notChecked.Count > 0)
+		{
+			Console.WriteLine("Not checked: " + string.Join("; ", notChecked.Select(n => $"{n.Title} ({n.Message.Replace("Not checked: ", "").TrimEnd('.')})")) + ".");
+		}
 		return required > 0 ? FoundProblems : 0;
 	}
 

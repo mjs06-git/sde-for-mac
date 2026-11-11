@@ -34,7 +34,7 @@ public static class Program
 		                              Import an SDE exchange folder or a FEMA SDE .mdb database
 		  lookups [TYPE-ID]           List lookup values (building types, causes, …)
 		  events                      List events with their dates and assessment counts
-		  qa [--event E] [--all]      Run the quality checks; exit code 1 if any required finding is open
+		  qa [--event E] [--all] [--marks FILE]  Run the quality checks; exit code 1 if any required finding is open
 		  compliance [--overdue] [--due-within DAYS] [--all]
 		                              List compliance cases with status and deadline
 		  report structure ASSESSMENT-ID FILE.pdf [--kind summary|detail] [--no-photos]
@@ -131,8 +131,9 @@ public static class Program
 	{
 		string eventText = TakeOption(rest, "--event");
 		bool all = TakeFlag(rest, "--all");
+		string marks = TakeOption(rest, "--marks");
 		RejectExtra(rest);
-		return ReviewCommands.Qa(ReadStore(dbPath), eventText, all);
+		return ReviewCommands.Qa(ReadStore(dbPath), eventText, all, marks);
 	}
 
 	private static int Compliance(string dbPath, List<string> rest)

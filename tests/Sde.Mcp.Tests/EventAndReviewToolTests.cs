@@ -100,6 +100,12 @@ public sealed class EventAndReviewToolTests
 		List<int> order = all.List("groups").Select(g => g.Str("severity") switch { "Error" => 0, "Warning" => 1, _ => 2 }).ToList();
 		Assert.Equal(order.OrderBy(x => x), order);
 		Assert.Contains("flood map zone", all.Str("note"));
+		JsonElement zone = all.List("notChecked").Single(n => n.Str("ruleId") == QaRuleIds.ZoneDiffersFromNfhl);
+		Assert.Equal("Not checked: no stored flood lookup.", zone.Str("message"));
+		Assert.Equal("NoStoredFloodLookup", zone.Str("reason"));
+		Assert.True(zone.GetProperty("canCheckOnline").GetBoolean());
+		Assert.Contains(all.List("notChecked"), n => n.Str("ruleId") == QaRuleIds.DepthVsHighWaterMarks);
+		Assert.Single((await s.CallOkAsync("qa_check", new { rule = "DepthVsHighWaterMarks" })).List("notChecked"));
 
 		// A finding set aside in SDE is left out unless asked for, with its reason when shown.
 		QaFinding photos = QaRules.Check(s.Store.LoadQaInput()).First(f => f.RuleId == QaRuleIds.MissingPhotos && f.AssessmentId == ranch.Id());
