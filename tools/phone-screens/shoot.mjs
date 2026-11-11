@@ -1,4 +1,5 @@
-// Photographs the real phone form for docs/screenshots (90-phone-find and 91-phone-edit, light and dark).
+// Photographs the real phone form for docs/screenshots (90-phone-find and 91-phone-edit, light and dark), and the
+// damage, cost and re-inspection screens (93, 94 and 95).
 // Run it while PhoneScreensHost serves made-up data; see README.md. Uses only Node's built-ins and Chrome.
 import { spawn } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync, existsSync, rmSync } from "node:fs";
@@ -89,6 +90,36 @@ for (const scheme of ["light", "dark"]) {
   await waitFor("!document.getElementById('edit').hidden && document.getElementById('edit-heading').textContent.length > 0", "the edit screen");
   await js("window.scrollTo(0, 0); true");
   await shot("91-phone-edit" + suffix);
+  // The steps the phone gained in 3.5: damage by element and the cost adjustments.
+  await showStep(6, "details[data-step='6'] summary");
+  await shot("93-phone-damage" + suffix);
+  await showStep(5, "details[data-step='5'] h4");
+  await shot("94-phone-costs" + suffix);
+  await js("document.getElementById('add-line').scrollIntoView({ block: 'center' }); true");
+  await shot("94-phone-costs-totals" + suffix);
+  await js("document.querySelectorAll('details').forEach((d) => { d.open = false; }); window.scrollTo(0, 0); true");
+}
+
+// A re-inspection: start another assessment of the open structure, then show the structure's assessments (both schemes).
+await js("document.getElementById('another').scrollIntoView({ block: 'center' }); document.getElementById('another').click(); true");
+await waitFor("!document.getElementById('another-confirm').hidden", "the confirmation");
+await shotOthers("95-phone-another-confirm-dark");
+await js("document.getElementById('another-yes').click(); true");
+await waitFor("document.querySelectorAll('#others-list li').length > 1", "the structure's assessments");
+await shotOthers("95-phone-another-dark");
+await page("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: "light" }] });
+await shotOthers("95-phone-another");
+
+async function showStep(step, target) {
+  await js(`document.querySelectorAll('details').forEach((d) => { d.open = d.getAttribute('data-step') === '${step}'; });
+    document.querySelector("${target}").scrollIntoView({ block: 'start' }); window.scrollBy(0, -12); true`);
+}
+
+async function shotOthers(name) {
+  // After the page settles (a new assessment scrolls the page to its top), show the structure's assessments.
+  await sleep(300);
+  await js("document.getElementById('others').scrollIntoView({ block: 'end' }); window.scrollBy(0, 16); true");
+  await shot(name);
 }
 
 ws.close();

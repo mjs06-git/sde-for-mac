@@ -102,6 +102,12 @@
     <p id="locked" class="locked" hidden></p>
     <p id="save-status" class="save-status" role="status" aria-live="polite"></p>
 
+    <section id="status-card" class="card" aria-labelledby="status-heading">
+      <h3 id="status-heading">Status</h3>
+      <div id="status-choices" class="segments" role="group" aria-labelledby="status-heading"></div>
+      <p id="status-note" class="hint"></p>
+    </section>
+
     <section class="photos" aria-labelledby="photos-heading">
       <h3 id="photos-heading">Photos</h3>
       <p id="photo-count"></p>
@@ -115,6 +121,19 @@
     </section>
 
     <div id="steps"></div>
+
+    <section id="others" class="card" aria-labelledby="others-heading">
+      <h3 id="others-heading">Assessments of this structure</h3>
+      <ul id="others-list" class="results" aria-labelledby="others-heading"></ul>
+      <button type="button" id="another" class="secondary">Start another assessment</button>
+      <div id="another-confirm" hidden>
+        <p class="hint" id="another-help">This starts a new assessment of the same structure, for a re-inspection. The address, owner and building details are shared with the other assessments.</p>
+        <div class="row">
+          <button type="button" id="another-yes" class="primary" aria-describedby="another-help">Start it</button>
+          <button type="button" id="another-no" class="secondary">Cancel</button>
+        </div>
+      </div>
+    </section>
   </section>
 </main>
 </body>
