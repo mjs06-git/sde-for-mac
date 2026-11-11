@@ -294,6 +294,9 @@ public sealed class AppServices
 	/// <summary>The event chosen in the sidebar, which scopes the pages to its assessments.</summary>
 	public EventScope Scope { get; } = new EventScope();
 
+	/// <summary>The high-water marks loaded in the Depth tool this session, which the Map page can draw as a water surface.</summary>
+	public SessionHighWaterMarks HighWaterMarks { get; } = new SessionHighWaterMarks();
+
 	/// <summary>
 	/// This app's lease on the open database: shared while it is open, to itself during a restore or a move, which are
 	/// refused while another copy of SDE holds one (see <see cref="DatabaseLease"/>). Null where leases aren't available.
@@ -403,6 +406,7 @@ public sealed class AppServices
 			Settings.Save();
 		}
 		Undo.Clear();
+		HighWaterMarks.Clear();
 		DatabaseChanged?.Invoke();
 	}
 

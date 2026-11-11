@@ -162,7 +162,8 @@ public class MapEngineTests
 
 		// The paper colour of the fake tiles is drawn where there are no dots.
 		WriteableBitmap frame = MapTestSupport.Capture(ui);
-		Point empty = MapTestSupport.InWindow(ui, view, new Point(30, 30));
+		// (The top right corner: the tool palette floats over the top left one.)
+		Point empty = MapTestSupport.InWindow(ui, view, new Point(view.Map.Bounds.Width - 30, 30));
 		AColor ground = MapTestSupport.At(frame, empty.X, empty.Y);
 		Assert.True(MapTestSupport.Near(ground, AColor.FromRgb(236, 232, 220)) || MapTestSupport.Near(ground, AColor.FromRgb(214, 208, 192)), $"{ground}");
 
@@ -233,7 +234,7 @@ public class MapEngineTests
 			AColor ring = MapTestSupport.At(frame, centre.X + 12.5, centre.Y);
 			Assert.True(MapTestSupport.Near(ring, MapTestSupport.ThemeColour("Accent"), 40), $"{theme}: ring {ring}");
 			// Bare map is the theme's subtle background.
-			Point bare = MapTestSupport.InWindow(ui, view, new Point(20, 20));
+			Point bare = MapTestSupport.InWindow(ui, view, new Point(view.Map.Bounds.Width - 20, 20));
 			Assert.True(MapTestSupport.Near(MapTestSupport.At(frame, bare.X, bare.Y), MapTestSupport.ThemeColour("SubtleBg"), 3), $"{theme}: background");
 		}
 		Application.Current!.RequestedThemeVariant = ThemeVariant.Light;

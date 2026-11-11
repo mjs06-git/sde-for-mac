@@ -22,6 +22,9 @@ public sealed class ResizeHandle : Thumb
 	/// <summary>True for a pane on the left (the sidebar: dragging right widens it); false for one on the right (an inspector).</summary>
 	public static readonly StyledProperty<bool> GrowsRightProperty = AvaloniaProperty.Register<ResizeHandle, bool>(nameof(GrowsRight), true);
 
+	/// <summary>True for a handle on a pane's top or bottom edge that drags its height (the Map page's attribute drawer); <see cref="GrowsRight"/> then means "grows downward".</summary>
+	public static readonly StyledProperty<bool> IsVerticalProperty = AvaloniaProperty.Register<ResizeHandle, bool>(nameof(IsVertical));
+
 	/// <summary>Run on a double-click: puts the width back to its default.</summary>
 	public static readonly StyledProperty<ICommand> ResetCommandProperty = AvaloniaProperty.Register<ResizeHandle, ICommand>(nameof(ResetCommand));
 
@@ -37,6 +40,12 @@ public sealed class ResizeHandle : Thumb
 		set => SetValue(GrowsRightProperty, value);
 	}
 
+	public bool IsVertical
+	{
+		get => GetValue(IsVerticalProperty);
+		set => SetValue(IsVerticalProperty, value);
+	}
+
 	public ICommand ResetCommand
 	{
 		get => GetValue(ResetCommandProperty);
@@ -50,10 +59,10 @@ public sealed class ResizeHandle : Thumb
 	protected override void OnDragDelta(VectorEventArgs e)
 	{
 		base.OnDragDelta(e);
-		Drag(e.Vector.X);
+		Drag(IsVertical ? e.Vector.Y : e.Vector.X);
 	}
 
-	/// <summary>Moves the edge by <paramref name="dx"/> pixels (positive is to the right).</summary>
+	/// <summary>Moves the edge by <paramref name="dx"/> pixels (positive is to the right, or down for a vertical handle).</summary>
 	public void Drag(double dx)
 	{
 		if (dx != 0)

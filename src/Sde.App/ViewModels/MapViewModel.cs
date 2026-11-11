@@ -353,6 +353,7 @@ public sealed partial class MapViewModel : ViewModelBase
 		_structureFeatures = null;
 		MarkersChanged?.Invoke();
 		StructuresChanged();
+		LegendChanged();
 	}
 
 	partial void OnSelectedChanged(MapPointViewModel value)

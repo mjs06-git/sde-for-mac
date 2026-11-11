@@ -141,6 +141,7 @@ public sealed partial class DepthSheetViewModel : SheetViewModel
 		{
 			HighWaterMarkFile file = HighWaterMarkFiles.Read(picked[0], MarksDatum == "Not given" ? null : MarksDatum);
 			_marks = file.Marks;
+			_app.HighWaterMarks.Set(_marks, Path.GetFileName(picked[0]));
 			MarksSummary = $"{Path.GetFileName(picked[0])}: {file.Marks.Count:N0} mark{(file.Marks.Count == 1 ? "" : "s")}"
 				+ (file.Skipped > 0 ? $", {file.Skipped:N0} row{(file.Skipped == 1 ? "" : "s")} skipped ({string.Join("; ", file.Problems.Take(3))})" : "") + ".";
 			Estimate();
@@ -203,6 +204,7 @@ public sealed partial class DepthSheetViewModel : SheetViewModel
 		{
 			StnHighWaterMarks got = await Stn().GetHighWaterMarksAsync(SelectedUsgsEvent.Id, states, CancellationToken.None);
 			_marks = got.Marks.ToList();
+			_app.HighWaterMarks.Set(_marks, SelectedUsgsEvent.Name);
 			MarksSummary = $"{SelectedUsgsEvent.Name}: {got.Marks.Count:N0} mark{(got.Marks.Count == 1 ? "" : "s")} from USGS" + (got.Skipped > 0 ? $", {got.Skipped:N0} without a usable position or elevation" : "") + ".";
 			UsgsNotice = got.Notice;
 			Estimate();

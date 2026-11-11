@@ -140,6 +140,15 @@
     <GradientStop Offset="1" Color="#FF3B30" />
   </ConicGradientBrush>
 
+  <!-- Map page (Styles/Map.axaml): the floating controls over the map, the attribute drawer, and the analysis layers -->
+  <x:Double x:Key="MapToolSize">34</x:Double> <!-- a tool button in the floating palette, and a zoom button -->
+  <x:Double x:Key="MapDrawerHeight">260</x:Double> <!-- the attribute drawer's default height (dragged between the min and max) -->
+  <x:Double x:Key="MapDrawerMinHeight">140</x:Double>
+  <x:Double x:Key="MapDrawerMaxHeight">620</x:Double>
+  <x:Double x:Key="MapLegendWidth">232</x:Double> <!-- the legend card in the map's lower left corner -->
+  <x:Double x:Key="MapSurfaceOpacity">0.62</x:Double> <!-- the water-surface picture over the basemap -->
+  <x:Double x:Key="MapHeatMaxAlpha">205</x:Double> <!-- the hottest heat-map pixel's alpha, 0 to 255 -->
+
   <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">
       <!-- Colours (the brushes below use these) -->
@@ -653,6 +662,30 @@
       <SolidColorBrush x:Key="DataGridCellFocusVisualSecondaryBrush" Color="Transparent" />
       <SolidColorBrush x:Key="MenuFlyoutItemBackground" Color="Transparent" />
       <SolidColorBrush x:Key="ComboBoxItemBackground" Color="Transparent" />
+      <!-- Map page analysis layers (Maps/MapAnalysis.cs). The heat-map ramp, from the coolest (water blue, drawn almost
+           clear because a pixel's alpha follows its density) through amber to the gauge's red; the positions of the stops
+           are MapAnalysis.HeatStopPositions. Then the water surface's five classes, lowest to highest. -->
+      <Color x:Key="MapHeatStop0Color">#1F7AD6</Color>
+      <Color x:Key="MapHeatStop1Color">#4FA3E3</Color>
+      <Color x:Key="MapHeatStop2Color">#F0A23A</Color>
+      <Color x:Key="MapHeatStop3Color">#C8102E</Color>
+      <Color x:Key="MapSurfaceClass0Color">#CDE5F7</Color>
+      <Color x:Key="MapSurfaceClass1Color">#96C7EC</Color>
+      <Color x:Key="MapSurfaceClass2Color">#589FDB</Color>
+      <Color x:Key="MapSurfaceClass3Color">#2B75C0</Color>
+      <Color x:Key="MapSurfaceClass4Color">#114A8A</Color>
+      <SolidColorBrush x:Key="MapSurfaceClass0" Color="{StaticResource MapSurfaceClass0Color}" />
+      <SolidColorBrush x:Key="MapSurfaceClass1" Color="{StaticResource MapSurfaceClass1Color}" />
+      <SolidColorBrush x:Key="MapSurfaceClass2" Color="{StaticResource MapSurfaceClass2Color}" />
+      <SolidColorBrush x:Key="MapSurfaceClass3" Color="{StaticResource MapSurfaceClass3Color}" />
+      <SolidColorBrush x:Key="MapSurfaceClass4" Color="{StaticResource MapSurfaceClass4Color}" />
+      <!-- The count inside a cluster circle: whichever of these two reads better on the circle's colour -->
+      <SolidColorBrush x:Key="MapClusterInkLight" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="MapClusterInkDark" Color="#0E2540" />
+      <!-- The printed legend (always on white paper): a dot's outline, and FEMA's flood zones -->
+      <SolidColorBrush x:Key="MapLegendDotOutline" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="MapFloodZoneFill" Color="#B35B8FD9" />
+      <SolidColorBrush x:Key="MapFloodZoneStroke" Color="#3D6FB8" />
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
       <!-- Colours (the brushes below use these) -->
@@ -1158,6 +1191,26 @@
       <SolidColorBrush x:Key="DataGridCellFocusVisualSecondaryBrush" Color="Transparent" />
       <SolidColorBrush x:Key="MenuFlyoutItemBackground" Color="Transparent" />
       <SolidColorBrush x:Key="ComboBoxItemBackground" Color="Transparent" />
+      <!-- Map page analysis layers (see the light theme) -->
+      <Color x:Key="MapHeatStop0Color">#4A93D6</Color>
+      <Color x:Key="MapHeatStop1Color">#6CB8F0</Color>
+      <Color x:Key="MapHeatStop2Color">#F5B04A</Color>
+      <Color x:Key="MapHeatStop3Color">#FF5A6B</Color>
+      <Color x:Key="MapSurfaceClass0Color">#B9DDFB</Color>
+      <Color x:Key="MapSurfaceClass1Color">#84C0F2</Color>
+      <Color x:Key="MapSurfaceClass2Color">#4F9DE2</Color>
+      <Color x:Key="MapSurfaceClass3Color">#2E78C8</Color>
+      <Color x:Key="MapSurfaceClass4Color">#1A549E</Color>
+      <SolidColorBrush x:Key="MapSurfaceClass0" Color="{StaticResource MapSurfaceClass0Color}" />
+      <SolidColorBrush x:Key="MapSurfaceClass1" Color="{StaticResource MapSurfaceClass1Color}" />
+      <SolidColorBrush x:Key="MapSurfaceClass2" Color="{StaticResource MapSurfaceClass2Color}" />
+      <SolidColorBrush x:Key="MapSurfaceClass3" Color="{StaticResource MapSurfaceClass3Color}" />
+      <SolidColorBrush x:Key="MapSurfaceClass4" Color="{StaticResource MapSurfaceClass4Color}" />
+      <SolidColorBrush x:Key="MapClusterInkLight" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="MapClusterInkDark" Color="#0E2540" />
+      <SolidColorBrush x:Key="MapLegendDotOutline" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="MapFloodZoneFill" Color="#B35B8FD9" />
+      <SolidColorBrush x:Key="MapFloodZoneStroke" Color="#3D6FB8" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>
