@@ -62,7 +62,7 @@ public class RestyleTests
 		using UiSession ui = WithSamples();
 		ui.Main.ShowCommand.Execute(Page.Settings);
 		SettingsViewModel settings = ui.Main.Settings;
-		Assert.Equal(new[] { "General", "Defaults", "Reports & letters", "Online services", "Phone form", "AI assistants", "Map & GIS", "Depth tables", "Backups" },
+		Assert.Equal(new[] { "General", "Appearance", "Defaults", "Reports & letters", "Online services", "Phone form", "AI assistants", "Map & GIS", "Depth tables", "Backups", "About" },
 			settings.Categories.Select(c => c.Title));
 		Assert.True(settings.IsGeneral);
 		Assert.False(settings.IsPhoneForm);

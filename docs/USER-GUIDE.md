@@ -88,7 +88,11 @@ their shortcuts. **View > Search and Commands…** (⌘K) finds structures, page
 
 Map, Summary and Import & Export aren't in the sidebar. Open them from the **View** menu or their shortcuts; Map and
 Summary are also available from the toolbar switch. **Event > Event Summary** opens the summary. Open Settings with
-**SDE > Settings…** (⌘,); **SDE > About Substantial Damage Estimator** opens it too and shows the version.
+**SDE > Settings…** (⌘,); **SDE > About Substantial Damage Estimator** opens **Settings > About**, with the version.
+
+Import & Export has three tabs, switched in the toolbar: **Import** (SDE data, inspections, parcels and settings
+files), **Export** (SDE data, spreadsheets, maps and your setup) and **Field Work** (photos, work packages and
+coordinates). It remembers the tab you used last until you quit.
 
 ![The Structures list](screenshots/01-structures.png)
 
@@ -136,6 +140,9 @@ These are in **Settings > General**.
 
 - **Check coordinates are in the structure's state**: FEMA's *Lat/Long Validation*. Turn it on to catch coordinates
   entered with the wrong sign or in the wrong order.
+- **Appearance** (in **Settings > Appearance**): **Match System**, **Light** or **Dark**; the accent colour, SDE blue
+  or the Mac's own; and **Comfortable** or **Compact** spacing. The theme and the accent change at once; the spacing
+  takes effect the next time SDE opens.
 - **Your fields**: three extra fields on every assessment. Name them for what your office tracks, such as *Permit
   number* or *Inspection team*.
 - **Note snippets**: text you type often (for example a standard note about water lines). Click **Add Snippet**,
@@ -205,8 +212,9 @@ FEMA's SDE 3.0 or by SDE for Mac), a folder from the older **SDE 2.x**, and FEMA
 1. Get the data from the other computer: an export folder, or a copy of `SDEDatabase.mdb` together with the
    `attachments` folder beside it (that's where its photos are).
 2. Choose **File > Import SDE Data…** (⌘I), or **Import SDE Data…** in the toolbar's **New** pull-down. Or open
-   **Import & Export** (⌘8) and, under **FEMA SDE data > Import**, click **SDE Export Folder…** or **SDE Database
-   (.mdb)…**. You can also drag the folder or `.mdb` file onto the Import & Export page.
+   **Import & Export** (⌘8) and, on the **Import** tab, click **SDE Export Folder…** or **SDE Database (.mdb)…**. You
+   can also drop the folder or `.mdb` file on the Import & Export page. A dropped spreadsheet opens **Import
+   Inspections or Parcels** instead.
 3. Under **Ready to import**, SDE lists what it found before anything is added. Untick anything you don't want.
 4. Choose what happens **If a structure is already in your database**:
    - **Keep mine (skip it)**,
@@ -224,7 +232,7 @@ details, see [Importing inspections or parcels](IMPORTING.md).
 1. **Export from the other system.** Save its report or search results as `.xlsx`, `.xls`, `.csv` or a shapefile's
    `.dbf`. Include a **record ID** that never changes (a permit, inspection or parcel number).
 2. Choose **File > Import Inspections or Parcels…** (⇧⌘I) or the same item in the toolbar's **New** pull-down, or
-   **Import & Export > Inspections or parcels > Import Inspections or Parcels…**, and choose the file.
+   **Import & Export > Import > Other systems > Import Inspections or Parcels…**, and choose the file.
 3. **Pick a profile.** A profile remembers how one source's files map to SDE. The first time, click **Start from an
    example** and pick the closest: **Generic inspections**, **County parcels** or **Accela (example)**. Next time, SDE
    picks your saved profile automatically.
@@ -232,6 +240,10 @@ details, see [Importing inspections or parcels](IMPORTING.md).
    - **Source**: the system's name in your words, such as *Permits* or *County assessor*.
    - **Each record becomes** an assessment (inspections) or a structure (parcels).
    - **New records match** existing structures by record ID only, by parcel number, or by address.
+   - **One row is** one building, or several: **A number of buildings in a column** or **A list of buildings in a
+     column** makes one structure per building, told apart in the unit or the lot number (see
+     [A record that covers several buildings](IMPORTING.md#a-record-that-covers-several-buildings)). The preview
+     shows each building under its row of the file.
 5. **Map the columns.** For each SDE field, pick the column it comes from, or type one value for every record (for
    example the cause of damage). Each mapped field shows an example from the file.
 6. **Translate the file's words.** Text that isn't one of FEMA's choices is listed with how many records use it. Pick
@@ -250,7 +262,8 @@ FEMA's SDE has a simpler import that makes one structure per row of a parcel or 
 for compatibility; for anything you will import again, use [3.3](#33-from-a-permit-system-spreadsheet-or-assessor-roll)
 instead.
 
-1. Open **Import & Export** and find **Structures from a parcel spreadsheet** under **Other systems**.
+1. Open **Import & Export** and, on the **Import** tab, find **Structures from a parcel spreadsheet** under **Other
+   systems**.
 2. Click **Choose Spreadsheet…** and pick a `.xlsx`, `.xlsm`, `.xls` or `.csv` file (a shapefile's `.dbf` or `.shp` table also works). Choose the **Sheet** and whether the **First row
    has the column names**.
 3. Match columns to fields, or pick a **Saved mapping**.
@@ -264,7 +277,7 @@ Structures need a latitude and longitude to appear on the map and in GIS files. 
 - [Click each one on the map](#the-map) with **Set location**.
 - Use a photo's GPS position ([chapter 5](#5-photos)).
 - Add them in bulk with a spreadsheet:
-  1. **Import & Export > Coordinates > Save Coordinates Spreadsheet…**
+  1. **Import & Export > Field Work > Coordinates > Save Coordinates Spreadsheet…**
   2. Fill in the **Latitude** and **Longitude** columns, by hand or with a geocoder.
   3. Click **Read Coordinates…**. SDE shows each structure's coordinates **Now** and **From spreadsheet**.
   4. Untick anything wrong and click **Save Checked Coordinates**.
@@ -413,7 +426,7 @@ you can't change them.
 ### Matching a whole folder of photos to structures
 When field teams bring back a folder of photos:
 
-1. Open **Import & Export > From the field > Photos** and click **Match a Photo Folder to Structures…**.
+1. Open **Import & Export > Field Work > Photos** and click **Match a Photo Folder to Structures…**.
 2. Choose the folder. SDE matches each photo by a record ID, parcel number or address in its file name, or otherwise
    by its GPS position (within 40 metres).
 3. Check the list (**Photo**, **Structure**, **Why**, **Distance**). Photos that match no structure, or two structures
@@ -576,7 +589,7 @@ A work package takes assessments to a Mac in the field and brings the work back.
 3. When you're done, click **Send Back to the Office…** in the banner and save the file.
 
 **Back at the office**
-1. On **Import & Export**, under **From the field**, click **Check In a Work Package…** and choose the file. The field's
+1. On **Import & Export > Field Work**, under **Work packages**, click **Check In a Work Package…** and choose the file. The field's
    work replaces the copies here, and History shows each change as the field made it.
 2. An assessment someone changed here meanwhile, or took back early, isn't checked in; SDE lists it.
 
@@ -886,9 +899,9 @@ SDE submission 2026-10-08 1430/
 ![The submission folder panel](screenshots/39-structures-submission.png)
 
 ### Other exports
-- **Excel**: **Export ▾ > Excel…** on Structures, or **Import & Export > Excel > Export to Excel…**: every assessment
+- **Excel**: **Export ▾ > Excel…** on Structures, or **Import & Export > Export > Excel > Export to Excel…**: every assessment
   as one row, with the same 218 columns as FEMA's *Export to Excel*.
-- **Google Earth**: **Import & Export > Google Earth map > Save Map (.kmz)…**: a pin for each assessment, coloured by
+- **Google Earth**: **Import & Export > Export > Google Earth map > Save Map (.kmz)…**: a pin for each assessment, coloured by
   percent damaged.
 - **GIS**: GeoPackage and GeoJSON from the [summary](#the-summary).
 
@@ -1108,11 +1121,11 @@ archive the event when it's over.
 - For inspectors in the field, use the [phone form](#15-the-phone-form).
 
 ### Share your setup
-Use **Import & Export > Your setup** to share your **Saved notes**, **Spreadsheet import mappings** and **Default
+Use **Import & Export > Export > Your setup** to share your **Saved notes**, **Spreadsheet import mappings** and **Default
 values** with colleagues:
 
 1. Tick what to include and click **Save Settings File…**.
-2. Your colleague clicks **Import Settings File…**. Notes and mappings are added to theirs; default values replace
+2. Your colleague clicks **Import Settings File…** on the **Import** tab. Notes and mappings are added to theirs; default values replace
    theirs after they confirm.
 
 The file is FEMA's user-settings format, so it also works with FEMA's SDE.
