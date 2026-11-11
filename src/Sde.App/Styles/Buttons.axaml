@@ -13,11 +13,12 @@
     With motion on (the window's "motion" class, Services/Motion) fills and borders fade between states.
   -->
 
-  <!-- The keyboard focus ring for every control, as on the Mac: 3 px of the accent, half see-through, hugging the control. -->
+  <!-- The keyboard focus ring for every control, as on the Mac: 3 px of the accent, half see-through (solid with
+       Increase Contrast), hugging the control. -->
   <Style Selector="AdornerLayer">
     <Setter Property="DefaultFocusAdorner">
       <FocusAdornerTemplate>
-        <Border BorderThickness="3" BorderBrush="{DynamicResource Focus}" Opacity="0.5" CornerRadius="{StaticResource RadiusControl}" Margin="-3" />
+        <Border BorderThickness="3" BorderBrush="{DynamicResource Focus}" Opacity="{DynamicResource FocusRingOpacity}" CornerRadius="{StaticResource RadiusControl}" Margin="-3" />
       </FocusAdornerTemplate>
     </Setter>
   </Style>

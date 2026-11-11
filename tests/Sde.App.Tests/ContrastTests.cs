@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -89,6 +90,129 @@ public class ContrastTests
 			}
 		}
 		Assert.True(failures.Count == 0, string.Join("\n", failures));
+	}
+
+	/// <summary>Primary text: held to 7:1 (WCAG AAA) while Increase Contrast is on; the rest keeps 4.5:1.</summary>
+	public static readonly string[] PrimaryText = { "TextPrimary", "TextOnFrame", "TextOnHero", "TextOnTooltip" };
+
+	/// <summary>A colour with Increase Contrast's dictionary over the tokens: its own brush if it has one, else the tokens'.</summary>
+	private static Color HighContrastColorOf(IResourceProvider highContrast, string key, ThemeVariant theme) =>
+		highContrast.TryGetResource(key, theme, out object value) && value is ISolidColorBrush brush ? brush.Color : ColorOf(key, theme);
+
+	/// <summary>Every pair again with Styles/Contrast.High.axaml applied: 7:1 for primary text, 4.5:1 for the rest.</summary>
+	[AvaloniaFact]
+	public void WithIncreaseContrast_PrimaryTextHas7To1_AndTheRest4Point5To1()
+	{
+		IResourceProvider hc = HighContrast.Load();
+		List<string> failures = new();
+		foreach (ThemeVariant theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+		{
+			foreach ((string text, string background) in Pairs)
+			{
+				double need = PrimaryText.Contains(text) ? 7 : 4.5;
+				double ratio = Ratio(HighContrastColorOf(hc, text, theme), HighContrastColorOf(hc, background, theme));
+				if (ratio < need)
+				{
+					failures.Add($"{theme}: {text} on {background} is {ratio:0.00}:1, needs {need}:1");
+				}
+			}
+		}
+		Assert.True(failures.Count == 0, string.Join("\n", failures));
+	}
+
+	/// <summary>With Increase Contrast, borders, dividers and secondary text stand out more, and cards lose their shadow.</summary>
+	[AvaloniaFact]
+	public void WithIncreaseContrast_BordersAndSecondaryText_AreStronger_AndCardsLoseTheirShadow()
+	{
+		IResourceProvider hc = HighContrast.Load();
+		foreach (ThemeVariant theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+		{
+			Color surface = ColorOf("BgSurface", theme);
+			foreach (string border in new[] { "BorderDefault", "BorderStrong", "BorderSubtle", "BorderCard", "TextControlBorderBrush", "ButtonBorderBrush", "DataGridGridLinesBrush" })
+			{
+				Assert.True(Ratio(HighContrastColorOf(hc, border, theme), surface) > Ratio(ColorOf(border, theme), surface) + 0.5, $"{theme} {border}");
+			}
+			// Inputs and cards are outlined clearly enough to see (WCAG's 3:1 for a control's edge)
+			Assert.True(Ratio(HighContrastColorOf(hc, "BorderStrong", theme), surface) >= 3, $"{theme} input edges");
+			Assert.True(Ratio(HighContrastColorOf(hc, "BorderCard", theme), surface) >= 3, $"{theme} card edges");
+			foreach (string text in new[] { "TextSecondary", "TextTertiary", "TextOnFrameSecondary", "TextOnFrameTertiary" })
+			{
+				string background = text.Contains("Frame") ? "BgFrame" : "BgSurface";
+				Assert.True(Ratio(HighContrastColorOf(hc, text, theme), ColorOf(background, theme)) > Ratio(ColorOf(text, theme), ColorOf(background, theme)), $"{theme} {text}");
+			}
+			Assert.True(hc.TryGetResource("ShadowCard", theme, out object shadow));
+			BoxShadows shadows = (BoxShadows)shadow!;
+			for (int i = 0; i < shadows.Count; i++)
+			{
+				Assert.Equal(0, shadows[i].Color.A);
+			}
+		}
+		Assert.True(hc.TryGetResource("FocusRingOpacity", null, out object opacity));
+		Assert.Equal(1.0, (double)opacity!);
+	}
+
+	/// <summary>
+	/// Every brush in the tokens made from a colour Increase Contrast changes is repeated in its dictionary, so no border
+	/// or label stays faint (a new brush added to the tokens fails this until it is added there too).
+	/// </summary>
+	[Fact]
+	public void IncreaseContrast_RepeatsEveryBrushMadeFromAColourItChanges()
+	{
+		string styles = Path.Combine(TestPaths.Root, "src", "Sde.App", "Styles");
+		string tokens = File.ReadAllText(Path.Combine(styles, "Tokens.axaml"));
+		string high = File.ReadAllText(Path.Combine(styles, "Contrast.High.axaml"));
+		List<string> missing = new();
+		foreach (string theme in new[] { "Light", "Dark" })
+		{
+			string ThemeBlock(string xaml)
+			{
+				int start = xaml.IndexOf($"<ResourceDictionary x:Key=\"{theme}\">", StringComparison.Ordinal);
+				Assert.True(start >= 0, theme);
+				return xaml[start..xaml.IndexOf("</ResourceDictionary>", start, StringComparison.Ordinal)];
+			}
+			string highBlock = ThemeBlock(high);
+			HashSet<string> changed = System.Text.RegularExpressions.Regex.Matches(highBlock, "<Color x:Key=\"([A-Za-z0-9]+)\">").Select(m => m.Groups[1].Value).ToHashSet();
+			Assert.Contains("BorderStrongColor", changed);
+			HashSet<string> repeated = System.Text.RegularExpressions.Regex.Matches(highBlock, "<SolidColorBrush x:Key=\"([A-Za-z0-9]+)\"").Select(m => m.Groups[1].Value).ToHashSet();
+			foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(ThemeBlock(tokens), "<SolidColorBrush x:Key=\"([A-Za-z0-9]+)\" Color=\"\\{StaticResource ([A-Za-z0-9]+)\\}\""))
+			{
+				if (changed.Contains(m.Groups[2].Value) && !repeated.Contains(m.Groups[1].Value))
+				{
+					missing.Add($"{theme}: {m.Groups[1].Value} (made from {m.Groups[2].Value})");
+				}
+			}
+		}
+		Assert.True(missing.Count == 0, "Not repeated in Styles/Contrast.High.axaml:\n" + string.Join("\n", missing));
+	}
+
+	/// <summary>Turning Increase Contrast on merges the stronger colours over the tokens at once; turning it off takes them out.</summary>
+	[AvaloniaFact]
+	public void IncreaseContrast_ChangesTheColoursAtOnce_AndBack()
+	{
+		Application app = Application.Current!;
+		Color normal = ColorOf("BorderCard", ThemeVariant.Light);
+		bool? was = MacNative.IncreaseContrastOverride;
+		try
+		{
+			MacNative.IncreaseContrastOverride = false;
+			HighContrast.Apply(app, setting: true);
+			Assert.True(HighContrast.IsOn);
+			Assert.NotEqual(normal, ColorOf("BorderCard", ThemeVariant.Light));
+			Assert.Equal(1.0, (double)app.FindResource("FocusRingOpacity")!);
+			HighContrast.Apply(app, setting: false);
+			Assert.False(HighContrast.IsOn);
+			Assert.Equal(normal, ColorOf("BorderCard", ThemeVariant.Light));
+			// The Mac's own Increase Contrast turns it on without the setting
+			MacNative.IncreaseContrastOverride = true;
+			HighContrast.Apply(app, setting: false);
+			Assert.True(HighContrast.IsOn);
+		}
+		finally
+		{
+			MacNative.IncreaseContrastOverride = was;
+			HighContrast.Set(app, false);
+		}
+		Assert.Equal(0.5, (double)app.FindResource("FocusRingOpacity")!);
 	}
 
 	[AvaloniaFact]

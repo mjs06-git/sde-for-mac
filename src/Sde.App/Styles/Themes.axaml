@@ -260,11 +260,7 @@
     <Setter Property="HorizontalContentAlignment" Value="Left" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="KnobTransitions">
-      <Transitions>
-        <DoubleTransition Easing="CubicEaseOut" Property="Canvas.Left" Duration="0:0:0.2" />
-      </Transitions>
-    </Setter>
+    <!-- The knob slides only with motion on: Styles/Accessibility.axaml -->
     <Setter Property="Template">
       <ControlTemplate>
         <Grid Background="{TemplateBinding Background}" ColumnDefinitions="*,Auto">

@@ -231,6 +231,14 @@
                   </Grid>
                 </Border>
                 <Border Classes="settingsRow">
+                  <ToggleSwitch IsChecked="{Binding IncreaseContrast}" OnContent="" OffContent="" Name="IncreaseContrastSwitch" AutomationProperties.Name="Increase contrast"
+                                ToolTip.Tip="Stronger borders, dividers and text. Also on whenever Increase Contrast is on in System Settings, Accessibility.">
+                    <ToggleSwitch.Content>
+                      <TextBlock Classes="medium" Text="Increase contrast" />
+                    </ToggleSwitch.Content>
+                  </ToggleSwitch>
+                </Border>
+                <Border Classes="settingsRow">
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                     <StackPanel Spacing="2" VerticalAlignment="Center">
                       <TextBlock Classes="medium" Text="Density" ToolTip.Tip="Compact fits more rows and fields on the screen" />

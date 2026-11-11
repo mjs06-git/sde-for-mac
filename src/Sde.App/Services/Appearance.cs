@@ -5,8 +5,9 @@ using Avalonia.Styling;
 namespace Sde.App.Services;
 
 /// <summary>
-/// Settings, Appearance: light or dark, SDE's accent or the Mac's, and the Comfortable or Compact sizes. The theme and
-/// the accent change at once. The sizes are read when the app starts, because the styles take them as they load.
+/// Settings, Appearance: light or dark, SDE's accent or the Mac's, Increase Contrast, and the Comfortable or Compact
+/// sizes. The theme, the accent and the contrast change at once. The sizes are read when the app starts, because the
+/// styles take them as they load.
 /// </summary>
 public static class Appearance
 {
@@ -38,10 +39,11 @@ public static class Appearance
 		_ => ThemeVariant.Default,
 	};
 
-	/// <summary>Applies the theme and the accent choice now.</summary>
+	/// <summary>Applies the theme, the accent choice and Increase Contrast now.</summary>
 	public static void Apply(Application app, AppSettings settings)
 	{
 		app.RequestedThemeVariant = ThemeOf(settings.Theme);
+		HighContrast.Apply(app, settings.IncreaseContrast);
 		if (settings.UseMacAccent && OperatingSystem.IsMacOS())
 		{
 			SystemAccent.Follow(app);

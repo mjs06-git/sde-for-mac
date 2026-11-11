@@ -1,0 +1,221 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    Increase Contrast (System Settings, Accessibility, Display, or Settings, Appearance): merged over Styles/Tokens.axaml
+    by Services/HighContrast while it is on, and taken out again when it is turned off. Borders, dividers and input
+    outlines are drawn stronger, secondary and tertiary text is darker (lighter in dark mode), the frame's and the result
+    card's secondary text is brighter, cards trade their shadow for a clear border, and the keyboard focus ring is drawn
+    solid. The accent colours are left alone (Services/SystemAccent owns them). Every brush in the tokens made from one of
+    the colours below is repeated here with the stronger colour (ContrastTests checks none is missed), and every text
+    pair keeps 7:1 for primary text and 4.5:1 for the rest with this applied.
+
+    Written by a script from the tokens: change a colour in both places.
+  -->
+  <!-- The focus ring round buttons and other controls (Styles/Buttons.axaml) is solid, and a focused text box's border is 2 px -->
+  <x:Double x:Key="FocusRingOpacity">1</x:Double>
+  <Thickness x:Key="TextControlBorderThemeThicknessFocused">2</Thickness>
+
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <Color x:Key="TextSecondaryColor">#2F3D50</Color>
+      <Color x:Key="TextTertiaryColor">#3A495C</Color>
+      <Color x:Key="BorderDefaultColor">#8292A4</Color>
+      <Color x:Key="BorderStrongColor">#66778C</Color>
+      <Color x:Key="BorderStrongHoverColor">#4F5F73</Color>
+      <Color x:Key="BorderSubtleColor">#B3BECB</Color>
+      <Color x:Key="BorderCardColor">#7F8EA1</Color>
+      <Color x:Key="BorderFrameColor">#5679A3</Color>
+      <Color x:Key="TextOnFrameSecondaryColor">#E1E9F3</Color>
+      <Color x:Key="TextOnFrameTertiaryColor">#C9D5E3</Color>
+      <Color x:Key="TextOnHeroSecondaryColor">#E1E9F3</Color>
+      <!-- Cards: a clear border instead of the shadow under them -->
+      <BoxShadows x:Key="ShadowCard">0 0 0 0 #00000000</BoxShadows>
+      <BoxShadows x:Key="ShadowHero">0 0 0 0 #00000000</BoxShadows>
+      <SolidColorBrush x:Key="BorderDefault" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="BorderStrong" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="BorderStrongHover" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="BorderSubtle" Color="{StaticResource BorderSubtleColor}" />
+      <SolidColorBrush x:Key="TextSecondary" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="TextTertiary" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="BorderFrame" Color="{StaticResource BorderFrameColor}" />
+      <SolidColorBrush x:Key="TextOnFrameSecondary" Color="{StaticResource TextOnFrameSecondaryColor}" />
+      <SolidColorBrush x:Key="TextOnFrameTertiary" Color="{StaticResource TextOnFrameTertiaryColor}" />
+      <SolidColorBrush x:Key="TextOnHeroSecondary" Color="{StaticResource TextOnHeroSecondaryColor}" />
+      <SolidColorBrush x:Key="BorderCard" Color="{StaticResource BorderCardColor}" />
+      <SolidColorBrush x:Key="CardBorder" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="TextMuted" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="ButtonBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="AccentButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="RepeatButtonBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="RepeatButtonBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="RepeatButtonBorderBrushPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="RepeatButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrushPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="SplitButtonBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="SplitButtonBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="SplitButtonBorderBrushPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="SplitButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="TextControlBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="TextControlButtonForeground" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundBorderBrushUnfocused" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="ComboBoxPlaceHolderForeground" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="ComboBoxPlaceHolderForegroundFocusedPressed" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="ComboBoxDropDownGlyphForeground" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="ComboBoxDropDownGlyphForegroundFocused" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="ComboBoxDropDownGlyphForegroundFocusedPressed" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeUnchecked" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeUncheckedPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeUncheckedPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeUncheckedDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="RadioButtonOuterEllipseStroke" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="RadioButtonOuterEllipseStrokePointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="RadioButtonOuterEllipseStrokePressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchStrokeOffDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="SliderTickBarFill" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForeground" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPressed" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="MenuFlyoutSubItemChevron" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="FlyoutBorderThemeBrush" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPointerOver" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPressed" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="ExpanderHeaderBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="ExpanderChevronForeground" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="CalendarDatePickerBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="CalendarDatePickerBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="CalendarDatePickerBorderBrushPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="CalendarDatePickerBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="CalendarDatePickerTextForeground" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="CalendarDatePickerCalendarGlyphForeground" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="DataGridColumnHeaderForegroundBrush" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="DataGridGridLinesBrush" Color="{StaticResource BorderSubtleColor}" />
+      <SolidColorBrush x:Key="CalendarViewOutOfScopeForeground" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="CalendarViewHoverBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="CalendarViewPressedBorderBrush" Color="{StaticResource BorderStrongHoverColor}" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Dark">
+      <Color x:Key="TextSecondaryColor">#CBD5E1</Color>
+      <Color x:Key="TextTertiaryColor">#BAC6D4</Color>
+      <Color x:Key="BorderDefaultColor">#56708E</Color>
+      <Color x:Key="BorderStrongColor">#7A8FA8</Color>
+      <Color x:Key="BorderStrongHoverColor">#93A6BD</Color>
+      <Color x:Key="BorderSubtleColor">#3E5570</Color>
+      <Color x:Key="BorderCardColor">#61799A</Color>
+      <Color x:Key="BorderFrameColor">#4F72A0</Color>
+      <Color x:Key="TextOnFrameSecondaryColor">#E1E9F3</Color>
+      <Color x:Key="TextOnFrameTertiaryColor">#C9D5E3</Color>
+      <Color x:Key="TextOnHeroSecondaryColor">#E6EDF5</Color>
+      <!-- Cards: a clear border instead of the shadow under them -->
+      <BoxShadows x:Key="ShadowCard">0 0 0 0 #00000000</BoxShadows>
+      <BoxShadows x:Key="ShadowHero">0 0 0 0 #00000000</BoxShadows>
+      <SolidColorBrush x:Key="BorderDefault" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="BorderStrong" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="BorderStrongHover" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="BorderSubtle" Color="{StaticResource BorderSubtleColor}" />
+      <SolidColorBrush x:Key="TextSecondary" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="TextTertiary" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="BorderFrame" Color="{StaticResource BorderFrameColor}" />
+      <SolidColorBrush x:Key="TextOnFrameSecondary" Color="{StaticResource TextOnFrameSecondaryColor}" />
+      <SolidColorBrush x:Key="TextOnFrameTertiary" Color="{StaticResource TextOnFrameTertiaryColor}" />
+      <SolidColorBrush x:Key="TextOnHeroSecondary" Color="{StaticResource TextOnHeroSecondaryColor}" />
+      <SolidColorBrush x:Key="BorderCard" Color="{StaticResource BorderCardColor}" />
+      <SolidColorBrush x:Key="CardBorder" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="TextMuted" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="AccentButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="RepeatButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="SplitButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="TextControlBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="TextControlButtonForeground" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="ComboBoxBackgroundBorderBrushUnfocused" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="ComboBoxPlaceHolderForeground" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="ComboBoxPlaceHolderForegroundFocusedPressed" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="ComboBoxDropDownGlyphForeground" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="ComboBoxDropDownGlyphForegroundFocused" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="ComboBoxDropDownGlyphForegroundFocusedPressed" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeUnchecked" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeUncheckedPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeUncheckedPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeUncheckedDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="RadioButtonOuterEllipseStroke" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="RadioButtonOuterEllipseStrokePointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="RadioButtonOuterEllipseStrokePressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="ToggleSwitchStrokeOffDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="SliderTickBarFill" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForeground" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPressed" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="MenuFlyoutSubItemChevron" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="FlyoutBorderThemeBrush" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPointerOver" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPressed" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="ExpanderHeaderBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="ExpanderChevronForeground" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="CalendarDatePickerBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="CalendarDatePickerBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="CalendarDatePickerBorderBrushPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="CalendarDatePickerBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
+      <SolidColorBrush x:Key="CalendarDatePickerTextForeground" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="CalendarDatePickerCalendarGlyphForeground" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="DataGridColumnHeaderForegroundBrush" Color="{StaticResource TextSecondaryColor}" />
+      <SolidColorBrush x:Key="DataGridGridLinesBrush" Color="{StaticResource BorderSubtleColor}" />
+      <SolidColorBrush x:Key="CalendarViewOutOfScopeForeground" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="CalendarViewHoverBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="CalendarViewPressedBorderBrush" Color="{StaticResource BorderStrongHoverColor}" />
+      <!-- Dark mode's buttons have a bezel of their own: drawn as strong as an input's outline -->
+      <SolidColorBrush x:Key="ButtonBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="RepeatButtonBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="RepeatButtonBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="RepeatButtonBorderBrushPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrushPressed" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="SplitButtonBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="SplitButtonBorderBrushPointerOver" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="SplitButtonBorderBrushPressed" Color="{StaticResource BorderStrongHoverColor}" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

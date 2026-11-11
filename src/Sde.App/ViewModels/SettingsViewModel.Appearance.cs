@@ -5,8 +5,9 @@ using Sde.App.Services;
 namespace Sde.App.ViewModels;
 
 /// <summary>
-/// Settings, Appearance: match the Mac, light or dark; SDE's blue or the Mac's accent colour; Comfortable or Compact.
-/// The theme and the accent change at once and are saved; the density is saved and used the next time SDE opens.
+/// Settings, Appearance: match the Mac, light or dark; SDE's blue or the Mac's accent colour; Increase contrast;
+/// Comfortable or Compact. The theme, the accent and the contrast change at once and are saved; the density is saved and
+/// used the next time SDE opens.
 /// </summary>
 public sealed partial class SettingsViewModel
 {
@@ -90,6 +91,22 @@ public sealed partial class SettingsViewModel
 			_app.Settings.Save();
 			OnPropertyChanged();
 			OnPropertyChanged(nameof(IsDensityChangePending));
+		}
+	}
+
+	/// <summary>Increase contrast: stronger borders and text, at once and saved. Also on while the Mac's Increase Contrast is.</summary>
+	public bool IncreaseContrast
+	{
+		get => _app.Settings.IncreaseContrast;
+		set
+		{
+			if (value == _app.Settings.IncreaseContrast)
+			{
+				return;
+			}
+			_app.Settings.IncreaseContrast = value;
+			SaveAndApplyAppearance();
+			OnPropertyChanged();
 		}
 	}
 

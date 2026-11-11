@@ -81,6 +81,9 @@ public sealed class AppSettings
 	/// <summary>Settings, Appearance: the tighter sizes (22 px controls, 24 px rows) instead of the roomier default. Read at launch.</summary>
 	public bool CompactDensity { get; set; }
 
+	/// <summary>Settings, Appearance: stronger borders and text even while the Mac's own Increase Contrast is off.</summary>
+	public bool IncreaseContrast { get; set; }
+
 	/// <summary>The window's layout: the sidebar's and inspector's widths and whether they show, and tables' column widths (null = the defaults).</summary>
 	public LayoutState Layout { get; set; }
 
