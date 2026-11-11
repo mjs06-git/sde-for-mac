@@ -66,6 +66,15 @@ public sealed class AppSettings
 	/// <summary>USGS's high-water mark service (STN), when it moves; null uses <see cref="Sde.Interop.Online.StnClient.DefaultBaseUrl"/>.</summary>
 	public string UsgsStnUrl { get; set; }
 
+	/// <summary>Settings, Appearance: "Light", "Dark", or null to match the Mac.</summary>
+	public string Theme { get; set; }
+
+	/// <summary>Settings, Appearance: buttons, selection and links take the Mac's accent colour instead of SDE's water blue.</summary>
+	public bool UseMacAccent { get; set; }
+
+	/// <summary>Settings, Appearance: the tighter sizes (22 px controls, 24 px rows) instead of the roomier default. Read at launch.</summary>
+	public bool CompactDensity { get; set; }
+
 	public const int MaxRecent = 8;
 
 	/// <summary>

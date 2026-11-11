@@ -22,9 +22,18 @@ namespace Sde.App.Tests;
 
 public static class TestAppBuilder
 {
-	public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
+	public static AppBuilder BuildAvaloniaApp()
+	{
+		// Nothing animates off-screen, so a screenshot never catches a sheet half-way in.
+		Motion.Enabled = false;
+		// SDE_TEST_COMPACT=1 runs the UI tests at the Compact sizes (the sizes are read once, as the app's styles load).
+		Appearance.StartCompact = Environment.GetEnvironmentVariable("SDE_TEST_COMPACT") == "1";
+		return Build();
+	}
+
+	private static AppBuilder Build() => AppBuilder.Configure<App>()
 		.UseSkia()
-		.WithMacFonts()
+		.WithAppFonts()
 		.UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
 		.AfterSetup(_ => Logger.Sink = BindingErrors.Instance);
 }

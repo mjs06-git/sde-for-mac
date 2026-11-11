@@ -1,0 +1,24 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    The Compact density (Settings, Appearance): the tight sizes the app had before 3.5, for the most rows on screen.
+    Merged over Styles/Tokens.axaml at launch when Compact is chosen; every key here overrides the Comfortable value.
+  -->
+  <x:Double x:Key="ControlHeightSmall">19</x:Double>
+  <x:Double x:Key="ControlHeight">22</x:Double>
+  <x:Double x:Key="ControlHeightLarge">28</x:Double>
+  <x:Double x:Key="TableRowHeight">24</x:Double>
+  <x:Double x:Key="TableHeaderHeight">26</x:Double>
+  <x:Double x:Key="TextControlThemeMinHeight">22</x:Double>
+  <Thickness x:Key="TextControlThemePadding">6,2,6,2</Thickness>
+  <x:Double x:Key="ComboBoxMinHeight">22</x:Double>
+  <Thickness x:Key="ComboBoxPadding">9,1,0,1</Thickness>
+  <Thickness x:Key="ComboBoxItemThemePadding">10,3,10,3</Thickness>
+  <x:Double x:Key="DropDownButtonMinHeight">22</x:Double>
+  <Thickness x:Key="ButtonPadding">12,1,12,1</Thickness>
+  <x:Double x:Key="CheckBoxMinHeight">20</x:Double>
+  <x:Double x:Key="RadioButtonMinHeight">20</x:Double>
+  <Thickness x:Key="MenuFlyoutItemThemePadding">9,3,9,3</Thickness>
+  <Thickness x:Key="MenuFlyoutItemThemePaddingNarrow">9,3,9,3</Thickness>
+  <x:Double x:Key="SliderHorizontalHeight">24</x:Double>
+</ResourceDictionary>

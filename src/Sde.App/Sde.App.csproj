@@ -22,6 +22,8 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets/**" />
+    <!-- Public Sans, the app's typeface: one copy of the files, shared with the PDF reports (SIL OFL 1.1) -->
+    <AvaloniaResource Include="../Sde.Reports/Fonts/*.ttf" Link="Assets/Fonts/%(Filename)%(Extension)" />
     <EmbeddedResource Include="Help/field-help.json" LogicalName="field-help.json" />
   </ItemGroup>
 

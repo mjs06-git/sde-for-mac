@@ -78,7 +78,7 @@ public class ContrastTests
 	}
 
 	[AvaloniaFact]
-	public void TheThemesDiffer_AndTheAccentFallsBackToTheMacBlue()
+	public void TheThemesDiffer_AndTheAccentIsSdesWaterBlue()
 	{
 		Assert.NotEqual(ColorOf("BgSurface", ThemeVariant.Light), ColorOf("BgSurface", ThemeVariant.Dark));
 		Assert.Equal(SystemAccent.Fallback, ColorOf("AccentFill", ThemeVariant.Light));
@@ -104,8 +104,8 @@ public class ContrastTests
 		List<string> failures = new();
 		foreach ((ThemeVariant theme, Dictionary<string, Color> c) in SystemAccent.Derive(Color.Parse(accent)))
 		{
-			Color sidebar = Color.Parse(theme == ThemeVariant.Light ? "#EBEBEA" : "#2B2B2D");
-			Color surface = Color.Parse(theme == ThemeVariant.Light ? "#FFFFFF" : "#252527");
+			Color sidebar = theme == ThemeVariant.Light ? SystemAccent.LightSidebar : SystemAccent.DarkSidebar;
+			Color surface = theme == ThemeVariant.Light ? SystemAccent.LightSurface : SystemAccent.DarkSurface;
 			void Check(string what, Color a, Color b)
 			{
 				if (Ratio(a, b) < 4.5)
@@ -119,6 +119,16 @@ public class ContrastTests
 			Check("Accent on AccentSoft", c["Accent"], c["AccentSoft"]);
 		}
 		Assert.True(failures.Count == 0, string.Join("\n", failures));
+	}
+
+	/// <summary>The surfaces the Mac's accent is checked against are the tokens' own sidebar and surface colours.</summary>
+	[AvaloniaFact]
+	public void TheSurfacesAnAccentIsCheckedAgainst_AreTheTokens()
+	{
+		Assert.Equal(ColorOf("BgSidebar", ThemeVariant.Light), SystemAccent.LightSidebar);
+		Assert.Equal(ColorOf("BgSurface", ThemeVariant.Light), SystemAccent.LightSurface);
+		Assert.Equal(ColorOf("BgSidebar", ThemeVariant.Dark), SystemAccent.DarkSidebar);
+		Assert.Equal(ColorOf("BgSurface", ThemeVariant.Dark), SystemAccent.DarkSurface);
 	}
 
 	[Fact]

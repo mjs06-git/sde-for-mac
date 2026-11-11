@@ -20,6 +20,8 @@ internal sealed class Program
 			return Sde.Mcp.SdeMcpServer.Run(args[1..], Services.AppLog.Folder);
 		}
 		AppDomain.CurrentDomain.UnhandledException += (_, e) => Services.AppLog.Write("Unhandled exception (the app is closing)", e.ExceptionObject as Exception);
+		Services.Appearance.StartCompact = Services.AppSettings.Load().CompactDensity;
+		Services.Motion.Enabled = !Services.MacNative.ReduceMotion;
 		StartApp(args);
 		return 0;
 	}
@@ -31,7 +33,7 @@ internal sealed class Program
 	public static AppBuilder BuildAvaloniaApp()
 		=> AppBuilder.Configure<App>()
 			.UsePlatformDetect()
-			.WithMacFonts()
+			.WithAppFonts()
 #if DEBUG
 			.WithDeveloperTools()
 #endif

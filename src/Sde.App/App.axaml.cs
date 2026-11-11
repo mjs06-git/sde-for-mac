@@ -15,18 +15,19 @@ public partial class App : Application
 	/// <summary>The application menu's About and Settings…: the Settings page (it shows the version).</summary>
 	private void OnAboutClicked(object sender, EventArgs e) => _main?.ShowCommand.Execute(Page.Settings);
 
-	public override void Initialize() => AvaloniaXamlLoader.Load(this);
+	public override void Initialize()
+	{
+		AvaloniaXamlLoader.Load(this);
+		Appearance.ApplyDensity(this);
+	}
 
 	public override void OnFrameworkInitializationCompleted()
 	{
 		if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
 		{
-			if (OperatingSystem.IsMacOS())
-			{
-				SystemAccent.Follow(this);
-			}
 			MainWindow window = new MainWindow();
 			AppServices services = new AppServices(window);
+			Appearance.Apply(this, services.Settings);
 			MainViewModel main = new MainViewModel(services);
 			window.DataContext = main;
 			_main = main;
