@@ -92,7 +92,8 @@ public sealed partial class ReadTools
 			+ string.Join("; ", notChecked.Select(n => n.Reason switch
 			{
 				nameof(QaNotCheckedReason.NoStoredFloodLookup) => "the flood map zone check has no stored flood lookup" + (n.Count > 0 ? $" for {n.Count} structures" : ""),
-				nameof(QaNotCheckedReason.NoHighWaterMarks) => "the high-water mark check has no marks loaded",
+				nameof(QaNotCheckedReason.NoHighWaterMarks) => "the high-water mark check has no stored marks" + (n.Count > 0 ? $" for {n.Count} assessments" : ""),
+				nameof(QaNotCheckedReason.StaleFloodLookup) => "the flood map zone check found that " + (n.Count > 0 ? $"{n.Count} structures have" : "the structures have") + " moved since their stored flood lookup",
 				_ => n.Title + " was not checked",
 			})) + ". SDE's Review page can look them up online.";
 		if (dismissed > 0 && !includeDismissed)

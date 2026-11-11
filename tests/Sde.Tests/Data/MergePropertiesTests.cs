@@ -60,6 +60,7 @@ public class MergePropertiesTests
 			KeptOnly = Store.CreateTag("Assessor record");
 			Store.SetTags(Merge.PropertyID, new[] { Shared.TagID, Unique.TagID });
 			Store.SetTags(Keep.PropertyID, new[] { Shared.TagID, KeptOnly.TagID });
+			Store.SaveFloodLookup(new FloodLookupRecord { PropertyID = Merge.PropertyID, Zone = "AE", Latitude = 39.961234, Longitude = -82.998765 });
 			Store.SaveImprovementProject(new ImprovementProjectRecord { PropertyID = Merge.PropertyID, PermitNumber = "B-1", Cost = 5000m, Included = true });
 			Store.SaveImprovementProject(new ImprovementProjectRecord { PropertyID = Keep.PropertyID, PermitNumber = "B-2", Cost = 7000m, Included = true });
 			Store.SaveShapes(Merge.PropertyID, new[] { new ShapeRecord { ShapeType = "c", TotalSqFt = 1450m } });
@@ -179,6 +180,7 @@ public class MergePropertiesTests
 		Assert.Equal(1, moving["Tags"]);
 		Assert.Equal(1, moving["Square-footage shapes"]);
 		Assert.Equal(1, moving["Custom field values"]);
+		Assert.Equal(1, moving["Flood map lookup"]);
 
 		Assert.Contains(p.Filled, f => f.Key == "Property.ZipCode" && f.OtherValue == "43702");
 		Assert.Contains(p.Filled, f => f.Key == "Property.Latitude");
@@ -210,13 +212,16 @@ public class MergePropertiesTests
 		foreach ((string table, int count) in new[]
 		{
 			("Assessment", 2), ("Document", 2), ("ComplianceCase", 1), ("ImprovementProject", 2), ("SIDetermination", 1),
-			("StructureLink", 2), ("Assignment", 1), ("PropertyTag", 3), ("Shapes", 1),
+			("StructureLink", 2), ("Assignment", 1), ("PropertyTag", 3), ("Shapes", 1), ("FloodLookup", 1),
 		})
 		{
 			Assert.Equal(count, c.ExecuteScalar<int>($"SELECT COUNT(*) FROM {table} WHERE PropertyID = @keep", k));
 		}
 		Assert.Equal(new[] { "Assessor record", "Owner called", "Revisit" }, d.Store.GetTagsFor(keep).Select(x => x.Name).OrderBy(n => n));
 		Assert.Equal("Flood vent installed", d.Store.GetCustomFieldResults(keep).Single().Result);
+		// The lookup was made where the duplicate was, which the kept structure now has (it had no coordinates), so it still counts.
+		Assert.Equal("AE", d.Store.GetFloodLookup(keep).Zone);
+		Assert.DoesNotContain(d.Store.LoadQaInput().StaleFloodLookups, id => id == keep);
 		// The assessment's own rows follow it, because they are keyed by the assessment, which moved unchanged.
 		AssessmentFile moved = d.Store.LoadAssessment(aid);
 		Assert.Equal(keep, moved.Property.PropertyID);
@@ -239,6 +244,30 @@ public class MergePropertiesTests
 		d.Store.Restore("A:" + d.Gone.ToString("D"));
 		Assert.Equal(keep, d.Store.LoadAssessment(d.Gone).Property.PropertyID);
 		Assert.False(d.Store.GetProperty(merge).Active);
+	}
+
+	[Fact]
+	public void WhenBothHaveAFloodLookup_TheKeptOnesStays_AndTheDuplicatesStaysBehind()
+	{
+		using Duplicates d = new Duplicates();
+		Guid keep = d.Keep.PropertyID;
+		Guid merge = d.Merge.PropertyID;
+		d.Store.SaveFloodLookup(new FloodLookupRecord { PropertyID = keep, Zone = "X" });
+		MergePreview p = d.Store.PreviewMerge(keep, merge);
+		Assert.DoesNotContain(p.Moving, m => m.What == "Flood map lookup");
+		Assert.Contains(p.StayingBehind, s => s == "Its stored flood map lookup, because River has its own.");
+		string before = Dump(d.T);
+		long lastHistory = d.T.Database.Read(c => c.ExecuteScalar<long>("SELECT MAX(HistoryID) FROM EditHistory"));
+		MergePropertiesResult r = d.Run();
+
+		Assert.Equal("X", d.Store.GetFloodLookup(keep).Zone);
+		Assert.Equal("AE", d.Store.GetFloodLookup(merge).Zone);
+		// Deliberately left with the duplicate in Recently deleted: the only other row still pointing at it.
+		Dictionary<string, int> left = References(d.T, merge);
+		Assert.Equal(new[] { "DeletedItem.PropertyID", "EditHistory.PropertyID", "FloodLookup.PropertyID", "Property.PropertyID", "RowVersion.ObjectID" }, left.Keys.OrderBy(x => x, StringComparer.Ordinal));
+		d.Store.UndoMerge(r.BatchId);
+		using SqliteConnection c = d.T.Database.Connect();
+		Assert.Equal(before, Dump(c, lastHistory, everything: false));
 	}
 
 	[Fact]

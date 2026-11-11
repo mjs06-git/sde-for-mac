@@ -134,6 +134,12 @@ public sealed class EventAndReviewToolTests
 
 		Assert.Contains("MissingPhotos (No photos)", await s.CallErrorAsync("qa_check", new { rule = "Spelling" }));
 		Assert.Contains("isn't an assessment ID", await s.CallErrorAsync("qa_check", new { assessmentIds = new[] { "10 Sample" } }));
+
+		// A flood lookup stored in SDE turns the zone check on, still without going online.
+		s.Store.SaveFloodLookup(new FloodLookupRecord { PropertyID = ranch.Property.PropertyID, Zone = "VE" });
+		JsonElement zoned = await s.CallOkAsync("qa_check", new { rule = "ZoneDiffersFromNfhl" });
+		Assert.Contains(zoned.List("groups").SelectMany(g => g.List("findings")), f => f.Str("assessmentId") == ranch.Id().ToString() && f.Str("message").Contains("shows VE"));
+		Assert.Contains("for 2 structures", zoned.Str("note"));
 	}
 
 	[Fact]

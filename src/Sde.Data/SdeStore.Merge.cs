@@ -102,7 +102,8 @@ public sealed class MergeRefusedException : InvalidOperationException
 /// Merging duplicate structures (the Review page's "same parcel / address / location" findings). Everything that belongs
 /// to the duplicate moves to the structure being kept in one transaction: its assessments (unchanged, results and all),
 /// documents, compliance cases, improvement projects and SI determinations, links to other systems, field assignments,
-/// tags, and with the assessments their photos, comments, letters, statuses and history. Blank fields of the kept
+/// tags, its stored flood lookup when the kept structure has none, and with the assessments their photos, comments,
+/// letters, statuses and history. Blank fields of the kept
 /// structure are filled in from the duplicate; no value is ever overwritten. The empty duplicate then goes to Recently
 /// deleted. Every row the merge changes is recorded (MacSetting "Merge.&lt;batch&gt;"), so the merge can be undone
 /// exactly, putting every row back on the structure it came from.
@@ -214,6 +215,10 @@ public sealed partial class SdeStore
 			foreach (long tagId in plan.TagsBothHave)
 			{
 				LoggedDelete(c, tx, log, "PropertyTag", new Dictionary<string, object> { ["PropertyID"] = merge, ["TagID"] = tagId });
+			}
+			if (plan.MoveFloodLookup)
+			{
+				LoggedUpdate(c, tx, log, "FloodLookup", new Dictionary<string, object> { ["PropertyID"] = merge }, "PropertyID", keep);
 			}
 			foreach (string fieldId in plan.CustomFieldsToMove)
 			{
@@ -376,6 +381,9 @@ public sealed partial class SdeStore
 		public List<long> TagsToMove { get; } = new();
 
 		public List<long> TagsBothHave { get; } = new();
+
+		/// <summary>The duplicate's stored flood lookup moves (the kept structure has none of its own).</summary>
+		public bool MoveFloodLookup { get; set; }
 	}
 
 	private MergePlan PlanMerge(IDbConnection c, IDbTransaction tx, Guid keepId, Guid mergeId)
@@ -604,6 +612,22 @@ public sealed partial class SdeStore
 		if (plan.TagsToMove.Count > 0)
 		{
 			pv.Moving.Add(new MergeCount("Tags", plan.TagsToMove.Count));
+		}
+
+		// The stored flood lookup: one per structure. The kept structure's own stays; the duplicate's moves only when the
+		// kept structure has none. A lookup made somewhere else than the kept structure ends up is stale to the Review
+		// checks, as for any structure that moved.
+		if (c.ExecuteScalar<int>("SELECT COUNT(*) FROM FloodLookup WHERE PropertyID = @mergeId", args, tx) > 0)
+		{
+			if (c.ExecuteScalar<int>("SELECT COUNT(*) FROM FloodLookup WHERE PropertyID = @keepId", args, tx) == 0)
+			{
+				plan.MoveFloodLookup = true;
+				pv.Moving.Add(new MergeCount("Flood map lookup", 1));
+			}
+			else
+			{
+				pv.StayingBehind.Add($"Its stored flood map lookup, because {pv.KeepLabel} has its own.");
+			}
 		}
 
 		// A structure has one field assignment per event (AssignToTeam): two can't be put together.
@@ -861,7 +885,7 @@ public sealed partial class SdeStore
 	{
 		["Property"] = "a structure", ["Assessment"] = "an assessment", ["EditHistory"] = "edit history", ["Document"] = "a document",
 		["ComplianceCase"] = "a compliance case", ["ImprovementProject"] = "an improvement project", ["SIDetermination"] = "an SI determination",
-		["StructureLink"] = "a link to another system", ["Assignment"] = "a field assignment", ["PropertyTag"] = "a tag",
+		["StructureLink"] = "a link to another system", ["Assignment"] = "a field assignment", ["PropertyTag"] = "a tag", ["FloodLookup"] = "a flood map lookup",
 		["CustomField_Results"] = "a custom field", ["Shapes"] = "the square-footage shapes", ["DeletedItem"] = "Recently deleted",
 		["LastFiveAssesments"] = "the recent assessments list",
 	};

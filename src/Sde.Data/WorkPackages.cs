@@ -421,7 +421,8 @@ public static class WorkPackages
 
 	/// <summary>
 	/// Replaces the Mac-only rows of these assessments (status, suggestions, photo details and markup, comments, event,
-	/// links, and their structures' documents and tags) in <paramref name="to"/> with those in <paramref name="from"/>. Columns are matched by name, so
+	/// links, their structures' documents, tags and flood lookups, and their events' high-water marks) in
+	/// <paramref name="to"/> with those in <paramref name="from"/>. Columns are matched by name, so
 	/// packages made by another version of the app still work.
 	/// </summary>
 	private static void CopyMacRows(SdeDatabase from, SdeDatabase to, IReadOnlyList<Guid> assessmentIds)
@@ -436,6 +437,19 @@ public static class WorkPackages
 			// Events first: memberships refer to them.
 			string eventColumns = SharedColumns(c, tx, "Event");
 			c.Execute($"INSERT OR IGNORE INTO main.Event ({eventColumns}) SELECT {eventColumns} FROM src.Event WHERE EventID IN (SELECT EventID FROM src.EventAssessment WHERE AssessmentID IN (SELECT id FROM moving))", transaction: tx);
+			// The high-water marks kept with those events (and the set for every event) go with them, where the other side
+			// has no set of its own for that event: a set loaded there is never replaced.
+			string setColumns = SharedColumns(c, tx, "HighWaterMarkSet");
+			string markColumns = SharedColumns(c, tx, "HighWaterMarkRow");
+			c.Execute($"""
+				CREATE TEMP TABLE IF NOT EXISTS movingSets (id TEXT PRIMARY KEY); DELETE FROM movingSets;
+				INSERT INTO movingSets (id)
+				SELECT s.SetID FROM src.HighWaterMarkSet s
+				WHERE (s.EventID IS NULL OR s.EventID IN (SELECT EventID FROM src.EventAssessment WHERE AssessmentID IN (SELECT id FROM moving)))
+				  AND NOT EXISTS (SELECT 1 FROM main.HighWaterMarkSet m WHERE m.EventID IS s.EventID);
+				INSERT INTO main.HighWaterMarkSet ({setColumns}) SELECT {setColumns} FROM src.HighWaterMarkSet WHERE SetID IN (SELECT id FROM movingSets);
+				INSERT INTO main.HighWaterMarkRow ({markColumns}) SELECT {markColumns} FROM src.HighWaterMarkRow WHERE SetID IN (SELECT id FROM movingSets) ORDER BY SetID, Seq;
+				""", transaction: tx);
 			foreach (string table in AssessmentTables)
 			{
 				string columns = SharedColumns(c, tx, table);
@@ -459,6 +473,14 @@ public static class WorkPackages
 				INSERT OR IGNORE INTO main.PropertyTag (PropertyID, TagID)
 				SELECT pt.PropertyID, m.TagID FROM src.PropertyTag pt JOIN src.Tag t ON t.TagID = pt.TagID JOIN main.Tag m ON m.Name = t.Name
 				WHERE pt.PropertyID IN ({properties});
+				""", transaction: tx);
+			// And the structure's stored flood lookup, unless this side has one at least as new.
+			string lookupColumns = SharedColumns(c, tx, "FloodLookup");
+			c.Execute($"""
+				INSERT OR REPLACE INTO main.FloodLookup ({lookupColumns})
+				SELECT {lookupColumns} FROM src.FloodLookup s
+				WHERE s.PropertyID IN ({properties})
+				  AND NOT EXISTS (SELECT 1 FROM main.FloodLookup m WHERE m.PropertyID = s.PropertyID AND m.RetrievedOn >= s.RetrievedOn);
 				""", transaction: tx);
 			// And the markup of the photos that moved.
 			string markupColumns = SharedColumns(c, tx, "PhotoMarkup");

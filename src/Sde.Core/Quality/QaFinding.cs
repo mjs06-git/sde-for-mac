@@ -110,11 +110,17 @@ public enum QaNotCheckedReason
 	/// <summary>The flood map check needs the zone FEMA's map shows at a structure, and no earlier lookup of it is stored.</summary>
 	NoStoredFloodLookup,
 
-	/// <summary>The high-water mark check needs an estimate from marks, and no marks are loaded.</summary>
+	/// <summary>The high-water mark check needs an estimate from marks, and no marks are stored for the assessment's event.</summary>
 	NoHighWaterMarks,
 
 	/// <summary>Some other input the check needs was not given.</summary>
 	InputNotSupplied,
+
+	/// <summary>
+	/// A flood lookup is stored, but the structure has moved since it was made, so the zone it found may not be the zone
+	/// where the structure is now.
+	/// </summary>
+	StaleFloodLookup,
 }
 
 /// <summary>
@@ -160,6 +166,9 @@ public sealed class QaOptions
 	/// <summary>A flood elevation more than this many feet from the high-water mark estimate is flagged.</summary>
 	public decimal HighWaterMarkToleranceFt { get; init; } = 1.0m;
 
+	/// <summary>A stored flood lookup made farther than this from where the structure is now is stale, and isn't used.</summary>
+	public double FloodLookupMoveMeters { get; init; } = 25;
+
 	/// <summary>The "close to the threshold" band, in percent damaged (inclusive).</summary>
 	public decimal NearThresholdLow { get; init; } = 45m;
 
@@ -194,10 +203,22 @@ public sealed record QaInput
 	public IReadOnlyDictionary<Guid, string> NfhlZones { get; init; }
 
 	/// <summary>
+	/// Structures (PropertyID) whose stored flood lookup was made somewhere else: they have moved since. They are left out
+	/// of <see cref="NfhlZones"/>, and <see cref="QaRules.NotChecked"/> says why.
+	/// </summary>
+	public IReadOnlyCollection<Guid> StaleFloodLookups { get; init; }
+
+	/// <summary>
 	/// The flood elevation the high-water marks suggest for each assessment, in feet in the structure's datum, from
 	/// marks already loaded. Null: the check does not run, and <see cref="QaRules.NotChecked"/> says so.
 	/// </summary>
 	public IReadOnlyDictionary<Guid, decimal> HighWaterMarkEstimates { get; init; }
+
+	/// <summary>
+	/// Assessments with no high-water marks stored for their event, when marks are stored for others. They have no
+	/// estimate, and <see cref="QaRules.NotChecked"/> counts them.
+	/// </summary>
+	public IReadOnlyCollection<Guid> AssessmentsWithoutMarks { get; init; }
 
 	/// <summary>Findings set aside earlier; matching findings come back with <see cref="QaFinding.Dismissal"/> set.</summary>
 	public IReadOnlyList<QaDismissalRecord> Dismissals { get; init; }

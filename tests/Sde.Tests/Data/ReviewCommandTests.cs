@@ -122,7 +122,7 @@ public class ReviewCommandTests : IDisposable
 		_t.Store.SaveAssessment(f);
 		(int code, string output, string _) = Run("qa");
 		Assert.Equal(0, code);
-		Assert.Contains("Not checked: Zone differs from the flood map (no stored flood lookup); Flood elevation unlike high-water marks (no high-water marks loaded).", output);
+		Assert.Contains("Not checked: Zone differs from the flood map (no stored flood lookup); Flood elevation unlike high-water marks (no high-water marks stored).", output);
 	}
 
 	[Fact]

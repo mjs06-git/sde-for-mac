@@ -42,7 +42,7 @@ public class QaNotCheckedTests
 		QaNotChecked zone = result.NotChecked.Single(n => n.RuleId == QaRuleIds.ZoneDiffersFromNfhl);
 		Assert.Equal(("Not checked: no stored flood lookup.", QaNotCheckedReason.NoStoredFloodLookup, true, 0), (zone.Message, zone.Reason, zone.CanCheckOnline, zone.Count));
 		QaNotChecked marks = result.NotChecked.Single(n => n.RuleId == QaRuleIds.DepthVsHighWaterMarks);
-		Assert.Equal(("Not checked: no high-water marks loaded.", QaNotCheckedReason.NoHighWaterMarks), (marks.Message, marks.Reason));
+		Assert.Equal(("Not checked: no high-water marks stored.", QaNotCheckedReason.NoHighWaterMarks), (marks.Message, marks.Reason));
 		Assert.Equal(2, result.NotChecked.Count);
 	}
 
@@ -71,6 +71,44 @@ public class QaNotCheckedTests
 		};
 		QaNotChecked zone = Assert.Single(QaRules.NotChecked(input));
 		Assert.Equal((QaRuleIds.ZoneDiffersFromNfhl, 1, "Not checked for 1 of 2 structures: no stored flood lookup."), (zone.RuleId, zone.Count, zone.Message));
+	}
+
+	[Fact]
+	public void AStaleLookup_IsCountedApart_FromAMissingOne()
+	{
+		AssessmentFile looked = File("1");
+		AssessmentFile moved = File("2");
+		AssessmentFile never = File("3");
+		QaInput input = Input(looked, moved, never) with
+		{
+			NfhlZones = new Dictionary<Guid, string> { [looked.Property.PropertyID] = "X" },
+			StaleFloodLookups = new[] { moved.Property.PropertyID },
+			HighWaterMarkEstimates = new Dictionary<Guid, decimal>(),
+		};
+		List<QaNotChecked> list = QaRules.NotChecked(input);
+		Assert.Equal(new[] { QaNotCheckedReason.NoStoredFloodLookup, QaNotCheckedReason.StaleFloodLookup }, list.Select(n => n.Reason));
+		Assert.Equal(("Not checked for 1 of 3 structures: no stored flood lookup.", 1), (list[0].Message, list[0].Count));
+		Assert.Equal(("Not checked for 1 of 3 structures: moved since the flood lookup.", 1, true), (list[1].Message, list[1].Count, list[1].CanCheckOnline));
+		Assert.Equal(looked.Property.PropertyID, Assert.Single(QaRules.Check(input), f => f.RuleId == QaRuleIds.ZoneDiffersFromNfhl).PropertyId);
+
+		QaNotChecked all = Assert.Single(QaRules.NotChecked(Input(moved) with { StaleFloodLookups = new[] { moved.Property.PropertyID }, HighWaterMarkEstimates = new Dictionary<Guid, decimal>() }));
+		Assert.Equal((QaNotCheckedReason.StaleFloodLookup, 0, "Not checked: the structure has moved since its flood lookup."), (all.Reason, all.Count, all.Message));
+	}
+
+	[Fact]
+	public void MarksForSomeAssessments_ListsHowManyHadNone()
+	{
+		AssessmentFile with = File("1");
+		AssessmentFile without = File("2");
+		QaInput input = Input(with, without) with
+		{
+			NfhlZones = new Dictionary<Guid, string> { [with.Property.PropertyID] = "X", [without.Property.PropertyID] = "X" },
+			HighWaterMarkEstimates = new Dictionary<Guid, decimal> { [with.Assessment.AssessmentID] = 9m },
+			AssessmentsWithoutMarks = new[] { without.Assessment.AssessmentID },
+		};
+		QaNotChecked marks = Assert.Single(QaRules.NotChecked(input));
+		Assert.Equal((QaRuleIds.DepthVsHighWaterMarks, QaNotCheckedReason.NoHighWaterMarks, 1, "Not checked for 1 of 2 assessments: no high-water marks stored for their event."),
+			(marks.RuleId, marks.Reason, marks.Count, marks.Message));
 	}
 
 	[Fact]

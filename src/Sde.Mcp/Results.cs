@@ -264,7 +264,7 @@ public sealed record QaGroup(string RuleId, string Title, string Severity, strin
 
 /// <summary>A check that did not run (or not for every structure) because the data it compares with is not stored in SDE.</summary>
 public sealed record QaNotCheckedItem(string RuleId, string Title,
-	[property: Description("NoStoredFloodLookup, NoHighWaterMarks or InputNotSupplied.")] string Reason,
+	[property: Description("NoStoredFloodLookup, StaleFloodLookup, NoHighWaterMarks or InputNotSupplied.")] string Reason,
 	[property: Description("Plain English, such as \"Not checked: no stored flood lookup.\"")] string Message,
 	[property: Description("True when an online lookup in SDE's Review page (Check Online) could supply the data. This tool never goes online.")] bool CanCheckOnline,
 	[property: Description("For a check that ran for some structures only: how many it did not cover. 0 when it did not run at all.")] int Count);

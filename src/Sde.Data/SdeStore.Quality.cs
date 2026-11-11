@@ -3,6 +3,7 @@ using Dapper;
 using Sde.Core;
 using Sde.Core.Assessments;
 using Sde.Core.Quality;
+using Sde.Core.Records;
 using Sde.Data.Infrastructure;
 
 namespace Sde.Data;
@@ -12,10 +13,20 @@ public sealed partial class SdeStore
 	/// <summary>
 	/// What the quality checks need from the database, read in one go: the assessments (null: every active assessment
 	/// of an active structure), the depth-table suggestions nobody has accepted, which event each assessment is in,
-	/// the events' names and the findings set aside. The flood map zones and the high-water mark estimates come from
-	/// elsewhere (an online lookup, a marks file); add them with <c>input with { NfhlZones = ... }</c>.
+	/// the events' names and the findings set aside. The flood map zones come from the structures' stored flood lookups
+	/// (a lookup made where the structure no longer is, is stale and left out), and the high-water mark estimates from the
+	/// marks stored with each assessment's event (see <see cref="HighWaterMarksFor"/>). Nothing goes online: what isn't
+	/// stored isn't checked, and <see cref="QaRules.NotChecked"/> says so. Other marks (a file) can replace the estimates
+	/// with <c>input with { HighWaterMarkEstimates = ..., AssessmentsWithoutMarks = null }</c>.
 	/// </summary>
 	public QaInput LoadQaInput(IReadOnlyCollection<Guid> assessmentIds = null, QaOptions options = null)
+	{
+		QaInput input = LoadQaRecords(assessmentIds, options ?? new QaOptions());
+		Dictionary<Guid, decimal> estimates = StoredMarkEstimates(input, out List<Guid> without);
+		return input with { HighWaterMarkEstimates = estimates, AssessmentsWithoutMarks = estimates == null ? null : without };
+	}
+
+	private QaInput LoadQaRecords(IReadOnlyCollection<Guid> assessmentIds, QaOptions options)
 	{
 		// Read first: loading the reference data takes a connection of its own.
 		ReferenceData reference = Reference;
@@ -31,6 +42,25 @@ public sealed partial class SdeStore
 			Dictionary<Guid, QaEvent> events = c.Query<EventNameRow>("SELECT EventID, Name FROM Event")
 				.ToDictionary(r => r.EventID, r => new QaEvent(r.EventID, r.Name));
 			List<QaDismissalRecord> dismissals = TableMap<QaDismissalRecord>.Select(c).ToList();
+			Dictionary<Guid, PropertyRecord> structures = new Dictionary<Guid, PropertyRecord>();
+			foreach (AssessmentFile f in files)
+			{
+				structures[f.Property.PropertyID] = f.Property;
+			}
+			Dictionary<Guid, string> zones = new Dictionary<Guid, string>();
+			List<Guid> stale = new List<Guid>();
+			foreach (FloodLookupRecord lookup in GetFloodLookups(c, null, structures.Keys).Values)
+			{
+				PropertyRecord p = structures[lookup.PropertyID];
+				if (lookup.IsStaleFor(p.Latitude, p.Longitude, options.FloodLookupMoveMeters))
+				{
+					stale.Add(p.PropertyID);
+				}
+				else if (!string.IsNullOrWhiteSpace(lookup.Zone))
+				{
+					zones[p.PropertyID] = lookup.Zone;
+				}
+			}
 			return new QaInput
 			{
 				Assessments = files,
@@ -39,9 +69,64 @@ public sealed partial class SdeStore
 				EventOf = eventOf,
 				Events = events,
 				Dismissals = dismissals,
-				Options = options ?? new QaOptions(),
+				NfhlZones = zones,
+				StaleFloodLookups = stale,
+				Options = options,
 			};
 		});
+	}
+
+	/// <summary>
+	/// The high-water mark estimates from the marks stored for each assessment's event (or for every event), and the
+	/// assessments with no marks to use. Null when there are no marks for any of them.
+	/// </summary>
+	private Dictionary<Guid, decimal> StoredMarkEstimates(QaInput input, out List<Guid> without)
+	{
+		without = new List<Guid>();
+		if (input.Assessments.Count == 0 || GetHighWaterMarkSets().Count == 0)
+		{
+			return null;
+		}
+		Dictionary<Guid, StoredHighWaterMarks> byEvent = new Dictionary<Guid, StoredHighWaterMarks>();
+		StoredHighWaterMarks forEvery = HighWaterMarksFor(null);
+		Dictionary<Guid, (StoredHighWaterMarks Marks, List<Guid> Ids)> bySet = new Dictionary<Guid, (StoredHighWaterMarks, List<Guid>)>();
+		foreach (AssessmentFile f in input.Assessments)
+		{
+			Guid id = f.Assessment.AssessmentID;
+			StoredHighWaterMarks marks = forEvery;
+			if (input.EventOf != null && input.EventOf.TryGetValue(id, out Guid eventId))
+			{
+				if (!byEvent.TryGetValue(eventId, out marks))
+				{
+					marks = HighWaterMarksFor(eventId);
+					byEvent[eventId] = marks;
+				}
+			}
+			if (marks == null)
+			{
+				without.Add(id);
+				continue;
+			}
+			if (!bySet.TryGetValue(marks.Set.SetID, out (StoredHighWaterMarks Marks, List<Guid> Ids) group))
+			{
+				group = (marks, new List<Guid>());
+				bySet[marks.Set.SetID] = group;
+			}
+			group.Ids.Add(id);
+		}
+		if (bySet.Count == 0)
+		{
+			return null;
+		}
+		Dictionary<Guid, decimal> estimates = new Dictionary<Guid, decimal>();
+		foreach ((StoredHighWaterMarks marks, List<Guid> ids) in bySet.Values)
+		{
+			foreach (KeyValuePair<Guid, decimal> e in DepthFromMarks.QaEstimates(this, ids, marks.Marks))
+			{
+				estimates[e.Key] = e.Value;
+			}
+		}
+		return estimates;
 	}
 
 	/// <summary>Every quality finding someone has set aside.</summary>

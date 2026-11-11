@@ -39,7 +39,8 @@ public static class ReviewCommands
 		The exit code is 0 when there are no required findings, and 1 when there is at least one open finding of
 		the most serious level (Required). Other findings never change the exit code.
 		The flood map zone check compares with a flood lookup stored earlier, and the high-water mark check compares
-		with the marks in --marks FILE (a .csv or .geojson file of marks). Neither goes online. A check with nothing
+		with the marks kept with each event in SDE's depth tool, or with the marks in --marks FILE (a .csv or .geojson
+		file of marks) instead. Neither goes online. A check with nothing
 		to compare with is listed on a "Not checked" line at the end; that never changes the exit code.
 		""";
 
@@ -100,7 +101,7 @@ public static class ReviewCommands
 			{
 				throw new ArgumentException($"There are no high-water marks in {marksFile}." + (marks.Problems.Count > 0 ? " " + marks.Problems[0] : ""));
 			}
-			input = input with { HighWaterMarkEstimates = DepthFromMarks.QaEstimates(s, input.Assessments.Select(f => f.Assessment.AssessmentID).ToList(), marks.Marks) };
+			input = input with { HighWaterMarkEstimates = DepthFromMarks.QaEstimates(s, input.Assessments.Select(f => f.Assessment.AssessmentID).ToList(), marks.Marks), AssessmentsWithoutMarks = null };
 		}
 		List<QaFinding> all = QaRules.Check(input);
 		List<QaNotChecked> notChecked = QaRules.NotChecked(input);
