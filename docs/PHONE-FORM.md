@@ -60,6 +60,7 @@ when you quit SDE, or automatically after 12 hours. The card shows how long is l
 <p>
   <img src="screenshots/90-phone-find.png" alt="My assignments on the phone" width="260">
   <img src="screenshots/91-phone-edit.png" alt="An assessment open on the phone, with its result and status" width="260">
+  <img src="screenshots/93-phone-damage.png" alt="Damage by element on the phone, with quick values for each element" width="260">
 </p>
 
 On **Damage by element**, tap one of the quick values for each element, or type an exact percentage in its box. Each
