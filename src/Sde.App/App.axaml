@@ -161,6 +161,7 @@
     <StyleInclude Source="avares://SDE/Styles/AppStyles.axaml" />
     <StyleInclude Source="avares://SDE/Styles/Shell.axaml" />
     <StyleInclude Source="avares://SDE/Styles/Editor.axaml" />
+    <StyleInclude Source="avares://SDE/Styles/AppLevel.axaml" />
     <StyleInclude Source="avares://SDE/Styles/DataPages.axaml" />
     <StyleInclude Source="avares://SDE/Styles/CaseFile.axaml" />
     <StyleInclude Source="avares://SDE/Styles/Workflow.axaml" />

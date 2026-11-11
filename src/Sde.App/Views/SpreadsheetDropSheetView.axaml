@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.SpreadsheetDropSheetView"
+             x:DataType="sh:SpreadsheetDropSheetViewModel">
+  <!-- The file's name, one choice for each import that reads it, then Cancel and Continue. -->
+  <StackPanel Spacing="16">
+    <DockPanel>
+      <c:Icon DockPanel.Dock="Left" Kind="Table" Classes="accent" VerticalAlignment="Center" Margin="0,0,8,0" />
+      <TextBlock Classes="semibold" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Name="DroppedFileName" />
+    </DockPanel>
+    <ItemsControl ItemsSource="{Binding Choices}" Name="SpreadsheetChoices">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel Classes="choiceList" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate DataType="sh:SpreadsheetUseChoice">
+          <RadioButton Classes="choice" GroupName="spreadsheetUse" Content="{Binding Title}" IsChecked="{Binding IsChosen}" ToolTip.Tip="{Binding Tip}" />
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <c:SheetFooter PrimaryText="Continue" PrimaryCommand="{Binding ContinueCommand}" />
+  </StackPanel>
+</UserControl>

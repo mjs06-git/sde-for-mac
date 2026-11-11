@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:svc="using:Sde.App.Services"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.WhatsNewSheetView"
+             x:DataType="sh:WhatsNewSheetViewModel">
+  <!-- The brand mark and the large heading, the groups of changes as cards (two to a row), then Done. -->
+  <StackPanel Spacing="20" Name="WhatsNewPanel">
+    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+      <c:Icon Classes="whatsNewMark" Kind="BrandMark" AutomationProperties.Name="SDE" />
+      <TextBlock Grid.Column="1" Classes="whatsNewHeading" Text="{Binding Heading}" Name="WhatsNewHeading" />
+    </Grid>
+    <ItemsControl Classes="whatsNewGroups" ItemsSource="{Binding Groups}" Margin="0,0,0,-16" Name="WhatsNewGroups">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <UniformGrid Columns="2" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate DataType="svc:WhatsNewGroup">
+          <Border Classes="whatsNewCard">
+            <DockPanel>
+              <DockPanel DockPanel.Dock="Top" Classes="cardHead">
+                <c:Icon Classes="cardIcon" Kind="{Binding Icon}" />
+                <TextBlock Classes="cardHeading" Text="{Binding Heading}" />
+              </DockPanel>
+              <ItemsControl ItemsSource="{Binding Items}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Classes="whatsNewLines" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="x:String">
+                    <DockPanel>
+                      <Ellipse DockPanel.Dock="Left" Classes="whatsNewDot" />
+                      <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+                    </DockPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </DockPanel>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <c:SheetFooter IsDone="True" DoneCommand="{Binding DoneCommand}" />
+  </StackPanel>
+</UserControl>

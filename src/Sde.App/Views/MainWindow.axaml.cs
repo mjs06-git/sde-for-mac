@@ -38,6 +38,7 @@ public partial class MainWindow : Window, IDialogs
 			Classes.Add(Motion.Class);
 		}
 		this.FindControl<ItemsControl>("ToastList").ItemsSource = Toasts.Items;
+		SetUpWindowDrops();
 		ContentControl pages = this.FindControl<ContentControl>("PageHost");
 		pages.TemplateApplied += (_, _) =>
 		{
@@ -102,6 +103,82 @@ public partial class MainWindow : Window, IDialogs
 
 	/// <summary>A click outside the command palette closes it.</summary>
 	private void OnPaletteScrimPressed(object sender, PointerPressedEventArgs e) => (DataContext as MainViewModel)?.Palette.Close();
+
+	// ───────────── Files dropped anywhere on the window ─────────────
+
+	/// <summary>The overlay shown while files are dragged over the window (added over everything, never hit-tested).</summary>
+	private readonly DropOverlay _dropOverlay = new DropOverlay
+	{
+		IsVisible = false,
+		Name = "DropOverlay",
+		DataContext = new DropPlan(DropKind.None, "", "", Array.Empty<string>()),
+	};
+
+	/// <summary>The overlay, for tests.</summary>
+	public DropOverlay DropOverlayView => _dropOverlay;
+
+	/// <summary>
+	/// Files can be dropped anywhere: while they are dragged over the window an overlay says what a drop would do, and a
+	/// drop goes to <see cref="DropRouter"/>. Page drop zones (Import &amp; Export, Import Inspections or Parcels, the
+	/// editor's photos) mark their events handled, so they take their own drops and the overlay stays out of their way.
+	/// Nothing is taken while a sheet or the command palette shows.
+	/// </summary>
+	private void SetUpWindowDrops()
+	{
+		((Panel)Content).Children.Add(_dropOverlay);
+		DragDrop.SetAllowDrop(this, true);
+		AddHandler(DragDrop.DragEnterEvent, OnWindowDragOver, RoutingStrategies.Bubble, handledEventsToo: true);
+		AddHandler(DragDrop.DragOverEvent, OnWindowDragOver, RoutingStrategies.Bubble, handledEventsToo: true);
+		AddHandler(DragDrop.DragLeaveEvent, (_, _) => HideDropOverlay(), RoutingStrategies.Bubble, handledEventsToo: true);
+		AddHandler(DragDrop.DropEvent, OnWindowDrop, RoutingStrategies.Bubble, handledEventsToo: true);
+	}
+
+	/// <summary>The local paths of the files being dragged (none for text, or for files without a path).</summary>
+	private static IReadOnlyList<string> DraggedPaths(DragEventArgs e) =>
+		e.DataTransfer.TryGetFiles()?.Select(f => f.TryGetLocalPath()).Where(p => p != null).ToList() ?? (IReadOnlyList<string>)Array.Empty<string>();
+
+	/// <summary>True when window-level drops are ignored: a sheet or the command palette is showing.</summary>
+	private static bool DropsBlocked(MainViewModel main) => main.Sheets.HasSheet || main.Palette.IsOpen;
+
+	private void OnWindowDragOver(object sender, DragEventArgs e)
+	{
+		if (DataContext is not MainViewModel main || e.Handled)
+		{
+			// A page's own drop zone has it (its tint shows instead).
+			HideDropOverlay();
+			return;
+		}
+		e.Handled = true;
+		IReadOnlyList<string> paths = DraggedPaths(e);
+		DropPlan plan = DropsBlocked(main) || paths.Count == 0 ? null : main.Drops.Plan(paths);
+		if (plan == null || plan.Kind == DropKind.None)
+		{
+			e.DragEffects = DragDropEffects.None;
+			HideDropOverlay();
+			return;
+		}
+		e.DragEffects = plan.CanDrop ? DragDropEffects.Copy : DragDropEffects.None;
+		_dropOverlay.DataContext = plan;
+		_dropOverlay.IsVisible = true;
+	}
+
+	/// <summary>Hides the overlay. Its plan stays, so its bindings never see the window's view model.</summary>
+	private void HideDropOverlay() => _dropOverlay.IsVisible = false;
+
+	private async void OnWindowDrop(object sender, DragEventArgs e)
+	{
+		HideDropOverlay();
+		if (e.Handled || DataContext is not MainViewModel main || DropsBlocked(main))
+		{
+			return;
+		}
+		e.Handled = true;
+		IReadOnlyList<string> paths = DraggedPaths(e);
+		if (paths.Count > 0)
+		{
+			await main.Drops.DropAsync(paths);
+		}
+	}
 
 	// ───────────── Edit menu: acts on the text box that has the cursor ─────────────
 

@@ -64,7 +64,12 @@ public partial class App : Application
 			};
 			window.Closed += (_, _) => services.PhoneForm.StopForQuit();
 			desktop.MainWindow = window;
-			window.Opened += (_, _) => _ = main.ShowWalkthroughIfFirstRun();
+			// What's New once after an update (first, as it reads whether the walkthrough was seen), then the first-run walkthrough.
+			window.Opened += (_, _) =>
+			{
+				_ = main.ShowWhatsNewIfUpdated();
+				_ = main.ShowWalkthroughIfFirstRun();
+			};
 
 			// Anything not caught where it happened: logged and shown in plain English, and the app keeps running.
 			Dispatcher.UIThread.UnhandledException += (_, e) =>

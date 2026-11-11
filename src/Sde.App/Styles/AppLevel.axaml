@@ -1,0 +1,151 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Sde.App.Controls">
+  <!--
+    App-level additions: the What's New sheet, Check for Updates, the spreadsheet chooser for a dropped file, and the
+    drop overlay shown while files are dragged over the window.
+      What's New: c:Icon.whatsNewMark beside TextBlock.whatsNewHeading (display size), then Border.whatsNewCard for each
+        group (DockPanel.cardHead with c:Icon.cardIcon and TextBlock.cardHeading, lines with an Ellipse.whatsNewDot).
+      Check for Updates: Border.statusBadge (a round tinted badge with its icon; .success, .accent or .warning) beside
+        TextBlock.statusHeadline and a secondary line.
+      Spreadsheet chooser: StackPanel.choiceList of RadioButton.choice rows.
+      Drop overlay: Border.dropOverlay (the dimmed window), Rectangle.dropEdge (an accent dashed edge, quiet when the
+        drop can't be used) and Border.dropPanel (the white card with Border.dropIcon, TextBlock.dropHeading and a line).
+  -->
+
+  <!-- ───────────── What's New ───────────── -->
+  <Style Selector="c|Icon.whatsNewMark">
+    <Setter Property="Size" Value="56" />
+    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.whatsNewHeading">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeDisplay}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="-0.3" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="Border.whatsNewCard">
+    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderCard}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource ShadowCard}" />
+    <Setter Property="Padding" Value="20,16,20,18" />
+    <Setter Property="Margin" Value="0,0,0,16" />
+  </Style>
+  <Style Selector="ItemsControl.whatsNewGroups ContentPresenter:nth-child(odd) > Border.whatsNewCard">
+    <Setter Property="Margin" Value="0,0,8,16" />
+  </Style>
+  <Style Selector="ItemsControl.whatsNewGroups ContentPresenter:nth-child(even) > Border.whatsNewCard">
+    <Setter Property="Margin" Value="8,0,0,16" />
+  </Style>
+  <Style Selector="StackPanel.whatsNewLines">
+    <Setter Property="Spacing" Value="8" />
+  </Style>
+  <Style Selector="StackPanel.whatsNewLines TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="LineHeight" Value="19" />
+  </Style>
+  <Style Selector="Ellipse.whatsNewDot">
+    <Setter Property="Width" Value="6" />
+    <Setter Property="Height" Value="6" />
+    <Setter Property="Fill" Value="{DynamicResource AccentFill}" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Margin" Value="2,7,12,0" />
+  </Style>
+
+  <!-- ───────────── Check for Updates ───────────── -->
+  <Style Selector="Border.statusBadge">
+    <Setter Property="Width" Value="44" />
+    <Setter Property="Height" Value="44" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
+    <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+  </Style>
+  <Style Selector="Border.statusBadge c|Icon">
+    <Setter Property="Size" Value="22" />
+    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.statusBadge.success">
+    <Setter Property="Background" Value="{DynamicResource SuccessBg}" />
+  </Style>
+  <Style Selector="Border.statusBadge.success c|Icon">
+    <Setter Property="Foreground" Value="{DynamicResource SuccessFg}" />
+  </Style>
+  <Style Selector="Border.statusBadge.warning">
+    <Setter Property="Background" Value="{DynamicResource WarningBg}" />
+  </Style>
+  <Style Selector="Border.statusBadge.warning c|Icon">
+    <Setter Property="Foreground" Value="{DynamicResource WarningFg}" />
+  </Style>
+  <Style Selector="TextBlock.statusHeadline">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeTitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <!-- ───────────── The spreadsheet chooser ───────────── -->
+  <Style Selector="StackPanel.choiceList">
+    <Setter Property="Spacing" Value="4" />
+  </Style>
+  <Style Selector="RadioButton.choice">
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="8,0,0,0" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <!-- ───────────── The drop overlay ───────────── -->
+  <Style Selector="Border.dropOverlay">
+    <Setter Property="Background" Value="{DynamicResource BgOverlay}" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+  <Style Selector="Rectangle.dropEdge">
+    <Setter Property="Stroke" Value="{DynamicResource AccentFill}" />
+    <Setter Property="StrokeThickness" Value="3" />
+    <Setter Property="StrokeDashArray" Value="4,3" />
+    <Setter Property="RadiusX" Value="16" />
+    <Setter Property="RadiusY" Value="16" />
+    <Setter Property="Margin" Value="16" />
+  </Style>
+  <Style Selector="Border.dropOverlay.refused Rectangle.dropEdge">
+    <Setter Property="Stroke" Value="{DynamicResource BorderStrong}" />
+  </Style>
+  <Style Selector="Border.dropPanel">
+    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderCard}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSheet}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource ShadowSheet}" />
+    <Setter Property="Padding" Value="40,32,40,32" />
+    <Setter Property="MinWidth" Value="420" />
+    <Setter Property="MaxWidth" Value="560" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.dropOverlay.refused Border.dropIcon">
+    <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
+  </Style>
+  <Style Selector="Border.dropOverlay.refused Border.dropIcon c|Icon">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+  </Style>
+  <Style Selector="TextBlock.dropHeading">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeLargeTitle}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="TextAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.dropLine">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+</Styles>

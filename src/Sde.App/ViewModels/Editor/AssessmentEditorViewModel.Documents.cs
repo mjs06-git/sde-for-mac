@@ -43,7 +43,13 @@ public sealed partial class AssessmentEditorViewModel
 
 	/// <summary>⋯, then Flood depth from high-water marks, for this assessment (a new one is saved first).</summary>
 	[RelayCommand]
-	private async Task FloodDepth()
+	private Task FloodDepth() => FloodDepthAsync(null);
+
+	/// <summary>
+	/// The same, with a file of high-water marks already read into the sheet (a file dropped on the window and chosen as
+	/// high-water marks), or none.
+	/// </summary>
+	public async Task FloodDepthAsync(string marksFile)
 	{
 		if (IsDraft)
 		{
@@ -54,7 +60,12 @@ public sealed partial class AssessmentEditorViewModel
 		{
 			return;
 		}
-		if (await _app.Sheets.ShowAsync(new DepthSheetViewModel(_app, new[] { Assessment.AssessmentID })) is DepthApplyResult result && result.Changed > 0)
+		DepthSheetViewModel sheet = new DepthSheetViewModel(_app, new[] { Assessment.AssessmentID });
+		if (marksFile != null)
+		{
+			sheet.LoadMarksFile(marksFile);
+		}
+		if (await _app.Sheets.ShowAsync(sheet) is DepthApplyResult result && result.Changed > 0)
 		{
 			_app.Dialogs.Notify("Flood depth saved", "History lists the change as the depth tool's.");
 		}

@@ -6,7 +6,9 @@ and press Publish.
 
 ## Steps
 
-1. Set `<Version>` in `src/Sde.App/Sde.App.csproj` (for example `3.5.0`) and commit. The workflow stops if the tag and this
+1. Set `<Version>` in `src/Sde.App/Sde.App.csproj` (for example `3.5.0`). For a release with new features, update
+   What's New in `src/Sde.App/Services/WhatsNew.cs` (its `Version` and a few groups of one line each), which every
+   copy shows once after updating. Commit. The workflow stops if the tag and this
    number disagree, because the zip names come from the project file.
 2. Make sure CI (`.github/workflows/ci.yml`) is green on that commit.
 3. Tag and push: `git tag v3.5.0 && git push origin v3.5.0`.

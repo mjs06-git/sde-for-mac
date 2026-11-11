@@ -363,8 +363,9 @@ public class DataPagesUiTests
 		settings.Show(SettingsCategory.About);
 		ui.Pump();
 
-		Assert.False(settings.HasWhatsNew);
-		Assert.False(settings.OpenWhatsNewCommand.CanExecute(null));
+		// The main view model connects What's New (AppLevelUiTests checks it opens the sheet); a counting hook here.
+		Assert.True(settings.HasWhatsNew);
+		Assert.True(settings.OpenWhatsNewCommand.CanExecute(null));
 		int shownWhatsNew = 0;
 		settings.ShowWhatsNew = () => shownWhatsNew++;
 		Assert.True(settings.OpenWhatsNewCommand.CanExecute(null));

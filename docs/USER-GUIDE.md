@@ -109,6 +109,28 @@ Changes save as you type. To save immediately, for example before closing the li
 **Settings > Backups** shows the database file and the photos folder, with **Show in Finder**. **File > Show Database
 in Finder** does the same from anywhere.
 
+### Dropping files on the window
+You can drop a file anywhere on the window. While you drag, SDE says what it recognised. Then:
+
+- An **SDE export folder** or a FEMA **.mdb** opens the import preview on Import & Export, as in [3.2](#32-from-femas-sde-or-another-sde-for-mac).
+- An **SDE database** (.sqlite) asks before SDE switches to it.
+- A **spreadsheet** (.csv, .xlsx, .xlsm, .xls, .dbf) asks what it holds: inspections or parcels, structures from a
+  parcel spreadsheet, coordinates (a .xlsx), or high-water marks (a .csv, while an assessment is open).
+- **Photos** go into the open assessment's Photos step. With no assessment open, SDE matches them to structures and
+  shows the matches for you to check.
+- A **map layer** (.shp, .geojson, .gpkg) is added on the Map.
+
+Anything else gets a short note that SDE can't import it. Nothing is dropped while a sheet is open. The drop zones on
+Import & Export, Import Inspections or Parcels and the Photos step still work as before.
+
+### What's new and updates
+After an update, SDE shows **What's New** once. **Help > What's New in SDE** and **Settings > About** show it again.
+
+**Help > Check for Updates…** asks GitHub whether a newer version is published. It runs only when you choose it, never
+by itself. It sends a request for the latest release with the app's name and version, and nothing about you or your
+data. If there is a newer version, **Open the Download Page** opens its page in your browser. SDE downloads and installs
+nothing itself.
+
 ---
 
 ## 2. Setting up for an event

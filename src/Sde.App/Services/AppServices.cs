@@ -63,6 +63,12 @@ public sealed class AppSettings
 	/// <summary>The first-run walkthrough has been shown (Help, then Show the Walkthrough, shows it again).</summary>
 	public bool SeenWalkthrough { get; set; }
 
+	/// <summary>
+	/// The version whose What's New was last shown or recorded (such as "3.5.0"). When the running version differs, What's
+	/// New opens once at launch; a brand-new install records its version without showing it (the walkthrough shows instead).
+	/// </summary>
+	public string LastSeenVersion { get; set; }
+
 	/// <summary>USGS's high-water mark service (STN), when it moves; null uses <see cref="Sde.Interop.Online.StnClient.DefaultBaseUrl"/>.</summary>
 	public string UsgsStnUrl { get; set; }
 

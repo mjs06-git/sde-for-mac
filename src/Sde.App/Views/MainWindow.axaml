@@ -96,6 +96,9 @@
           <NativeMenuItem Header="Show the Walkthrough" Command="{Binding ShowWalkthroughCommand}" />
           <NativeMenuItem Header="Open Sample Database" Command="{Binding OpenSampleDatabaseCommand}" />
           <NativeMenuItemSeparator />
+          <NativeMenuItem Header="What's New in SDE" Command="{Binding ShowWhatsNewCommand}" />
+          <NativeMenuItem Header="Check for Updates…" Command="{Binding CheckForUpdatesCommand}" />
+          <NativeMenuItemSeparator />
           <NativeMenuItem Header="Keyboard Shortcuts" Command="{Binding ShowShortcutsCommand}" />
           <NativeMenuItem Header="Show Log Folder" Command="{Binding ShowLogsCommand}" />
         </NativeMenu>
@@ -143,6 +146,9 @@
     <DataTemplate DataType="sh:FieldHelpSheetViewModel"><v:FieldHelpSheetView /></DataTemplate>
     <DataTemplate DataType="sh:HelpIndexSheetViewModel"><v:HelpIndexSheetView /></DataTemplate>
     <DataTemplate DataType="sh:WalkthroughSheetViewModel"><v:WalkthroughSheetView /></DataTemplate>
+    <DataTemplate DataType="sh:WhatsNewSheetViewModel"><v:WhatsNewSheetView /></DataTemplate>
+    <DataTemplate DataType="sh:UpdateSheetViewModel"><v:UpdateSheetView /></DataTemplate>
+    <DataTemplate DataType="sh:SpreadsheetDropSheetViewModel"><v:SpreadsheetDropSheetView /></DataTemplate>
     <DataTemplate DataType="sh:ManualMissingSheetViewModel"><v:ManualMissingSheetView /></DataTemplate>
     <!-- Field data sheets (photos, online look-up) -->
     <DataTemplate DataType="sh:AutoFillSheetViewModel"><v:AutoFillSheetView /></DataTemplate>

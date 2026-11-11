@@ -16,10 +16,12 @@ public partial class ImportExportView : UserControl
 		AddHandler(DragDrop.DropEvent, OnDrop);
 	}
 
+	/// <summary>One file over the page: this page takes it (handled, so the window's drop overlay stays away).</summary>
 	private void OnDragOver(object sender, DragEventArgs e)
 	{
 		bool one = e.DataTransfer.TryGetFiles() is { Length: 1 };
 		e.DragEffects = one ? DragDropEffects.Copy : DragDropEffects.None;
+		e.Handled = one;
 		ShowDragOver(one);
 	}
 
@@ -31,6 +33,7 @@ public partial class ImportExportView : UserControl
 		ShowDragOver(false);
 		if (e.DataTransfer.TryGetFiles() is { Length: 1 } files && files[0].TryGetLocalPath() is string path && DataContext is ImportExportViewModel vm)
 		{
+			e.Handled = true;
 			await vm.DropAsync(path);
 		}
 	}

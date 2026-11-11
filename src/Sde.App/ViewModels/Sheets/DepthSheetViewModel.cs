@@ -252,15 +252,21 @@ public sealed partial class DepthSheetViewModel : SheetViewModel
 		{
 			return;
 		}
+		LoadMarksFile(picked[0]);
+	}
+
+	/// <summary>Reads a file of high-water marks (.csv, .txt, .geojson or .json) and estimates from it. Also used for a file dropped on the window.</summary>
+	public void LoadMarksFile(string path)
+	{
 		try
 		{
 			string datum = MarksDatum == "Not given" ? null : MarksDatum;
-			HighWaterMarkFile file = HighWaterMarkFiles.Read(picked[0], datum);
+			HighWaterMarkFile file = HighWaterMarkFiles.Read(path, datum);
 			_marks = file.Marks;
-			_app.HighWaterMarks.Set(_marks, Path.GetFileName(picked[0]));
-			MarksSummary = $"{Path.GetFileName(picked[0])}: {file.Marks.Count:N0} mark{(file.Marks.Count == 1 ? "" : "s")}"
+			_app.HighWaterMarks.Set(_marks, Path.GetFileName(path));
+			MarksSummary = $"{Path.GetFileName(path)}: {file.Marks.Count:N0} mark{(file.Marks.Count == 1 ? "" : "s")}"
 				+ (file.Skipped > 0 ? $", {file.Skipped:N0} row{(file.Skipped == 1 ? "" : "s")} skipped ({string.Join("; ", file.Problems.Take(3))})" : "") + ".";
-			Loaded("File: " + Path.GetFileName(picked[0]), datum);
+			Loaded("File: " + Path.GetFileName(path), datum);
 			Estimate();
 		}
 		catch (Exception ex) when (ex is IOException or InvalidDataException or FormatException or UnauthorizedAccessException)
