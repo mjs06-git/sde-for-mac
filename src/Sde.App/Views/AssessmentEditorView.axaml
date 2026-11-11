@@ -464,7 +464,7 @@
     <Grid Name="EditorGrid" ColumnDefinitions="*,Auto">
       <!-- Current step -->
       <ScrollViewer Name="StepScroller" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="24,24,24,32" MaxWidth="900" HorizontalAlignment="Stretch">
+        <StackPanel Margin="28,24,28,32" MaxWidth="900" HorizontalAlignment="Stretch">
           <c:Banner Classes="stacked" Tone="Accent" Icon="Lock" Margin="0,0,0,16" IsVisible="{Binding IsLocked}" Text="{Binding LockText}"
                     AutomationProperties.Name="Locked">
             <TextBlock Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding ChangedInOlderVersion}"
@@ -496,24 +496,17 @@
       <!-- Live result -->
       <Border Grid.Column="1" Classes="resultPanel" Width="{Binding Shell.InspectorWidth}" Name="ResultPanel">
         <ScrollViewer>
-          <StackPanel Margin="16,16,16,20" Spacing="16">
-            <!-- The result: the percent in ink (red when substantial), the determination, and the staff gauge -->
-            <Border Classes="resultHero" Name="ResultHero">
-              <StackPanel>
-                <TextBlock Classes="groupLabel" Text="Percent damaged" />
-                <TextBlock Classes="display" Text="{Binding PercentText}" app:ThemeBrush.Foreground="{Binding State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
-                <TextBlock Classes="verdict" Text="{Binding Determination}" ToolTip.Tip="{Binding StateHint}"
-                           app:ThemeBrush.Foreground="{Binding State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
-                <TextBlock Classes="secondary sm" Text="{Binding LineText}" IsVisible="{Binding HasPercent}" Margin="0,2,0,0" />
-                <c:StaffGauge Value="{Binding PercentValue}" IsEmpty="{Binding !HasPercent}" />
-                <TextBlock Text="{Binding StateHint}" TextWrapping="Wrap" Classes="secondary sm" Margin="0,10,0,0" IsVisible="{Binding ShowStateHint}" />
-              </StackPanel>
-            </Border>
+          <StackPanel Margin="0,24,20,24" Spacing="14">
+            <!-- The result: the percent large in white on the dark card, the determination, and the staff gauge -->
+            <c:ResultHero Name="EditorHero" Label="Percent damaged" PercentText="{Binding PercentText}" HasPercent="{Binding HasPercent}"
+                          Verdict="{Binding Determination}" IsSubstantial="{Binding State, Converter={x:Static app:Converters.IsSubstantial}}"
+                          LineText="{Binding LineText}" Value="{Binding PercentValue}" Hint="{Binding StateHint}" ShowHint="{Binding ShowStateHint}"
+                          ToolTip.Tip="{Binding StateHint}" />
 
             <!-- Cumulative damage (Settings; off by default). A separate finding: FEMA's result above never changes. -->
-            <Border Classes="resultCard rule" IsVisible="{Binding ShowCumulative}" Name="CumulativeCard">
+            <Border Classes="sideCard" IsVisible="{Binding ShowCumulative}" Name="CumulativeCard">
               <StackPanel Spacing="4">
-                <TextBlock Classes="groupLabel" Text="Cumulative damage" />
+                <TextBlock Classes="cardTitle" Text="Cumulative damage" />
                 <TextBlock Classes="semibold" Text="{Binding CumulativeTitle}" TextWrapping="Wrap"
                            app:ThemeBrush.Foreground="{Binding CumulativeState, Converter={x:Static app:Converters.PercentForegroundKey}}"
                            ToolTip.Tip="Damage from the events in the look-back period added together, as set in Settings. FEMA's reports and exports keep FEMA's own result." />
@@ -531,9 +524,9 @@
               </StackPanel>
             </Border>
 
-            <Border Classes="resultCard">
-              <StackPanel Spacing="6">
-                <TextBlock Classes="groupLabel" Text="Costs" />
+            <Border Classes="sideCard">
+              <StackPanel Spacing="8">
+                <TextBlock Classes="cardTitle" Text="Costs" />
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Classes="secondary" Text="Replacement cost" />
                   <TextBlock Grid.Column="1" Classes="money" Text="{Binding Assessment.TotalReplacementCost, Converter={x:Static app:Converters.MoneyWhole}}" />
@@ -568,11 +561,11 @@
               </StackPanel>
             </Border>
 
-            <Border Classes="resultCard rule">
+            <Border Classes="sideCard">
               <StackPanel Spacing="6">
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Classes="groupLabel" Text="To check" />
-                  <TextBlock Grid.Column="1" Classes="danger xs" Text="{Binding RequiredIssueCount, StringFormat='{}{0} required'}"
+                  <TextBlock Classes="cardTitle" Text="To check" />
+                  <TextBlock Grid.Column="1" Classes="danger sm semibold" VerticalAlignment="Center" Text="{Binding RequiredIssueCount, StringFormat='{}{0} required'}"
                              IsVisible="{Binding RequiredIssueCount, Converter={x:Static app:Converters.IsPositive}}" />
                 </Grid>
                 <TextBlock Classes="sm secondary" Text="Nothing missing" IsVisible="{Binding Issues.Count, Converter={x:Static app:Converters.IsZero}}" />

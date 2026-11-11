@@ -54,7 +54,7 @@
 
   <Panel>
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasAnything}">
-      <StackPanel Margin="{StaticResource PagePadding}" Spacing="16">
+      <StackPanel Margin="{StaticResource PagePadding}" Spacing="20">
         <!-- What the last export did, and the warning while owner names are going into the GIS files -->
         <StackPanel Spacing="8">
           <StackPanel.IsVisible>
@@ -67,26 +67,58 @@
           <TextBlock Classes="secondary" Text="{Binding LastResult}" IsVisible="{Binding HasResult}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
         </StackPanel>
 
-        <!-- The headline: the share substantially damaged on a staff, in one line with the money -->
-        <Border Classes="sheetBlock headline" Name="Headline">
-          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="32">
-            <TextBlock Classes="headline" Text="{Binding HeadlineText}" VerticalAlignment="Center" ToolTip.Tip="{Binding SubstantialNote}" />
-            <c:StaffGauge Grid.Column="1" Value="{Binding SubstantialShare}" IsEmpty="{Binding !HasAssessments}" ShowMark="False" WaterKey="GaugeDanger"
-                          VerticalAlignment="Center" MinWidth="160" Margin="0,4,0,0" />
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="20" VerticalAlignment="Center">
-              <TextBlock Classes="secondary num" ToolTip.Tip="Of the assessed structures">
-                <Run Text="Building value " /><Run Text="{Binding BuildingValue}" FontWeight="{StaticResource FontWeightSemiBold}" Foreground="{DynamicResource TextPrimary}" />
-              </TextBlock>
-              <TextBlock Classes="secondary num" ToolTip.Tip="Of the assessed structures">
-                <Run Text="Repair cost " /><Run Text="{Binding RepairCost}" FontWeight="{StaticResource FontWeightSemiBold}" Foreground="{DynamicResource TextPrimary}" />
-              </TextBlock>
+        <!-- The headline band: how many are substantially damaged, the share on a big gauge, and the money and the share
+             assessed beside it, all in one dark band -->
+        <Border Classes="heroBand" Name="Headline">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="28">
+            <StackPanel Spacing="20" VerticalAlignment="Center">
+              <TextBlock Classes="heroHeadline" Text="{Binding HeadlineText}" ToolTip.Tip="{Binding SubstantialNote}" />
+              <c:StaffGauge Value="{Binding SubstantialShare}" IsEmpty="{Binding !HasAssessments}" ShowMark="False" WaterKey="GaugeDanger"
+                            OnDark="True" ShowLabels="True" TrackThickness="16" MinWidth="240" Name="ShareGauge" />
             </StackPanel>
+            <Border Grid.Column="1" Classes="heroFigures" VerticalAlignment="Center">
+              <Grid ColumnDefinitions="Auto,Auto,Auto" ColumnSpacing="28">
+                <StackPanel Spacing="4" ToolTip.Tip="Of the assessed structures">
+                  <TextBlock Classes="heroLabel" Text="Building value" />
+                  <TextBlock Classes="heroFigure" Text="{Binding BuildingValue}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="4" ToolTip.Tip="Of the assessed structures">
+                  <TextBlock Classes="heroLabel" Text="Repair cost" />
+                  <TextBlock Classes="heroFigure" Text="{Binding RepairCost}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Spacing="4" ToolTip.Tip="{Binding StructuresNote}">
+                  <TextBlock Classes="heroLabel" Text="Assessed" />
+                  <TextBlock Classes="heroFigure" Text="{Binding AssessedShareText}" />
+                </StackPanel>
+              </Grid>
+            </Border>
           </Grid>
         </Border>
 
-        <!-- The blocks, two to a row, each a white sheet -->
-        <Grid ColumnDefinitions="*,*" ColumnSpacing="16" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="16">
-          <Border Classes="sheetBlock">
+        <!-- The cards, two to a row: the two charts first, then the counts -->
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="20" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="20">
+          <Border Classes="sheetBlock" Name="DistributionCard">
+            <StackPanel>
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="sheetTitle" Text="Damage distribution" ToolTip.Tip="Assessments with a result, by percent damaged in 10-point bands" />
+                <TextBlock Grid.Column="1" Classes="chartNote" Text="{Binding DistributionNote}" />
+              </Grid>
+              <v:DamageHistogram Classes="chart" Bins="{Binding DamageBins}" Threshold="{Binding SubstantialLine}" IsVisible="{Binding HasDistribution}" Name="Distribution" />
+              <TextBlock Classes="muted" Text="No results yet" IsVisible="{Binding !HasDistribution}" />
+            </StackPanel>
+          </Border>
+          <Border Grid.Column="1" Classes="sheetBlock" Name="ProgressCard">
+            <StackPanel>
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Classes="sheetTitle" Text="Progress over time" ToolTip.Tip="Completed assessments by inspection date" />
+                <TextBlock Grid.Column="1" Classes="chartNote" Text="{Binding ProgressNote}" />
+              </Grid>
+              <v:ProgressChart Classes="chart" Points="{Binding ProgressSeries}" IsVisible="{Binding HasProgressSeries}" Name="ProgressOverTime" />
+              <TextBlock Classes="muted" Text="No inspection dates yet" IsVisible="{Binding !HasProgressSeries}" />
+            </StackPanel>
+          </Border>
+
+          <Border Grid.Row="1" Grid.Column="1" Classes="sheetBlock">
             <StackPanel>
               <TextBlock Classes="sheetTitle" Text="Event summary" ToolTip.Tip="{Binding Subtitle}" />
               <StackPanel Spacing="8" Grid.IsSharedSizeScope="True">
@@ -122,33 +154,33 @@
             </StackPanel>
           </Border>
 
-          <Border Grid.Column="1" Classes="sheetBlock">
+          <Border Grid.Row="1" Classes="sheetBlock">
             <StackPanel>
               <TextBlock Classes="sheetTitle" Text="Results" />
               <ItemsControl ItemsSource="{Binding ByResult}" ItemTemplate="{StaticResource BarRow}" Grid.IsSharedSizeScope="True" />
             </StackPanel>
           </Border>
 
-          <Border Grid.Row="1" Classes="sheetBlock">
+          <Border Grid.Row="2" Classes="sheetBlock">
             <StackPanel>
               <TextBlock Classes="sheetTitle" Text="{Binding ProgressTitle}" />
               <ItemsControl ItemsSource="{Binding Progress}" ItemTemplate="{StaticResource BarRow}" Grid.IsSharedSizeScope="True" />
             </StackPanel>
           </Border>
-          <Border Grid.Row="1" Grid.Column="1" Classes="sheetBlock">
+          <Border Grid.Row="2" Grid.Column="1" Classes="sheetBlock">
             <StackPanel>
               <TextBlock Classes="sheetTitle" Text="Inspectors" />
               <ItemsControl ItemsSource="{Binding ByInspector}" ItemTemplate="{StaticResource BarRow}" Grid.IsSharedSizeScope="True" />
             </StackPanel>
           </Border>
 
-          <Border Grid.Row="2" Classes="sheetBlock">
+          <Border Grid.Row="3" Classes="sheetBlock">
             <StackPanel>
               <TextBlock Classes="sheetTitle" Text="Streets" ToolTip.Tip="The 10 streets with the most assessments" />
               <ItemsControl ItemsSource="{Binding ByStreet}" ItemTemplate="{StaticResource BarRow}" Grid.IsSharedSizeScope="True" />
             </StackPanel>
           </Border>
-          <Border Grid.Row="2" Grid.Column="1" Classes="sheetBlock">
+          <Border Grid.Row="3" Grid.Column="1" Classes="sheetBlock">
             <StackPanel>
               <TextBlock Classes="sheetTitle" Text="Communities" />
               <ItemsControl ItemsSource="{Binding ByCommunity}" ItemTemplate="{StaticResource BarRow}" Grid.IsSharedSizeScope="True" />
@@ -156,13 +188,13 @@
           </Border>
 
           <!-- Field teams and compliance, once there are any -->
-          <Border Grid.Row="3" Classes="sheetBlock" IsVisible="{Binding HasTeams}">
+          <Border Grid.Row="4" Classes="sheetBlock" IsVisible="{Binding HasTeams}">
             <StackPanel>
               <TextBlock Classes="sheetTitle" Text="Field teams" ToolTip.Tip="Structures per team, and how many are assessed since they were assigned" />
               <ItemsControl ItemsSource="{Binding ByTeam}" ItemTemplate="{StaticResource BarRow}" Grid.IsSharedSizeScope="True" />
             </StackPanel>
           </Border>
-          <Border Grid.Row="3" Grid.Column="1" Classes="sheetBlock" IsVisible="{Binding HasCompliance}">
+          <Border Grid.Row="4" Grid.Column="1" Classes="sheetBlock" IsVisible="{Binding HasCompliance}">
             <StackPanel>
               <TextBlock Classes="sheetTitle" Text="Compliance" />
               <StackPanel Spacing="8" Grid.IsSharedSizeScope="True">
@@ -195,10 +227,10 @@
 
         <!-- What the bar colours mean -->
         <StackPanel Orientation="Horizontal" Spacing="16" Margin="4,0,0,0" ToolTip.Tip="Bars are split by result">
-          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusSubstantialFg}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Substantial" /></StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusCloseFg}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Near threshold" /></StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusNotSubstantialFg}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Not substantial" /></StackPanel>
-          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusIncompleteFg}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Incomplete or undetermined" /></StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusSubstantialDot}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Substantial" /></StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusCloseDot}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Near threshold" /></StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusNotSubstantialDot}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Not substantial" /></StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="5"><Ellipse Width="8" Height="8" Fill="{DynamicResource StatusIncompleteDot}" VerticalAlignment="Center" /><TextBlock Classes="muted" Text="Incomplete or undetermined" /></StackPanel>
         </StackPanel>
       </StackPanel>
     </ScrollViewer>

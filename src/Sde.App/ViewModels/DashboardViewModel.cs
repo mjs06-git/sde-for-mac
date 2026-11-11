@@ -211,7 +211,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
 			counts[Enum.TryParse(r.Status, out AssessmentStatus st) ? st : AssessmentStatus.Draft]++;
 		}
 		Fill(Progress, new[] { AssessmentStatus.Draft, AssessmentStatus.Reviewed, AssessmentStatus.Final, AssessmentStatus.LetterSent, AssessmentStatus.Appeal }
-			.Select(v => (AssessmentStatuses.Label(v), counts[v], $"{counts[v]:N0}", new[] { (counts[v], v is AssessmentStatus.Final or AssessmentStatus.LetterSent ? "Accent" : "StatusIncompleteFg") })));
+			.Select(v => (AssessmentStatuses.Label(v), counts[v], $"{counts[v]:N0}", new[] { (counts[v], v is AssessmentStatus.Final or AssessmentStatus.LetterSent ? "Accent" : "StatusIncompleteDot") })));
 	}
 
 	private void Show(EventSummary s)
@@ -235,15 +235,16 @@ public sealed partial class DashboardViewModel : ViewModelBase
 		Fill(ByResult, new[]
 		{
 			DeterminationClass.Substantial, DeterminationClass.Close, DeterminationClass.NotSubstantial, DeterminationClass.Undetermined, DeterminationClass.Incomplete,
-		}.Select(c => (Label(c), s.Count(c), $"{s.Count(c):N0}", new[] { (s.Count(c), "Status" + c + "Fg") })));
+		}.Select(c => (Label(c), s.Count(c), $"{s.Count(c):N0}", new[] { (s.Count(c), "Status" + c + "Dot") })));
 		Fill(Progress, new[]
 		{
 			("Assessed", s.AssessedStructures, $"{s.AssessedStructures:N0} structures", new[] { (s.AssessedStructures, "Accent") }),
-			("Not yet assessed", s.NotYetAssessed, $"{s.NotYetAssessed:N0} structures", new[] { (s.NotYetAssessed, "StatusIncompleteFg") }),
+			("Not yet assessed", s.NotYetAssessed, $"{s.NotYetAssessed:N0} structures", new[] { (s.NotYetAssessed, "StatusIncompleteDot") }),
 		});
 		Fill(ByStreet, s.ByStreet.Take(TopCount).Select(Group));
 		Fill(ByCommunity, s.ByCommunity.Take(TopCount).Select(Group));
 		Fill(ByInspector, s.ByInspector.Take(TopCount).Select(Group));
+		ShowCharts(s);
 	}
 
 	private static string Label(DeterminationClass c) => c switch
@@ -258,7 +259,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
 	private static (string Label, int Count, string Detail, (int Part, string Colour)[] Parts) Group(EventGroup g) => (
 		g.Label, g.Count,
 		$"{g.Count:N0} assessment{(g.Count == 1 ? "" : "s")}" + (g.Substantial > 0 ? $", {g.Substantial:N0} substantial" : ""),
-		new[] { (g.Substantial, "StatusSubstantialFg"), (g.Close, "StatusCloseFg"), (g.NotSubstantial, "StatusNotSubstantialFg"), (g.Other, "StatusIncompleteFg") });
+		new[] { (g.Substantial, "StatusSubstantialDot"), (g.Close, "StatusCloseDot"), (g.NotSubstantial, "StatusNotSubstantialDot"), (g.Other, "StatusIncompleteDot") });
 
 	/// <summary>Replaces the rows of one chart. Every bar is drawn against the longest in its own chart.</summary>
 	private static void Fill(ObservableCollection<BarRowViewModel> rows, IEnumerable<(string Label, int Count, string Detail, (int Part, string Colour)[] Parts)> items)

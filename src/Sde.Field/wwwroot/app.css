@@ -51,6 +51,10 @@
   --gauge-close: #b86e0a;
   --gauge-red: #c8102e;
   --gauge-mark: #c8102e;
+  /* The navy frame (the Mac app's sidebar and title band): the top bar, with white text on it */
+  --frame: #0e2540;
+  --on-frame: #ffffff;
+  --on-frame-2: #bccadb;
   --radius: 14px;
   --radius-control: 10px;
   --shadow: 0 1px 2px rgba(20, 35, 58, 0.06);
@@ -87,6 +91,9 @@
     --gauge-close: #f5a53b;
     --gauge-red: #ff5a6b;
     --gauge-mark: #ff7c88;
+    --frame: #0a1a2e;
+    --on-frame: #ffffff;
+    --on-frame-2: #bccadb;
     --shadow: none;
   }
 }
@@ -105,14 +112,14 @@ body {
 
 [hidden] { display: none !important; }
 
-/* The top bar: the form's name and who this phone is paired as */
+/* The top bar: the form's name and who this phone is paired as, on the app's navy frame */
 .bar {
   padding: calc(env(safe-area-inset-top) + 14px) 16px 12px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--frame);
+  color: var(--on-frame);
 }
-.bar h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.2px; }
-.who { margin: 2px 0 0; color: var(--text-2); font-size: 15px; }
+.bar h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.2px; color: var(--on-frame); }
+.who { margin: 2px 0 0; color: var(--on-frame-2); font-size: 15px; }
 
 /* Notices: the unencrypted connection (amber) and errors (red) */
 .notice, .message, .locked {

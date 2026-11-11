@@ -41,29 +41,68 @@
   <Style Selector="Border.card.compact">
     <Setter Property="Padding" Value="{StaticResource CardPaddingCompact}" />
   </Style>
-  <!-- A white sheet on the paper page (the Summary's blocks): hairline border, no shadow, a semibold heading inside -->
+  <!-- A white card on the page (the Summary's blocks): a faint hairline, the card shadow, a semibold heading inside -->
   <Style Selector="Border.sheetBlock">
     <Setter Property="Background" Value="{DynamicResource BgSurface}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderCard}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
-    <Setter Property="Padding" Value="20,16,20,20" />
+    <Setter Property="BoxShadow" Value="{DynamicResource ShadowCard}" />
+    <Setter Property="Padding" Value="24,20,24,24" />
   </Style>
-  <!-- A page's headline line (the Summary's "2 of 3 structures substantially damaged") -->
-  <Style Selector="Border.sheetBlock.headline">
-    <Setter Property="Padding" Value="24,16,24,14" />
-  </Style>
-  <Style Selector="TextBlock.headline">
+  <Style Selector="TextBlock.sheetTitle">
     <Setter Property="FontSize" Value="{StaticResource FontSizeTitle}" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="Margin" Value="0,0,0,16" />
   </Style>
-  <Style Selector="TextBlock.sheetTitle">
-    <Setter Property="FontSize" Value="{StaticResource FontSizeSubheadline}" />
+  <!-- A chart's heading row: the title, and on the right a short figure in words ("40 assessed") -->
+  <Style Selector="TextBlock.chartNote">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Margin" Value="12,4,0,0" />
+  </Style>
+  <Style Selector=":is(Control).chart">
+    <Setter Property="Height" Value="{StaticResource ChartHeight}" />
+  </Style>
+
+  <!-- The Summary's hero band: the one dark band at the top, the headline large in white, the share on a big gauge and
+       the supporting figures beside it -->
+  <Style Selector="Border.heroBand">
+    <Setter Property="Background" Value="{DynamicResource BgHero}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSheet}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource ShadowHero}" />
+    <Setter Property="Padding" Value="28,26,28,24" />
+  </Style>
+  <Style Selector="TextBlock.heroHeadline">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeDisplay}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="-0.4" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnHero}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.heroLabel">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnHeroSecondary}" />
+  </Style>
+  <Style Selector="TextBlock.heroFigure">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeLargeTitle}" />
     <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-    <Setter Property="Margin" Value="0,0,0,12" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnHero}" />
   </Style>
+  <Style Selector="TextBlock.heroFigure.danger">
+    <Setter Property="Foreground" Value="{DynamicResource DangerOnFrame}" />
+  </Style>
+  <!-- The supporting figures stand on a hairline of the frame's border, to the right of the headline -->
+  <Style Selector="Border.heroFigures">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
+    <Setter Property="BorderThickness" Value="1,0,0,0" />
+    <Setter Property="Padding" Value="28,0,0,0" />
+  </Style>
+
   <Style Selector="Border.subtle">
     <Setter Property="Background" Value="{DynamicResource BgApp}" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
@@ -78,12 +117,33 @@
     <Setter Property="BorderThickness" Value="0,1,0,0" />
   </Style>
 
-  <!-- A page's inspector: a flush pane at the right with a hairline on its left, no card (Structures, Review, ...) -->
+  <!-- A page's inspector: a flush pane at the right with a hairline on its left, no card (Review, ...) -->
   <Style Selector="Border.inspector">
     <Setter Property="Width" Value="{StaticResource InspectorWidth}" />
     <Setter Property="Background" Value="{DynamicResource BgInspector}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
     <Setter Property="BorderThickness" Value="1,0,0,0" />
+  </Style>
+  <!-- An inspector that is a column of cards on the page (Structures): the result hero on top, white cards under it -->
+  <Style Selector="Border.inspector.cards">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <!-- A white card in a side column (the inspector's facts, the editor's costs and checks) -->
+  <Style Selector="Border.sideCard">
+    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderCard}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource ShadowCard}" />
+    <Setter Property="Padding" Value="18,16,18,18" />
+  </Style>
+  <!-- A card's heading in a side column ("Structure", "Costs") -->
+  <Style Selector="TextBlock.cardTitle">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeSubheadline}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="Margin" Value="0,0,0,4" />
   </Style>
   <Style Selector="Border.hairline">
     <Setter Property="Height" Value="1" />
@@ -119,11 +179,11 @@
     <Setter Property="Margin" Value="0,4,0,0" />
   </Style>
   <Style Selector="Grid.facts">
-    <Setter Property="RowSpacing" Value="6" />
-    <Setter Property="ColumnSpacing" Value="8" />
+    <Setter Property="RowSpacing" Value="9" />
+    <Setter Property="ColumnSpacing" Value="12" />
   </Style>
   <Style Selector="Grid.facts TextBlock">
-    <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <!-- A page's toolbar items (PageChrome.Toolbar): a row of controls beside the window's title -->

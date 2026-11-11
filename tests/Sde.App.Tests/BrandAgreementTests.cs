@@ -70,6 +70,9 @@ public class BrandAgreementTests
 			("success", "StatusNotSubstantialFg"),
 			("success-bg", "StatusNotSubstantialBg"),
 			("gauge-red", "StatusSubstantialDot"),
+			("frame", "BgFrameColor"),
+			("on-frame", "TextOnFrameColor"),
+			("on-frame-2", "TextOnFrameSecondaryColor"),
 		};
 		List<string> failures = new();
 		foreach ((string css, string token) in pairs)

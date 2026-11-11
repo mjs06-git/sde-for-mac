@@ -9,6 +9,10 @@ using Sde.App.Controls;
 using Sde.App.Services;
 using Sde.App.ViewModels;
 using Sde.App.ViewModels.Editor;
+using Sde.Core;
+using Sde.Core.Assessments;
+using Sde.Core.Records;
+using Sde.Data;
 using Page = Sde.App.ViewModels.Page;
 
 namespace Sde.App.Tests;
@@ -21,6 +25,64 @@ public class ScreenTourTests
 {
 	/// <summary>Three made-up structures (see <see cref="SampleDatabase.AddSamples"/>), shared by most UI tests.</summary>
 	internal static void AddSamples(Sde.Data.SdeStore store) => SampleDatabase.AddSamples(store);
+
+	/// <summary>
+	/// Forty more made-up structures for the Summary's screenshots, so its charts look like an event's: a spread of
+	/// percent damaged from 4 to 99 and inspections over two weeks, by three inspectors on made-up streets.
+	/// </summary>
+	internal static void AddEventSpread(SdeStore store)
+	{
+		double[] targets =
+		{
+			4, 8, 12, 15, 18, 22, 24, 27, 29, 31, 33, 34, 36, 38, 41, 43, 44, 46, 47, 48,
+			49, 52, 54, 55, 57, 58, 61, 63, 64, 67, 69, 72, 74, 78, 81, 85, 88, 91, 96, 99,
+		};
+		// How many inspections each day, over the two weeks after the flood (40 in all)
+		int[] perDay = { 2, 4, 5, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1, 1 };
+		string[] streets = { "Alder", "Birch", "Cedar", "Dogwood", "Elm", "Fir", "Willow" };
+		string[] inspectors = { SampleDatabase.Inspector, "Inspector B", "Inspector C" };
+		// The three samples were inspected on the day they were made: put them in the event's first days too
+		List<Guid> samples = store.ListStructures().Where(r => r.AssessmentID != null).Select(r => r.AssessmentID!.Value).ToList();
+		foreach (AssessmentFile sample in store.LoadAssessments(samples))
+		{
+			sample.Assessment.DateofInspection = new DateTime(2026, 9, 15);
+			store.SaveAssessment(sample);
+		}
+		int n = 0;
+		for (int day = 0; day < perDay.Length; day++)
+		{
+			for (int k = 0; k < perDay[day]; k++, n++)
+			{
+				PropertyRecord p = store.SaveProperty(new PropertyRecord
+				{
+					OwnerFirstName = "Sample", OwnerLastName = "Owner " + (n + 1),
+					StreetNumber = (100 + 12 * n).ToString(), StreetName = streets[n % streets.Length], StreetSuffixID = 172,
+					City = SampleDatabase.Town, StateID = 36, NFIPCID = "990001", NFIPCommunityName = "Exampleville, Town of",
+					StructureTypeID = 1, ResidenceTypeID = 92, FoundationTypeID = 45, SuperStructureTypeID = 130,
+					RoofCoveringTypeID = 95, ExteriorFinishTypeID = 25, HVACTypeID = 49, StoryTypeID = 104,
+					YearOfConstruction = 1962, StructureQualityID = 54, SquareFootage = 1200 + 20 * n,
+				});
+				AssessmentFile f = store.CreateAssessment(p.PropertyID, applyDefaults: false);
+				AssessmentRecord a = f.Assessment;
+				a.InspectorName = inspectors[n % inspectors.Length];
+				a.DateDamageOccurred = new DateTime(2026, 9, 14);
+				a.DateofInspection = new DateTime(2026, 9, 15).AddDays(day);
+				a.CauseofDamageID = LookupIds.CauseFlood;
+				a.BaseCost = 118.75m;
+				a.GeographicAdjustment = 0.93m;
+				store.Calculator.NormalizeRows(f);
+				store.Calculator.ApplyDepreciationRating(f, 386);
+				// The same damage on every element gives that share of the replacement cost; the depreciation lifts it
+				// to the target share of the building's value
+				decimal damage = (decimal)Math.Round(targets[n * 17 % targets.Length] * 0.758);
+				foreach (ElementPercentageRecord e in f.ElementPercentages)
+				{
+					e.UserDamage = Math.Min(100, damage);
+				}
+				store.SaveAssessment(f);
+			}
+		}
+	}
 
 	[AvaloniaFact]
 	public void Tour_AllScreens_RenderWithoutBindingErrors()
@@ -45,6 +107,8 @@ public class ScreenTourTests
 			ui.Snapshot($"{10 + i:00}-editor-{Slug(editor.Sections[i].Title)}");
 		}
 
+		AddEventSpread(ui.Store);
+		ui.Services.RaiseDataChanged();
 		ui.Main.ShowCommand.Execute(Page.Dashboard);
 		ui.Snapshot("03-summary");
 		ui.Main.ShowCommand.Execute(Page.ImportExport);
@@ -85,6 +149,8 @@ public class ScreenTourTests
 		ui.Snapshot("41-dark-editor-damage");
 		ui.Main.Editor.SelectedSection = ui.Main.Editor.Sections[1];
 		ui.Snapshot("42-dark-editor-building");
+		AddEventSpread(ui.Store);
+		ui.Services.RaiseDataChanged();
 		ui.Main.ShowCommand.Execute(Page.Dashboard);
 		ui.Snapshot("43-dark-dashboard");
 		ui.Main.ShowCommand.Execute(Page.ImportExport);
@@ -118,9 +184,11 @@ public class ScreenTourTests
 		ui.Pump();
 		StaffGauge gauge = ui.Window.GetVisualDescendants().OfType<StaffGauge>().First(g => g.IsEffectivelyVisible && !g.IsMini);
 		Assert.Equal(ui.Main.Editor.PercentValue, gauge.Value, 1);
-		AssertThemeColour(gauge.FillKey, gauge.FillBrush);
+		// The result hero draws the gauge on its dark card, so the water is painted with the "OnDark" version of its colour
+		Assert.Equal(gauge.FillKey + "OnDark", gauge.PaintKey);
+		AssertThemeColour(gauge.PaintKey, gauge.FillBrush);
 		SwitchTheme(ui, ThemeVariant.Light);
-		AssertThemeColour(gauge.FillKey, gauge.FillBrush);
+		AssertThemeColour(gauge.PaintKey, gauge.FillBrush);
 
 		ui.Main.ShowCommand.Execute(Page.Map);
 		ui.Pump();

@@ -51,8 +51,18 @@ public sealed class StaffGauge : Control
 	public static readonly StyledProperty<string> WaterKeyProperty =
 		AvaloniaProperty.Register<StaffGauge, string>(nameof(WaterKey));
 
+	/// <summary>
+	/// True on the dark result card: every colour comes from the gauge's "OnDark" tokens (a lighter staff, brighter water
+	/// and red) and the captions from the hero's text colours, so the gauge reads on navy in both themes.
+	/// </summary>
+	public static readonly StyledProperty<bool> OnDarkProperty =
+		AvaloniaProperty.Register<StaffGauge, bool>(nameof(OnDark));
+
+	/// <summary>How thick the staff is drawn, in pixels (8 by default; the result card and the Summary draw it thicker).</summary>
+	public static readonly StyledProperty<double> TrackThicknessProperty =
+		AvaloniaProperty.Register<StaffGauge, double>(nameof(TrackThickness), 8);
+
 	// The drawing's own geometry (not design tokens: it is the shape of the control, like an icon's path).
-	private const double TrackHeight = 8;
 	private const double MiniTrackHeight = 4;
 	private const double Overshoot = 4;
 	private const double TickGap = 2;
@@ -69,8 +79,9 @@ public sealed class StaffGauge : Control
 
 	static StaffGauge()
 	{
-		AffectsRender<StaffGauge>(ValueProperty, ThresholdProperty, NearBandProperty, ShowLabelsProperty, IsMiniProperty, IsEmptyProperty, ShowMarkProperty, WaterKeyProperty);
-		AffectsMeasure<StaffGauge>(ShowLabelsProperty, IsMiniProperty);
+		AffectsRender<StaffGauge>(ValueProperty, ThresholdProperty, NearBandProperty, ShowLabelsProperty, IsMiniProperty, IsEmptyProperty, ShowMarkProperty, WaterKeyProperty,
+			OnDarkProperty, TrackThicknessProperty);
+		AffectsMeasure<StaffGauge>(ShowLabelsProperty, IsMiniProperty, TrackThicknessProperty);
 	}
 
 	public StaffGauge()
@@ -135,6 +146,20 @@ public sealed class StaffGauge : Control
 		set => SetValue(WaterKeyProperty, value);
 	}
 
+	/// <inheritdoc cref="OnDarkProperty"/>
+	public bool OnDark
+	{
+		get => GetValue(OnDarkProperty);
+		set => SetValue(OnDarkProperty, value);
+	}
+
+	/// <inheritdoc cref="TrackThicknessProperty"/>
+	public double TrackThickness
+	{
+		get => GetValue(TrackThicknessProperty);
+		set => SetValue(TrackThicknessProperty, value);
+	}
+
 	/// <summary>The resource key of the water's colour now: blue below the line, amber near it, red at or above it.</summary>
 	public string FillKey =>
 		!string.IsNullOrEmpty(WaterKey) ? WaterKey
@@ -142,8 +167,17 @@ public sealed class StaffGauge : Control
 		: Value >= Threshold - NearBand ? "GaugeNear"
 		: "GaugeWater";
 
+	/// <summary>
+	/// The resource key the water is painted with: <see cref="FillKey"/>, or its "OnDark" version on the dark result card
+	/// (for example "GaugeDangerOnDark"). <see cref="FillKey"/> keeps the meaning; this is the colour.
+	/// </summary>
+	public string PaintKey => Key(FillKey);
+
 	/// <summary>The water's brush in the theme now showing (what <see cref="Render"/> paints with).</summary>
-	public IBrush FillBrush => Brush(FillKey, Brushes.SteelBlue);
+	public IBrush FillBrush => Brush(PaintKey, Brushes.SteelBlue);
+
+	/// <summary>A gauge token's key, with "OnDark" added when the gauge is drawn on the dark result card.</summary>
+	private string Key(string key) => OnDark ? key + "OnDark" : key;
 
 	/// <summary>What a screen reader hears, for example "45 percent damaged, within 10 points of the 50 percent line".</summary>
 	public string SpokenText
@@ -203,7 +237,7 @@ public sealed class StaffGauge : Control
 		{
 			return new Size(Math.Min(width, 56), MiniHeight);
 		}
-		double height = Overshoot + TrackHeight + TickGap + MajorTick;
+		double height = Overshoot + TrackThickness + TickGap + MajorTick;
 		if (ShowLabels)
 		{
 			height += LabelGap + LabelHeight();
@@ -229,9 +263,10 @@ public sealed class StaffGauge : Control
 		double left = inset;
 		double right = width - inset;
 		double span = right - left;
-		Rect track = new Rect(left, Overshoot, span, TrackHeight);
-		RoundedRect staff = new RoundedRect(track, TrackHeight / 2);
-		context.DrawRectangle(Brush("GaugeTrack", Brushes.LightGray), null, staff);
+		double thickness = TrackThickness;
+		Rect track = new Rect(left, Overshoot, span, thickness);
+		RoundedRect staff = new RoundedRect(track, thickness / 2);
+		context.DrawRectangle(Brush(Key("GaugeTrack"), Brushes.LightGray), null, staff);
 		double lineX = left + span * Math.Clamp(Threshold, 0, 100) / 100;
 
 		if (!IsEmpty)
@@ -239,12 +274,12 @@ public sealed class StaffGauge : Control
 			double level = left + span * Math.Clamp(Value, 0, 100) / 100;
 			using (context.PushClip(staff))
 			{
-				context.DrawRectangle(FillBrush, null, new Rect(left, track.Y, level - left, TrackHeight));
+				context.DrawRectangle(FillBrush, null, new Rect(left, track.Y, level - left, thickness));
 			}
 		}
 
 		// Graduations every 10 percent under the staff; taller at 0, 50 and 100
-		IBrush tick = Brush("GaugeTick", Brushes.Gray);
+		IBrush tick = Brush(Key("GaugeTick"), Brushes.Gray);
 		double tickTop = track.Bottom + TickGap;
 		for (int i = 0; i <= 10; i++)
 		{
@@ -257,21 +292,21 @@ public sealed class StaffGauge : Control
 		{
 			// The high-water mark: from above the staff down through the graduations, with a thin gap where it crosses the water
 			double markX = Math.Round(lineX - MarkWidth / 2);
-			context.DrawRectangle(Brush("GaugeMarkHalo", Brushes.White), null, new Rect(markX - 1, track.Y, MarkWidth + 2, TrackHeight));
-			context.DrawRectangle(Brush("GaugeMark", Brushes.Red), null, new RoundedRect(new Rect(markX, 0, MarkWidth, tickTop + MajorTick), MarkWidth / 2));
+			context.DrawRectangle(Brush(Key("GaugeMarkHalo"), Brushes.White), null, new Rect(markX - 1, track.Y, MarkWidth + 2, thickness));
+			context.DrawRectangle(Brush(Key("GaugeMark"), Brushes.Red), null, new RoundedRect(new Rect(markX, 0, MarkWidth, tickTop + MajorTick), MarkWidth / 2));
 		}
 
 		if (ShowLabels)
 		{
 			double top = tickTop + MajorTick + LabelGap;
-			IBrush quiet = Brush("TextTertiary", Brushes.Gray);
+			IBrush quiet = Brush(OnDark ? "TextOnHeroSecondary" : "TextTertiary", Brushes.Gray);
 			FormattedText zero = Label("0%", quiet, FontWeight.Normal);
 			FormattedText hundred = Label("100%", quiet, FontWeight.Normal);
 			context.DrawText(zero, new Point(0, top));
 			context.DrawText(hundred, new Point(width - hundred.Width, top));
 			if (ShowMark)
 			{
-				FormattedText line = Label(Threshold.ToString("0.#", Us) + "%", Brush("DangerFg", Brushes.Red), FontWeight.SemiBold);
+				FormattedText line = Label(Threshold.ToString("0.#", Us) + "%", Brush(OnDark ? "DangerOnFrame" : "DangerFg", Brushes.Red), FontWeight.SemiBold);
 				double x = Math.Clamp(lineX - line.Width / 2, zero.Width + 4, width - hundred.Width - 4 - line.Width);
 				context.DrawText(line, new Point(x, top));
 			}
@@ -291,7 +326,7 @@ public sealed class StaffGauge : Control
 		double y = (Bounds.Height - MiniTrackHeight) / 2;
 		Rect track = new Rect(inset, y, span, MiniTrackHeight);
 		RoundedRect staff = new RoundedRect(track, MiniTrackHeight / 2);
-		context.DrawRectangle(Brush("GaugeTrack", Brushes.LightGray), null, staff);
+		context.DrawRectangle(Brush(Key("GaugeTrack"), Brushes.LightGray), null, staff);
 		if (!IsEmpty)
 		{
 			double level = inset + span * Math.Clamp(Value, 0, 100) / 100;
@@ -304,7 +339,7 @@ public sealed class StaffGauge : Control
 		if (ShowMark && !IsEmpty)
 		{
 			double markX = Math.Round(inset + span * Math.Clamp(Threshold, 0, 100) / 100 - MarkWidth / 2);
-			context.DrawRectangle(Brush("GaugeMark", Brushes.Red), null, new RoundedRect(new Rect(markX, 0, MarkWidth, Bounds.Height), MarkWidth / 2));
+			context.DrawRectangle(Brush(Key("GaugeMark"), Brushes.Red), null, new RoundedRect(new Rect(markX, 0, MarkWidth, Bounds.Height), MarkWidth / 2));
 		}
 	}
 

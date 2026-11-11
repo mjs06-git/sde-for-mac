@@ -202,8 +202,9 @@
           </Border>
         </Panel>
         <Grid>
-          <!-- The table: a white working surface on the paper page -->
+          <!-- The table: one white card on the page -->
           <Border Classes="tableSheet" IsVisible="{Binding HasRows}">
+          <Border Classes="tableClip">
           <DataGrid Name="Grid" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}"
                     IsReadOnly="True" CanUserSortColumns="True" CanUserReorderColumns="False" CanUserResizeColumns="True" SelectionMode="Single"
                     GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
@@ -316,11 +317,11 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Damaged" SortMemberPath="Damaged" Width="128">
+              <DataGridTemplateColumn Header="Damaged" SortMemberPath="Damaged" Width="136">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <Grid ColumnDefinitions="*,Auto">
-                      <TextBlock Classes="cell money" Text="{Binding PercentText}"
+                      <TextBlock Classes="cellFigure" Text="{Binding PercentText}"
                                  app:ThemeBrush.Foreground="{Binding State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
                       <c:StaffGauge Grid.Column="1" Classes="cellGauge" Value="{Binding PercentValue}" IsEmpty="{Binding !HasPercent}" />
                     </Grid>
@@ -340,6 +341,7 @@
             </DataGrid.Columns>
           </DataGrid>
           </Border>
+          </Border>
 
           <!-- Empty states -->
           <c:EmptyState IsVisible="{Binding IsEmpty}" Title="{Binding EmptyTitle}">
@@ -354,77 +356,74 @@
         </Grid>
     </DockPanel>
 
-    <Border Grid.Column="1" Classes="inspector" IsVisible="{Binding IsInspectorVisible}" Width="{Binding Shell.InspectorWidth}" Name="Inspector">
+    <!-- The selected structure: the result hero, then its facts and costs on a white card with the actions -->
+    <Border Grid.Column="1" Classes="inspector cards" IsVisible="{Binding IsInspectorVisible}" Width="{Binding Shell.InspectorWidth}" Name="Inspector">
       <Grid>
-        <DockPanel Margin="20,20,20,16" IsVisible="{Binding HasSelectedDetail}">
-          <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
-            <DropDownButton Content="Report" IsEnabled="{Binding CanReportSelected}" AutomationProperties.Name="Report of the selected structure">
-              <DropDownButton.Flyout>
-                <MenuFlyout>
-                  <MenuItem Header="Summary Report" Command="{Binding PrintSelectedCommand}" CommandParameter="Summary" />
-                  <MenuItem Header="Detailed Report" Command="{Binding PrintSelectedCommand}" CommandParameter="Detail" />
-                </MenuFlyout>
-              </DropDownButton.Flyout>
-            </DropDownButton>
-            <Button Classes="icon" Command="{Binding PinCommand}" CommandParameter="{Binding Selected}" IsVisible="{Binding !SelectedIsPinned}"
-                    AutomationProperties.Name="Pin" ToolTip.Tip="Pin to the Sidebar">
-              <c:Icon Kind="PushPin" Size="16" />
-            </Button>
-            <Button Classes="icon" Command="{Binding UnpinCommand}" CommandParameter="{Binding Selected}" IsVisible="{Binding SelectedIsPinned}"
-                    AutomationProperties.Name="Unpin" ToolTip.Tip="Unpin from the Sidebar">
-              <c:Icon Kind="PushPinFilled" Size="16" Classes="accent" />
-            </Button>
-            <Button Classes="primary" Content="Open" Command="{Binding OpenCommand}" CommandParameter="{Binding Selected}" AutomationProperties.Name="Open the selected structure" />
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasSelectedDetail}">
+          <StackPanel Spacing="14" Margin="0,0,20,20">
+            <c:ResultHero Name="InspectorHero" DataContext="{Binding SelectedDetail}" x:DataType="vm:StructureDetail"
+                          Title="{Binding Row.Address}" Subtitle="{Binding Kind}" PercentText="{Binding Row.PercentText}" HasPercent="{Binding Row.HasPercent}"
+                          Verdict="{Binding Row.Result}" IsSubstantial="{Binding Row.State, Converter={x:Static app:Converters.IsSubstantial}}"
+                          LineText="{Binding LineText}" Value="{Binding PercentValue}" />
+
+            <Border Classes="sideCard">
+              <StackPanel Spacing="16">
+                <StackPanel Spacing="16" DataContext="{Binding SelectedDetail}" x:DataType="vm:StructureDetail">
+                  <StackPanel Spacing="8">
+                    <TextBlock Classes="cardTitle" Text="Structure" />
+                    <Grid Classes="facts" ColumnDefinitions="88,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                      <TextBlock Classes="factLabel" Text="Owner" />
+                      <TextBlock Grid.Column="1" Text="{Binding Row.Owner}" TextWrapping="Wrap" />
+                      <TextBlock Grid.Row="1" Classes="factLabel" Text="Community" />
+                      <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Row.Place}" TextWrapping="Wrap" />
+                      <TextBlock Grid.Row="2" Classes="factLabel" Text="Inspected" />
+                      <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Row.Inspected}" />
+                      <TextBlock Grid.Row="3" Classes="factLabel" Text="Inspector" />
+                      <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Row.Inspector}" TextWrapping="Wrap" />
+                      <TextBlock Grid.Row="4" Classes="factLabel" Text="Status" />
+                      <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Row.Status}" />
+                    </Grid>
+                  </StackPanel>
+
+                  <Border Classes="hairline" IsVisible="{Binding HasAssessment}" />
+                  <StackPanel Spacing="8" IsVisible="{Binding HasAssessment}">
+                    <TextBlock Classes="cardTitle" Text="Costs" />
+                    <Grid Classes="facts" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
+                      <TextBlock Classes="factLabel" Text="Replacement cost" />
+                      <TextBlock Grid.Column="1" Classes="money" Text="{Binding ReplacementCost, Converter={x:Static app:Converters.MoneyWhole}}" />
+                      <TextBlock Grid.Row="1" Classes="factLabel" Text="Actual cash value" />
+                      <TextBlock Grid.Row="1" Grid.Column="1" Classes="money" Text="{Binding ActualCashValue, Converter={x:Static app:Converters.MoneyWhole}}" />
+                      <TextBlock Grid.Row="2" Classes="factLabel" Text="Damages" />
+                      <TextBlock Grid.Row="2" Grid.Column="1" Classes="money semibold" Text="{Binding Damages, Converter={x:Static app:Converters.MoneyWhole}}" />
+                    </Grid>
+                  </StackPanel>
+                </StackPanel>
+
+                <Border Classes="hairline" />
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                  <DropDownButton Content="Report" IsEnabled="{Binding CanReportSelected}" AutomationProperties.Name="Report of the selected structure">
+                    <DropDownButton.Flyout>
+                      <MenuFlyout>
+                        <MenuItem Header="Summary Report" Command="{Binding PrintSelectedCommand}" CommandParameter="Summary" />
+                        <MenuItem Header="Detailed Report" Command="{Binding PrintSelectedCommand}" CommandParameter="Detail" />
+                      </MenuFlyout>
+                    </DropDownButton.Flyout>
+                  </DropDownButton>
+                  <Button Classes="icon" Command="{Binding PinCommand}" CommandParameter="{Binding Selected}" IsVisible="{Binding !SelectedIsPinned}"
+                          AutomationProperties.Name="Pin" ToolTip.Tip="Pin to the Sidebar">
+                    <c:Icon Kind="PushPin" Size="16" />
+                  </Button>
+                  <Button Classes="icon" Command="{Binding UnpinCommand}" CommandParameter="{Binding Selected}" IsVisible="{Binding SelectedIsPinned}"
+                          AutomationProperties.Name="Unpin" ToolTip.Tip="Unpin from the Sidebar">
+                    <c:Icon Kind="PushPinFilled" Size="16" Classes="accent" />
+                  </Button>
+                  <Button Classes="primary" Content="Open" Command="{Binding OpenCommand}" CommandParameter="{Binding Selected}" MinWidth="88"
+                          HorizontalContentAlignment="Center" AutomationProperties.Name="Open the selected structure" />
+                </StackPanel>
+              </StackPanel>
+            </Border>
           </StackPanel>
-          <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Spacing="16" DataContext="{Binding SelectedDetail}" x:DataType="vm:StructureDetail">
-              <StackPanel Spacing="2">
-                <TextBlock Classes="title" Text="{Binding Row.Address}" TextWrapping="Wrap" />
-                <TextBlock Classes="secondary sm" Text="{Binding Kind}" TextWrapping="Wrap" />
-              </StackPanel>
-
-              <!-- The result: the figure, the determination in words, and where it stands on the staff -->
-              <StackPanel Spacing="2">
-                <TextBlock Classes="inspectorFigure" Text="{Binding Row.PercentText}" IsVisible="{Binding Row.HasPercent}"
-                           app:ThemeBrush.Foreground="{Binding Row.State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
-                <TextBlock Classes="verdict" Text="{Binding Row.Result}"
-                           app:ThemeBrush.Foreground="{Binding Row.State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
-                <TextBlock Classes="secondary sm" Text="{Binding LineText}" IsVisible="{Binding Row.HasPercent}" />
-                <c:StaffGauge Classes="inspectorGauge" Value="{Binding PercentValue}" IsEmpty="{Binding !Row.HasPercent}" Margin="0,10,0,0" />
-              </StackPanel>
-
-              <Border Classes="hairline" />
-              <StackPanel Spacing="8">
-                <TextBlock Classes="groupLabel" Text="Structure" />
-                <Grid Classes="facts" ColumnDefinitions="88,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-                  <TextBlock Classes="factLabel" Text="Owner" />
-                  <TextBlock Grid.Column="1" Text="{Binding Row.Owner}" TextWrapping="Wrap" />
-                  <TextBlock Grid.Row="1" Classes="factLabel" Text="Community" />
-                  <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Row.Place}" TextWrapping="Wrap" />
-                  <TextBlock Grid.Row="2" Classes="factLabel" Text="Inspected" />
-                  <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Row.Inspected}" />
-                  <TextBlock Grid.Row="3" Classes="factLabel" Text="Inspector" />
-                  <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Row.Inspector}" TextWrapping="Wrap" />
-                  <TextBlock Grid.Row="4" Classes="factLabel" Text="Status" />
-                  <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Row.Status}" />
-                </Grid>
-              </StackPanel>
-
-              <Border Classes="hairline" IsVisible="{Binding HasAssessment}" />
-              <StackPanel Spacing="8" IsVisible="{Binding HasAssessment}">
-                <TextBlock Classes="groupLabel" Text="Costs" />
-                <Grid Classes="facts" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
-                  <TextBlock Classes="factLabel" Text="Replacement cost" />
-                  <TextBlock Grid.Column="1" Classes="money" Text="{Binding ReplacementCost, Converter={x:Static app:Converters.MoneyWhole}}" />
-                  <TextBlock Grid.Row="1" Classes="factLabel" Text="Actual cash value" />
-                  <TextBlock Grid.Row="1" Grid.Column="1" Classes="money" Text="{Binding ActualCashValue, Converter={x:Static app:Converters.MoneyWhole}}" />
-                  <TextBlock Grid.Row="2" Classes="factLabel" Text="Damages" />
-                  <TextBlock Grid.Row="2" Grid.Column="1" Classes="money semibold" Text="{Binding Damages, Converter={x:Static app:Converters.MoneyWhole}}" />
-                </Grid>
-              </StackPanel>
-            </StackPanel>
-          </ScrollViewer>
-        </DockPanel>
+        </ScrollViewer>
         <c:EmptyState IsVisible="{Binding !HasSelectedDetail}" Title="No Selection" />
       </Grid>
     </Border>

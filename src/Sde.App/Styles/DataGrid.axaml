@@ -32,7 +32,7 @@
     <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
-    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="Background" Value="{DynamicResource BgTableHeader}" />
     <Setter Property="MinHeight" Value="{DynamicResource TableHeaderHeight}" />
     <Setter Property="Padding" Value="8,0,4,0" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -48,13 +48,14 @@
   <Style Selector="DataGrid">
     <Setter Property="RowBackground" Value="Transparent" />
   </Style>
-  <!-- Selection: the soft accent behind ink text (a solid slab of blue fought the red and amber of the results) -->
+  <!-- Selection: the soft accent behind ink text with a 3 px accent edge at the row's leading side (a solid slab of blue
+       fought the red and amber of the results) -->
   <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
-    <Setter Property="Fill" Value="{DynamicResource AccentSoft}" />
+    <Setter Property="Fill" Value="{DynamicResource RowSelectedFill}" />
     <Setter Property="Opacity" Value="1" />
   </Style>
   <Style Selector="DataGridRow:selected:pointerover /template/ Rectangle#BackgroundRectangle">
-    <Setter Property="Fill" Value="{DynamicResource AccentSoftHover}" />
+    <Setter Property="Fill" Value="{DynamicResource RowSelectedHoverFill}" />
   </Style>
   <Style Selector="DataGridRow:selected TextBlock.cell.secondary">
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
@@ -103,6 +104,9 @@
   <!-- On a page whose table is a sheet, the scope bar sits on the paper with no rule of its own -->
   <Style Selector="Border.scopeBar.onPaper">
     <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="20,0" />
+    <Setter Property="Height" Value="{DynamicResource ScopeBarHeight}" />
+    <Setter Property="Margin" Value="0,6,0,4" />
   </Style>
   <Style Selector="Border.statusBar">
     <Setter Property="Height" Value="{DynamicResource StatusBarHeight}" />
@@ -113,14 +117,27 @@
   <Style Selector="Border.statusBar.onPaper">
     <Setter Property="BorderThickness" Value="0" />
   </Style>
-  <!-- The table's working surface: a white sheet on the paper page, the rows clipped to its corners -->
+  <!-- The table's working surface: one white card on the page with the card shadow; the rows are clipped to its
+       corners by the inner border (a border that clips can't also cast a shadow) -->
   <Style Selector="Border.tableSheet">
     <Setter Property="Background" Value="{DynamicResource BgSurface}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderCard}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource ShadowCard}" />
+    <Setter Property="Margin" Value="20,0,20,0" />
+  </Style>
+  <Style Selector="Border.tableClip">
+    <Setter Property="CornerRadius" Value="11" />
     <Setter Property="ClipToBounds" Value="True" />
-    <Setter Property="Margin" Value="16,0,16,0" />
+  </Style>
+  <!-- The percent damaged in a table cell: tabular and bold (red only when substantial, from the view) -->
+  <Style Selector="TextBlock.cellFigure">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+    <Setter Property="TextAlignment" Value="Right" />
+    <Setter Property="Margin" Value="8,0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <!-- The percent damaged in a table: the figure, then a small staff gauge -->
   <Style Selector="c|StaffGauge.cellGauge">

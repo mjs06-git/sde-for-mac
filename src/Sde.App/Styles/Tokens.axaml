@@ -27,6 +27,8 @@
   <x:Double x:Key="FontSizeTitle">18</x:Double>
   <x:Double x:Key="FontSizeLargeTitle">24</x:Double>
   <x:Double x:Key="FontSizeDisplay">30</x:Double>
+  <!-- The hero figure: the percent damaged on the dark result card, and the Summary's headline -->
+  <x:Double x:Key="FontSizeHero">44</x:Double>
   <!-- Weights, for the rare place a class can't go (a Run inside a TextBlock); elsewhere use the medium, semibold and bold classes -->
   <FontWeight x:Key="FontWeightRegular">Normal</FontWeight>
   <FontWeight x:Key="FontWeightMedium">Medium</FontWeight>
@@ -53,6 +55,8 @@
   <CornerRadius x:Key="RadiusSheet">14</CornerRadius>
   <CornerRadius x:Key="RadiusSheetAttached">0,0,14,14</CornerRadius>
   <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+  <!-- The content panel's top-left corner, where the navy frame wraps round the bright content -->
+  <CornerRadius x:Key="RadiusContent">14,0,0,0</CornerRadius>
 
   <!-- Control heights (Comfortable): small 22, regular 28, large 32 (toolbar items). Compact: 19, 22, 28 -->
   <x:Double x:Key="ControlHeightSmall">22</x:Double>
@@ -71,19 +75,20 @@
   <x:Double x:Key="InspectorMinWidth">240</x:Double>
   <x:Double x:Key="InspectorMaxWidth">460</x:Double>
   <x:Double x:Key="ResizeHandleWidth">5</x:Double> <!-- the invisible strip on a sidebar's or inspector's edge that drags it -->
-  <x:Double x:Key="TitleBandHeight">48</x:Double> <!-- the toolbar across the top; the sidebar's title strip matches it -->
+  <x:Double x:Key="TitleBandHeight">56</x:Double> <!-- the toolbar across the top; the sidebar's title strip matches it -->
   <!-- Room for the window's close, minimise and zoom buttons, before the show-sidebar button while the sidebar is hidden -->
   <Thickness x:Key="TrafficLightInset">68,0,0,0</Thickness>
   <!-- A sheet hangs from the title band's lower edge (its top is TitleBandHeight) -->
-  <Thickness x:Key="SheetMargin">40,48,40,40</Thickness>
+  <Thickness x:Key="SheetMargin">40,56,40,40</Thickness>
   <!-- Toasts sit this far above the window's bottom edge, centred over the page (not the sidebar) -->
   <Thickness x:Key="ToastMargin">0,0,0,20</Thickness>
-  <x:Double x:Key="TableRowHeight">30</x:Double>
-  <x:Double x:Key="TableHeaderHeight">30</x:Double>
+  <x:Double x:Key="TableRowHeight">36</x:Double>
+  <x:Double x:Key="TableHeaderHeight">36</x:Double>
   <x:Double x:Key="ScopeBarHeight">40</x:Double> <!-- the filter strip above a table (small controls, 9 px above and below) -->
   <x:Double x:Key="StatusBarHeight">28</x:Double> <!-- the count and sort line under a table -->
-  <x:Double x:Key="StepBadgeSize">20</x:Double> <!-- the round step number in the editor's outline -->
+  <x:Double x:Key="StepBadgeSize">22</x:Double> <!-- the round step number in the editor's outline -->
   <x:Double x:Key="GaugeMiniWidth">56</x:Double> <!-- the staff gauge in a table cell -->
+  <x:Double x:Key="ChartHeight">184</x:Double> <!-- the Summary's damage distribution and progress charts -->
   <x:Double x:Key="SheetWidthSmall">440</x:Double>
   <x:Double x:Key="SheetWidthMedium">600</x:Double>
   <x:Double x:Key="SheetWidthLarge">800</x:Double>
@@ -173,7 +178,7 @@
       <!-- The frame (3.5): the sidebar and title band are navy in both themes, with their own text colours -->
       <Color x:Key="BgFrameColor">#0E2540</Color>
       <Color x:Key="BgFrameHoverColor">#193656</Color>
-      <Color x:Key="BgFramePressedColor">#21456F</Color>
+      <Color x:Key="BgFramePressedColor">#1F416A</Color>
       <Color x:Key="BgFrameFieldColor">#1B3A5E</Color>
       <Color x:Key="BorderFrameColor">#234469</Color>
       <Color x:Key="TextOnFrameColor">#FFFFFF</Color>
@@ -181,9 +186,12 @@
       <Color x:Key="TextOnFrameTertiaryColor">#9DAFC5</Color>
       <Color x:Key="AccentOnFrameColor">#7FBDF7</Color>
       <Color x:Key="DangerOnFrameColor">#FF8F99</Color>
-      <Color x:Key="BgHeroColor">#0E2540</Color>
+      <Color x:Key="BgHeroColor">#0F2A4A</Color>
       <Color x:Key="TextOnHeroColor">#FFFFFF</Color>
       <Color x:Key="TextOnHeroSecondaryColor">#BCCADB</Color>
+      <Color x:Key="BgFrameSelectedColor">#2C5788</Color>
+      <Color x:Key="BorderCardColor">#E1E7EE</Color>
+      <Color x:Key="BgTableHeaderColor">#F4F6F9</Color>
       <!-- Backgrounds -->
       <SolidColorBrush x:Key="BgApp" Color="{StaticResource BgAppColor}" /> <!-- the content area behind cards -->
       <SolidColorBrush x:Key="BgSidebar" Color="{StaticResource BgSidebarColor}" /> <!-- the sidebar and side panels -->
@@ -246,6 +254,9 @@
       <SolidColorBrush x:Key="BgHero" Color="{StaticResource BgHeroColor}" /> <!-- the result panel, the one dark card inside the content area -->
       <SolidColorBrush x:Key="TextOnHero" Color="{StaticResource TextOnHeroColor}" /> <!-- the figure on the result panel -->
       <SolidColorBrush x:Key="TextOnHeroSecondary" Color="{StaticResource TextOnHeroSecondaryColor}" /> <!-- supporting text on the result panel -->
+      <SolidColorBrush x:Key="BgFrameSelected" Color="{StaticResource BgFrameSelectedColor}" /> <!-- the chosen segment of a switch on the frame -->
+      <SolidColorBrush x:Key="BorderCard" Color="{StaticResource BorderCardColor}" /> <!-- the hairline round a white card (with ShadowCard under it) -->
+      <SolidColorBrush x:Key="BgTableHeader" Color="{StaticResource BgTableHeaderColor}" /> <!-- a table's header row -->
       <!-- Older names, kept because code and views look them up by name -->
       <SolidColorBrush x:Key="WindowBg" Color="{StaticResource BgAppColor}" />
       <SolidColorBrush x:Key="SidebarBg" Color="{StaticResource BgSidebarColor}" />
@@ -277,7 +288,8 @@
       <BoxShadows x:Key="FocusHalo">0 0 0 3 #731769C2</BoxShadows>
       <BoxShadows x:Key="ShadowPopup">0 6 20 0 #29000000</BoxShadows>
       <BoxShadows x:Key="ShadowSheet">0 10 30 0 #40000000</BoxShadows>
-      <BoxShadows x:Key="ShadowCard">0 1 3 0 #140E2540, 0 6 16 -4 #1A0E2540</BoxShadows>
+      <BoxShadows x:Key="ShadowCard">0 1 2 0 #0F0E2540, 0 8 24 -6 #240E2540</BoxShadows>
+      <BoxShadows x:Key="ShadowHero">0 2 4 0 #1F0E2540, 0 14 32 -10 #590E2540</BoxShadows>
       <!-- The bezel under a push button, a pop-up button and the selected segment (Mac controls sit slightly raised) -->
       <BoxShadows x:Key="ShadowControl">0 0.5 1.5 0 #24000000</BoxShadows>
       <!-- The staff gauge (Controls/StaffGauge): the dry staff, its graduations, the water, and the high-water mark.
@@ -289,6 +301,34 @@
       <SolidColorBrush x:Key="GaugeDanger" Color="#C8102E" />
       <SolidColorBrush x:Key="GaugeMark" Color="#C8102E" />
       <SolidColorBrush x:Key="GaugeMarkHalo" Color="#FFFFFF" /> <!-- a thin gap either side of the mark where it crosses the water -->
+      <!-- The same gauge drawn on the dark result card (StaffGauge.OnDark): a lighter staff and brighter water and red -->
+      <SolidColorBrush x:Key="GaugeTrackOnDark" Color="#2A4A70" />
+      <SolidColorBrush x:Key="GaugeTickOnDark" Color="#7E95B2" />
+      <SolidColorBrush x:Key="GaugeWaterOnDark" Color="#4DA6FF" />
+      <SolidColorBrush x:Key="GaugeNearOnDark" Color="#F5B04A" />
+      <SolidColorBrush x:Key="GaugeDangerOnDark" Color="#FF5468" />
+      <SolidColorBrush x:Key="GaugeMarkOnDark" Color="#FF5468" />
+      <SolidColorBrush x:Key="GaugeMarkHaloOnDark" Color="{StaticResource BgHeroColor}" />
+      <!-- The Summary's charts: light gridlines, the progress line and the soft area under it -->
+      <SolidColorBrush x:Key="ChartGrid" Color="#E6EBF1" />
+      <SolidColorBrush x:Key="ChartLine" Color="#1769C2" />
+      <LinearGradientBrush x:Key="ChartArea" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#4D1769C2" />
+        <GradientStop Offset="1" Color="#051769C2" />
+      </LinearGradientBrush>
+      <!-- The selected table row: the soft accent with a 3 px accent edge at its leading side -->
+      <LinearGradientBrush x:Key="RowSelectedFill" StartPoint="0,0" EndPoint="4,0">
+        <GradientStop Offset="0" Color="{StaticResource AccentFillColor}" />
+        <GradientStop Offset="0.75" Color="{StaticResource AccentFillColor}" />
+        <GradientStop Offset="0.75" Color="{StaticResource AccentSoftColor}" />
+        <GradientStop Offset="1" Color="{StaticResource AccentSoftColor}" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="RowSelectedHoverFill" StartPoint="0,0" EndPoint="4,0">
+        <GradientStop Offset="0" Color="{StaticResource AccentFillColor}" />
+        <GradientStop Offset="0.75" Color="{StaticResource AccentFillColor}" />
+        <GradientStop Offset="0.75" Color="{StaticResource AccentSoftHoverColor}" />
+        <GradientStop Offset="1" Color="{StaticResource AccentSoftHoverColor}" />
+      </LinearGradientBrush>
       <!-- Mac surfaces with no WCAG text pair: the selected source-list row and a segmented control's track -->
       <SolidColorBrush x:Key="SidebarSelection" Color="#D5DEE9" />
       <SolidColorBrush x:Key="SegmentedTrack" Color="#E3E9F0" />
@@ -649,19 +689,22 @@
       <Color x:Key="NeutralBgColor">#2A3A4E</Color>
       <Color x:Key="ScrollThumbColor">#4B5D73</Color>
       <!-- The frame (3.5): the sidebar and title band are navy in both themes, with their own text colours -->
-      <Color x:Key="BgFrameColor">#081321</Color>
-      <Color x:Key="BgFrameHoverColor">#132438</Color>
-      <Color x:Key="BgFramePressedColor">#1B3049</Color>
-      <Color x:Key="BgFrameFieldColor">#14263B</Color>
-      <Color x:Key="BorderFrameColor">#1C3047</Color>
+      <Color x:Key="BgFrameColor">#0A1A2E</Color>
+      <Color x:Key="BgFrameHoverColor">#152943</Color>
+      <Color x:Key="BgFramePressedColor">#1D3555</Color>
+      <Color x:Key="BgFrameFieldColor">#14273F</Color>
+      <Color x:Key="BorderFrameColor">#22395A</Color>
       <Color x:Key="TextOnFrameColor">#FFFFFF</Color>
       <Color x:Key="TextOnFrameSecondaryColor">#BCCADB</Color>
       <Color x:Key="TextOnFrameTertiaryColor">#9DAFC5</Color>
       <Color x:Key="AccentOnFrameColor">#7FBDF7</Color>
       <Color x:Key="DangerOnFrameColor">#FF8F99</Color>
-      <Color x:Key="BgHeroColor">#0B1B2E</Color>
+      <Color x:Key="BgHeroColor">#15365C</Color>
       <Color x:Key="TextOnHeroColor">#FFFFFF</Color>
-      <Color x:Key="TextOnHeroSecondaryColor">#BCCADB</Color>
+      <Color x:Key="TextOnHeroSecondaryColor">#C3D1E2</Color>
+      <Color x:Key="BgFrameSelectedColor">#25466C</Color>
+      <Color x:Key="BorderCardColor">#24354A</Color>
+      <Color x:Key="BgTableHeaderColor">#1B2A3C</Color>
       <!-- Backgrounds -->
       <SolidColorBrush x:Key="BgApp" Color="{StaticResource BgAppColor}" /> <!-- the content area behind cards -->
       <SolidColorBrush x:Key="BgSidebar" Color="{StaticResource BgSidebarColor}" /> <!-- the sidebar and side panels -->
@@ -724,6 +767,9 @@
       <SolidColorBrush x:Key="BgHero" Color="{StaticResource BgHeroColor}" /> <!-- the result panel, the one dark card inside the content area -->
       <SolidColorBrush x:Key="TextOnHero" Color="{StaticResource TextOnHeroColor}" /> <!-- the figure on the result panel -->
       <SolidColorBrush x:Key="TextOnHeroSecondary" Color="{StaticResource TextOnHeroSecondaryColor}" /> <!-- supporting text on the result panel -->
+      <SolidColorBrush x:Key="BgFrameSelected" Color="{StaticResource BgFrameSelectedColor}" /> <!-- the chosen segment of a switch on the frame -->
+      <SolidColorBrush x:Key="BorderCard" Color="{StaticResource BorderCardColor}" /> <!-- the hairline round a white card (with ShadowCard under it) -->
+      <SolidColorBrush x:Key="BgTableHeader" Color="{StaticResource BgTableHeaderColor}" /> <!-- a table's header row -->
       <!-- Older names, kept because code and views look them up by name -->
       <SolidColorBrush x:Key="WindowBg" Color="{StaticResource BgAppColor}" />
       <SolidColorBrush x:Key="SidebarBg" Color="{StaticResource BgSidebarColor}" />
@@ -754,7 +800,8 @@
       <BoxShadows x:Key="FocusHalo">0 0 0 3 #806DB5F5</BoxShadows>
       <BoxShadows x:Key="ShadowPopup">0 6 20 0 #66000000</BoxShadows>
       <BoxShadows x:Key="ShadowSheet">0 10 30 0 #8C000000</BoxShadows>
-      <BoxShadows x:Key="ShadowCard">0 0 0 0 #00000000</BoxShadows>
+      <BoxShadows x:Key="ShadowCard">0 1 2 0 #33000000, 0 8 22 -8 #59000000</BoxShadows>
+      <BoxShadows x:Key="ShadowHero">0 2 4 0 #40000000, 0 14 32 -10 #80000000</BoxShadows>
       <BoxShadows x:Key="ShadowControl">0 0.5 1 0 #59000000</BoxShadows>
       <SolidColorBrush x:Key="GaugeTrack" Color="#26374B" />
       <SolidColorBrush x:Key="GaugeTick" Color="#61728A" />
@@ -763,6 +810,31 @@
       <SolidColorBrush x:Key="GaugeDanger" Color="#FF5A6B" />
       <SolidColorBrush x:Key="GaugeMark" Color="#FF5A6B" />
       <SolidColorBrush x:Key="GaugeMarkHalo" Color="#172536" />
+      <SolidColorBrush x:Key="GaugeTrackOnDark" Color="#30557F" />
+      <SolidColorBrush x:Key="GaugeTickOnDark" Color="#8AA0BC" />
+      <SolidColorBrush x:Key="GaugeWaterOnDark" Color="#5AAEFF" />
+      <SolidColorBrush x:Key="GaugeNearOnDark" Color="#F5B04A" />
+      <SolidColorBrush x:Key="GaugeDangerOnDark" Color="#FF5A6E" />
+      <SolidColorBrush x:Key="GaugeMarkOnDark" Color="#FF5A6E" />
+      <SolidColorBrush x:Key="GaugeMarkHaloOnDark" Color="{StaticResource BgHeroColor}" />
+      <SolidColorBrush x:Key="ChartGrid" Color="#24354A" />
+      <SolidColorBrush x:Key="ChartLine" Color="#5AAEFF" />
+      <LinearGradientBrush x:Key="ChartArea" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#665AAEFF" />
+        <GradientStop Offset="1" Color="#085AAEFF" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="RowSelectedFill" StartPoint="0,0" EndPoint="4,0">
+        <GradientStop Offset="0" Color="{StaticResource AccentColor}" />
+        <GradientStop Offset="0.75" Color="{StaticResource AccentColor}" />
+        <GradientStop Offset="0.75" Color="{StaticResource AccentSoftColor}" />
+        <GradientStop Offset="1" Color="{StaticResource AccentSoftColor}" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="RowSelectedHoverFill" StartPoint="0,0" EndPoint="4,0">
+        <GradientStop Offset="0" Color="{StaticResource AccentColor}" />
+        <GradientStop Offset="0.75" Color="{StaticResource AccentColor}" />
+        <GradientStop Offset="0.75" Color="{StaticResource AccentSoftHoverColor}" />
+        <GradientStop Offset="1" Color="{StaticResource AccentSoftHoverColor}" />
+      </LinearGradientBrush>
       <SolidColorBrush x:Key="SidebarSelection" Color="#2A3F58" />
       <SolidColorBrush x:Key="SegmentedTrack" Color="#1E2F44" />
       <SolidColorBrush x:Key="ControlFill" Color="#55667D" />

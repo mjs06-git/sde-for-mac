@@ -14,6 +14,9 @@ public static class Converters
 	/// <summary>The damaged percentage's colour: red when substantially damaged, otherwise ordinary text (colour is kept for the one result that matters).</summary>
 	public static readonly IValueConverter PercentForegroundKey = new FuncValueConverter<ResultState, string>(s => s == ResultState.Substantial ? "StatusSubstantialFg" : "TextPrimary");
 
+	/// <summary>True for a substantially damaged result (the result hero writes the determination in red).</summary>
+	public static readonly IValueConverter IsSubstantial = new FuncValueConverter<ResultState, bool>(s => s == ResultState.Substantial);
+
 	/// <summary>The result dot's colour: the status hues, brighter than text so a small dot reads.</summary>
 	public static readonly IValueConverter StatusDotKey = new FuncValueConverter<ResultState, string>(s => $"Status{s}Dot");
 

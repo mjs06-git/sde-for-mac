@@ -17,7 +17,7 @@
         WindowStartupLocation="CenterScreen"
         ExtendClientAreaToDecorationsHint="True"
         WindowDecorations="Full"
-        Background="{DynamicResource WindowBg}">
+        Background="{DynamicResource BgFrame}">
 
   <NativeMenu.Menu>
     <NativeMenu>
@@ -396,7 +396,7 @@
         and Settings sits at the foot. The host clips the sidebar while it slides in or out (only with motion on).
       -->
       <Panel Name="SidebarHost" Classes="sidebarHost">
-      <Border Classes="sidebar" Width="{Binding SidebarWidth}" Name="Sidebar">
+      <Border Classes="sidebar onFrame" Width="{Binding SidebarWidth}" Name="Sidebar">
         <DockPanel>
           <Panel DockPanel.Dock="Top" Classes="sidebarTitleBar" Name="SidebarTitleBar"
                  chrome:WindowDecorationProperties.ElementRole="TitleBar">
@@ -435,7 +435,7 @@
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="ed:SectionViewModel">
                   <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" ToolTip.Tip="{Binding StatusText}">
-                    <Border Classes="stepBadge" Classes.required="{Binding HasRequiredIssues}">
+                    <Border Classes="stepBadge" Classes.required="{Binding HasRequiredIssues}" Classes.done="{Binding IsDone}">
                       <TextBlock Classes="stepNumber" Text="{Binding Number}" />
                     </Border>
                     <TextBlock Grid.Column="1" Classes="stepTitle" Text="{Binding Title}" />
@@ -535,7 +535,7 @@
           The unified toolbar: under the window's title bar, so its empty parts drag the window. On the left the back
           button (above an assessment), the title and the database; on the right the view switch, New and search.
         -->
-        <Border DockPanel.Dock="Top" Classes="titleBand" Name="TitleBand" chrome:WindowDecorationProperties.ElementRole="TitleBar">
+        <Border DockPanel.Dock="Top" Classes="titleBand onFrame" Name="TitleBand" chrome:WindowDecorationProperties.ElementRole="TitleBar">
           <Grid ColumnDefinitions="Auto,*,Auto">
             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
               <Button Classes="icon toolbar showSidebar" IsVisible="{Binding !IsSidebarVisible}" Command="{Binding ToggleSidebarCommand}"
@@ -657,8 +657,11 @@
                 <ListBoxItem AutomationProperties.Name="Map" ToolTip.Tip="Map (⌘2)"><c:Icon Kind="Map" Size="16" /></ListBoxItem>
                 <ListBoxItem AutomationProperties.Name="Summary" ToolTip.Tip="Summary (⌘3)"><c:Icon Kind="Dashboard" Size="16" /></ListBoxItem>
               </ListBox>
-              <DropDownButton Classes="ghost toolbar" Name="NewButton" AutomationProperties.Name="New" ToolTip.Tip="New">
-                <c:Icon Kind="Plus" Size="16" />
+              <DropDownButton Classes="toolbar newButton" Name="NewButton" AutomationProperties.Name="New" ToolTip.Tip="New">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <c:Icon Kind="Plus" Size="14" VerticalAlignment="Center" />
+                  <TextBlock Text="New" />
+                </StackPanel>
                 <DropDownButton.Flyout>
                   <MenuFlyout Placement="BottomEdgeAlignedRight">
                     <MenuItem Header="Residential Structure" InputGesture="Cmd+N" Command="{Binding Structures.NewStructureCommand}" CommandParameter="1" />
@@ -682,6 +685,9 @@
           </Grid>
         </Border>
 
+        <!-- The bright content panel the frame wraps (its top-left corner rounded while the sidebar shows) -->
+        <Border Classes="contentPanel" Classes.flush="{Binding !IsSidebarVisible}" Name="ContentPanel">
+        <DockPanel>
         <!-- The sample database is practice only: said on every page. -->
         <c:Banner DockPanel.Dock="Top" Tone="Warning" CornerRadius="0" Padding="20,6" IsVisible="{Binding IsSampleDatabase}"
                   Text="Sample database. Changes here are practice only." AutomationProperties.Name="Sample database notice">
@@ -693,6 +699,8 @@
           <Button Classes="link" Content="Send Back to the Office…" Command="{Binding SendBackCommand}" />
         </c:Banner>
         <ContentControl Content="{Binding CurrentPage}" Name="PageHost" />
+        </DockPanel>
+        </Border>
       </DockPanel>
     </Grid>
 

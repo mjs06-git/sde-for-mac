@@ -35,6 +35,11 @@ public class ContrastTests
 		("TextOnFrameTertiary", "BgFrame"), ("TextOnFrameTertiary", "BgFrameHover"), ("TextOnFrameTertiary", "BgFrameField"),
 		("AccentOnFrame", "BgFrame"), ("AccentOnFrame", "BgFrameHover"), ("DangerOnFrame", "BgFrame"), ("DangerOnFrame", "BgFrameHover"),
 		("TextOnHero", "BgHero"), ("TextOnHeroSecondary", "BgHero"), ("DangerOnFrame", "BgHero"),
+		// 3.5's frame in use: the selected sidebar row (white on the accent), the chosen segment of the view switch, the
+		// step showing (a lighter navy row), a required count on its capsule; and the tables' tinted header row
+		("OnAccent", "AccentFill"), ("TextOnFrame", "BgFrameSelected"),
+		("TextOnFrameSecondary", "BgFramePressed"), ("DangerOnFrame", "BgFrameField"), ("DangerOnFrame", "BgFramePressed"),
+		("TextPrimary", "BgTableHeader"), ("TextSecondary", "BgTableHeader"),
 		// The older names the result colours are looked up by
 		("StatusSubstantialFg", "StatusSubstantialBg"), ("StatusCloseFg", "StatusCloseBg"), ("StatusNotSubstantialFg", "StatusNotSubstantialBg"),
 		("StatusIncompleteFg", "StatusIncompleteBg"), ("StatusUndeterminedFg", "StatusUndeterminedBg"),
