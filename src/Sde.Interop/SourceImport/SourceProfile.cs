@@ -45,6 +45,19 @@ public enum SourceMatchBy
 	Address,
 }
 
+/// <summary>Whether one source row can become several structures (a record that covers several buildings).</summary>
+public enum SourceSplitMode
+{
+	/// <summary>One row, one structure. The default, and what profiles saved before this setting do.</summary>
+	None,
+
+	/// <summary>A column holds the number of buildings: a row with 3 becomes 3 structures.</summary>
+	CountColumn,
+
+	/// <summary>A column holds a list of building or unit names separated by a delimiter: one structure per item.</summary>
+	DelimitedColumn,
+}
+
 /// <summary>Where one SDE field's value comes from: a column, or the same constant for every row.</summary>
 public sealed class SourceFieldMap
 {
@@ -139,6 +152,35 @@ public sealed class SourceProfile
 	/// <summary>The assessment custom field (1–3) that receives the record ID, so it reaches the FEMA export; 0 = none.</summary>
 	public int RecordIdCustomField { get; set; }
 
+	/// <summary>
+	/// Whether a row that covers several buildings becomes several structures. Off by default. Not written to the
+	/// profile file while it is off, so profiles that don't use it look exactly as before.
+	/// </summary>
+	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+	public SourceSplitMode SplitMode { get; set; }
+
+	/// <summary>The source column with the number of buildings, or with the list of building names (see <see cref="SplitMode"/>).</summary>
+	public string SplitColumn { get; set; }
+
+	/// <summary>For <see cref="SourceSplitMode.DelimitedColumn"/>: what separates the items. Blank means a semicolon.</summary>
+	public string SplitDelimiter { get; set; }
+
+	/// <summary>
+	/// The structure field that tells the buildings of one row apart: <see cref="SplitFieldUnit"/> (the default, put after
+	/// the street number as SDE does for a unit) or <see cref="SplitFieldLot"/>. If the row already has a value there,
+	/// the building's name is added after it.
+	/// </summary>
+	public string SplitSuffixField { get; set; }
+
+	/// <summary>For <see cref="SourceSplitMode.CountColumn"/>: the word put before the building's number, as in "Bldg 2". Blank means "Bldg".</summary>
+	public string SplitLabel { get; set; }
+
+	/// <summary>The unit field (stored after the street number) as the field to tell split buildings apart.</summary>
+	public const string SplitFieldUnit = "ApartmentUnit";
+
+	/// <summary>The lot number field as the field to tell split buildings apart.</summary>
+	public const string SplitFieldLot = "LotNumber";
+
 	/// <summary>Field key (<see cref="SourceFieldInfo.Key"/>) → where its value comes from.</summary>
 	public Dictionary<string, SourceFieldMap> Fields { get; set; } = new(StringComparer.Ordinal);
 
@@ -149,6 +191,14 @@ public sealed class SourceProfile
 	/// <summary>The source name to write to links: <see cref="SourceName"/>, or <see cref="DefaultSourceName"/> when blank.</summary>
 	[JsonIgnore]
 	public string EffectiveSourceName => string.IsNullOrWhiteSpace(SourceName) ? DefaultSourceName : SourceName.Trim();
+
+	/// <summary>The delimiter for a list of buildings: <see cref="SplitDelimiter"/>, or a semicolon when blank.</summary>
+	[JsonIgnore]
+	public string EffectiveSplitDelimiter => string.IsNullOrEmpty(SplitDelimiter) ? ";" : SplitDelimiter;
+
+	/// <summary>The field that tells split buildings apart: <see cref="SplitFieldLot"/> or (default) <see cref="SplitFieldUnit"/>.</summary>
+	[JsonIgnore]
+	public string EffectiveSplitSuffixField => string.Equals(SplitSuffixField, SplitFieldLot, StringComparison.OrdinalIgnoreCase) ? SplitFieldLot : SplitFieldUnit;
 
 	/// <summary>The map for a field, or null when the field isn't mapped.</summary>
 	public SourceFieldMap this[string key] => Fields.TryGetValue(key, out SourceFieldMap m) && m.IsMapped ? m : null;
@@ -238,6 +288,12 @@ public sealed class SourceProfile
 		}
 		p.Fields = fields;
 		p.FilterValues ??= new List<string>();
+		if (!string.IsNullOrWhiteSpace(p.SplitSuffixField) && !string.Equals(p.SplitSuffixField, SplitFieldUnit, StringComparison.OrdinalIgnoreCase)
+			&& !string.Equals(p.SplitSuffixField, SplitFieldLot, StringComparison.OrdinalIgnoreCase))
+		{
+			warnings.Add($"'{p.SplitSuffixField}' can't tell buildings apart; the unit is used instead.");
+			p.SplitSuffixField = null;
+		}
 		if (p.RecordIdCustomField is < 0 or > 3)
 		{
 			warnings.Add($"Custom field {p.RecordIdCustomField} doesn't exist; the record ID won't be copied to a custom field.");
