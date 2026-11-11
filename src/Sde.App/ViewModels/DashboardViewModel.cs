@@ -40,11 +40,13 @@ public sealed partial class DashboardViewModel : ViewModelBase
 	private static readonly CultureInfo Us = CultureInfo.GetCultureInfo("en-US");
 
 	private readonly AppServices _app;
+	private readonly MainViewModel _main;
 	private List<AssessmentFile> _files = new();
 
-	public DashboardViewModel(AppServices app)
+	public DashboardViewModel(AppServices app, MainViewModel main = null)
 	{
 		_app = app;
+		_main = main;
 		app.DataChanged += () =>
 		{
 			if (IsActive)
@@ -140,6 +142,9 @@ public sealed partial class DashboardViewModel : ViewModelBase
 	public partial int TotalStructures { get; set; }
 
 	public bool HasAnything => TotalStructures > 0;
+
+	/// <summary>The window's view model: the empty state's New Structure and Open Sample Database are its commands.</summary>
+	public MainViewModel Shell => _main;
 
 	/// <summary>Whether the GIS files carry the owners' names. Off unless ticked, because names are personal information.</summary>
 	[ObservableProperty]

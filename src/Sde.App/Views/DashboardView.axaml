@@ -235,6 +235,14 @@
       </StackPanel>
     </ScrollViewer>
 
-    <c:EmptyState IsVisible="{Binding !HasAnything}" Title="No Structures" />
+    <!-- Nothing to sum up: the same first steps as an empty Structures list -->
+    <c:EmptyState IsVisible="{Binding !HasAnything}" Title="No Structures" Name="SummaryEmptyState">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Classes="primary" Content="New Structure" Command="{Binding Shell.Structures.NewStructureCommand}" CommandParameter="1"
+                ToolTip.Tip="A new residential structure (⌘N)" />
+        <Button Content="Open Sample Database" Command="{Binding Shell.OpenSampleDatabaseCommand}" IsVisible="{Binding Shell.Structures.CanOpenSample}"
+                ToolTip.Tip="Practise on made-up structures; your database stays as it is" />
+      </StackPanel>
+    </c:EmptyState>
   </Panel>
 </UserControl>

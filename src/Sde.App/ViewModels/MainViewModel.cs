@@ -59,7 +59,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		Settings = new SettingsViewModel(app);
 		Trash = new TrashViewModel(app);
 		Map = new MapViewModel(app, this);
-		Dashboard = new DashboardViewModel(app);
+		Dashboard = new DashboardViewModel(app, this);
 		Review = new ReviewViewModel(app, this);
 		Compliance = new ComplianceViewModel(app, this);
 		Assignments = new AssignmentsViewModel(app, this);
