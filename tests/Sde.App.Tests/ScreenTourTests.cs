@@ -5,6 +5,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
+using Sde.App.Controls;
 using Sde.App.Services;
 using Sde.App.ViewModels;
 using Sde.App.ViewModels.Editor;
@@ -44,6 +45,8 @@ public class ScreenTourTests
 			ui.Snapshot($"{10 + i:00}-editor-{Slug(editor.Sections[i].Title)}");
 		}
 
+		ui.Main.ShowCommand.Execute(Page.Dashboard);
+		ui.Snapshot("03-summary");
 		ui.Main.ShowCommand.Execute(Page.ImportExport);
 		ui.Snapshot("30-import-export");
 		// A made-up name: without one the field shows the Mac account's full name, which must never reach the docs.
@@ -96,7 +99,7 @@ public class ScreenTourTests
 	}
 
 	[AvaloniaFact]
-	public void ThemeSwitch_RecoloursResultDots_TheThresholdBar_AndLegendDots()
+	public void ThemeSwitch_RecoloursResultDots_TheStaffGauge_AndLegendDots()
 	{
 		BindingErrors.Instance.Messages.Clear();
 		using UiSession ui = new UiSession(ThemeVariant.Light);
@@ -113,11 +116,11 @@ public class ScreenTourTests
 
 		ui.Main.OpenAssessment(ui.Main.Structures.Rows.First(r => r.Address.StartsWith("123")).AssessmentID!.Value);
 		ui.Pump();
-		ProgressBar bar = ui.Window.GetVisualDescendants().OfType<ProgressBar>().First(p => p.IsEffectivelyVisible && p.Classes.Contains("threshold"));
-		string barKey = "Status" + ui.Main.Editor.State + "Dot";
-		AssertThemeColour(barKey, bar.Foreground);
+		StaffGauge gauge = ui.Window.GetVisualDescendants().OfType<StaffGauge>().First(g => g.IsEffectivelyVisible && !g.IsMini);
+		Assert.Equal(ui.Main.Editor.PercentValue, gauge.Value, 1);
+		AssertThemeColour(gauge.FillKey, gauge.FillBrush);
 		SwitchTheme(ui, ThemeVariant.Light);
-		AssertThemeColour(barKey, bar.Foreground);
+		AssertThemeColour(gauge.FillKey, gauge.FillBrush);
 
 		ui.Main.ShowCommand.Execute(Page.Map);
 		ui.Pump();

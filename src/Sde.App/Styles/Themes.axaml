@@ -87,7 +87,7 @@
   <ControlTheme x:Key="{x:Type c:Banner}" TargetType="c:Banner">
     <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
     <Setter Property="Padding" Value="10,7" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="Template">
@@ -275,9 +275,9 @@
             <Grid x:Name="SwitchAreaGrid" Background="Transparent" TemplatedControl.IsTemplateFocusTarget="True" />
             <ContentPresenter x:Name="PART_OffContentPresenter" IsVisible="False" Content="{TemplateBinding OffContent}" ContentTemplate="{TemplateBinding OffContentTemplate}" />
             <ContentPresenter x:Name="PART_OnContentPresenter" IsVisible="False" Content="{TemplateBinding OnContent}" ContentTemplate="{TemplateBinding OnContentTemplate}" />
-            <Border x:Name="OuterBorder" Width="36" Height="20" CornerRadius="10" BorderThickness="1"
+            <Border x:Name="OuterBorder" Width="36" Height="20" CornerRadius="{StaticResource RadiusPill}" BorderThickness="1"
                     Background="{DynamicResource ToggleSwitchFillOff}" BorderBrush="{DynamicResource ToggleSwitchStrokeOff}" />
-            <Border x:Name="SwitchKnobBounds" Width="36" Height="20" CornerRadius="10" BorderThickness="1"
+            <Border x:Name="SwitchKnobBounds" Width="36" Height="20" CornerRadius="{StaticResource RadiusPill}" BorderThickness="1"
                     Background="{DynamicResource ToggleSwitchFillOn}" BorderBrush="{DynamicResource ToggleSwitchStrokeOn}" />
             <Canvas x:Name="PART_SwitchKnob" Width="16" Height="20" HorizontalAlignment="Left">
               <Grid x:Name="PART_MovingKnobs" Width="20" Height="20">

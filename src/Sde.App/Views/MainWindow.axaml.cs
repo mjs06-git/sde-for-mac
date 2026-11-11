@@ -29,6 +29,11 @@ public partial class MainWindow : Window, IDialogs
 	public MainWindow()
 	{
 		InitializeComponent();
+		// Styles animate only under this class, so Reduce Motion (and the off-screen tests) get none.
+		if (Motion.Enabled)
+		{
+			Classes.Add(Motion.Class);
+		}
 		this.FindControl<ItemsControl>("ToastList").ItemsSource = Toasts.Items;
 		ContentControl pages = this.FindControl<ContentControl>("PageHost");
 		pages.TemplateApplied += (_, _) =>

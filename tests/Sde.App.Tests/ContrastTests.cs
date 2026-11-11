@@ -26,6 +26,9 @@ public class ContrastTests
 		("InfoFg", "InfoBg"), ("InfoFg", "BgSurface"), ("VioletFg", "VioletBg"), ("NeutralFg", "NeutralBg"),
 		("TextPrimary", "DangerBg"), ("TextPrimary", "WarningBg"), ("TextPrimary", "SuccessBg"), ("TextPrimary", "InfoBg"), ("TextPrimary", "NeutralBg"),
 		("TextOnTooltip", "BgTooltip"),
+		// The inspector panes (Structures, the editor's result), the selected table row and the sidebar's step outline
+		("TextPrimary", "BgInspector"), ("TextSecondary", "BgInspector"), ("TextTertiary", "BgInspector"), ("Accent", "BgInspector"), ("DangerFg", "BgInspector"),
+		("DangerFg", "AccentSoft"), ("DangerFg", "BgSidebar"), ("TextTertiary", "AccentSoft"),
 		// The older names the result colours are looked up by
 		("StatusSubstantialFg", "StatusSubstantialBg"), ("StatusCloseFg", "StatusCloseBg"), ("StatusNotSubstantialFg", "StatusNotSubstantialBg"),
 		("StatusIncompleteFg", "StatusIncompleteBg"), ("StatusUndeterminedFg", "StatusUndeterminedBg"),

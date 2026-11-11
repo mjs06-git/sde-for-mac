@@ -62,7 +62,7 @@
     <Grid>
       <DataGrid Name="Cases" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}" IsVisible="{Binding HasRows}"
                 IsReadOnly="True" CanUserSortColumns="True" CanUserReorderColumns="False" CanUserResizeColumns="True" SelectionMode="Single"
-                GridLinesVisibility="None" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
+                GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
                 AutomationProperties.Name="Compliance cases" ToolTip.Tip="Open cases first, by deadline. Double-click to open."
                 DoubleTapped="OnCasesDoubleTapped" KeyDown="OnCasesKeyDown">
         <DataGrid.ContextMenu>

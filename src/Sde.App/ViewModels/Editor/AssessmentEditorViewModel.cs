@@ -232,7 +232,7 @@ public sealed partial class AssessmentEditorViewModel : ViewModelBase
 	// ───────────── Result panel ─────────────
 
 	[ObservableProperty]
-	[NotifyPropertyChangedFor(nameof(HasPercent), nameof(ShowStateHint))]
+	[NotifyPropertyChangedFor(nameof(HasPercent), nameof(ShowStateHint), nameof(LineText))]
 	public partial ResultState State { get; set; }
 
 	/// <summary>Whether the hint under the result is shown: only when it says what to do (incomplete or undetermined); otherwise it is the result's tooltip.</summary>
@@ -243,11 +243,14 @@ public sealed partial class AssessmentEditorViewModel : ViewModelBase
 
 	/// <summary>The percent damaged for the result card's bar, from 0 to 100 (0 when there is no result).</summary>
 	[ObservableProperty]
-	[NotifyPropertyChangedFor(nameof(HasPercent))]
+	[NotifyPropertyChangedFor(nameof(HasPercent), nameof(LineText))]
 	public partial double PercentValue { get; set; }
 
 	/// <summary>Whether there is a percent to show on the result card's bar.</summary>
 	public bool HasPercent => State is ResultState.Substantial or ResultState.Close or ResultState.NotSubstantial;
+
+	/// <summary>Where the result stands against the line, in words, under the staff gauge ("25 points above the 50% line").</summary>
+	public string LineText => HasPercent ? ResultLine.Describe(PercentValue) : "";
 
 	[ObservableProperty]
 	public partial string Determination { get; set; }

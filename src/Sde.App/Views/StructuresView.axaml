@@ -59,7 +59,7 @@
   <!-- The toolbar names the list (and the sidebar's smart groups filter it); the page is the table, edge to edge. -->
   <DockPanel>
     <!-- Scope bar: what to show -->
-    <Border DockPanel.Dock="Top" Classes="scopeBar">
+    <Border DockPanel.Dock="Top" Classes="scopeBar onPaper">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
           <ComboBox Classes="sm" SelectedIndex="{Binding TypeFilter}" AutomationProperties.Name="Structure type filter">
@@ -187,14 +187,14 @@
     <Grid ColumnDefinitions="*,Auto">
     <DockPanel>
         <Panel DockPanel.Dock="Bottom">
-          <Border Classes="statusBar">
+          <Border Classes="statusBar onPaper">
             <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center">
               <TextBlock Text="{Binding CountText}" />
               <TextBlock Text="·" />
               <TextBlock Text="{Binding SortText}" />
             </StackPanel>
           </Border>
-          <Border Classes="statusBar" IsVisible="{Binding HasChecked}">
+          <Border Classes="statusBar onPaper" IsVisible="{Binding HasChecked}">
             <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" VerticalAlignment="Center">
               <TextBlock Text="{Binding CheckedText}" ToolTip.Tip="Change, Reports and Export use the checked structures" />
               <Button Classes="link" Content="Clear" Command="{Binding ClearCheckedCommand}" AutomationProperties.Name="Uncheck every structure" />
@@ -202,9 +202,11 @@
           </Border>
         </Panel>
         <Grid>
-          <DataGrid Name="Grid" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}" IsVisible="{Binding HasRows}"
+          <!-- The table: a white working surface on the paper page -->
+          <Border Classes="tableSheet" IsVisible="{Binding HasRows}">
+          <DataGrid Name="Grid" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}"
                     IsReadOnly="True" CanUserSortColumns="True" CanUserReorderColumns="False" CanUserResizeColumns="True" SelectionMode="Single"
-                    GridLinesVisibility="None" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
+                    GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
                     AutomationProperties.Name="Structures" Sorting="OnSorting" DoubleTapped="OnRowDoubleTapped" KeyDown="OnListKeyDown">
             <DataGrid.ContextMenu>
               <ContextMenu>
@@ -248,14 +250,14 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Type" SortMemberPath="Type" Width="124">
+              <DataGridTemplateColumn Header="Type" SortMemberPath="Type" Width="112">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <TextBlock Classes="cell secondary" Text="{Binding Type}" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Inspected" SortMemberPath="Inspected" Width="112">
+              <DataGridTemplateColumn Header="Inspected" SortMemberPath="Inspected" Width="108">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <TextBlock Classes="cell secondary" Text="{Binding Inspected}" ToolTip.Tip="{Binding Inspector}" />
@@ -269,7 +271,7 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Status" SortMemberPath="Status" Width="100">
+              <DataGridTemplateColumn Header="Status" SortMemberPath="Status" Width="88">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <TextBlock Classes="cell secondary" Text="{Binding Status}" />
@@ -311,11 +313,14 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Damaged" SortMemberPath="Damaged" Width="96">
+              <DataGridTemplateColumn Header="Damaged" SortMemberPath="Damaged" Width="128">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
-                    <TextBlock Classes="cell money" Text="{Binding PercentText}"
-                               app:ThemeBrush.Foreground="{Binding State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Classes="cell money" Text="{Binding PercentText}"
+                                 app:ThemeBrush.Foreground="{Binding State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
+                      <c:StaffGauge Grid.Column="1" Classes="cellGauge" Value="{Binding PercentValue}" IsEmpty="{Binding !HasPercent}" />
+                    </Grid>
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
@@ -331,6 +336,7 @@
               </DataGridTemplateColumn>
             </DataGrid.Columns>
           </DataGrid>
+          </Border>
 
           <!-- Empty states -->
           <c:EmptyState IsVisible="{Binding IsEmpty}" Title="{Binding EmptyTitle}">
@@ -345,10 +351,10 @@
         </Grid>
     </DockPanel>
 
-    <Border Grid.Column="1" Classes="inspector" Width="264" IsVisible="{Binding IsInspectorVisible}">
+    <Border Grid.Column="1" Classes="inspector" IsVisible="{Binding IsInspectorVisible}">
       <Grid>
-        <DockPanel Margin="16" IsVisible="{Binding HasSelectedDetail}">
-          <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+        <DockPanel Margin="20,20,20,16" IsVisible="{Binding HasSelectedDetail}">
+          <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
             <DropDownButton Content="Report" IsEnabled="{Binding CanReportSelected}" AutomationProperties.Name="Report of the selected structure">
               <DropDownButton.Flyout>
                 <MenuFlyout>
@@ -360,55 +366,51 @@
             <Button Classes="primary" Content="Open" Command="{Binding OpenCommand}" CommandParameter="{Binding Selected}" AutomationProperties.Name="Open the selected structure" />
           </StackPanel>
           <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Spacing="12" DataContext="{Binding SelectedDetail}" x:DataType="vm:StructureDetail">
+            <StackPanel Spacing="16" DataContext="{Binding SelectedDetail}" x:DataType="vm:StructureDetail">
               <StackPanel Spacing="2">
-                <TextBlock Classes="semibold" Text="{Binding Row.Address}" TextWrapping="Wrap" />
+                <TextBlock Classes="title" Text="{Binding Row.Address}" TextWrapping="Wrap" />
                 <TextBlock Classes="secondary sm" Text="{Binding Kind}" TextWrapping="Wrap" />
               </StackPanel>
-              <StackPanel Spacing="4">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <TextBlock Classes="inspectorFigure" Text="{Binding Row.PercentText}" IsVisible="{Binding Row.HasPercent}"
-                             app:ThemeBrush.Foreground="{Binding Row.State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
-                  <TextBlock Classes="secondary sm" Text="{Binding Row.Result}" VerticalAlignment="Bottom" Margin="0,0,0,3" TextWrapping="Wrap" />
-                </StackPanel>
-                <StackPanel Spacing="4" IsVisible="{Binding Row.HasPercent}">
-                  <Panel>
-                    <ProgressBar Classes="threshold" Minimum="0" Maximum="100" Value="{Binding PercentValue}"
-                                 app:ThemeBrush.Foreground="{Binding Row.State, Converter={x:Static app:Converters.StatusDotKey}}"
-                                 AutomationProperties.Name="Percent damaged against the 50% threshold" />
-                    <Grid ColumnDefinitions="*,Auto,*">
-                      <Border Grid.Column="1" Classes="thresholdTick" />
-                    </Grid>
-                  </Panel>
-                  <Grid ColumnDefinitions="*,Auto,*">
-                    <TextBlock Classes="xs secondary num" Text="0%" />
-                    <TextBlock Grid.Column="1" Classes="xs secondary num" Text="50%" />
-                    <TextBlock Grid.Column="2" Classes="xs secondary num" Text="100%" HorizontalAlignment="Right" />
-                  </Grid>
-                </StackPanel>
+
+              <!-- The result: the figure, the determination in words, and where it stands on the staff -->
+              <StackPanel Spacing="2">
+                <TextBlock Classes="inspectorFigure" Text="{Binding Row.PercentText}" IsVisible="{Binding Row.HasPercent}"
+                           app:ThemeBrush.Foreground="{Binding Row.State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
+                <TextBlock Classes="verdict" Text="{Binding Row.Result}"
+                           app:ThemeBrush.Foreground="{Binding Row.State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
+                <TextBlock Classes="secondary sm" Text="{Binding LineText}" IsVisible="{Binding Row.HasPercent}" />
+                <c:StaffGauge Classes="inspectorGauge" Value="{Binding PercentValue}" IsEmpty="{Binding !Row.HasPercent}" Margin="0,10,0,0" />
               </StackPanel>
+
               <Border Classes="hairline" />
-              <Grid Classes="facts" ColumnDefinitions="96,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-                <TextBlock Classes="secondary" Text="Owner" />
-                <TextBlock Grid.Column="1" Text="{Binding Row.Owner}" TextWrapping="Wrap" />
-                <TextBlock Grid.Row="1" Classes="secondary" Text="Community" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Row.Place}" TextWrapping="Wrap" />
-                <TextBlock Grid.Row="2" Classes="secondary" Text="Inspected" />
-                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Row.Inspected}" />
-                <TextBlock Grid.Row="3" Classes="secondary" Text="Inspector" />
-                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Row.Inspector}" TextWrapping="Wrap" />
-                <TextBlock Grid.Row="4" Classes="secondary" Text="Status" />
-                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Row.Status}" />
-              </Grid>
+              <StackPanel Spacing="8">
+                <TextBlock Classes="groupLabel" Text="Structure" />
+                <Grid Classes="facts" ColumnDefinitions="88,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                  <TextBlock Classes="factLabel" Text="Owner" />
+                  <TextBlock Grid.Column="1" Text="{Binding Row.Owner}" TextWrapping="Wrap" />
+                  <TextBlock Grid.Row="1" Classes="factLabel" Text="Community" />
+                  <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Row.Place}" TextWrapping="Wrap" />
+                  <TextBlock Grid.Row="2" Classes="factLabel" Text="Inspected" />
+                  <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Row.Inspected}" />
+                  <TextBlock Grid.Row="3" Classes="factLabel" Text="Inspector" />
+                  <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Row.Inspector}" TextWrapping="Wrap" />
+                  <TextBlock Grid.Row="4" Classes="factLabel" Text="Status" />
+                  <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Row.Status}" />
+                </Grid>
+              </StackPanel>
+
               <Border Classes="hairline" IsVisible="{Binding HasAssessment}" />
-              <Grid Classes="facts" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" IsVisible="{Binding HasAssessment}">
-                <TextBlock Classes="secondary" Text="Replacement cost" />
-                <TextBlock Grid.Column="1" Classes="money" Text="{Binding ReplacementCost, Converter={x:Static app:Converters.MoneyWhole}}" />
-                <TextBlock Grid.Row="1" Classes="secondary" Text="Actual cash value" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Classes="money" Text="{Binding ActualCashValue, Converter={x:Static app:Converters.MoneyWhole}}" />
-                <TextBlock Grid.Row="2" Classes="secondary" Text="Damages" />
-                <TextBlock Grid.Row="2" Grid.Column="1" Classes="money" Text="{Binding Damages, Converter={x:Static app:Converters.MoneyWhole}}" />
-              </Grid>
+              <StackPanel Spacing="8" IsVisible="{Binding HasAssessment}">
+                <TextBlock Classes="groupLabel" Text="Costs" />
+                <Grid Classes="facts" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
+                  <TextBlock Classes="factLabel" Text="Replacement cost" />
+                  <TextBlock Grid.Column="1" Classes="money" Text="{Binding ReplacementCost, Converter={x:Static app:Converters.MoneyWhole}}" />
+                  <TextBlock Grid.Row="1" Classes="factLabel" Text="Actual cash value" />
+                  <TextBlock Grid.Row="1" Grid.Column="1" Classes="money" Text="{Binding ActualCashValue, Converter={x:Static app:Converters.MoneyWhole}}" />
+                  <TextBlock Grid.Row="2" Classes="factLabel" Text="Damages" />
+                  <TextBlock Grid.Row="2" Grid.Column="1" Classes="money semibold" Text="{Binding Damages, Converter={x:Static app:Converters.MoneyWhole}}" />
+                </Grid>
+              </StackPanel>
             </StackPanel>
           </ScrollViewer>
         </DockPanel>

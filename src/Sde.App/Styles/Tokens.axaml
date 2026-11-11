@@ -8,6 +8,8 @@
     The 3.5 look ("High-Water") comes from the app icon: water blue for the accent, navy ink for text, warm paper
     for backgrounds, and the staff gauge's red for substantial damage, errors and destructive actions. The sizes
     here are the Comfortable density; Styles/Density.Compact.axaml overrides them when Compact is chosen in Settings.
+    The Compact sizes are merged in after the style sheets load, so Styles/*.axaml look the size tokens up with
+    DynamicResource (ControlHeight, TableRowHeight and the like); radii and colours do not change with density.
     docs/design/DESIGN-LANGUAGE.md has the rules.
   -->
 
@@ -71,6 +73,10 @@
   <x:Double x:Key="TitleBandHeight">52</x:Double>
   <x:Double x:Key="TableRowHeight">30</x:Double>
   <x:Double x:Key="TableHeaderHeight">30</x:Double>
+  <x:Double x:Key="ScopeBarHeight">40</x:Double> <!-- the filter strip above a table (small controls, 9 px above and below) -->
+  <x:Double x:Key="StatusBarHeight">28</x:Double> <!-- the count and sort line under a table -->
+  <x:Double x:Key="StepBadgeSize">20</x:Double> <!-- the round step number in the editor's outline -->
+  <x:Double x:Key="GaugeMiniWidth">56</x:Double> <!-- the staff gauge in a table cell -->
   <x:Double x:Key="SheetWidthSmall">440</x:Double>
   <x:Double x:Key="SheetWidthMedium">600</x:Double>
   <x:Double x:Key="SheetWidthLarge">800</x:Double>
@@ -240,6 +246,15 @@
       <BoxShadows x:Key="ShadowCard">0 0 0 0 #00000000</BoxShadows>
       <!-- The bezel under a push button, a pop-up button and the selected segment (Mac controls sit slightly raised) -->
       <BoxShadows x:Key="ShadowControl">0 0.5 1.5 0 #24000000</BoxShadows>
+      <!-- The staff gauge (Controls/StaffGauge): the dry staff, its graduations, the water, and the high-water mark.
+           The water turns to the warning amber within ten points of the line and to the gauge red at or above it. -->
+      <SolidColorBrush x:Key="GaugeTrack" Color="#E7E1D6" />
+      <SolidColorBrush x:Key="GaugeTick" Color="#A69C8B" />
+      <SolidColorBrush x:Key="GaugeWater" Color="#2F78BD" />
+      <SolidColorBrush x:Key="GaugeNear" Color="#D9871A" />
+      <SolidColorBrush x:Key="GaugeDanger" Color="#C8102E" />
+      <SolidColorBrush x:Key="GaugeMark" Color="#C8102E" />
+      <SolidColorBrush x:Key="GaugeMarkHalo" Color="#FFFFFF" /> <!-- a thin gap either side of the mark where it crosses the water -->
       <!-- Mac surfaces with no WCAG text pair: the selected source-list row and a segmented control's track -->
       <SolidColorBrush x:Key="SidebarSelection" Color="#DDD5C7" />
       <SolidColorBrush x:Key="SegmentedTrack" Color="#E7E0D4" />
@@ -680,6 +695,13 @@
       <BoxShadows x:Key="ShadowSheet">0 10 30 0 #8C000000</BoxShadows>
       <BoxShadows x:Key="ShadowCard">0 0 0 0 #00000000</BoxShadows>
       <BoxShadows x:Key="ShadowControl">0 0.5 1 0 #59000000</BoxShadows>
+      <SolidColorBrush x:Key="GaugeTrack" Color="#2A384B" />
+      <SolidColorBrush x:Key="GaugeTick" Color="#61728A" />
+      <SolidColorBrush x:Key="GaugeWater" Color="#4A93D6" />
+      <SolidColorBrush x:Key="GaugeNear" Color="#F0A23A" />
+      <SolidColorBrush x:Key="GaugeDanger" Color="#FF5A6B" />
+      <SolidColorBrush x:Key="GaugeMark" Color="#FF5A6B" />
+      <SolidColorBrush x:Key="GaugeMarkHalo" Color="#1A2535" />
       <SolidColorBrush x:Key="SidebarSelection" Color="#2B3B51" />
       <SolidColorBrush x:Key="SegmentedTrack" Color="#233043" />
       <SolidColorBrush x:Key="ControlFill" Color="#55667D" />

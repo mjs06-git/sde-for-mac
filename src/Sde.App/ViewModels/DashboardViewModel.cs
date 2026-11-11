@@ -105,6 +105,18 @@ public sealed partial class DashboardViewModel : ViewModelBase
 	[ObservableProperty]
 	public partial string BuildingValue { get; set; }
 
+	/// <summary>The page's headline: "2 of 3 structures substantially damaged", or "No assessments yet".</summary>
+	[ObservableProperty]
+	public partial string HeadlineText { get; set; }
+
+	/// <summary>The share of assessments that are substantially damaged, 0 to 100, for the headline's gauge.</summary>
+	[ObservableProperty]
+	public partial double SubstantialShare { get; set; }
+
+	/// <summary>Whether there is any assessment to take a share of (the headline's gauge is drawn dry otherwise).</summary>
+	[ObservableProperty]
+	public partial bool HasAssessments { get; set; }
+
 	[ObservableProperty]
 	public partial string RepairCost { get; set; }
 
@@ -210,6 +222,10 @@ public sealed partial class DashboardViewModel : ViewModelBase
 		int substantial = s.Count(DeterminationClass.Substantial);
 		SubstantialText = substantial.ToString("N0", Us);
 		SubstantialNote = s.AssessmentCount == 0 ? "No assessments yet" : $"{100.0 * substantial / s.AssessmentCount:0.#}% of assessments";
+		HasAssessments = s.AssessmentCount > 0;
+		SubstantialShare = s.AssessmentCount == 0 ? 0 : 100.0 * substantial / s.AssessmentCount;
+		HeadlineText = s.AssessmentCount == 0 ? "No assessments yet"
+			: $"{substantial.ToString("N0", Us)} of {s.AssessmentCount.ToString("N0", Us)} {(s.AssessmentCount == 1 ? "structure" : "structures")} substantially damaged";
 		BuildingValue = s.TotalBuildingValue.ToString("C0", Us);
 		RepairCost = s.TotalRepairCost.ToString("C0", Us);
 		Dates = DateText(s);

@@ -110,7 +110,9 @@ public sealed class FieldGrid : Panel
 		double column = ColumnWidth(width);
 		foreach (Control child in Children)
 		{
-			if (!Shows(child))
+			// A field's ContentPresenter makes its child on the first measure, so measure before asking whether it shows:
+			// otherwise a hidden field counts as a row the first time and leaves an empty gap under the group.
+			if (!Shows(child) || child is ContentPresenter { Child: null })
 			{
 				child.Measure(new Size(column, double.PositiveInfinity));
 			}

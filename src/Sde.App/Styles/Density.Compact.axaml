@@ -9,6 +9,9 @@
   <x:Double x:Key="ControlHeightLarge">28</x:Double>
   <x:Double x:Key="TableRowHeight">24</x:Double>
   <x:Double x:Key="TableHeaderHeight">26</x:Double>
+  <x:Double x:Key="ScopeBarHeight">34</x:Double>
+  <x:Double x:Key="StatusBarHeight">24</x:Double>
+  <x:Double x:Key="StepBadgeSize">18</x:Double>
   <x:Double x:Key="TextControlThemeMinHeight">22</x:Double>
   <Thickness x:Key="TextControlThemePadding">6,2,6,2</Thickness>
   <x:Double x:Key="ComboBoxMinHeight">22</x:Double>

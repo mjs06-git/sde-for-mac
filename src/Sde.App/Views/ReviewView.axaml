@@ -73,7 +73,7 @@
         <Grid>
           <DataGrid Name="Queue" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}" IsVisible="{Binding HasRows}"
                     IsReadOnly="True" CanUserSortColumns="True" CanUserReorderColumns="False" CanUserResizeColumns="True" SelectionMode="Single"
-                    GridLinesVisibility="None" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
+                    GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
                     AutomationProperties.Name="Assessments to review" ToolTip.Tip="Problems first. Double-click to open."
                     DoubleTapped="OnQueueDoubleTapped" KeyDown="OnQueueKeyDown">
             <DataGrid.ContextMenu>

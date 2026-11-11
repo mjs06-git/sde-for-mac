@@ -67,6 +67,9 @@ public sealed partial class StructureRowViewModel(StructureSummary s, ReferenceD
 
 	public string PercentText => HasPercent ? $"{Summary.PercentDamage:0.0}%" : "–";
 
+	/// <summary>The percent damaged for the staff gauge in the Damaged column (0 when there is no result).</summary>
+	public double PercentValue => HasPercent ? (double)(Summary.PercentDamage ?? 0m) : 0;
+
 	public string Result => Summary.AssessmentID == null ? "No assessment" : Summary.DamageMessage ?? "Data Entry Incomplete";
 
 	[ObservableProperty]
@@ -102,6 +105,9 @@ public sealed class StructureDetail
 
 	/// <summary>The percent damaged for the threshold bar, 0 to 100.</summary>
 	public double PercentValue => Row.HasPercent ? (double)Math.Clamp(Row.Summary.PercentDamage ?? 0m, 0m, 100m) : 0;
+
+	/// <summary>Where the result stands against the line, in words ("25 points above the 50% line"); empty with no result.</summary>
+	public string LineText => Row.HasPercent ? ResultLine.Describe((double)(Row.Summary.PercentDamage ?? 0m)) : "";
 
 	public static StructureDetail Read(SdeStore store, StructureRowViewModel row)
 	{

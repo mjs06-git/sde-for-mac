@@ -3,30 +3,49 @@
         xmlns:c="using:Sde.App.Controls">
   <!--
     Buttons, in the Mac's push-button look. A plain <Button> is the default: white (dark grey in dark mode), a hairline
-    bezel and a soft shadow, 22 px high, regular weight.
+    bezel and a soft shadow, ControlHeight high (28 Comfortable, 22 Compact), RadiusControl corners, regular weight.
       Variants: accent (also "primary"), ghost (also "subtle"), link, danger (red text), destructive (solid red),
                 icon (square, no border), chip (small pill), nav (sidebar item; "active" when selected), help (the info icon by a field)
-      Sizes:    sm (19 px), lg (28 px, toolbar items); they combine with the variants, for example Classes="icon sm".
+      Sizes:    sm (ControlHeightSmall), lg (ControlHeightLarge, toolbar items); they combine with the variants, for example Classes="icon sm".
     Menus: <DropDownButton> shows a chevron; DropDownButton.accent is the accent version. <SplitButton> likewise.
     A segmented control is a ListBox with Classes="segmented".
     Every state (pointer over, pressed, disabled, keyboard focus) is styled; keyboard focus shows the Focus ring.
+    With motion on (the window's "motion" class, Services/Motion) fills and borders fade between states.
   -->
 
   <!-- The keyboard focus ring for every control, as on the Mac: 3 px of the accent, half see-through, hugging the control. -->
   <Style Selector="AdornerLayer">
     <Setter Property="DefaultFocusAdorner">
       <FocusAdornerTemplate>
-        <Border BorderThickness="3" BorderBrush="{DynamicResource Focus}" Opacity="0.5" CornerRadius="7" Margin="-3" />
+        <Border BorderThickness="3" BorderBrush="{DynamicResource Focus}" Opacity="0.5" CornerRadius="{StaticResource RadiusControl}" Margin="-3" />
       </FocusAdornerTemplate>
     </Setter>
   </Style>
 
   <!-- Default -->
   <Style Selector="Button, ToggleButton, DropDownButton, SplitButton">
-    <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeight}" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
+  </Style>
+  <!-- Hover and press fade (only with motion on) -->
+  <Style Selector=".motion Button /template/ ContentPresenter#PART_ContentPresenter, .motion ToggleButton /template/ ContentPresenter#PART_ContentPresenter, .motion RepeatButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.12" />
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.12" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector=".motion DropDownButton /template/ Border#RootBorder">
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.12" />
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.12" />
+      </Transitions>
+    </Setter>
   </Style>
   <!-- The bezel shadow under push buttons; the borderless variants below take it off -->
   <Style Selector="Button /template/ ContentPresenter#PART_ContentPresenter, ToggleButton /template/ ContentPresenter#PART_ContentPresenter">
@@ -42,12 +61,12 @@
     <Setter Property="BoxShadow" Value="0 0 0 0 #00000000" />
   </Style>
   <Style Selector="Button.sm, ToggleButton.sm, DropDownButton.sm">
-    <Setter Property="MinHeight" Value="{StaticResource ControlHeightSmall}" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeightSmall}" />
     <Setter Property="Padding" Value="8,2" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
   </Style>
   <Style Selector="Button.lg, ToggleButton.lg, DropDownButton.lg">
-    <Setter Property="MinHeight" Value="{StaticResource ControlHeightLarge}" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeightLarge}" />
     <Setter Property="Padding" Value="16,4" />
   </Style>
 
@@ -103,8 +122,8 @@
 
   <!-- Icon: a square ghost button with one icon -->
   <Style Selector="Button.icon">
-    <Setter Property="Width" Value="{StaticResource ControlHeight}" />
-    <Setter Property="Height" Value="{StaticResource ControlHeight}" />
+    <Setter Property="Width" Value="{DynamicResource ControlHeight}" />
+    <Setter Property="Height" Value="{DynamicResource ControlHeight}" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -116,14 +135,14 @@
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
   <Style Selector="Button.icon.sm">
-    <Setter Property="Width" Value="{StaticResource ControlHeightSmall}" />
-    <Setter Property="Height" Value="{StaticResource ControlHeightSmall}" />
-    <Setter Property="MinHeight" Value="{StaticResource ControlHeightSmall}" />
+    <Setter Property="Width" Value="{DynamicResource ControlHeightSmall}" />
+    <Setter Property="Height" Value="{DynamicResource ControlHeightSmall}" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeightSmall}" />
     <Setter Property="Padding" Value="0" />
   </Style>
   <Style Selector="Button.icon.lg">
-    <Setter Property="Width" Value="{StaticResource ControlHeightLarge}" />
-    <Setter Property="Height" Value="{StaticResource ControlHeightLarge}" />
+    <Setter Property="Width" Value="{DynamicResource ControlHeightLarge}" />
+    <Setter Property="Height" Value="{DynamicResource ControlHeightLarge}" />
     <Setter Property="Padding" Value="0" />
   </Style>
 
@@ -196,7 +215,7 @@
 
   <!-- Chip: a small push button (damage presets 0 to 100, the status menu, "Showing … ×") -->
   <Style Selector="Button.chip">
-    <Setter Property="MinHeight" Value="{StaticResource ControlHeightSmall}" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeightSmall}" />
     <Setter Property="Padding" Value="8,1" />
     <Setter Property="MinWidth" Value="34" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
@@ -208,10 +227,10 @@
   <Style Selector="Button.nav">
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    <Setter Property="MinHeight" Value="28" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeight}" />
     <Setter Property="Padding" Value="8,0" />
     <Setter Property="FontWeight" Value="Normal" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
   </Style>
   <Style Selector="Button.nav /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
@@ -220,12 +239,32 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
+  <Style Selector="Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgHover}" />
+  </Style>
+  <!-- The page showing: the soft water blue, medium weight, and the accent's leading mark (Border.navMark in the row) -->
   <Style Selector="Button.nav.active /template/ ContentPresenter#PART_ContentPresenter, Button.nav.active:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource SidebarSelection}" />
+    <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector="Button.nav.active">
+    <Setter Property="TextElement.FontWeight" Value="Medium" />
   </Style>
   <Style Selector="Button.nav c|Icon">
     <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+  </Style>
+  <Style Selector="Button.nav Border.navMark">
+    <Setter Property="Width" Value="3" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
+    <Setter Property="Background" Value="{DynamicResource Accent}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="-8,0,0,0" />
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="Button.nav.active Border.navMark">
+    <Setter Property="IsVisible" Value="True" />
   </Style>
 
   <!-- The info icon beside a field's label: opens the field's help -->
@@ -321,7 +360,7 @@
   <Style Selector="RadioButton.segment">
     <Setter Property="Template">
       <ControlTemplate>
-        <Border Name="PART_Segment" Background="Transparent" CornerRadius="4" Padding="12,1" MinHeight="20">
+        <Border Name="PART_Segment" Background="Transparent" CornerRadius="{StaticResource RadiusSmall}" Padding="12,1" MinHeight="{DynamicResource ControlHeightSmall}">
           <ContentPresenter Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center"
                             Foreground="{DynamicResource TextPrimary}" />
         </Border>
@@ -349,9 +388,9 @@
     </Setter>
   </Style>
   <Style Selector="ListBox.segmented ListBoxItem">
-    <Setter Property="MinHeight" Value="20" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeightSmall}" />
     <Setter Property="Padding" Value="12,1" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
     <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />

@@ -403,10 +403,20 @@
             </Button>
           </Panel>
 
+          <!-- The brand: the mark, the product's name and the open database -->
+          <Grid DockPanel.Dock="Top" Classes="brandHeader" ColumnDefinitions="Auto,*" Name="BrandHeader">
+            <c:Icon Kind="BrandMark" Size="26" />
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+              <TextBlock Classes="brandName" Text="SDE" />
+              <TextBlock Classes="brandDetail" Text="{Binding DatabaseName}" ToolTip.Tip="{Binding DatabaseName}" />
+            </StackPanel>
+          </Grid>
+
           <Panel DockPanel.Dock="Bottom" IsVisible="{Binding !IsEditorPage}">
             <Button Classes="nav" Margin="10,4,10,10" DataContext="{Binding TrashItem}" x:DataType="shell:NavItemViewModel"
                     Classes.active="{Binding IsActive}" Command="{Binding ShowCommand}" AutomationProperties.Name="{Binding Title}" ToolTip.Tip="{Binding ToolTip}">
               <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Classes="navMark" />
                 <c:Icon Kind="{Binding Icon}" Size="16" Margin="0,0,8,0" />
                 <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                 <TextBlock Grid.Column="2" Classes="sourceCount" Text="{Binding CountText}" IsVisible="{Binding HasCount}" />
@@ -421,8 +431,10 @@
             <ListBox Classes="steps" Margin="0" ItemsSource="{Binding Sections}" SelectedItem="{Binding SelectedSection}" AutomationProperties.Name="Steps">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="ed:SectionViewModel">
-                  <Grid ColumnDefinitions="18,*,Auto" ColumnSpacing="8" ToolTip.Tip="{Binding StatusText}">
-                    <TextBlock Classes="stepNumber" Text="{Binding Number}" />
+                  <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" ToolTip.Tip="{Binding StatusText}">
+                    <Border Classes="stepBadge" Classes.required="{Binding HasRequiredIssues}">
+                      <TextBlock Classes="stepNumber" Text="{Binding Number}" />
+                    </Border>
                     <TextBlock Grid.Column="1" Classes="stepTitle" Text="{Binding Title}" />
                     <Border Grid.Column="2" Classes="stepCount" Classes.required="{Binding HasRequiredIssues}" IsVisible="{Binding HasIssues}">
                       <TextBlock Text="{Binding IssueCount}" />
@@ -446,6 +458,7 @@
                           <Button Classes="nav" Classes.active="{Binding IsActive}" Command="{Binding ShowCommand}"
                                   AutomationProperties.Name="{Binding Title}" ToolTip.Tip="{Binding ToolTip}">
                             <Grid ColumnDefinitions="Auto,*,Auto">
+                              <Border Classes="navMark" />
                               <c:Icon Kind="{Binding Icon}" Size="16" Margin="0,0,8,0" />
                               <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                               <TextBlock Grid.Column="2" Classes="sourceCount" Text="{Binding CountText}" IsVisible="{Binding HasCount}" />
@@ -456,6 +469,7 @@
                           <Button Classes="nav" Classes.active="{Binding IsActive}" Command="{Binding ShowCommand}"
                                   AutomationProperties.Name="{Binding Title}" ToolTip.Tip="{Binding Title}">
                             <Grid ColumnDefinitions="Auto,*,Auto">
+                              <Border Classes="navMark" />
                               <c:Icon Kind="{Binding Icon}" Size="16" Margin="0,0,8,0" />
                               <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                               <TextBlock Grid.Column="2" Classes="sourceCount" Text="{Binding CountText}" IsVisible="{Binding HasCount}" />

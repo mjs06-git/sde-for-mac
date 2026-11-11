@@ -93,7 +93,7 @@
         <Grid>
           <DataGrid Name="Route" ItemsSource="{Binding Stops}" SelectedItem="{Binding SelectedStop}" IsVisible="{Binding HasStops}"
                     IsReadOnly="True" CanUserSortColumns="False" CanUserReorderColumns="False" CanUserResizeColumns="True" SelectionMode="Single"
-                    GridLinesVisibility="None" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
+                    GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
                     AutomationProperties.Name="Route" ToolTip.Tip="In route order. Double-click to open."
                     DoubleTapped="OnRouteDoubleTapped" KeyDown="OnRouteKeyDown">
             <DataGrid.ContextMenu>
