@@ -213,6 +213,7 @@
             <DataGrid.ContextMenu>
               <ContextMenu>
                 <MenuItem Header="Open" Command="{Binding OpenCommand}" CommandParameter="{Binding Selected}" />
+                <MenuItem Header="Case File" Command="{Binding Shell.ShowCaseFileCommand}" CommandParameter="{Binding Selected}" />
                 <MenuItem Header="Pin" Command="{Binding PinCommand}" CommandParameter="{Binding Selected}" IsVisible="{Binding !SelectedIsPinned}" />
                 <MenuItem Header="Unpin" Command="{Binding UnpinCommand}" CommandParameter="{Binding Selected}" IsVisible="{Binding SelectedIsPinned}" />
                 <MenuItem Header="Copy from Another Structure…" Command="{Binding CopyFromCommand}" CommandParameter="{Binding Selected}" />
@@ -409,6 +410,10 @@
                       </MenuFlyout>
                     </DropDownButton.Flyout>
                   </DropDownButton>
+                  <Button Classes="icon" Command="{Binding Shell.ShowCaseFileCommand}" CommandParameter="{Binding Selected}" Name="InspectorCaseFile"
+                          AutomationProperties.Name="Case file of the selected structure" ToolTip.Tip="Case File">
+                    <c:Icon Kind="Clipboard" Size="16" />
+                  </Button>
                   <Button Classes="icon" Command="{Binding PinCommand}" CommandParameter="{Binding Selected}" IsVisible="{Binding !SelectedIsPinned}"
                           AutomationProperties.Name="Pin" ToolTip.Tip="Pin to the Sidebar">
                     <c:Icon Kind="PushPin" Size="16" />

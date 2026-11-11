@@ -360,7 +360,7 @@ public class ShellLayoutTests
 		};
 		List<MenuItem> commands = items.Where(i => !i.Classes.Contains("menuGroup")).ToList();
 		Assert.All(before, h => Assert.Single(commands, i => (string)i.Header == h && i.Command != null));
-		Assert.Equal(before.Length + 2, commands.Count);                        // and Pin, Unpin
+		Assert.Equal(before.Length + 5, commands.Count);                        // and Pin, Unpin, Case File, Documents…, Compare Assessments…
 		Assert.Equal(Avalonia.Input.KeyGesture.Parse("Cmd+S"), commands.Single(i => (string)i.Header == "Save Now").InputGesture);
 		Assert.Equal(Avalonia.Input.KeyGesture.Parse("Cmd+Shift+Z"), commands.Single(i => (string)i.Header == "Redo").InputGesture);
 		Assert.Equal(new[] { "This Assessment", "Structure", "Fill In", "Letters and Determinations" },

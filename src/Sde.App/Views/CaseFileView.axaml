@@ -1,0 +1,206 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Sde.App.ViewModels"
+             xmlns:v="using:Sde.App.Views"
+             xmlns:app="using:Sde.App"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.CaseFileView"
+             x:DataType="vm:CaseFileViewModel">
+  <UserControl.Resources>
+    <!-- A line of a card (a letter, a case, a document): the title over its detail, a date or figure on the right -->
+    <DataTemplate x:Key="CaseLine" x:DataType="vm:CaseFileLine">
+      <Border Classes="caseRow" AutomationProperties.Name="{Binding AccessibleName}">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+          <StackPanel Spacing="1">
+            <TextBlock Classes="medium" Text="{Binding Title}" TextWrapping="Wrap" />
+            <TextBlock Classes="secondary sm" Text="{Binding Detail}" TextWrapping="Wrap" IsVisible="{Binding HasDetail}" />
+          </StackPanel>
+          <TextBlock Grid.Column="1" Classes="secondary num" Text="{Binding Trailing}" VerticalAlignment="Top" />
+        </Grid>
+      </Border>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <!-- In the window's toolbar -->
+  <v:PageChrome.Toolbar>
+    <StackPanel Classes="pageToolbar">
+      <Button Content="Print Case File…" Command="{Binding PrintCommand}" Name="PrintCaseFileButton"
+              ToolTip.Tip="A PDF of the case file, with or without the timeline" />
+      <Button Content="Open Latest Assessment" Command="{Binding OpenLatestCommand}" Name="OpenLatestButton"
+              ToolTip.Tip="The assessment whose result is the structure's current result" />
+    </StackPanel>
+  </v:PageChrome.Toolbar>
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled" Name="CaseFileScroll">
+    <StackPanel Margin="{StaticResource PagePadding}" Spacing="20">
+      <!-- The hero band: who and where the structure is, and its current result -->
+      <Border Classes="heroBand" Name="CaseFileHero">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="28">
+          <StackPanel Spacing="22" VerticalAlignment="Center">
+            <StackPanel Spacing="4">
+              <TextBlock Classes="heroHeadline" Text="{Binding Address}" Name="CaseFileAddress" />
+              <TextBlock Classes="heroNote" Text="{Binding CityStateZip}" IsVisible="{Binding HasCityStateZip}" />
+            </StackPanel>
+            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="32">
+              <StackPanel Spacing="3">
+                <TextBlock Classes="heroLabel" Text="Owner" />
+                <TextBlock Classes="heroValue" Text="{Binding Owner}" Name="CaseFileOwner" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="3">
+                <TextBlock Classes="heroLabel" Text="Parcel" />
+                <TextBlock Classes="heroValue num" Text="{Binding Parcel}" Name="CaseFileParcel" />
+              </StackPanel>
+              <StackPanel Grid.Column="2" Spacing="3">
+                <TextBlock Classes="heroLabel" Text="NFIP community" />
+                <TextBlock Classes="heroValue" Text="{Binding Community}" />
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+          <Border Grid.Column="1" Classes="heroResult" VerticalAlignment="Center">
+            <StackPanel>
+              <c:ResultHero Classes="inBand" Name="CaseFileResult" Label="Current result"
+                            PercentText="{Binding PercentText}" HasPercent="{Binding HasPercent}" Verdict="{Binding Verdict}"
+                            IsSubstantial="{Binding IsSubstantial}" LineText="{Binding LineText}" Value="{Binding PercentValue}"
+                            Hint="{Binding LatestText}" ShowHint="{Binding HasLatest}" />
+              <TextBlock Classes="heroNote" Classes.danger="{Binding CumulativeMeetsThreshold}" Text="{Binding CumulativeText}"
+                         IsVisible="{Binding HasCumulative}" Margin="0,6,0,0" Name="CumulativeLine" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </Border>
+
+      <Grid ColumnDefinitions="3*,2*" ColumnSpacing="20">
+        <!-- The timeline, newest first, under month headings -->
+        <Border Classes="sheetBlock" Name="TimelineCard" VerticalAlignment="Top">
+          <StackPanel>
+            <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+              <TextBlock Classes="sheetTitle" Text="Timeline" Margin="0" VerticalAlignment="Center" />
+              <ToggleSwitch Grid.Column="1" Name="ShowEditsSwitch" Content="Show edits" OnContent="" OffContent="" IsChecked="{Binding ShowEdits}"
+                            IsVisible="{Binding HasEdits}" ToolTip.Tip="{Binding EditsTip}" AutomationProperties.Name="Show edits" />
+            </Grid>
+            <ItemsControl ItemsSource="{Binding Timeline}" Name="TimelineList">
+              <ItemsControl.DataTemplates>
+                <DataTemplate DataType="vm:CaseFileMonthViewModel">
+                  <TextBlock Classes="timelineMonth" Text="{Binding Title}" />
+                </DataTemplate>
+                <DataTemplate DataType="vm:CaseFileEntryViewModel">
+                  <Grid ColumnDefinitions="60,44,*" Classes="timelineEntry" AutomationProperties.Name="{Binding AccessibleName}">
+                    <StackPanel Spacing="1" Margin="0,7,0,0">
+                      <TextBlock Classes="timelineDate" Text="{Binding DateText}" />
+                      <TextBlock Classes="timelineTime" Text="{Binding TimeText}" IsVisible="{Binding HasTime}" />
+                    </StackPanel>
+                    <Panel Grid.Column="1">
+                      <Border Classes="timelineRail" />
+                      <Border Classes="timelineDot" Classes.edit="{Binding IsEdit}">
+                        <c:Icon Kind="{Binding Icon}" Size="12" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
+                    </Panel>
+                    <Button Grid.Column="2" Classes="subtle caseRow" Margin="0,0,0,6" Command="{Binding Open}" CommandParameter="{Binding}"
+                            IsEnabled="{Binding CanOpen}" AutomationProperties.Name="{Binding AccessibleName}">
+                      <StackPanel Spacing="2">
+                        <TextBlock Classes="timelineTitle" Classes.edit="{Binding IsEdit}" Text="{Binding Title}" />
+                        <TextBlock Classes="secondary sm" Text="{Binding Detail}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis"
+                                   IsVisible="{Binding HasDetail}" />
+                        <TextBlock Classes="muted" Text="{Binding Who}" IsVisible="{Binding HasWho}" />
+                      </StackPanel>
+                    </Button>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.DataTemplates>
+            </ItemsControl>
+            <TextBlock Classes="muted" Text="Nothing recorded yet" IsVisible="{Binding !HasTimeline}" Margin="0,8,0,0" />
+          </StackPanel>
+        </Border>
+
+        <!-- The cards: each is left out when it has nothing -->
+        <StackPanel Grid.Column="1" Classes="caseCards" Spacing="16">
+          <Border Classes="sideCard" Name="AssessmentsCard" IsVisible="{Binding HasAssessments}">
+            <StackPanel>
+              <Grid Classes="cardHead" ColumnDefinitions="*,Auto">
+                <TextBlock Classes="cardTitle" Text="Assessments" />
+                <Button Grid.Column="1" Classes="link" Content="Compare…" Command="{Binding CompareCommand}" IsVisible="{Binding CanCompare}"
+                        Name="CompareButton" AutomationProperties.Name="Compare assessments" VerticalAlignment="Top" />
+              </Grid>
+              <ItemsControl ItemsSource="{Binding Assessments}" Name="AssessmentRows">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:CaseFileAssessmentRowViewModel">
+                    <Button Classes="subtle caseRow" Classes.trashed="{Binding IsTrashed}" Command="{Binding Open}" CommandParameter="{Binding}"
+                            IsEnabled="{Binding CanOpen}" AutomationProperties.Name="{Binding AccessibleName}"
+                            ToolTip.Tip="{Binding Result}">
+                      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="2" ColumnSpacing="12">
+                        <TextBlock Classes="semibold" Text="{Binding EventText}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Row="1" Classes="secondary sm" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                          <TextBlock Classes="cellFigure" Margin="0,0,8,0" Text="{Binding PercentText}"
+                                     app:ThemeBrush.Foreground="{Binding State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
+                          <c:StaffGauge Classes="cellGauge" Margin="0" Value="{Binding PercentValue}" IsEmpty="{Binding !HasPercent}" />
+                        </StackPanel>
+                        <DockPanel Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right">
+                          <Ellipse DockPanel.Dock="Left" Classes="dot" Margin="0,0,6,0" app:ThemeBrush.Fill="{Binding State, Converter={x:Static app:Converters.StatusDotKey}}" />
+                          <TextBlock Classes="secondary sm" Text="{Binding Result}" TextTrimming="CharacterEllipsis" MaxWidth="168" />
+                        </DockPanel>
+                      </Grid>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
+          <Border Classes="sideCard" Name="ComplianceCard" IsVisible="{Binding HasCompliance}">
+            <StackPanel>
+              <TextBlock Classes="cardTitle" Text="Compliance" Margin="0,0,0,8" />
+              <ItemsControl ItemsSource="{Binding Compliance}" ItemTemplate="{StaticResource CaseLine}" />
+            </StackPanel>
+          </Border>
+
+          <Border Classes="sideCard" Name="LettersCard" IsVisible="{Binding HasLetters}">
+            <StackPanel>
+              <TextBlock Classes="cardTitle" Text="Letters" Margin="0,0,0,8" />
+              <ItemsControl ItemsSource="{Binding Letters}" ItemTemplate="{StaticResource CaseLine}" />
+            </StackPanel>
+          </Border>
+
+          <Border Classes="sideCard" Name="AppealsCard" IsVisible="{Binding HasAppeals}">
+            <StackPanel>
+              <TextBlock Classes="cardTitle" Text="Appeals and bids" Margin="0,0,0,8" />
+              <ItemsControl ItemsSource="{Binding Appeals}" ItemTemplate="{StaticResource CaseLine}" />
+            </StackPanel>
+          </Border>
+
+          <Border Classes="sideCard" Name="ImprovementsCard" IsVisible="{Binding HasImprovements}">
+            <StackPanel>
+              <TextBlock Classes="cardTitle" Text="Improvements and SI determinations" TextWrapping="Wrap" Margin="0,0,0,8" />
+              <ItemsControl ItemsSource="{Binding Improvements}" ItemTemplate="{StaticResource CaseLine}" />
+            </StackPanel>
+          </Border>
+
+          <Border Classes="sideCard" Name="DocumentsCard" IsVisible="{Binding HasDocuments}">
+            <StackPanel>
+              <Grid Classes="cardHead" ColumnDefinitions="*,Auto">
+                <TextBlock Classes="cardTitle" Text="Documents" />
+                <Button Grid.Column="1" Classes="link" Content="Manage…" Command="{Binding ShowDocumentsCommand}" VerticalAlignment="Top"
+                        Name="ManageDocumentsButton" AutomationProperties.Name="Manage documents" />
+              </Grid>
+              <ItemsControl ItemsSource="{Binding Documents}" ItemTemplate="{StaticResource CaseLine}" />
+            </StackPanel>
+          </Border>
+
+          <Border Classes="sideCard" Name="PhotosCard" IsVisible="{Binding HasPhotos}">
+            <StackPanel>
+              <Grid Classes="cardHead" ColumnDefinitions="*,Auto">
+                <TextBlock Classes="cardTitle" Text="Photos" />
+                <TextBlock Grid.Column="1" Classes="secondary num" Text="{Binding PhotosText}" VerticalAlignment="Top" Name="PhotosCount" />
+              </Grid>
+              <ItemsControl ItemsSource="{Binding Photos}" ItemTemplate="{StaticResource CaseLine}" />
+            </StackPanel>
+          </Border>
+
+          <!-- With no documents yet, the way to add one -->
+          <Button Content="Add a Document…" Command="{Binding ShowDocumentsCommand}" IsVisible="{Binding !HasDocuments}" HorizontalAlignment="Left"
+                  Name="AddDocumentButton" />
+        </StackPanel>
+      </Grid>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

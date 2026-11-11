@@ -35,6 +35,8 @@ public class FitTests
 		}
 
 		Check("Structures");
+		ui.Main.ShowCaseFile(ui.Main.Structures.Rows[0].Summary.PropertyID);
+		Check("Case File");
 		ui.Main.OpenAssessment(ui.Main.Structures.Rows.First(r => r.Address.StartsWith("123")).AssessmentID!.Value);
 		AssessmentEditorViewModel editor = ui.Main.Editor;
 		foreach (SectionViewModel section in editor.Sections)

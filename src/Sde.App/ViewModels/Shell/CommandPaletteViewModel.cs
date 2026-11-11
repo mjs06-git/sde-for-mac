@@ -228,6 +228,10 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 			}, keywords);
 
 		SettingsViewModel settings = _main.Settings;
+		if (_main.CurrentStructureId is Guid structure)
+		{
+			yield return Command("Case file of this structure", "Clipboard", null, _main.ShowCaseFileCommand, structure, "history timeline record everything letters appeals documents");
+		}
 		yield return Command("New residential structure", "Plus", "⌘N", _main.Structures.NewStructureCommand, "1", "add assessment house");
 		yield return Command("New non-residential structure", "Plus", "⇧⌘N", _main.Structures.NewStructureCommand, "2", "add assessment business commercial");
 		yield return Command("Import inspections or parcels…", "Import", "⇧⌘I", _main.OpenSourceImportCommand, keywords: "csv excel accela");

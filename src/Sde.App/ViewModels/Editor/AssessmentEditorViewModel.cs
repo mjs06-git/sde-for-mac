@@ -1031,6 +1031,8 @@ public sealed partial class AssessmentEditorViewModel : ViewModelBase
 				JoinChosenEvent();
 				LoadOtherAssessments();
 				OnPropertyChanged(nameof(HasOtherAssessments));
+				OnPropertyChanged(nameof(CanCompareAssessments));
+				OnPropertyChanged(nameof(CompareAssessmentsTip));
 				_app.RaiseDataChanged();
 			}
 			// The damage date may now fall in an event.

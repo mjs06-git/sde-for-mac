@@ -32,6 +32,8 @@ public enum Page
 	Compliance,
 	/// <summary>Teams and the structures assigned to them.</summary>
 	Assignments,
+	/// <summary>One structure across every event (its case file): a sub-page of the page it was opened from.</summary>
+	CaseFile,
 }
 
 /// <summary>
@@ -94,6 +96,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		app.DatabaseChanged += () =>
 		{
 			Editor = null;
+			CaseFilePage = null;
 			LoadPins();
 			Structures.DatabaseChanged();
 			Settings = new SettingsViewModel(app);
@@ -308,12 +311,13 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	{
 		Page.Editor => Page.Structures,
 		Page.SourceImport => Page.ImportExport,
+		Page.CaseFile => Page.Structures,
 		_ => page,
 	};
 
 	private void UpdateSidebar()
 	{
-		Page active = ActivePage == Page.Editor ? _editorParent : SidebarPage(ActivePage);
+		Page active = ActivePage == Page.Editor ? EditorSidebarPage : ActivePage == Page.CaseFile ? _caseFileRoot : SidebarPage(ActivePage);
 		foreach (NavItemViewModel item in SidebarItems ?? Array.Empty<NavItemViewModel>())
 		{
 			item.IsActive = item.Page == active;
@@ -417,6 +421,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	{
 		Page.Editor when Editor != null => Editor.Title,
 		Page.SourceImport => "Import Inspections or Parcels",
+		Page.CaseFile when CaseFilePage != null => CaseFilePage.Address,
 		Page.Structures when Structures.AppliedView != null => Structures.AppliedView,
 		Page.Structures when _smartGroups.FirstOrDefault(g => g.Filter == Structures.Filter && Structures.Filter != StructureFilter.All) is SourceRowViewModel g => g.Title,
 		Page.Structures when Events?.Selected?.Id != null => Events.Label,
@@ -429,8 +434,10 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	/// </summary>
 	public string PageParent => ActivePage switch
 	{
+		Page.Editor when Editor != null && _editorParent == Page.CaseFile => "Case File",
 		Page.Editor when Editor != null => SidebarItems.FirstOrDefault(i => i.Page == _editorParent)?.Title ?? "Structures",
 		Page.SourceImport => "Import & Export",
+		Page.CaseFile => CaseFileParentTitle,
 		_ => null,
 	};
 
@@ -447,6 +454,10 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		else if (ActivePage == Page.SourceImport)
 		{
 			Show(Page.ImportExport);
+		}
+		else if (ActivePage == Page.CaseFile)
+		{
+			CloseCaseFile();
 		}
 	}
 
@@ -618,6 +629,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 			Page.Review => Review,
 			Page.Compliance => Compliance,
 			Page.Assignments => Assignments,
+			Page.CaseFile => (ViewModelBase)CaseFilePage ?? Structures,
 			_ => Structures,
 		};
 		Map.IsActive = page == Page.Map;
@@ -654,6 +666,10 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		if (page == Page.Structures)
 		{
 			Structures.Reload();
+		}
+		if (page == Page.CaseFile)
+		{
+			CaseFilePage?.Reload();
 		}
 	}
 

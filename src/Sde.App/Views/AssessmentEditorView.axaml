@@ -381,7 +381,17 @@
                           <c:Icon Kind="CaretRight" Size="14" />
                         </Button>
                       </Grid>
-                      <Button Padding="0" Background="Transparent" Command="{Binding OpenCommand}" ToolTip.Tip="Open" AutomationProperties.Name="{Binding FileName, StringFormat='Open {0}'}">
+                      <Button Padding="0" Background="Transparent" Classes="photoThumb" ToolTip.Tip="Quick Look (Space)"
+                              Command="{Binding $parent[ItemsControl].((ed:PhotosSectionViewModel)DataContext).Editor.QuickLookCommand}" CommandParameter="{Binding}"
+                              AutomationProperties.Name="{Binding FileName, StringFormat='Quick Look {0}'}">
+                        <Button.ContextMenu>
+                          <ContextMenu>
+                            <MenuItem Header="Quick Look" InputGesture="Space" CommandParameter="{Binding}"
+                                      Command="{ReflectionBinding DataContext.QuickLookCommand, RelativeSource={RelativeSource AncestorType=UserControl, Tree=Logical}}" />
+                            <MenuItem Header="Open in Preview" Command="{Binding OpenCommand}" />
+                            <MenuItem Header="Mark Up…" Command="{Binding MarkUpCommand}" />
+                          </ContextMenu>
+                        </Button.ContextMenu>
                         <Border CornerRadius="6" ClipToBounds="True" Height="150" Width="218" Background="{DynamicResource BgSubtle}">
                           <Panel>
                             <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" IsVisible="{Binding HasThumbnail}" />
