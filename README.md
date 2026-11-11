@@ -90,6 +90,8 @@ moved.
 - About 200 MB of disk space for the app, plus room for your photos.
 - An internet connection for online maps and layers, optional online look-ups and USGS high-water marks. See
   [SECURITY.md](SECURITY.md#what-sde-sends-over-the-internet) for what these services receive.
+- SDE never checks for updates by itself. Only when you choose **Help > Check for Updates** does it ask GitHub for the
+  latest release, sending the app's name and version and nothing about your data. It downloads and installs nothing.
 
 ### Step by step
 1. **Check which kind of Mac you have.** Open the Apple menu (top-left corner) and choose **About This Mac**. If it says **Chip: Apple M1** (or

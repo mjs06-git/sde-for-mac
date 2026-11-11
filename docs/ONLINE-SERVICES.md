@@ -163,3 +163,24 @@ them; MetadataExtractor reads that format.
     JSON worked. I stopped after two tries. It may be the proxy or the server; it needs a check from a Mac.
   - Not checked: a county parcel FeatureServer, an older MapServer that answers only Esri JSON, a slow connection, and
     the messages for a secured or missing layer.
+
+## GitHub latest release (Help > Check for Updates)
+
+`UpdateChecker` (`src/Sde.Interop/Online/UpdateChecker.cs`) runs only when someone chooses **Help > Check for
+Updates…**. Nothing checks in the background or at launch (`AppLevelUiTests.NothingAsksForUpdates_AtStartUp`), and it
+downloads and installs nothing.
+
+- URL: `https://api.github.com/repos/mjs06-git/sde-for-mac/releases/latest` (the repository is the one constant
+  `UpdateChecker.Repository`). One HTTPS GET with `Accept: application/vnd.github+json` and a User-Agent naming only
+  the app and its version (`SDE-for-Mac/3.5.0`). Nothing about the person, the Mac or the database is sent.
+- Limits: a 10 second timeout and a 512 KB cap on the answer. Only `tag_name`, `html_url`, `published_at`,
+  `prerelease` and `draft` are read; anything else in the answer is ignored.
+- Tags must be `vX.Y.Z`. Pre-releases (a hyphen in the tag, or `prerelease: true`) and drafts are never offered. The
+  versions are compared number by number (3.10.0 is newer than 3.9.9).
+- The release page is opened in the browser only when `html_url` is an https address on `github.com` under
+  `/mjs06-git/sde-for-mac/releases/`. Anything else is refused as an unexpected answer.
+- GitHub allows 60 unauthenticated requests an hour from one address. A 403 or 429 says to try again in an hour; a 404
+  (no published release yet), other errors, a timeout or no connection say that SDE couldn't check.
+- To verify live: with a published release, a GET of the URL with that User-Agent should give HTTP 200 and those five
+  fields, with `html_url` of the form `https://github.com/mjs06-git/sde-for-mac/releases/tag/vX.Y.Z`. Not yet checked
+  live.
