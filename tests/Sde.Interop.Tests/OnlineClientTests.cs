@@ -196,6 +196,18 @@ public class OnlineClientTests
 		Assert.Equal(3, handler.Urls.Count);
 	}
 
+	[Theory]
+	[InlineData("<Null>")]
+	[InlineData("<NULL>")]
+	[InlineData(" ")]
+	public async Task Nfhl_PlaceholderOrBlankSubtype_ReadsAsNoSubtype(string subtype)
+	{
+		FakeHandler handler = FakeHandler.NfhlZones(FakeHandler.ZoneJson("AE", subtype));
+		FloodInfo info = await Nfhl(handler).LookupAsync(38.9, -77.0, CancellationToken.None);
+		Assert.Equal("AE", info.Zone);
+		Assert.Null(info.ZoneSubtype);
+	}
+
 	[Fact]
 	public async Task Nfhl_NoZoneFeature_ReturnsNull()
 	{

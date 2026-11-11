@@ -64,6 +64,20 @@ public class StnClientTests
 	}
 
 	[Fact]
+	public async Task Events_NumericTypeAndStatusIds_ReadAsUnknown_AndNamesAreKept()
+	{
+		string body = "[{\"event_id\":1,\"event_name\":\"Live shape\",\"event_type\":1,\"event_status\":\"2\"},"
+			+ "{\"event_id\":2,\"event_name\":\"Named\",\"event_type_name\":\"Hurricane\",\"event_type\":1,\"event_status\":\"Active\"}]";
+		FakeHandler handler = new FakeHandler((request, ct) => Task.FromResult(FakeHandler.Json(body)));
+		IReadOnlyList<StnEvent> events = await Client(handler).GetEventsAsync(CancellationToken.None);
+		StnEvent live = events.Single(e => e.Id == 1);
+		Assert.Null(live.Type);
+		Assert.Null(live.Status);
+		StnEvent named = events.Single(e => e.Id == 2);
+		Assert.Equal(("Hurricane", "Active"), (named.Type, named.Status));
+	}
+
+	[Fact]
 	public async Task BusyGateways_AreAskedAgain()
 	{
 		int calls = 0;

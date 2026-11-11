@@ -57,8 +57,8 @@ verified, or that look risky, are named in each result.
   FLOODWAY", and also X-zone values such as "1 PCT FUTURE CONDITIONS, FLOODWAY" and "1 PCT CONTAINED IN STRUCTURE,
   FLOODWAY". SDE's substring test would call all of these floodway, including the X-zone ones. Decide whether that is
   wanted. (2) Some A, AE and VE polygons have the literal text `<Null>` as `ZONE_SUBTY`, and some AE and AO polygons
-  have a single space. SDE reads the first as a subtype (it is not blank), which would show "<Null>" if the subtype is
-  displayed. (3) `STATIC_BFE` and `V_DATUM` are present on every feature checked; `V_DATUM` can be an empty string.
+  have a single space. Fixed in 3.5: `OnlineHttp.Text` now reads `<Null>` (any case) and blank text as no value, for
+  every field. (3) `STATIC_BFE` and `V_DATUM` are present on every feature checked; `V_DATUM` can be an empty string.
 
 ## USGS high-water marks (STN), v2.5
 
@@ -82,7 +82,7 @@ Settings, Online services, in case USGS moves the service.
   - `events/` gave HTTP 200 and a JSON array of 334 events, not paged. Every event has `id`, `name`, `start_date`
     and `end_date` (`end_date` is null for events still open). The code's fallbacks `name`, `start_date` and
     `end_date` apply. The key `event_name` does not exist.
-  - Drift: events carry `event_type` and `event_status` as numbers (for example 1 and 2), and no `event_type_name` or
+  - Drift (fixed in 3.5: a purely numeric type or status now reads as unknown, null, and real names are kept): events carry `event_type` and `event_status` as numbers (for example 1 and 2), and no `event_type_name` or
     `event_status_name`. `StnClient.cs` lines 103 and 104 read those keys, so `StnEvent.Type` and `StnEvent.Status`
     become the text "1" or "2", not "Hurricane" or "Completed". The depth sheet does not show them today, so nothing
     visible is wrong yet.
