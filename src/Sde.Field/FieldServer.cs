@@ -262,7 +262,7 @@ public sealed class FieldServer : IAsyncDisposable
 		{
 			await Fail(ctx, StatusCodes.Status401Unauthorized, "This phone isn't paired. Pair it with the QR code or PIN on the Mac.");
 		}
-		catch (Exception ex) when (ex is AssessmentLockedException or AssessmentCheckedOutException)
+		catch (Exception ex) when (ex is AssessmentLockedException or AssessmentCheckedOutException or StatusNotChangeableException)
 		{
 			await Fail(ctx, StatusCodes.Status409Conflict, ex.Message);
 		}
@@ -334,7 +334,8 @@ public sealed class FieldServer : IAsyncDisposable
 		app.MapPost("/api/structures", AddStructure);
 		app.MapGet("/api/teams", () => Results.Json(FieldApi.Teams(_store())));
 		app.MapGet("/api/teams/{id:guid}/assignments", (Guid id) => Results.Json(FieldApi.Assignments(_store(), id)));
-		app.MapPost("/api/properties/{id:guid}/assessments", AddAssessment);
+		app.MapPost("/api/properties/{id:guid}/assessments", (HttpContext ctx, Guid id,
+			[Microsoft.AspNetCore.Mvc.FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] NewAssessmentRequest req) => AddAssessment(ctx, id, req));
 		app.MapGet("/api/assessments/{id:guid}", (Guid id) =>
 		{
 			SdeStore store = _store();
@@ -342,6 +343,9 @@ public sealed class FieldServer : IAsyncDisposable
 			return file == null ? NotFound() : Results.Json(FieldApi.Describe(store, file));
 		});
 		app.MapPost("/api/assessments/{id:guid}/changes", ApplyChanges);
+		app.MapPost("/api/assessments/{id:guid}/elements", ApplyElements);
+		app.MapPost("/api/assessments/{id:guid}/costs", ApplyCosts);
+		app.MapPost("/api/assessments/{id:guid}/status", SetStatus);
 		app.MapPost("/api/assessments/{id:guid}/photos", UploadPhoto);
 	}
 
@@ -401,14 +405,15 @@ public sealed class FieldServer : IAsyncDisposable
 		return Results.Json(FieldApi.Describe(store, saved));
 	}
 
-	private async Task<IResult> AddAssessment(HttpContext ctx, Guid id)
+	private async Task<IResult> AddAssessment(HttpContext ctx, Guid id, NewAssessmentRequest req)
 	{
 		SdeStore store = _store();
-		// The page asks only for a structure with no assessment yet. A second one would share the structure's fields
-		// with the first, and a Final first one must not change through it.
-		if (store.GetAssessmentsForProperty(id).Count > 0)
+		// A second assessment (a re-inspection) only when the phone says so, so a slow double tap on a structure with no
+		// assessment can't start two. The Mac starts one whatever the other assessments' statuses; the store still keeps
+		// the structure's own fields from changing through it while another assessment is Final, Letter sent or checked out.
+		if (req?.Another != true && store.GetAssessmentsForProperty(id).Count > 0)
 		{
-			return Results.Json(new { error = "That structure already has an assessment. Search for it again to open it." }, statusCode: StatusCodes.Status409Conflict);
+			return Results.Json(new { error = "That structure already has an assessment. Open it, or start another one from it." }, statusCode: StatusCodes.Status409Conflict);
 		}
 		AssessmentFile file = FieldApi.NewAssessment(store, id);
 		if (file == null)
@@ -441,6 +446,95 @@ public sealed class FieldServer : IAsyncDisposable
 		AssessmentFile saved = await _writer.ApplyAsync(id, f => FieldApi.Apply(f, changes, store.Reference, store.Calculator), ContextFor(ctx));
 		return Results.Json(FieldApi.Describe(store, saved));
 	}
+
+	private async Task<IResult> ApplyElements(HttpContext ctx, Guid id, ElementsRequest req)
+	{
+		SdeStore store = _store();
+		AssessmentFile current = Load(store, id);
+		if (current == null)
+		{
+			return NotFound();
+		}
+		if (Refusal(store, id) is IResult refused)
+		{
+			return refused;
+		}
+		IReadOnlyList<ElementChangeDto> changes = req?.Elements ?? Array.Empty<ElementChangeDto>();
+		if (changes.Count > MaxChanges)
+		{
+			throw new FieldInputException("Too many changes at once.");
+		}
+		// Checked on a copy first, as field changes are; the engine works out the result in the save, as after an edit on the Mac.
+		FieldApi.ApplyElements(current, changes, store.Calculator);
+		AssessmentFile saved = await _writer.ApplyAsync(id, f => FieldApi.ApplyElements(f, changes, store.Calculator), ContextFor(ctx));
+		return Results.Json(FieldApi.Describe(store, saved));
+	}
+
+	private async Task<IResult> ApplyCosts(HttpContext ctx, Guid id, CostsRequest req)
+	{
+		SdeStore store = _store();
+		AssessmentFile current = Load(store, id);
+		if (current == null)
+		{
+			return NotFound();
+		}
+		if (Refusal(store, id) is IResult refused)
+		{
+			return refused;
+		}
+		if ((req?.Adjustments?.Count ?? 0) + (req?.Additional?.Count ?? 0) > MaxChanges)
+		{
+			throw new FieldInputException("Too many changes at once.");
+		}
+		FieldApi.ApplyCosts(current, req, store.Calculator, store.Reference);
+		AssessmentFile saved = await _writer.ApplyAsync(id, f => FieldApi.ApplyCosts(f, req, store.Calculator, store.Reference), ContextFor(ctx));
+		return Results.Json(FieldApi.Describe(store, saved));
+	}
+
+	/// <summary>
+	/// Moves an assessment between Draft and Reviewed (<see cref="FieldApi.PhoneStatuses"/>). Never to or from Final or
+	/// Letter sent, never out of Appeal, never while checked out; the store records the change with the inspector's name.
+	/// </summary>
+	private async Task<IResult> SetStatus(HttpContext ctx, Guid id, StatusRequest req)
+	{
+		SdeStore store = _store();
+		if (Load(store, id) == null)
+		{
+			return NotFound();
+		}
+		AssessmentStatus next = FieldApi.ParsePhoneStatus(req?.Status);
+		if (Refusal(store, id) is IResult refused)
+		{
+			return refused;
+		}
+		SaveContext context = ContextFor(ctx);
+		await _writer.SetStatusAsync(id, () =>
+		{
+			// Checked again inside the write, so a status set on the Mac a moment ago is never overwritten from here.
+			AssessmentStatusRecord now = store.GetStatus(id);
+			if (now.IsLocked)
+			{
+				throw new AssessmentLockedException(id, now.Value, Array.Empty<FieldDiff>());
+			}
+			if (!FieldApi.PhoneStatuses.Contains(now.Value))
+			{
+				throw new StatusNotChangeableException($"This assessment is {AssessmentStatuses.Label(now.Value)}, so its status is changed on the Mac.");
+			}
+			// No reason is passed, so this can never reopen an assessment that became Final meanwhile: the store refuses that.
+			try
+			{
+				store.SetStatus(id, next, null, context);
+			}
+			catch (ArgumentException) when (store.GetStatus(id) is { IsLocked: true } locked)
+			{
+				throw new AssessmentLockedException(id, locked.Value, Array.Empty<FieldDiff>());
+			}
+		}, context);
+		return Results.Json(FieldApi.Describe(store, Load(store, id)));
+	}
+
+	/// <summary>A status the phone can't change (Appeal); answered with 409.</summary>
+	private sealed class StatusNotChangeableException(string message) : Exception(message);
 
 	private async Task<IResult> UploadPhoto(HttpContext ctx, Guid id)
 	{
