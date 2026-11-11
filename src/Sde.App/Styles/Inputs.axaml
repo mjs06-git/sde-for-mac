@@ -90,6 +90,22 @@
   <Style Selector="MenuFlyoutPresenter MenuItem, ContextMenu MenuItem">
     <Setter Property="Margin" Value="0" />
   </Style>
+  <!-- A label over a group of menu items ("This Assessment"): small, grey, not a command -->
+  <Style Selector="MenuItem.menuGroup">
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiary}" />
+    <Setter Property="MinHeight" Value="0" />
+  </Style>
+  <!-- A menu item that deletes (Move to Recently Deleted): the danger red -->
+  <Style Selector="MenuItem.destructive">
+    <Setter Property="Foreground" Value="{DynamicResource DangerFg}" />
+  </Style>
+  <Style Selector="MenuItem.destructive:pointerover /template/ ContentPresenter#PART_HeaderPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource DangerFg}" />
+  </Style>
   <Style Selector="ToolTip">
     <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />

@@ -35,8 +35,8 @@ public enum Page
 }
 
 /// <summary>
-/// The window: the sidebar (pages grouped as Work, Data and Manage, with the event and database switchers), the title
-/// band (page title, ⌘K search, New), and the current page.
+/// The window: the sidebar (Library, Pinned, Saved Views, Events, Workflow and Data, with Settings at its foot), the
+/// title band (back, page title, the page's toolbar, the view switch, New and search), and the current page.
 /// </summary>
 public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 {
@@ -62,15 +62,22 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		SidebarItems = BuildPages();
 		Events = new EventSwitcherViewModel { NewEventCommand = NewEventCommand, ManageEventsCommand = ManageEventsCommand };
 		Events.SelectionChanged += choice => _app.Scope.Set(_app.Store, choice.Id);
+		LoadPins();
 		SourceSections = BuildSourceList();
 		Structures.PropertyChanged += (_, e) =>
 		{
 			if (e.PropertyName is nameof(StructuresViewModel.Filter) or nameof(StructuresViewModel.SubstantialCount) or nameof(StructuresViewModel.CloseCount)
-				or nameof(StructuresViewModel.BelowCount) or nameof(StructuresViewModel.IncompleteCount))
+				or nameof(StructuresViewModel.BelowCount) or nameof(StructuresViewModel.IncompleteCount) or nameof(StructuresViewModel.AppliedView))
 			{
 				UpdateSidebar();
 			}
+			if (e.PropertyName == nameof(StructuresViewModel.IsInspectorVisible))
+			{
+				LayoutChanged();
+			}
 		};
+		Structures.Reloaded += RebuildPinnedRows;
+		Structures.SavedViews.CollectionChanged += (_, _) => RebuildSavedViewRows();
 		app.Scope.Changed += OnScopeChanged;
 		DatabaseSwitcher = new DatabaseSwitcherViewModel(app, this);
 		Palette = new CommandPaletteViewModel(app, this);
@@ -87,6 +94,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		app.DatabaseChanged += () =>
 		{
 			Editor = null;
+			LoadPins();
 			Structures.DatabaseChanged();
 			Settings = new SettingsViewModel(app);
 			Structures.ShowOnly(null, null);
@@ -103,6 +111,9 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		CurrentPage = Structures;
 		RefreshEvents();
 		RefreshStatus();
+		RebuildPinnedRows();
+		RebuildSavedViewRows();
+		RestoreLayout(_app.Settings.Layout);
 		UpdateSidebar();
 	}
 
@@ -173,16 +184,20 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	}
 
 	/// <summary>
-	/// Every page, in the View menu's order (⌘1 to ⌘8; Settings is ⌘,). The sidebar's source list shows some of them
-	/// (Library's All Structures, Workflow, Recently Deleted); the rest are reached from the menus and the toolbar.
+	/// Every page, in the View menu's order (⌘1 to ⌘8; Settings is ⌘,). The sidebar's source list shows the office pages
+	/// (Workflow), Import &amp; Export and Recently Deleted (Data), and Settings at its foot; Structures is Library's All
+	/// Structures, and the map and summary are reached from the toolbar's view switch.
 	/// </summary>
 	public IReadOnlyList<NavItemViewModel> SidebarItems { get; }
 
-	/// <summary>The sidebar's source list: Library (with its smart groups), Events, Workflow.</summary>
+	/// <summary>
+	/// The sidebar's source list, in order: Library (with its smart groups), Pinned, Saved Views, Events, Workflow and
+	/// Data. A section with no rows (no pins, no saved views, no events) is hidden.
+	/// </summary>
 	public IReadOnlyList<SourceSectionViewModel> SourceSections { get; }
 
-	/// <summary>Recently Deleted, at the foot of the sidebar.</summary>
-	public NavItemViewModel TrashItem => SidebarItems.Single(i => i.Page == Page.Trash);
+	/// <summary>Settings, at the foot of the sidebar.</summary>
+	public NavItemViewModel SettingsItem => SidebarItems.Single(i => i.Page == Page.Settings);
 
 	private SourceRowViewModel _allStructures;
 	private readonly List<SourceRowViewModel> _smartGroups = new();
@@ -190,7 +205,10 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 
 	/// <summary>True while the sidebar shows (View › Hide Sidebar, ⌃⌘S).</summary>
 	[ObservableProperty]
+	[NotifyPropertyChangedFor(nameof(SidebarInset))]
 	public partial bool IsSidebarVisible { get; set; } = true;
+
+	partial void OnIsSidebarVisibleChanged(bool value) => LayoutChanged();
 
 	[RelayCommand]
 	private void ToggleSidebar() => IsSidebarVisible = !IsSidebarVisible;
@@ -252,8 +270,11 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		return new[]
 		{
 			new SourceSectionViewModel("Library", new(new object[] { _allStructures }.Concat(_smartGroups))),
+			new SourceSectionViewModel("Pinned", _pinnedRows),
+			new SourceSectionViewModel("Saved Views", _savedViewRows),
 			new SourceSectionViewModel("Events", _eventRows),
 			new SourceSectionViewModel("Workflow", new(new object[] { Page_(Page.Review), Page_(Page.Compliance), Page_(Page.Assignments) })),
+			new SourceSectionViewModel("Data", new(new object[] { Page_(Page.ImportExport), Page_(Page.Trash) })),
 		};
 	}
 
@@ -303,6 +324,13 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 			// assessments, or its map or summary) is showing.
 			bool library = active is Page.Structures or Page.Map or Page.Dashboard;
 			Guid? scope = Events?.Selected?.Id;
+			// A saved view is a row of its own: while one is showing, Library's rows aren't chosen.
+			string view = Structures.AppliedView;
+			foreach (SavedViewRowViewModel row in _savedViewRows.OfType<SavedViewRowViewModel>())
+			{
+				row.IsActive = library && string.Equals(view, row.Title, StringComparison.OrdinalIgnoreCase);
+			}
+			library &= view == null;
 			_allStructures.IsActive = library && Structures.Filter == StructureFilter.All && scope == null;
 			_allStructures.Count = Structures.TotalCount;
 			foreach (SourceRowViewModel group in _smartGroups)
@@ -389,6 +417,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	{
 		Page.Editor when Editor != null => Editor.Title,
 		Page.SourceImport => "Import Inspections or Parcels",
+		Page.Structures when Structures.AppliedView != null => Structures.AppliedView,
 		Page.Structures when _smartGroups.FirstOrDefault(g => g.Filter == Structures.Filter && Structures.Filter != StructureFilter.All) is SourceRowViewModel g => g.Title,
 		Page.Structures when Events?.Selected?.Id != null => Events.Label,
 		_ => SidebarItems.FirstOrDefault(i => i.Page == SidebarPage(ActivePage))?.Title ?? "Structures",
@@ -775,6 +804,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 			return;
 		}
 		_editorParent = parent;
+		RememberRecent(file.Property.PropertyID);
 		Editor = new AssessmentEditorViewModel(_app, this, file, stamp: stamp);
 		ActivePage = Page.Editor;
 		CurrentPage = Editor;
@@ -793,6 +823,10 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		Guid propertyId = draft.Property.PropertyID;
 		VersionStamp stamp = propertyId == Guid.Empty ? null
 			: new VersionStamp(0, _app.Store.GetVersion(propertyId), null, draft.Property.LastUpdate);
+		if (propertyId != Guid.Empty && _app.Store.GetProperty(propertyId) != null)
+		{
+			RememberRecent(propertyId);
+		}
 		Editor = new AssessmentEditorViewModel(_app, this, draft, isDraft: true, stamp: stamp);
 		ActivePage = Page.Editor;
 		CurrentPage = Editor;

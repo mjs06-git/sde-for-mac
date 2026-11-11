@@ -9,6 +9,7 @@
         xmlns:c="using:Sde.App.Controls"
         xmlns:data="using:Sde.Data"
         xmlns:chrome="using:Avalonia.Controls.Chrome"
+        xmlns:app="using:Sde.App"
         x:Class="Sde.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Substantial Damage Estimator"
@@ -389,15 +390,17 @@
   <Panel>
     <Grid ColumnDefinitions="Auto,*">
       <!--
-        The source list. Its top 52 px is under the window's own title bar: the close, minimise and zoom buttons sit
-        there, and the empty space drags the window (ElementRole TitleBar). Library's rows filter the structure list,
-        an event's row scopes it, and Workflow's rows are the office pages.
+        The source list. Its top strip (TitleBandHeight) is under the window's own title bar: the close, minimise and
+        zoom buttons sit there, and the empty space drags the window (ElementRole TitleBar). Library's rows filter the
+        structure list, Pinned opens a structure, a saved view or an event scopes the list, Workflow and Data are pages,
+        and Settings sits at the foot. The host clips the sidebar while it slides in or out (only with motion on).
       -->
-      <Border Classes="sidebar" Width="{StaticResource SidebarWidth}" IsVisible="{Binding IsSidebarVisible}" Name="Sidebar">
+      <Panel Name="SidebarHost" Classes="sidebarHost">
+      <Border Classes="sidebar" Width="{Binding SidebarWidth}" Name="Sidebar">
         <DockPanel>
-          <Panel DockPanel.Dock="Top" Height="52" Background="Transparent" Name="SidebarTitleBar"
+          <Panel DockPanel.Dock="Top" Classes="sidebarTitleBar" Name="SidebarTitleBar"
                  chrome:WindowDecorationProperties.ElementRole="TitleBar">
-            <Button Classes="icon toolbar" HorizontalAlignment="Right" Margin="0,0,10,0" Command="{Binding ToggleSidebarCommand}"
+            <Button Classes="icon toolbar sidebarToggle" Command="{Binding ToggleSidebarCommand}"
                     AutomationProperties.Name="Hide sidebar" ToolTip.Tip="Hide Sidebar (⌃⌘S)">
               <c:Icon Kind="Sidebar" Size="18" />
             </Button>
@@ -412,21 +415,21 @@
             </StackPanel>
           </Grid>
 
-          <Panel DockPanel.Dock="Bottom" IsVisible="{Binding !IsEditorPage}">
-            <Button Classes="nav" Margin="10,4,10,10" DataContext="{Binding TrashItem}" x:DataType="shell:NavItemViewModel"
-                    Classes.active="{Binding IsActive}" Command="{Binding ShowCommand}" AutomationProperties.Name="{Binding Title}" ToolTip.Tip="{Binding ToolTip}">
+          <!-- Settings (⌘,), always at the foot -->
+          <Border DockPanel.Dock="Bottom" Classes="sidebarFoot">
+            <Button Classes="nav" DataContext="{Binding SettingsItem}" x:DataType="shell:NavItemViewModel" Name="SettingsRow"
+                    Classes.active="{Binding IsActive}" Command="{Binding ShowCommand}" AutomationProperties.Name="{Binding Title}" ToolTip.Tip="Settings (⌘,)">
               <Grid ColumnDefinitions="Auto,*,Auto">
                 <Border Classes="navMark" />
-                <c:Icon Kind="{Binding Icon}" Size="16" Margin="0,0,8,0" />
+                <c:Icon Kind="{Binding Icon}" Size="16" Classes="navIcon" />
                 <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                <TextBlock Grid.Column="2" Classes="sourceCount" Text="{Binding CountText}" IsVisible="{Binding HasCount}" />
               </Grid>
             </Button>
-          </Panel>
+          </Border>
 
           <!-- While an assessment is open the sidebar is its outline: the sections, numbered, with how many fields to check -->
           <Panel IsVisible="{Binding IsEditorPage}">
-          <StackPanel Margin="10,0" Spacing="1" DataContext="{Binding Editor}" x:DataType="ed:AssessmentEditorViewModel">
+          <StackPanel Classes="sidebarList" Spacing="1" DataContext="{Binding Editor}" x:DataType="ed:AssessmentEditorViewModel">
             <TextBlock Classes="sourceHeader" Text="Assessment" />
             <ListBox Classes="steps" Margin="0" ItemsSource="{Binding Sections}" SelectedItem="{Binding SelectedSection}" AutomationProperties.Name="Steps">
               <ListBox.ItemTemplate>
@@ -447,10 +450,10 @@
           </Panel>
 
           <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !IsEditorPage}">
-            <ItemsControl ItemsSource="{Binding SourceSections}" Margin="10,0">
+            <ItemsControl ItemsSource="{Binding SourceSections}" Classes="sidebarList" Name="SourceList">
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="shell:SourceSectionViewModel">
-                  <StackPanel Spacing="1" Margin="0,0,0,12" IsVisible="{Binding !!Rows.Count}">
+                  <StackPanel Classes="sourceSection" IsVisible="{Binding !!Rows.Count}">
                     <TextBlock Classes="sourceHeader" Text="{Binding Title}" />
                     <ItemsControl ItemsSource="{Binding Rows}">
                       <ItemsControl.DataTemplates>
@@ -459,7 +462,7 @@
                                   AutomationProperties.Name="{Binding Title}" ToolTip.Tip="{Binding ToolTip}">
                             <Grid ColumnDefinitions="Auto,*,Auto">
                               <Border Classes="navMark" />
-                              <c:Icon Kind="{Binding Icon}" Size="16" Margin="0,0,8,0" />
+                              <c:Icon Kind="{Binding Icon}" Size="16" Classes="navIcon" />
                               <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                               <TextBlock Grid.Column="2" Classes="sourceCount" Text="{Binding CountText}" IsVisible="{Binding HasCount}" />
                             </Grid>
@@ -470,9 +473,46 @@
                                   AutomationProperties.Name="{Binding Title}" ToolTip.Tip="{Binding Title}">
                             <Grid ColumnDefinitions="Auto,*,Auto">
                               <Border Classes="navMark" />
-                              <c:Icon Kind="{Binding Icon}" Size="16" Margin="0,0,8,0" />
+                              <c:Icon Kind="{Binding Icon}" Size="16" Classes="navIcon" />
                               <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                               <TextBlock Grid.Column="2" Classes="sourceCount" Text="{Binding CountText}" IsVisible="{Binding HasCount}" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                        <!-- A pinned structure: its result dot and address; opens its latest assessment -->
+                        <DataTemplate DataType="shell:PinnedRowViewModel">
+                          <Button Classes="nav pinned" Command="{Binding ShowCommand}"
+                                  AutomationProperties.Name="{Binding ToolTip}" ToolTip.Tip="{Binding ToolTip}">
+                            <Button.ContextMenu>
+                              <ContextMenu>
+                                <MenuItem Header="Open" Command="{Binding ShowCommand}" />
+                                <MenuItem Header="Unpin" Command="{Binding UnpinCommand}" />
+                              </ContextMenu>
+                            </Button.ContextMenu>
+                            <Grid ColumnDefinitions="Auto,*">
+                              <Border Classes="navMark" />
+                              <Panel Classes="navDot">
+                                <Ellipse Classes="dot" app:ThemeBrush.Fill="{Binding State, Converter={x:Static app:Converters.StatusDotKey}}" />
+                              </Panel>
+                              <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                        <!-- A saved view of the structure list -->
+                        <DataTemplate DataType="shell:SavedViewRowViewModel">
+                          <Button Classes="nav" Classes.active="{Binding IsActive}" Command="{Binding ShowCommand}"
+                                  AutomationProperties.Name="{Binding Title}" ToolTip.Tip="{Binding Title}">
+                            <Button.ContextMenu>
+                              <ContextMenu>
+                                <MenuItem Header="Rename…" Command="{Binding RenameCommand}" />
+                                <Separator />
+                                <MenuItem Header="Delete" Classes="destructive" Command="{Binding DeleteCommand}" />
+                              </ContextMenu>
+                            </Button.ContextMenu>
+                            <Grid ColumnDefinitions="Auto,*">
+                              <Border Classes="navMark" />
+                              <c:Icon Kind="Bookmark" Size="16" Classes="navIcon" />
+                              <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                             </Grid>
                           </Button>
                         </DataTemplate>
@@ -485,6 +525,10 @@
           </ScrollViewer>
         </DockPanel>
       </Border>
+      </Panel>
+      <!-- The sidebar's trailing edge drags its width; a double-click puts the default back -->
+      <c:ResizeHandle Classes="sidebarEdge" Name="SidebarResizer" IsVisible="{Binding IsSidebarVisible}"
+                      Value="{Binding SidebarWidth}" ResetCommand="{Binding ResetSidebarWidthCommand}" GrowsRight="True" />
 
       <DockPanel Grid.Column="1">
         <!--
@@ -494,7 +538,7 @@
         <Border DockPanel.Dock="Top" Classes="titleBand" Name="TitleBand" chrome:WindowDecorationProperties.ElementRole="TitleBar">
           <Grid ColumnDefinitions="Auto,*,Auto">
             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-              <Button Classes="icon toolbar" Margin="70,0,4,0" IsVisible="{Binding !IsSidebarVisible}" Command="{Binding ToggleSidebarCommand}"
+              <Button Classes="icon toolbar showSidebar" IsVisible="{Binding !IsSidebarVisible}" Command="{Binding ToggleSidebarCommand}"
                       AutomationProperties.Name="Show sidebar" ToolTip.Tip="Show Sidebar (⌃⌘S)">
                 <c:Icon Kind="Sidebar" Size="18" />
               </Button>
@@ -570,27 +614,36 @@
                       </MenuFlyout>
                     </DropDownButton.Flyout>
                   </DropDownButton>
-                  <Button Classes="icon toolbar" AutomationProperties.Name="More actions" ToolTip.Tip="More">
+                  <Button Classes="icon toolbar" Name="MoreButton" AutomationProperties.Name="More actions" ToolTip.Tip="More">
                     <c:Icon Kind="More" Size="18" />
                     <Button.Flyout>
                       <MenuFlyout Placement="BottomEdgeAlignedRight">
+                        <!-- Grouped, with a label over each group; what deletes is last, in red -->
+                        <MenuItem Classes="menuGroup" Header="This Assessment" />
                         <MenuItem Header="Save Now" Command="{Binding SaveCommand}" InputGesture="Cmd+S" />
                         <MenuItem Header="Undo" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" InputGesture="Cmd+Z" />
                         <MenuItem Header="Redo" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}" InputGesture="Cmd+Shift+Z" />
                         <MenuItem Header="History…" Command="{Binding ShowHistoryCommand}" />
                         <MenuItem Header="Comments…" Command="{Binding ShowCommentsCommand}" />
-                        <MenuItem Header="Copy from Another Structure…" Command="{Binding CopyFromCommand}" IsEnabled="{Binding IsEditable}" />
                         <MenuItem Header="Set Event…" Command="{Binding SetEventCommand}" />
+                        <Separator />
+                        <MenuItem Classes="menuGroup" Header="Structure" />
+                        <MenuItem Header="Pin" Command="{Binding PinCommand}" IsVisible="{Binding !IsPinned}" IsEnabled="{Binding CanPin}" />
+                        <MenuItem Header="Unpin" Command="{Binding UnpinCommand}" IsVisible="{Binding IsPinned}" />
+                        <MenuItem Header="Improvements and SI…" Command="{Binding ShowImprovementsCommand}" />
+                        <Separator />
+                        <MenuItem Classes="menuGroup" Header="Fill In" />
+                        <MenuItem Header="Copy from Another Structure…" Command="{Binding CopyFromCommand}" IsEnabled="{Binding IsEditable}" />
+                        <MenuItem Header="Copy from a Work Package…" Command="{Binding CopyFromPackageCommand}" IsEnabled="{Binding IsEditable}" />
                         <MenuItem Header="Elevation Certificate…" Command="{Binding ImportElevationCertificateCommand}" IsEnabled="{Binding IsEditable}" />
                         <MenuItem Header="Flood Depth from High-Water Marks…" Command="{Binding FloodDepthCommand}" IsEnabled="{Binding IsEditable}" />
-                        <MenuItem Header="Copy from a Work Package…" Command="{Binding CopyFromPackageCommand}" IsEnabled="{Binding IsEditable}" />
                         <Separator />
-                        <MenuItem Header="Improvements and SI…" Command="{Binding ShowImprovementsCommand}" />
+                        <MenuItem Classes="menuGroup" Header="Letters and Determinations" />
                         <MenuItem Header="Appeal…" Command="{Binding ShowAppealCommand}" />
                         <MenuItem Header="Compliance Case…" Command="{Binding ComplianceCaseCommand}" />
                         <MenuItem Header="Mark Letter as Sent…" Command="{Binding MarkLetterSentCommand}" />
                         <Separator />
-                        <MenuItem Header="Move to Recently Deleted" Command="{Binding DeleteAssessmentCommand}" />
+                        <MenuItem Header="Move to Recently Deleted" Classes="destructive" Command="{Binding DeleteAssessmentCommand}" />
                       </MenuFlyout>
                     </Button.Flyout>
                   </Button>
@@ -669,7 +722,9 @@
     </Panel>
 
     <!-- Toasts, newest at the bottom -->
-    <ItemsControl Name="ToastList" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="224,0,0,20">
+    <!-- The host starts where the page starts (after the sidebar, or at the window's edge while it is hidden) -->
+    <Panel Name="ToastHost" Margin="{Binding SidebarInset, Converter={x:Static app:Converters.LeftInset}}">
+    <ItemsControl Name="ToastList" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="{StaticResource ToastMargin}">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>
           <StackPanel Spacing="8" />
@@ -682,6 +737,7 @@
         </DataTemplate>
       </ItemsControl.ItemTemplate>
     </ItemsControl>
+    </Panel>
 
     <!-- A long task: progress and Stop, over the bottom right corner, above any sheet so Stop can always be pressed. -->
     <Border Classes="card" IsVisible="{Binding Jobs.IsBusy}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="20" Width="340" Padding="16,12"

@@ -117,8 +117,16 @@ public class AccessibilityTests
 		// Named for VoiceOver: each row of the source list by its title, the toolbar's search, view switch and New.
 		List<string> names = ui.Window.GetVisualDescendants().OfType<Control>().Where(c => c.IsEffectivelyVisible && (c is Button or TextBox or ListBox))
 			.Select(c => ControlAutomationPeer.CreatePeerForElement(c).GetName()).ToList();
-		foreach (string title in ui.Main.SourceSections.SelectMany(s => s.Rows).Select(r => r switch { SourceRowViewModel row => row.Title, NavItemViewModel nav => nav.Title, _ => null })
-			.Append("Recently Deleted"))
+		// Recently Deleted is now a row of the Data section; Settings sits at the sidebar's foot.
+		foreach (string title in ui.Main.SourceSections.SelectMany(s => s.Rows).Select(r => r switch
+			{
+				SourceRowViewModel row => row.Title,
+				NavItemViewModel nav => nav.Title,
+				SavedViewRowViewModel view => view.Title,
+				PinnedRowViewModel pin => pin.ToolTip,
+				_ => null,
+			})
+			.Append("Settings"))
 		{
 			Assert.Contains(title, names);
 		}

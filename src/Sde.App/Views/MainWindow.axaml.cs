@@ -1,5 +1,8 @@
 using System.Diagnostics;
 using Avalonia;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
+using Avalonia.Styling;
 using Avalonia.Controls;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
@@ -63,13 +66,38 @@ public partial class MainWindow : Window, IDialogs
 	/// <summary>The toasts shown at the bottom of the window (<see cref="Notify(string, string, bool)"/> adds one).</summary>
 	public ToastHost Toasts { get; } = new ToastHost();
 
-	// ───────────── Shell: switchers, palette ─────────────
+	// ───────────── Shell: the sidebar, the palette ─────────────
 
-	/// <summary>A row in a switcher's flyout was chosen: the flyout closes (its command runs as well).</summary>
-	private void OnFlyoutItemClick(object sender, RoutedEventArgs e)
+	/// <summary>How long the sidebar takes to slide in or out (only with motion on).</summary>
+	private static readonly TimeSpan SidebarSlide = TimeSpan.FromMilliseconds(180);
+
+	/// <summary>
+	/// Shows or hides the sidebar. With motion on, its width slides between nothing and its full width (the host clips
+	/// it); otherwise, and in the tests, it simply appears or goes.
+	/// </summary>
+	private async void ShowSidebar(MainViewModel main, bool animate)
 	{
-		this.FindControl<Button>("EventSwitcher")?.Flyout?.Hide();
-		this.FindControl<Button>("DatabaseButton")?.Flyout?.Hide();
+		Panel host = this.FindControl<Panel>("SidebarHost");
+		bool visible = main.IsSidebarVisible;
+		if (!animate || !Classes.Contains(Motion.Class) || !IsLoaded)
+		{
+			host.IsVisible = visible;
+			return;
+		}
+		double full = main.SidebarWidth;
+		Animation slide = new Animation
+		{
+			Duration = SidebarSlide,
+			Easing = new CubicEaseOut(),
+			Children =
+			{
+				new KeyFrame { Cue = new Cue(0), Setters = { new Setter(WidthProperty, visible ? 0d : full) } },
+				new KeyFrame { Cue = new Cue(1), Setters = { new Setter(WidthProperty, visible ? full : 0d) } },
+			},
+		};
+		host.IsVisible = true;
+		await slide.RunAsync(host);
+		host.IsVisible = main.IsSidebarVisible;
 	}
 
 	/// <summary>A click outside the command palette closes it.</summary>
@@ -125,6 +153,8 @@ public partial class MainWindow : Window, IDialogs
 		if (DataContext is MainViewModel main)
 		{
 			AddPageShortcuts(main);
+			ShowSidebar(main, animate: false);
+			Closed += (_, _) => main.CancelLayoutSave();
 			// Others' saves are checked for while the window is active (and at once when it becomes active).
 			Activated += (_, _) => main.WindowActivated(true);
 			Deactivated += (_, _) => main.WindowActivated(false);
@@ -133,6 +163,10 @@ public partial class MainWindow : Window, IDialogs
 				if (args.PropertyName == nameof(MainViewModel.RecentDatabases))
 				{
 					RebuildRecent(main);
+				}
+				else if (args.PropertyName == nameof(MainViewModel.IsSidebarVisible))
+				{
+					ShowSidebar(main, animate: true);
 				}
 			};
 			RebuildRecent(main);
@@ -282,18 +316,11 @@ public partial class MainWindow : Window, IDialogs
 	public Task CopyTextAsync(string text) => Clipboard?.SetTextAsync(text) ?? Task.CompletedTask;
 }
 
-/// <summary>Small converters for the window's sheets and switchers.</summary>
+/// <summary>Small converters for the window's sheets.</summary>
 public static class SheetConverters
 {
 	public static readonly IValueConverter DetailsToggle = new FuncValueConverter<bool, string>(shown => shown ? "Hide details" : "Show details");
 
 	/// <summary>True when the sheet size equals the parameter ("Small", "Medium" or "Large"), for the sheet chrome's width class.</summary>
 	public static readonly IValueConverter IsSize = new FuncValueConverter<SheetSize, string, bool>((size, name) => size.ToString() == name);
-
-	/// <summary>True when every value is the same object (the chosen event, for its check mark).</summary>
-	public static readonly IMultiValueConverter Same = new FuncMultiValueConverter<object, bool>(values =>
-	{
-		List<object> list = values.ToList();
-		return list.Count > 1 && list.All(v => Equals(v, list[0]));
-	});
 }

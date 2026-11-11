@@ -181,6 +181,7 @@ public sealed partial class AssessmentEditorViewModel : ViewModelBase
 
 	/// <summary>True until a new assessment's first edit is saved: closing it before then leaves nothing behind.</summary>
 	[ObservableProperty]
+	[NotifyPropertyChangedFor(nameof(CanPin))]
 	public partial bool IsDraft { get; private set; }
 
 	/// <summary>Raised to move keyboard focus to a field (after "Needs attention" is clicked); the view scrolls to it.</summary>
@@ -189,6 +190,35 @@ public sealed partial class AssessmentEditorViewModel : ViewModelBase
 	public ReferenceData Reference { get; }
 
 	public PropertyRecord Property => File.Property;
+
+	/// <summary>The window, for what pages share: the result panel's width is the inspector width.</summary>
+	public MainViewModel Shell => _main;
+
+	/// <summary>Whether this structure is pinned to the sidebar (More offers Pin or Unpin). A new structure can't be pinned until it is saved.</summary>
+	public bool IsPinned => _main?.IsPinned(Property.PropertyID) == true;
+
+	public bool CanPin => _main != null && !IsPinned && !IsDraft;
+
+	/// <summary>The pins changed: More's Pin and Unpin follow.</summary>
+	public void PinsChanged()
+	{
+		OnPropertyChanged(nameof(IsPinned));
+		OnPropertyChanged(nameof(CanPin));
+	}
+
+	/// <summary>More, then Pin: the structure gets a row in the sidebar's Pinned section.</summary>
+	[RelayCommand]
+	private void Pin()
+	{
+		if (!IsDraft)
+		{
+			_main?.SetPinned(Property.PropertyID, true);
+		}
+	}
+
+	/// <summary>More, then Unpin.</summary>
+	[RelayCommand]
+	private void Unpin() => _main?.SetPinned(Property.PropertyID, false);
 
 	public AssessmentRecord Assessment => File.Assessment;
 

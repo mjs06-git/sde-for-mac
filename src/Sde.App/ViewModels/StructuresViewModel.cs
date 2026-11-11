@@ -210,6 +210,15 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	/// <summary>The Submission folder panel (Export ▾).</summary>
 	public SubmissionViewModel Submission { get; }
 
+	/// <summary>The window, for what pages share: the inspector's width (bound by the view) and the pinned structures.</summary>
+	public MainViewModel Shell => _main;
+
+	/// <summary>Every structure in the database, whatever event is chosen (the sidebar's pinned rows read their results from it).</summary>
+	public IReadOnlyList<StructureSummary> Everything { get; private set; } = Array.Empty<StructureSummary>();
+
+	/// <summary>Raised after the list is read again from the database.</summary>
+	public event Action Reloaded;
+
 	public ObservableCollection<StructureRowViewModel> Rows { get; } = new();
 
 	public ObservableCollection<ColumnChoice> Columns { get; } = new();
@@ -295,7 +304,39 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	/// <summary>Whether the selected structure has an assessment to print (the inspector's Report menu).</summary>
 	public bool CanReportSelected => SelectedDetail?.HasAssessment == true;
 
-	partial void OnSelectedChanged(StructureRowViewModel value) => SelectedDetail = value == null ? null : StructureDetail.Read(_app.Store, value);
+	partial void OnSelectedChanged(StructureRowViewModel value)
+	{
+		SelectedDetail = value == null ? null : StructureDetail.Read(_app.Store, value);
+		OnPropertyChanged(nameof(SelectedIsPinned));
+	}
+
+	/// <summary>Whether the selected structure is pinned to the sidebar (the row menu and the inspector offer Pin or Unpin).</summary>
+	public bool SelectedIsPinned => Selected != null && _main.IsPinned(Selected.Summary.PropertyID);
+
+	/// <summary>The pins changed (from here, the sidebar or the editor): Pin and Unpin follow.</summary>
+	public void PinsChanged() => OnPropertyChanged(nameof(SelectedIsPinned));
+
+	/// <summary>Row menu or inspector, then Pin: the structure gets a row in the sidebar's Pinned section.</summary>
+	[RelayCommand]
+	private void Pin(StructureRowViewModel row)
+	{
+		row ??= Selected;
+		if (row != null)
+		{
+			_main.SetPinned(row.Summary.PropertyID, true);
+		}
+	}
+
+	/// <summary>Row menu or inspector, then Unpin.</summary>
+	[RelayCommand]
+	private void Unpin(StructureRowViewModel row)
+	{
+		row ??= Selected;
+		if (row != null)
+		{
+			_main.SetPinned(row.Summary.PropertyID, false);
+		}
+	}
 
 	/// <summary>Whether the inspector is shown at the right of the list (View › Show Inspector, ⌥⌘I).</summary>
 	[ObservableProperty]
@@ -397,6 +438,7 @@ public sealed partial class StructuresViewModel : ViewModelBase
 		{
 			return;
 		}
+		AppliedView = null;
 		Apply();
 		Remember();
 	}
@@ -406,6 +448,7 @@ public sealed partial class StructuresViewModel : ViewModelBase
 		ColumnsChanged?.Invoke();
 		if (!_restoring)
 		{
+			AppliedView = null;
 			Remember();
 		}
 	}
@@ -429,8 +472,9 @@ public sealed partial class StructuresViewModel : ViewModelBase
 		}
 		HashSet<Guid> checkedIds = _all.Where(r => r.IsChecked && r.AssessmentID != null).Select(r => r.AssessmentID!.Value).ToHashSet();
 		ReferenceData reference = _app.Store.Reference;
+		Everything = _app.Store.ListStructures();
 		// The event chosen in the sidebar limits the list to its assessments.
-		_all = _app.Store.ListStructures().Where(s => _app.Scope.Includes(s.AssessmentID))
+		_all = Everything.Where(s => _app.Scope.Includes(s.AssessmentID))
 			.Select(s => new StructureRowViewModel(s, reference) { IsChecked = s.AssessmentID is Guid id && checkedIds.Contains(id) }).ToList();
 		foreach (StructureRowViewModel r in _all)
 		{
@@ -444,6 +488,8 @@ public sealed partial class StructuresViewModel : ViewModelBase
 		CheckedCount = _all.Count(r => r.IsChecked);
 		HasImported = _all.Any(r => r.Summary.ExternalId != null);
 		Apply();
+		OnPropertyChanged(nameof(SelectedIsPinned));
+		Reloaded?.Invoke();
 	}
 
 	/// <summary>Another database was opened: its own remembered view and saved views.</summary>
@@ -451,6 +497,7 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	{
 		// Ticks belong to the database they were made in (a work package holds the same assessments as the office).
 		ClearChecked();
+		AppliedView = null;
 		RestoreState(_app.Store.GetSetting<ListViewState>(ViewSettingKey));
 		ReloadSavedViews();
 		Reload();
@@ -759,6 +806,10 @@ public sealed partial class StructuresViewModel : ViewModelBase
 
 	public ObservableCollection<string> SavedViews { get; } = new();
 
+	/// <summary>The saved view the list shows, until a filter, the sort or the columns change (null when none).</summary>
+	[ObservableProperty]
+	public partial string AppliedView { get; private set; }
+
 	public bool HasSavedViews => SavedViews.Count > 0;
 
 	private void ReloadSavedViews()
@@ -783,6 +834,7 @@ public sealed partial class StructuresViewModel : ViewModelBase
 		RestoreState(JsonConvert.DeserializeObject<ListViewState>(v.State));
 		Apply();
 		Remember();
+		AppliedView = v.Name;
 	}
 
 	/// <summary>Views ▾, then Save this view: asks for a name.</summary>
@@ -802,6 +854,47 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	private void DeleteView(string name)
 	{
 		_app.Store.DeleteView(name);
+		if (string.Equals(AppliedView, name, StringComparison.OrdinalIgnoreCase))
+		{
+			AppliedView = null;
+		}
+		ReloadSavedViews();
+	}
+
+	/// <summary>A saved view's menu in the sidebar, then Rename: asks for the new name and keeps the view's filters, sort and columns.</summary>
+	[RelayCommand]
+	private async Task RenameView(string name)
+	{
+		SavedViewRecord v = _app.Store.GetSavedViews().FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
+		if (v == null)
+		{
+			return;
+		}
+		string renamed = await _app.Sheets.ShowAsync<string>(new NameSheetViewModel("Rename view", "Name", "For example: Zone AE, not yet reviewed", v.Name));
+		if (string.IsNullOrWhiteSpace(renamed) || renamed.Trim() == v.Name)
+		{
+			return;
+		}
+		RenameSavedView(v.Name, renamed.Trim());
+	}
+
+	/// <summary>Gives a saved view a new name (a view already called that is replaced).</summary>
+	public void RenameSavedView(string name, string renamed)
+	{
+		SavedViewRecord v = _app.Store.GetSavedViews().FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
+		if (v == null || string.IsNullOrWhiteSpace(renamed))
+		{
+			return;
+		}
+		if (!string.Equals(v.Name, renamed, StringComparison.OrdinalIgnoreCase))
+		{
+			_app.Store.DeleteView(v.Name);
+		}
+		_app.Store.SaveView(renamed.Trim(), v.State);
+		if (string.Equals(AppliedView, v.Name, StringComparison.OrdinalIgnoreCase))
+		{
+			AppliedView = renamed.Trim();
+		}
 		ReloadSavedViews();
 	}
 

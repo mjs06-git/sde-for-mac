@@ -115,7 +115,7 @@
               <DataGridTemplateColumn Header="#" Width="40" MinWidth="40" CanUserResize="False">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:AssignmentRowViewModel">
-                    <TextBlock Classes="cell" Text="{Binding Number}" />
+                    <TextBlock Classes="cell num" Text="{Binding Number}" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>

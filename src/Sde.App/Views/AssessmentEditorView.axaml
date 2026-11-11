@@ -494,7 +494,7 @@
       </ScrollViewer>
 
       <!-- Live result -->
-      <Border Grid.Column="1" Classes="resultPanel">
+      <Border Grid.Column="1" Classes="resultPanel" Width="{Binding Shell.InspectorWidth}" Name="ResultPanel">
         <ScrollViewer>
           <StackPanel Margin="16,16,16,20" Spacing="16">
             <!-- The result: the percent in ink (red when substantial), the determination, and the staff gauge -->
@@ -591,6 +591,9 @@
           </StackPanel>
         </ScrollViewer>
       </Border>
+      <!-- The result panel's leading edge drags its width (the same width as Structures' inspector) -->
+      <c:ResizeHandle Grid.Column="1" Classes="inspectorEdge" Name="ResultResizer"
+                      Value="{Binding Shell.InspectorWidth}" ResetCommand="{Binding Shell.ResetInspectorWidthCommand}" GrowsRight="False" />
     </Grid>
   </DockPanel>
 </UserControl>

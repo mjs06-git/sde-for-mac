@@ -207,15 +207,18 @@
           <DataGrid Name="Grid" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}"
                     IsReadOnly="True" CanUserSortColumns="True" CanUserReorderColumns="False" CanUserResizeColumns="True" SelectionMode="Single"
                     GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
+                    v:TableLayout.Key="Structures"
                     AutomationProperties.Name="Structures" Sorting="OnSorting" DoubleTapped="OnRowDoubleTapped" KeyDown="OnListKeyDown">
             <DataGrid.ContextMenu>
               <ContextMenu>
                 <MenuItem Header="Open" Command="{Binding OpenCommand}" CommandParameter="{Binding Selected}" />
+                <MenuItem Header="Pin" Command="{Binding PinCommand}" CommandParameter="{Binding Selected}" IsVisible="{Binding !SelectedIsPinned}" />
+                <MenuItem Header="Unpin" Command="{Binding UnpinCommand}" CommandParameter="{Binding Selected}" IsVisible="{Binding SelectedIsPinned}" />
                 <MenuItem Header="Copy from Another Structure…" Command="{Binding CopyFromCommand}" CommandParameter="{Binding Selected}" />
                 <MenuItem Header="Set a Field on the Checked Structures…" Command="{Binding BulkEditCommand}" />
                 <MenuItem Header="Set Event for the Checked Structures…" Command="{Binding SetEventCommand}" />
                 <Separator />
-                <MenuItem Header="Move to Recently Deleted" Command="{Binding TrashCommand}" CommandParameter="{Binding Selected}" />
+                <MenuItem Header="Move to Recently Deleted" Classes="destructive" Command="{Binding TrashCommand}" CommandParameter="{Binding Selected}" />
               </ContextMenu>
             </DataGrid.ContextMenu>
             <DataGrid.Columns>
@@ -229,14 +232,14 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Structure" SortMemberPath="Address" Width="1.6*" MinWidth="160">
+              <DataGridTemplateColumn Header="Structure" SortMemberPath="Address" Width="1.4*" MinWidth="148">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <TextBlock Classes="cell" Text="{Binding Address}" ToolTip.Tip="{Binding Detail}" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Owner" SortMemberPath="Owner" Width="1.2*">
+              <DataGridTemplateColumn Header="Owner" SortMemberPath="Owner" Width="1*" MinWidth="96">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <TextBlock Classes="cell secondary" Text="{Binding Owner}" />
@@ -250,14 +253,14 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Type" SortMemberPath="Type" Width="112">
+              <DataGridTemplateColumn Header="Type" SortMemberPath="Type" Width="116">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <TextBlock Classes="cell secondary" Text="{Binding Type}" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Inspected" SortMemberPath="Inspected" Width="108">
+              <DataGridTemplateColumn Header="Inspected" SortMemberPath="Inspected" Width="96">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <TextBlock Classes="cell secondary" Text="{Binding Inspected}" ToolTip.Tip="{Binding Inspector}" />
@@ -271,7 +274,7 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Status" SortMemberPath="Status" Width="88">
+              <DataGridTemplateColumn Header="Status" SortMemberPath="Status" Width="76">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <TextBlock Classes="cell secondary" Text="{Binding Status}" />
@@ -324,7 +327,7 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Result" SortMemberPath="Result" Width="1.5*" MinWidth="150">
+              <DataGridTemplateColumn Header="Result" SortMemberPath="Result" Width="1.8*" MinWidth="184">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <DockPanel Classes="result" Margin="8,0" VerticalAlignment="Center" ToolTip.Tip="{Binding Result}">
@@ -351,7 +354,7 @@
         </Grid>
     </DockPanel>
 
-    <Border Grid.Column="1" Classes="inspector" IsVisible="{Binding IsInspectorVisible}">
+    <Border Grid.Column="1" Classes="inspector" IsVisible="{Binding IsInspectorVisible}" Width="{Binding Shell.InspectorWidth}" Name="Inspector">
       <Grid>
         <DockPanel Margin="20,20,20,16" IsVisible="{Binding HasSelectedDetail}">
           <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
@@ -363,6 +366,14 @@
                 </MenuFlyout>
               </DropDownButton.Flyout>
             </DropDownButton>
+            <Button Classes="icon" Command="{Binding PinCommand}" CommandParameter="{Binding Selected}" IsVisible="{Binding !SelectedIsPinned}"
+                    AutomationProperties.Name="Pin" ToolTip.Tip="Pin to the Sidebar">
+              <c:Icon Kind="PushPin" Size="16" />
+            </Button>
+            <Button Classes="icon" Command="{Binding UnpinCommand}" CommandParameter="{Binding Selected}" IsVisible="{Binding SelectedIsPinned}"
+                    AutomationProperties.Name="Unpin" ToolTip.Tip="Unpin from the Sidebar">
+              <c:Icon Kind="PushPinFilled" Size="16" Classes="accent" />
+            </Button>
             <Button Classes="primary" Content="Open" Command="{Binding OpenCommand}" CommandParameter="{Binding Selected}" AutomationProperties.Name="Open the selected structure" />
           </StackPanel>
           <ScrollViewer HorizontalScrollBarVisibility="Disabled">
@@ -417,6 +428,9 @@
         <c:EmptyState IsVisible="{Binding !HasSelectedDetail}" Title="No Selection" />
       </Grid>
     </Border>
+    <!-- The inspector's leading edge drags its width (shared with the editor's result panel) -->
+    <c:ResizeHandle Grid.Column="1" Classes="inspectorEdge" Name="InspectorResizer" IsVisible="{Binding IsInspectorVisible}"
+                    Value="{Binding Shell.InspectorWidth}" ResetCommand="{Binding Shell.ResetInspectorWidthCommand}" GrowsRight="False" />
     </Grid>
   </DockPanel>
 </UserControl>

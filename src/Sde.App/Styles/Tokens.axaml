@@ -63,14 +63,22 @@
   <x:Double x:Key="IconSizeSmall">14</x:Double>
   <x:Double x:Key="IconSizeLarge">20</x:Double>
 
-  <!-- Shell -->
+  <!-- Shell. The sidebar and the inspectors are resizable between their min and max (a double-click on the edge goes
+       back to the default width); MainViewModel.Layout reads these. -->
   <x:Double x:Key="SidebarWidth">232</x:Double>
   <x:Double x:Key="SidebarMinWidth">184</x:Double>
   <x:Double x:Key="SidebarMaxWidth">380</x:Double>
   <x:Double x:Key="InspectorWidth">288</x:Double>
   <x:Double x:Key="InspectorMinWidth">240</x:Double>
   <x:Double x:Key="InspectorMaxWidth">460</x:Double>
-  <x:Double x:Key="TitleBandHeight">52</x:Double>
+  <x:Double x:Key="ResizeHandleWidth">5</x:Double> <!-- the invisible strip on a sidebar's or inspector's edge that drags it -->
+  <x:Double x:Key="TitleBandHeight">48</x:Double> <!-- the toolbar across the top; the sidebar's title strip matches it -->
+  <!-- Room for the window's close, minimise and zoom buttons, before the show-sidebar button while the sidebar is hidden -->
+  <Thickness x:Key="TrafficLightInset">68,0,0,0</Thickness>
+  <!-- A sheet hangs from the title band's lower edge (its top is TitleBandHeight) -->
+  <Thickness x:Key="SheetMargin">40,48,40,40</Thickness>
+  <!-- Toasts sit this far above the window's bottom edge, centred over the page (not the sidebar) -->
+  <Thickness x:Key="ToastMargin">0,0,0,20</Thickness>
   <x:Double x:Key="TableRowHeight">30</x:Double>
   <x:Double x:Key="TableHeaderHeight">30</x:Double>
   <x:Double x:Key="ScopeBarHeight">40</x:Double> <!-- the filter strip above a table (small controls, 9 px above and below) -->

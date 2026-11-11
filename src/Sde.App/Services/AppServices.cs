@@ -75,7 +75,54 @@ public sealed class AppSettings
 	/// <summary>Settings, Appearance: the tighter sizes (22 px controls, 24 px rows) instead of the roomier default. Read at launch.</summary>
 	public bool CompactDensity { get; set; }
 
+	/// <summary>The window's layout: the sidebar's and inspector's widths and whether they show, and tables' column widths (null = the defaults).</summary>
+	public LayoutState Layout { get; set; }
+
+	/// <summary>
+	/// The structures opened most recently, newest first, for each database (keyed by the database's path): the ⌘K
+	/// palette's Recent group. At most <see cref="MaxRecentStructures"/> for each and <see cref="MaxRecentStructureDatabases"/> databases.
+	/// </summary>
+	public Dictionary<string, List<Guid>> RecentStructures { get; set; } = new();
+
 	public const int MaxRecent = 8;
+
+	public const int MaxRecentStructures = 10;
+
+	public const int MaxRecentStructureDatabases = 20;
+
+	/// <summary>The structures opened most recently in the database at <paramref name="databasePath"/>, newest first.</summary>
+	public IReadOnlyList<Guid> RecentStructuresIn(string databasePath) =>
+		databasePath != null && RecentStructures != null && RecentStructures.TryGetValue(databasePath, out List<Guid> ids) && ids != null ? ids : Array.Empty<Guid>();
+
+	/// <summary>
+	/// Puts a structure first in its database's recent list, keeping at most <see cref="MaxRecentStructures"/>. When more
+	/// than <see cref="MaxRecentStructureDatabases"/> databases have lists, those not in File, then Open Recent go first.
+	/// </summary>
+	public void AddRecentStructure(string databasePath, Guid propertyId)
+	{
+		if (string.IsNullOrEmpty(databasePath) || propertyId == Guid.Empty)
+		{
+			return;
+		}
+		RecentStructures ??= new Dictionary<string, List<Guid>>();
+		List<Guid> ids = RecentStructures.TryGetValue(databasePath, out List<Guid> found) && found != null ? found : new List<Guid>();
+		ids.Remove(propertyId);
+		ids.Insert(0, propertyId);
+		if (ids.Count > MaxRecentStructures)
+		{
+			ids.RemoveRange(MaxRecentStructures, ids.Count - MaxRecentStructures);
+		}
+		RecentStructures[databasePath] = ids;
+		while (RecentStructures.Count > MaxRecentStructureDatabases)
+		{
+			string drop = RecentStructures.Keys.Where(k => k != databasePath)
+				.OrderBy(k => RecentDatabases?.Contains(k) == true ? 1 : 0).First();
+			RecentStructures.Remove(drop);
+		}
+	}
+
+	/// <summary>The file these settings were read from (and are saved back to), so a save never lands in another session's folder.</summary>
+	private string _path;
 
 	/// <summary>
 	/// ~/Library/Application Support/SDE/app-settings.json, or, when SDE_DATABASE chose the database (tests, training),
@@ -95,7 +142,12 @@ public sealed class AppSettings
 	/// Reads the settings at <paramref name="path"/>. When that file is missing, cut short or can't be read, the copy
 	/// kept by the last save (the same name with ".bak" added) is read instead, and failing that the defaults are used.
 	/// </summary>
-	public static AppSettings Load(string path) => Read(path) ?? Read(path + ".bak") ?? new AppSettings();
+	public static AppSettings Load(string path)
+	{
+		AppSettings settings = Read(path) ?? Read(path + ".bak") ?? new AppSettings();
+		settings._path = path;
+		return settings;
+	}
 
 	/// <summary>The settings in one file, or null when it is missing, cut short or can't be read.</summary>
 	private static AppSettings Read(string path)
@@ -110,8 +162,8 @@ public sealed class AppSettings
 		}
 	}
 
-	/// <summary>Remembers the settings (see <see cref="Save(string)"/>).</summary>
-	public void Save() => Save(FilePath);
+	/// <summary>Remembers the settings in the file they were read from (see <see cref="Save(string)"/>).</summary>
+	public void Save() => Save(_path ?? FilePath);
 
 	/// <summary>
 	/// Writes the settings to a temporary file in the same folder, then moves it over <paramref name="path"/> in one
@@ -148,6 +200,24 @@ public sealed class AppSettings
 			}
 		}
 	}
+}
+
+/// <summary>
+/// How the window was laid out: the sidebar and the inspector (shown or hidden, and their widths; 0 means the default
+/// width) and the column widths of each table that keeps them, by the table's name and then the column's key ("Owner")
+/// in DataGridLength form ("140" pixels, "1.5*" a share of the rest).
+/// </summary>
+public sealed class LayoutState
+{
+	public bool SidebarVisible { get; set; } = true;
+
+	public double SidebarWidth { get; set; }
+
+	public bool InspectorVisible { get; set; } = true;
+
+	public double InspectorWidth { get; set; }
+
+	public Dictionary<string, Dictionary<string, string>> ColumnWidths { get; set; } = new();
 }
 
 /// <summary>Where the main window was.</summary>

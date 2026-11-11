@@ -3,16 +3,16 @@
         xmlns:c="using:Sde.App.Controls">
   <!--
     Tables (DataGrid, on top of its Fluent theme): a white working surface (put the table in a Border.tableSheet on the
-    paper page), rows TableRowHeight high with hairline dividers (GridLinesVisibility="Horizontal"), body text with
-    tabular numbers, a header row of small semibold labels on a hairline, a caret for the sorted column, and the
-    selected row in the soft accent with its text still ink. Rows fade their hover when motion is on.
+    paper page), rows TableRowHeight high with hairline dividers (GridLinesVisibility="Horizontal"), a header row of
+    small semibold labels on a hairline, a caret for the sorted column, and the selected row in the soft accent with its
+    text still ink. Tabular figures are for number and money cells only (the num and money classes), so dates such as
+    "Nov 11, 2026" keep their natural spacing. Rows fade their hover when motion is on.
   -->
 
   <Style Selector="DataGrid">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
-    <Setter Property="TextElement.FontFeatures" Value="+tnum" />
     <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderSubtle}" />
     <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource BorderSubtle}" />
   </Style>

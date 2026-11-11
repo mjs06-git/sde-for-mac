@@ -21,7 +21,7 @@ public sealed class PaletteItem
 		Keywords = keywords;
 	}
 
-	/// <summary>"Structures", "Pages" or "Commands": shown as a heading above the first item of each group.</summary>
+	/// <summary>"Recent", "Structures", "Pages" or "Commands": shown as a heading above the first item of each group.</summary>
 	public string Group { get; }
 
 	public string Title { get; }
@@ -69,6 +69,7 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 	private readonly AppServices _app;
 	private readonly MainViewModel _main;
 	private List<PaletteItem> _structures = new();
+	private List<PaletteItem> _recent = new();
 
 	public CommandPaletteViewModel(AppServices app, MainViewModel main)
 	{
@@ -99,7 +100,7 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 	[RelayCommand]
 	public void Open()
 	{
-		_structures = LoadStructures();
+		LoadStructures();
 		Query = "";
 		Refresh();
 		IsOpen = true;
@@ -134,7 +135,10 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 		Selected = Results[next];
 	}
 
-	/// <summary>Lists what matches the search: up to <see cref="MaxStructures"/> structures, then pages, then commands.</summary>
+	/// <summary>
+	/// Lists what matches the search: up to <see cref="MaxStructures"/> structures, then pages, then commands. With nothing
+	/// typed, the structures opened recently come first (Recent).
+	/// </summary>
 	private void Refresh()
 	{
 		List<string> words = (Query ?? "").ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
@@ -142,6 +146,10 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 		if (words.Count > 0)
 		{
 			list.AddRange(_structures.Where(s => s.Matches(words)).Take(MaxStructures));
+		}
+		else
+		{
+			list.AddRange(_recent);
 		}
 		list.AddRange(Pages().Where(p => p.Matches(words)));
 		if (words.Count > 0)
@@ -165,24 +173,33 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 		IsEmpty = Results.Count == 0;
 	}
 
-	private List<PaletteItem> LoadStructures()
+	/// <summary>Reads the structures to search, and the recent ones (each structure's latest assessment) for the Recent group.</summary>
+	private void LoadStructures()
 	{
 		try
 		{
-			return _app.Store.ListStructures()
-				.OrderByDescending(s => s.LastUpdate)
-				.Select(s => new PaletteItem("Structures", string.IsNullOrWhiteSpace(s.Address) ? "(No address)" : s.Address.Trim(),
-					string.Join(" · ", new[] { s.Owner, s.City }.Where(x => !string.IsNullOrWhiteSpace(x))),
-					s.StructureTypeID == 2 ? "NonResidential" : "Structures", null, () => _main.OpenStructure(s),
-					string.Join(" ", s.ParcelNumber, s.ExternalId, s.ZipCode, s.NFIPCommunityName)))
-				.ToList();
+			List<StructureSummary> all = _app.Store.ListStructures().OrderByDescending(s => s.LastUpdate).ToList();
+			_structures = all.Select(s => Item("Structures", s)).ToList();
+			Dictionary<Guid, StructureSummary> latest = new();
+			foreach (StructureSummary s in all)
+			{
+				latest.TryAdd(s.PropertyID, s);
+			}
+			_recent = _main.RecentStructureIds.Where(latest.ContainsKey).Select(id => Item("Recent", latest[id])).ToList();
 		}
 		catch (Exception ex) when (ex is not OutOfMemoryException)
 		{
 			AppLog.Write("Couldn't list structures for the command palette", ex);
-			return new List<PaletteItem>();
+			_structures = new List<PaletteItem>();
+			_recent = new List<PaletteItem>();
 		}
 	}
+
+	private PaletteItem Item(string group, StructureSummary s) =>
+		new PaletteItem(group, string.IsNullOrWhiteSpace(s.Address) ? "(No address)" : s.Address.Trim(),
+			string.Join(" · ", new[] { s.Owner, s.City }.Where(x => !string.IsNullOrWhiteSpace(x))),
+			s.StructureTypeID == 2 ? "NonResidential" : "Structures", null, () => _main.OpenStructure(s),
+			string.Join(" ", s.ParcelNumber, s.ExternalId, s.ZipCode, s.NFIPCommunityName));
 
 	private IEnumerable<PaletteItem> Pages() =>
 		_main.SidebarItems.Select(n => new PaletteItem("Pages", n.Title, null, n.Icon, n.Shortcut, () => _main.ShowCommand.Execute(n.Page), "go page"));

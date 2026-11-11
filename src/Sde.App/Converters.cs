@@ -39,6 +39,9 @@ public static class Converters
 
 	public static readonly IValueConverter IsPositive = new FuncValueConverter<int, bool>(v => v > 0);
 
+	/// <summary>A margin with only a left side (the page's offset from the window's edge, such as the sidebar's width).</summary>
+	public static readonly IValueConverter LeftInset = new FuncValueConverter<double, Avalonia.Thickness>(v => new Avalonia.Thickness(v, 0, 0, 0));
+
 	public static readonly IValueConverter IsZero = new FuncValueConverter<int, bool>(v => v == 0);
 
 	/// <summary>The name of the issue's colour, required (red) / recommended (amber) / suggested (green), for <see cref="ThemeBrush"/>.</summary>

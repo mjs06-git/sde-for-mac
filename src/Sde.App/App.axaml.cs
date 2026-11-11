@@ -51,6 +51,7 @@ public partial class App : Application
 				}
 				main.Editor?.Save();
 				services.Settings.Window = window.Placement();
+				services.Settings.Layout = main.CaptureLayout();
 				services.Settings.Save();
 				services.BackUpOnQuit();
 			};
