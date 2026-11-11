@@ -24,4 +24,6 @@
   <Thickness x:Key="MenuFlyoutItemThemePadding">9,3,9,3</Thickness>
   <Thickness x:Key="MenuFlyoutItemThemePaddingNarrow">9,3,9,3</Thickness>
   <x:Double x:Key="SliderHorizontalHeight">24</x:Double>
+  <!-- Accessibility: the date field (Controls/DateField) -->
+  <x:Double x:Key="DateFieldWidth">156</x:Double>
 </ResourceDictionary>

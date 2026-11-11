@@ -91,7 +91,7 @@ public partial class AssessmentEditorView : UserControl
 				return;
 			}
 			Control input = holder.GetVisualDescendants().OfType<Control>()
-				.FirstOrDefault(c => c.Focusable && c.IsEffectivelyEnabled && c is TextBox or ComboBox or CheckBox or CalendarDatePicker or NumericUpDown);
+				.FirstOrDefault(c => c.Focusable && c.IsEffectivelyEnabled && c is TextBox or ComboBox or CheckBox or NumericUpDown);
 			holder.BringIntoView();
 			(input ?? holder).Focus(NavigationMethod.Tab);
 		}, DispatcherPriority.Background);

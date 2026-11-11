@@ -22,8 +22,7 @@
             <Grid ColumnDefinitions="*,*" ColumnSpacing="16" RowDefinitions="Auto,Auto" RowSpacing="4">
               <TextBlock Classes="fieldLabel" Text="Received" />
               <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Outcome" />
-              <CalendarDatePicker Grid.Row="1" SelectedDate="{Binding ReceivedOn}" HorizontalAlignment="Stretch" SelectedDateFormat="Custom"
-                                  CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" AutomationProperties.Name="Date the appeal was received" />
+              <c:DateField Grid.Row="1" SelectedDate="{Binding ReceivedOn}" HorizontalAlignment="Stretch" AutomationProperties.Name="Date the appeal was received" />
               <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{x:Static sh:AppealSheetViewModel.Outcomes}" SelectedItem="{Binding Outcome}" HorizontalAlignment="Stretch"
                         AutomationProperties.Name="Outcome of the appeal" />
             </Grid>
@@ -88,8 +87,7 @@
                   <TextBlock Classes="adorn" Text="$" Margin="10,0,0,0" />
                 </NumericUpDown.InnerLeftContent>
               </NumericUpDown>
-              <CalendarDatePicker Grid.Row="1" Grid.Column="2" SelectedDate="{Binding NewBidDate}" HorizontalAlignment="Stretch" SelectedDateFormat="Custom"
-                                  CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" AutomationProperties.Name="Date of the new bid" />
+              <c:DateField Grid.Row="1" Grid.Column="2" SelectedDate="{Binding NewBidDate}" HorizontalAlignment="Stretch" AutomationProperties.Name="Date of the new bid" />
               <TextBlock Grid.Row="2" Classes="fieldLabel" Text="Notes" Margin="0,8,0,0" />
               <TextBox Grid.Row="3" Grid.ColumnSpan="2" Text="{Binding NewNotes}" AutomationProperties.Name="Notes on the new bid" />
               <Button Grid.Row="3" Grid.Column="2" Content="Add Bid" Command="{Binding AddBidCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />

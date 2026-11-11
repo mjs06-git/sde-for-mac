@@ -116,8 +116,8 @@
                                 <Grid Classes="filterEditor" ColumnDefinitions="*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="4" MinWidth="320">
                                   <TextBlock Classes="fieldLabel" Text="Inspected from" />
                                   <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Inspected to" />
-                                  <CalendarDatePicker Grid.Row="1" SelectedDate="{Binding From}" HorizontalAlignment="Stretch" AutomationProperties.Name="Inspected from" />
-                                  <CalendarDatePicker Grid.Row="1" Grid.Column="1" SelectedDate="{Binding To}" HorizontalAlignment="Stretch" AutomationProperties.Name="Inspected to" />
+                                  <c:DateField Grid.Row="1" SelectedDate="{Binding From}" HorizontalAlignment="Stretch" AutomationProperties.Name="Inspected from" />
+                                  <c:DateField Grid.Row="1" Grid.Column="1" SelectedDate="{Binding To}" HorizontalAlignment="Stretch" AutomationProperties.Name="Inspected to" />
                                 </Grid>
                               </DataTemplate>
                               <DataTemplate DataType="vm:PercentFilterChipViewModel">
@@ -267,7 +267,7 @@
                 </DataGridTemplateColumn.Header>
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
-                    <CheckBox IsChecked="{Binding IsChecked}" HorizontalAlignment="Center" AutomationProperties.Name="{Binding Address, StringFormat='Include {0}'}" />
+                    <CheckBox Classes="rowCheck" IsChecked="{Binding IsChecked}" HorizontalAlignment="Center" AutomationProperties.Name="{Binding Address, StringFormat='Include {0}'}" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>

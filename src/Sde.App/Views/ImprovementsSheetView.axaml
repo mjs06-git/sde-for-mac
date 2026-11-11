@@ -39,8 +39,7 @@
                 <TextBlock Classes="fieldLabel" Text="Permit number" />
                 <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Date (permit or start)" />
                 <TextBox Grid.Row="1" Text="{Binding PermitNumber}" AutomationProperties.Name="Permit number" />
-                <CalendarDatePicker Grid.Row="1" Grid.Column="1" SelectedDate="{Binding ProjectDate}" HorizontalAlignment="Stretch" SelectedDateFormat="Custom"
-                                    CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" AutomationProperties.Name="Project date" />
+                <c:DateField Grid.Row="1" Grid.Column="1" SelectedDate="{Binding ProjectDate}" HorizontalAlignment="Stretch" AutomationProperties.Name="Project date" />
                 <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Classes="fieldLabel" Text="Description" Margin="0,4,0,0" />
                 <TextBox Grid.Row="3" Grid.ColumnSpan="2" Text="{Binding Description}" PlaceholderText="For example: kitchen remodel and new roof" AutomationProperties.Name="Project description" />
                 <TextBlock Grid.Row="4" Classes="fieldLabel" Text="Cost of the improvement" Margin="0,4,0,0" />

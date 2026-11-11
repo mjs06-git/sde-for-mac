@@ -98,8 +98,8 @@
             </Button>
           </StackPanel>
         </DockPanel>
-        <CalendarDatePicker SelectedDate="{Binding Date}" AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" IsEnabled="{Binding IsEnabled}" HorizontalAlignment="Stretch"
-                            SelectedDateFormat="Custom" CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" />
+        <c:DateField SelectedDate="{Binding Date}" AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" IsEnabled="{Binding IsEnabled}"
+                     HorizontalAlignment="Left" Width="{DynamicResource DateFieldWidth}" />
         <DockPanel Classes="issueLine" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
                    Classes.suggested="{Binding IsSuggestedIssue}" IsVisible="{Binding ShowIssueInline}">
           <c:Icon DockPanel.Dock="Left" Kind="WarningCircle" />
@@ -161,6 +161,7 @@
     <StyleInclude Source="avares://SDE/Styles/AppStyles.axaml" />
     <StyleInclude Source="avares://SDE/Styles/Shell.axaml" />
     <StyleInclude Source="avares://SDE/Styles/Editor.axaml" />
+    <StyleInclude Source="avares://SDE/Styles/Accessibility.axaml" />
     <StyleInclude Source="avares://SDE/Styles/AppLevel.axaml" />
     <StyleInclude Source="avares://SDE/Styles/DataPages.axaml" />
     <StyleInclude Source="avares://SDE/Styles/CaseFile.axaml" />

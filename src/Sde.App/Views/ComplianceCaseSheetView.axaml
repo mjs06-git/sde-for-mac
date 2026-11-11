@@ -30,13 +30,11 @@
             <TextBlock Grid.Row="2" Classes="fieldLabel" Text="Permit number" Margin="0,6,0,0" />
             <TextBlock Grid.Row="2" Grid.Column="1" Classes="fieldLabel" Text="Permit issued" Margin="0,6,0,0" />
             <TextBox Grid.Row="3" Text="{Binding PermitNumber}" AutomationProperties.Name="Permit number" />
-            <CalendarDatePicker Grid.Row="3" Grid.Column="1" SelectedDate="{Binding PermitIssuedOn}" HorizontalAlignment="Stretch" SelectedDateFormat="Custom"
-                                CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" AutomationProperties.Name="Date the permit was issued" />
+            <c:DateField Grid.Row="3" Grid.Column="1" SelectedDate="{Binding PermitIssuedOn}" HorizontalAlignment="Stretch" AutomationProperties.Name="Date the permit was issued" />
 
             <TextBlock Grid.Row="4" Classes="fieldLabel" Text="Deadline" Margin="0,6,0,0" />
             <TextBlock Grid.Row="4" Grid.Column="1" Classes="fieldLabel" Text="Why it was closed" Margin="0,6,0,0" IsVisible="{Binding IsCaseClosed}" />
-            <CalendarDatePicker Grid.Row="5" SelectedDate="{Binding Deadline}" HorizontalAlignment="Stretch" SelectedDateFormat="Custom"
-                                CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" AutomationProperties.Name="Compliance deadline" />
+            <c:DateField Grid.Row="5" SelectedDate="{Binding Deadline}" HorizontalAlignment="Stretch" AutomationProperties.Name="Compliance deadline" />
             <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding ClosedReason}" IsVisible="{Binding IsCaseClosed}" PlaceholderText="For example: elevated and inspected"
                      AutomationProperties.Name="Why the case was closed" />
 
@@ -54,15 +52,12 @@
                 <TextBlock Classes="adorn" Text="$" Margin="10,0,0,0" />
               </NumericUpDown.InnerLeftContent>
             </NumericUpDown>
-            <CalendarDatePicker Grid.Row="9" Grid.Column="1" SelectedDate="{Binding EcReceivedOn}" HorizontalAlignment="Stretch" SelectedDateFormat="Custom"
-                                CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" AutomationProperties.Name="Date the elevation certificate was received" />
+            <c:DateField Grid.Row="9" Grid.Column="1" SelectedDate="{Binding EcReceivedOn}" HorizontalAlignment="Stretch" AutomationProperties.Name="Date the elevation certificate was received" />
 
             <TextBlock Grid.Row="10" Classes="fieldLabel" Text="Final inspection" Margin="0,6,0,0" />
             <TextBlock Grid.Row="10" Grid.Column="1" Classes="fieldLabel" Text="Certificate of compliance" Margin="0,6,0,0" />
-            <CalendarDatePicker Grid.Row="11" SelectedDate="{Binding FinalInspectionOn}" HorizontalAlignment="Stretch" SelectedDateFormat="Custom"
-                                CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" AutomationProperties.Name="Date of the final inspection" />
-            <CalendarDatePicker Grid.Row="11" Grid.Column="1" SelectedDate="{Binding ComplianceCertOn}" HorizontalAlignment="Stretch" SelectedDateFormat="Custom"
-                                CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" AutomationProperties.Name="Date of the certificate of compliance" />
+            <c:DateField Grid.Row="11" SelectedDate="{Binding FinalInspectionOn}" HorizontalAlignment="Stretch" AutomationProperties.Name="Date of the final inspection" />
+            <c:DateField Grid.Row="11" Grid.Column="1" SelectedDate="{Binding ComplianceCertOn}" HorizontalAlignment="Stretch" AutomationProperties.Name="Date of the certificate of compliance" />
           </Grid>
           <StackPanel Spacing="4">
             <TextBlock Classes="fieldLabel" Text="Notes" />

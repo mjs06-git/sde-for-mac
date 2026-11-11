@@ -18,11 +18,9 @@
       <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Started" ToolTip.Tip="New assessments damaged in this range are offered this event." />
       <TextBlock Grid.Column="2" Classes="fieldLabel" Text="Ended" ToolTip.Tip="New assessments damaged in this range are offered this event." />
       <TextBox Grid.Row="1" Text="{Binding DRNumber}" PlaceholderText="DR-0000" AutomationProperties.Name="FEMA disaster number" />
-      <CalendarDatePicker Grid.Row="1" Grid.Column="1" SelectedDate="{Binding StartDate}" HorizontalAlignment="Stretch" SelectedDateFormat="Custom"
-                          CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" AutomationProperties.Name="Date the event started"
+      <c:DateField Grid.Row="1" Grid.Column="1" SelectedDate="{Binding StartDate}" HorizontalAlignment="Stretch" AutomationProperties.Name="Date the event started"
                           ToolTip.Tip="New assessments damaged in this range are offered this event." />
-      <CalendarDatePicker Grid.Row="1" Grid.Column="2" SelectedDate="{Binding EndDate}" HorizontalAlignment="Stretch" SelectedDateFormat="Custom"
-                          CustomDateFormatString="MMM d, yyyy" PlaceholderText="Still going" AutomationProperties.Name="Date the event ended" />
+      <c:DateField Grid.Row="1" Grid.Column="2" SelectedDate="{Binding EndDate}" HorizontalAlignment="Stretch" PlaceholderText="Still going" AutomationProperties.Name="Date the event ended" />
     </Grid>
     <Grid ColumnDefinitions="*,2*" ColumnSpacing="16" RowDefinitions="Auto,Auto" RowSpacing="4">
       <TextBlock Classes="fieldLabel" Text="Datum offset (ft, optional)"
