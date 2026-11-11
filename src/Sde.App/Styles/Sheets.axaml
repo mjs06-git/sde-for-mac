@@ -72,7 +72,7 @@
     <Setter Property="VerticalAlignment" Value="Top" />
     <Setter Property="Margin" Value="12,-3,-8,0" />
   </Style>
-  <!-- The walkthrough sets its own large title, so the row keeps only the close button -->
+  <!-- The walkthrough and What's New set their own large title, so the row keeps only the close button -->
   <Style Selector="Border.sheet.welcome TextBlock.sheetHeading">
     <Setter Property="IsVisible" Value="False" />
   </Style>

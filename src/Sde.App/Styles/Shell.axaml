@@ -200,6 +200,11 @@
 
   <!-- The sidebar's rows on the frame: quiet light text and icons; white on hover; the page showing is a solid accent
        row with white text and icon -->
+  <!-- The colour dots of pinned structures and tags: a faint ring keeps the darker colours visible on the navy frame -->
+  <Style Selector="Border.sidebar Panel.navDot Ellipse.dot">
+    <Setter Property="Stroke" Value="{DynamicResource FrameDotRing}" />
+    <Setter Property="StrokeThickness" Value="1" />
+  </Style>
   <Style Selector="Border.sidebar Button.nav">
     <Setter Property="MinHeight" Value="{DynamicResource ControlHeightLarge}" />
     <Setter Property="Padding" Value="10,0" />

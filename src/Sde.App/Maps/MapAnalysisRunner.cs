@@ -299,13 +299,30 @@ public sealed class MapAnalysisRunner
 		return result;
 	}
 
+	/// <summary>
+	/// The heat map shown now, drawn again in the colours of <paramref name="resource"/> (the light theme's, for a print on
+	/// white paper). The same view and points as on screen; null when no heat map is shown.
+	/// </summary>
+	public MapRasterOverlay HeatForPrint(Func<string, object> resource)
+	{
+		if (_heat == null || _inputs == null || _inputs.Display != StructureDisplay.Heatmap)
+		{
+			return _heat;
+		}
+		byte maxAlpha = (byte)Math.Clamp(resource("MapHeatMaxAlpha") is double a ? a : 205, 0, 255);
+		return MapAnalysis.Heat(_inputs.Points, _inputs.HeatByDamage, _heat.MinX, _heat.MinY, _heat.MaxX, _heat.MaxY,
+			_heat.PixelWidth * MapAnalysis.HeatCellPixels, _heat.PixelHeight * MapAnalysis.HeatCellPixels, HeatRamp(resource), maxAlpha) ?? _heat;
+	}
+
 	/// <summary>The heat ramp in the theme's colours (Tokens.axaml), at <see cref="MapAnalysis.HeatStopPositions"/>.</summary>
-	private ColorStop[] HeatRamp()
+	private ColorStop[] HeatRamp() => HeatRamp(_resource);
+
+	private static ColorStop[] HeatRamp(Func<string, object> resource)
 	{
 		ColorStop[] stops = new ColorStop[MapAnalysis.HeatStopKeys.Length];
 		for (int i = 0; i < stops.Length; i++)
 		{
-			Color c = _resource(MapAnalysis.HeatStopKeys[i]) is Color found ? found : Colors.SteelBlue;
+			Color c = resource(MapAnalysis.HeatStopKeys[i]) is Color found ? found : Colors.SteelBlue;
 			stops[i] = new ColorStop(MapAnalysis.HeatStopPositions[i], c.R, c.G, c.B);
 		}
 		return stops;

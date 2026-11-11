@@ -388,6 +388,13 @@ public partial class MapView : UserControl
 	// ───────────── Printing ─────────────
 
 	/// <summary>The map as it is on screen, in the light theme's colours (paper is white), with its legend.</summary>
+	/// <summary>The analysis pictures for a print: the heat map is drawn again in the light theme's colours, since paper is white.</summary>
+	private List<MapRasterOverlay> PrintRasters()
+	{
+		MapRasterOverlay lightHeat = _analysis.HeatForPrint(key => Application.Current!.TryGetResource(key, ThemeVariant.Light, out object r) ? r : null);
+		return Surface.Rasters.Select(r => r.Key == MapAnalysis.HeatKey && lightHeat != null ? lightHeat : r).ToList();
+	}
+
 	private MapPrintScene BuildPrintScene()
 	{
 		if (_vm == null)
@@ -424,7 +431,7 @@ public partial class MapView : UserControl
 			MarkerLabels = labels == null ? null : _vm.StructuresLayer.Labels,
 			Clusters = PrintClusters(),
 			MarkersHidden = Surface.MarkersHidden,
-			Rasters = Surface.Rasters.ToList(),
+			Rasters = PrintRasters(),
 			Legend = PrintLegend(),
 		};
 	}

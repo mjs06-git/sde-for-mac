@@ -430,6 +430,25 @@ public class MapAnalysisLayersTests
 	}
 
 	[AvaloniaFact]
+	public void APrintFromTheDarkTheme_DrawsTheHeatMapInTheLightColours()
+	{
+		(UiSession ui, MapView view) = Streets(ThemeVariant.Dark);
+		using (ui)
+		{
+			MapViewModel map = ui.Main.Map;
+			map.Basemap = Basemaps.None;
+			map.Display = StructureDisplay.Heatmap;
+			Analyse(ui, view);
+			MapRasterOverlay onScreen = Assert.Single(view.Map.Rasters);
+			MapRasterOverlay printed = Assert.Single(map.PrintScene().Rasters);
+			Assert.Equal(MapAnalysis.HeatKey, printed.Key);
+			Assert.Equal((onScreen.MinX, onScreen.MaxX, onScreen.PixelWidth), (printed.MinX, printed.MaxX, printed.PixelWidth));
+			// Same view, different colours: the dark ramp on screen, the light ramp on paper.
+			Assert.NotEqual(onScreen.Png, printed.Png);
+		}
+	}
+
+	[AvaloniaFact]
 	public async Task ThePrintedMap_HasTheHeatMapAndItsLegend()
 	{
 		(UiSession ui, MapView view) = Streets();

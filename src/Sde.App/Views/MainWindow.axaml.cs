@@ -401,8 +401,8 @@ public static class SheetConverters
 	/// <summary>True when the sheet size equals the parameter ("Small", "Medium" or "Large"), for the sheet chrome's width class.</summary>
 	public static readonly IValueConverter IsSize = new FuncValueConverter<SheetSize, string, bool>((size, name) => size.ToString() == name);
 
-	/// <summary>True for the first-run walkthrough, which shows its own large title in place of the chrome's.</summary>
-	public static readonly IValueConverter IsWelcome = new FuncValueConverter<SheetViewModel, bool>(sheet => sheet is WalkthroughSheetViewModel);
+	/// <summary>True for the first-run walkthrough and What's New, which show their own large title in place of the chrome's.</summary>
+	public static readonly IValueConverter IsWelcome = new FuncValueConverter<SheetViewModel, bool>(sheet => sheet is WalkthroughSheetViewModel or WhatsNewSheetViewModel);
 
 	/// <summary>True when both values are the same object (a walkthrough page and the page being read).</summary>
 	public static readonly IMultiValueConverter Same = new FuncMultiValueConverter<object, bool>(values =>

@@ -155,6 +155,9 @@
   <Thickness x:Key="SheetFooterPadding">24,14</Thickness>
   <CornerRadius x:Key="RadiusSheetFooter">0,0,13,13</CornerRadius>
   <x:Double x:Key="SheetButtonMinWidth">90</x:Double>
+  <!-- Sidebar (3.5): a faint ring round the colour dots of pinned structures and tags, so a slate or grey dot still
+       shows on the navy frame. Decorative, so no contrast pair. -->
+  <SolidColorBrush x:Key="FrameDotRing" Color="#59FFFFFF" />
 
   <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">
@@ -308,7 +311,7 @@
       <SolidColorBrush x:Key="StatusCloseDot" Color="#DE8A1B" />
       <SolidColorBrush x:Key="StatusNotSubstantialDot" Color="#2E9E57" />
       <SolidColorBrush x:Key="StatusIncompleteDot" Color="#8D99A8" />
-      <SolidColorBrush x:Key="StatusUndeterminedDot" Color="#8A63C9" />
+      <SolidColorBrush x:Key="StatusUndeterminedDot" Color="#7D55C0" /> <!-- dark enough for a white count on a map cluster (5.3:1) -->
       <SolidColorBrush x:Key="RequiredFg" Color="{StaticResource DangerFgColor}" />
       <SolidColorBrush x:Key="RecommendedFg" Color="{StaticResource WarningFgColor}" />
       <SolidColorBrush x:Key="SuggestedFg" Color="{StaticResource SuccessFgColor}" />
