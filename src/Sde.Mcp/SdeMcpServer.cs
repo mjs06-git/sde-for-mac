@@ -247,7 +247,7 @@ public static class SdeMcpServer
 		Content = [new TextContentBlock { Text = message }],
 	};
 
-	/// <summary>SDE's version ("2.5.0"), from the app that runs the server.</summary>
+	/// <summary>SDE's version, read from the assembly of the app that runs the server.</summary>
 	public static string Version
 	{
 		get

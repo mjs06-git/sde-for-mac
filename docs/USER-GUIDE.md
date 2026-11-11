@@ -251,7 +251,7 @@ for compatibility; for anything you will import again, use [3.3](#33-from-a-perm
 instead.
 
 1. Open **Import & Export** and find **Structures from a parcel spreadsheet** under **Other systems**.
-2. Click **Choose Spreadsheet…** and pick a `.xlsx` or `.csv` file. Choose the **Sheet** and whether the **First row
+2. Click **Choose Spreadsheet…** and pick a `.xlsx`, `.xlsm`, `.xls` or `.csv` file (a shapefile's `.dbf` or `.shp` table also works). Choose the **Sheet** and whether the **First row
    has the column names**.
 3. Match columns to fields, or pick a **Saved mapping**.
 4. Click **Create Checked Structures**. SDE warns about rows that look like a structure already in the database (same

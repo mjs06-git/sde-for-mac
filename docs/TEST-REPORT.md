@@ -122,7 +122,7 @@ once the window is activated, which a background run never does: **check them by
 
 ## v1.5: Accela import and the submission folder
 
-There is no real Accela export yet, so these checks use synthetic exports (`tests/fixtures/accela/`): one with a row
+These checks use synthetic exports, not a real Accela export. The Accela importer was generalised in v2.0 into Source Import with import profiles (see `docs/PORTING-NOTES.md`). The fixtures are in `tests/fixtures/accela/`: one with a row
 per inspection, and the same inspections as a checklist with a row per item, including RanchFlood and a checklist
 item answered twice.
 
@@ -199,7 +199,7 @@ The packaged app (arm64, and x64 under Rosetta) was opened on a new database and
 - **FEMA's SDE on Windows**: importing our files, entering the same cases, and exporting back. Use
   `docs/windows-crosscheck/README.md`, which takes about an hour.
 - **The File/View menus and the macOS save panel**, by hand.
-- **Importing `.mdb` files on a Mac that has never had Homebrew.** The packaged app now carries its own mdbtools
+- **Importing `.mdb` files on a Mac that has never had Homebrew**, as a clean-machine run. The packaged app carries its own mdbtools
   (`tools/packaging/build_mdbtools.sh`). On the build Mac, both architectures' copies give byte-identical output to
   Homebrew's mdbtools on every table of the test database and of FEMA's shipped database, and SDE's `.mdb` import ran
   through them with Homebrew left out of the search.

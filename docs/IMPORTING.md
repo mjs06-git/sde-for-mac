@@ -200,7 +200,7 @@ All the types live in the `Sde.Interop` namespace (a namespace called `SourceImp
 `SourceImport` class).
 
 **Compatibility.** Profiles saved by v1.5 (`Accela Profiles/`) are copied once into `Import Profiles/`; the old folder
-is left for v1.5. A v1.5 profile has no `SourceName`, so it reads as an Inspections profile from "Accela", matching by
+is left as it was, so v1.5 can still use it. A v1.5 profile has no `SourceName`, so it reads as an Inspections profile from "Accela", matching by
 record ID: its existing links (`ExternalLink.Source = 'Accela'`) keep matching, and nothing in the database needs to
 change. The app setting `LastAccelaProfile` is read as `LastImportProfile`. Both link tables are added to older
 databases when they're opened (`SdeDatabase.EnsureSchema`) and use `ON DELETE CASCADE`, so older versions can still

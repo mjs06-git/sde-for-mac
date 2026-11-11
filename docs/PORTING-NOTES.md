@@ -178,7 +178,7 @@ folder, with progress and cancellation. See `docs/IMPORTING.md`.
   - The original required three address columns; one is enough.
 - **SDE 2.x:** cost adjustments pointed at the old lookup type 10 (now type 23); residences got the non-residential story count (duplicate OldIDs in lookup type 14); missing elements, structures without assessments and sub-folders without `PropertyData.xml` crashed or stopped the import; empty dates became 1 Jan 0001 and empty BFE/flood values 0; undetermined-damage codes were stored as the depreciation %; "52.3%" was dropped; same-named photos overwrote each other; an unknown value/repair basis became 0 (now 390/393).
 
-**Not supported:** old `.xls` workbooks (ClosedXML reads .xlsx only); the app asks to re-save as .xlsx or .csv.
+**Old `.xls` workbooks** are supported. ClosedXML reads .xlsx and .xlsm; ExcelDataReader reads legacy .xls (`Sde.Interop/Internal/SheetReader.cs`, tested in `XlsAndDbfTests`).
 
 **Accela import (v1.5, not in FEMA's SDE).** `Sde.Interop.Accela` turns an Accela export into assessments: a field
 catalog grouped like the editor, a JSON profile per agency, a checklist (guidesheet) pivot, Accela text → FEMA choices
