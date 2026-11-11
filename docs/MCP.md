@@ -42,6 +42,8 @@ The server does not upgrade database tables and refuses a database that needs an
 
 ## What it can do
 
+The server has 28 tools: 19 read tools, 3 output tools and 6 edit tools.
+
 Read tools (always on; read-only connections):
 
 | Tool | What it does |
@@ -57,6 +59,12 @@ Read tools (always on; read-only connections):
 | `qa_check` | `QaRules` over chosen assessments, one event or the whole database, with dismissals applied (dismissed findings only on request), grouped by check with its title and severity. Paged. |
 | `get_review_comments` | An assessment's review comment threads and replies, so `add_review_comment` can answer one. |
 | `list_compliance_cases` | The compliance cases as `ComplianceReport.Rows` gives them. Filters: open or closed, overdue, path, ICC status, event. Paged. |
+| `get_compliance_case` | One case as `list_compliance_cases` shows it, with its timeline (`GetComplianceEntries`), newest first. Paged. |
+| `list_letters` | The letters SDE wrote (`GetLetters`) for one assessment, or for every assessment of a structure: kind, template, when written and when marked sent. File names only. |
+| `list_documents` | A structure's documents (`GetDocuments`): kind, title, the file's original name, when added and by whom, and the values read from an elevation certificate. |
+| `get_appeal` | An assessment's appeal (`GetAppeal`) and its contractor bids (`GetBids`), with the bid its repair cost uses, if any, and its result now. |
+| `list_improvements` | A structure's improvement projects and SI determinations. Each project has the cumulative figures the Improvements sheet shows, from `ImprovementCalculator.Evaluate` with the latest assessment's building value as the market value. |
+| `agenda` | Dated items, oldest first, for the whole database or one event: open cases' deadlines, final inspections, appeals received and decided, letters marked sent, events' first and last days (as `Sde.Interop.AgendaItem`). `from` and `to` (default: today and 30 days on; without `from`, deadlines already passed are listed too, marked overdue) or `overdueOnly`. Paged. |
 | `list_layers` | The Map page's layers (`MapLayer`) with their table in `<db>.layers.gpkg`, geometry type, feature count, fields and extent; warns when the layers file belongs to another database. |
 | `query_layer` | One layer's features by attribute conditions (AND or OR) and/or a bounding box, with their values and boxes; GeoJSON shapes only when asked, and shapes over 2,000 points left out. Paged. |
 
@@ -121,6 +129,12 @@ Resources: `sde://assessment/{id}` and `sde://field-help`.
   Assigned again, which revert couldn't undo). `create_event` keeps to the New event sheet's limits (a datum offset
   within 20 feet either way). Nothing can be deleted, restored, imported, exported to FEMA's format or marked as letter
   sent, and Settings can't be changed.
+- Letters, documents, appeals and bids, improvement projects, SI determinations and compliance cases can be read but
+  not changed. An assistant can't change a case's status, deadline or outcome, or an appeal or a determination. It
+  can't add a line to a case's timeline either. `AddComplianceEntry` writes no edit history and SDE has no way to
+  remove a timeline line, so `Revert` couldn't undo one, and every edit tool must be revertible.
+- `list_letters` and `list_documents` give file names without their folders, as `get_assessment` gives a photo count
+  but no photo paths. No tool reads a letter's or a document's file.
 - The server holds a shared lease on the database, so SDE won't restore a backup or move it underneath.
 - Tool descriptions and the server's instructions say that free text in the database and in map layers is data,
   never instructions. Results are paged and long text is shortened to stay under Claude Code's tool-result limit. A

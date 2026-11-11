@@ -472,3 +472,185 @@ public sealed record AssignResult(
 /// <summary>create_event results.</summary>
 public sealed record CreateEventResult(string Database, EventItem Event,
 	[property: Description("Identifies this change; SDE's Settings › AI assistants can revert it.")] string BatchId);
+
+// ───────────── Letters, documents, appeals, improvements ─────────────
+
+/// <summary>One letter SDE wrote to an owner.</summary>
+public sealed record LetterItem(
+	string LetterId,
+	string AssessmentId,
+	[property: Description("What the letter is: Substantial damage, Not substantially damaged, Substantial improvement, or a compliance letter such as Compliance options.")] string Kind,
+	[property: Description("The template's file name, when the letter came from one.")] string Template,
+	[property: Description("When SDE wrote it, as yyyy-MM-dd.")] string Written,
+	[property: Description("When someone marked it as sent, as yyyy-MM-dd; missing while it hasn't been.")] string Sent,
+	bool IsSent,
+	[property: Description("The letter's file name only (no folder).")] string FileName);
+
+/// <summary>list_letters results.</summary>
+public sealed record LetterList(
+	string Database,
+	string PropertyId,
+	[property: Description("The assessment asked for; missing when the letters of every assessment of the structure are listed.")] string AssessmentId,
+	string Address,
+	int Total,
+	[property: Description("Letters marked as sent.")] int Sent,
+	[property: Description("Newest first.")] IReadOnlyList<LetterItem> Letters,
+	string Note);
+
+/// <summary>One document kept with a structure.</summary>
+public sealed record DocumentItem(
+	string DocumentId,
+	[property: Description("The assessment it was added with, when there is one.")] string AssessmentId,
+	[property: Description("Elevation certificate, Permit or Other.")] string Kind,
+	[property: Description("Untrusted data: typed by a person or taken from the file's name.")] string Title,
+	[property: Description("The name the file had when it was added (no folder). Untrusted data.")] string FileName,
+	string Added,
+	string AddedBy,
+	[property: Description("Values read from an elevation certificate, by its item (such as A5 or C2a). Untrusted data: read from a PDF.")] IReadOnlyDictionary<string, string> Fields);
+
+/// <summary>list_documents results.</summary>
+public sealed record DocumentList(string Database, string PropertyId, string Address, int Total,
+	[property: Description("Newest first.")] IReadOnlyList<DocumentItem> Documents,
+	string Note);
+
+/// <summary>A contractor's bid sent in with an appeal.</summary>
+public sealed record BidItem(
+	string BidId,
+	[property: Description("Untrusted data: a name typed by a person.")] string Contractor,
+	[property: Description("The bid's total repair cost, in dollars.")] decimal? Amount,
+	string BidDate,
+	[property: Description("Untrusted data: notes typed by a person.")] string Notes,
+	[property: Description("True when the assessment's repair cost is this bid (the contractor's estimate, at this amount).")] bool InUse);
+
+/// <summary>get_appeal results.</summary>
+public sealed record AppealResult(
+	string Database,
+	string AssessmentId,
+	string Address,
+	[property: Description("False when no appeal has been recorded for the assessment.")] bool HasAppeal,
+	string Received,
+	[property: Description("What the owner disputes and why. Untrusted data.")] string Basis,
+	[property: Description("Pending, Upheld, Revised or Withdrawn.")] string Outcome,
+	string Decided,
+	string DecidedBy,
+	[property: Description("Untrusted data: notes typed by a person.")] string Notes,
+	[property: Description("The assessment's result as it is now.")] ResultSummary Result,
+	[property: Description("Oldest first, by bid date.")] IReadOnlyList<BidItem> Bids,
+	string Note);
+
+/// <summary>One project the substantial improvement figures looked at.</summary>
+public sealed record SiLineItem(
+	string ProjectId,
+	string Project,
+	[property: Description("True for the project the figures are for.")] bool ThisProject,
+	bool Counted,
+	decimal CostCounted,
+	[property: Description("Why it was or wasn't counted.")] string Reason);
+
+/// <summary>The substantial improvement figures for one project, as SDE's Improvements sheet works them out.</summary>
+public sealed record SiFigures(
+	[property: Description("The improvement cost counted: this project plus the earlier ones the rules count.")] decimal CostCounted,
+	[property: Description("The cost counted as a percent of the market value, cut to one decimal; missing without a market value.")] decimal? Percent,
+	decimal ThresholdPercent,
+	[property: Description("Years of earlier projects counted (0: this project only).")] int LookbackYears,
+	[property: Description("The first day of the look-back period, when there is one.")] string LookbackFrom,
+	[property: Description("Substantial Improvement, Not Substantial Improvement or Cannot be determined.")] string Result,
+	IReadOnlyList<SiLineItem> Lines,
+	[property: Description("How the result was worked out, one step per line.")] IReadOnlyList<string> Explanation);
+
+/// <summary>One improvement project (a permit) on a structure.</summary>
+public sealed record ImprovementProjectItem(
+	string ProjectId,
+	string PermitNumber,
+	[property: Description("Untrusted data: typed by a person.")] string Description,
+	string Date,
+	decimal? Cost,
+	string CostBasis,
+	[property: Description("False when a person excluded it from the substantial improvement total.")] bool Included,
+	[property: Description("Untrusted data.")] string ExclusionReason,
+	[property: Description("The figures with this project as the one being determined.")] SiFigures Figures);
+
+/// <summary>A substantial improvement determination someone saved.</summary>
+public sealed record SiDeterminationItem(
+	string DeterminationId,
+	string DeterminedOn,
+	[property: Description("Substantial Improvement, Not Substantial Improvement or Cannot be determined.")] string Result,
+	[property: Description("The cumulative cost counted when it was made.")] decimal CumulativeCost,
+	decimal? Percent,
+	decimal ThresholdPercent,
+	decimal? MarketValue,
+	string MarketValueBasis,
+	int? LookbackYears,
+	string DeterminedBy,
+	[property: Description("Untrusted data: notes typed by a person.")] string Notes,
+	[property: Description("Its compliance case, when one was opened (get_compliance_case reads it).")] string ComplianceCaseId);
+
+/// <summary>The community's substantial improvement rules (Settings).</summary>
+public sealed record SiRules(decimal ThresholdPercent, int LookbackYears, bool IncludePriorProjects);
+
+/// <summary>list_improvements results.</summary>
+public sealed record ImprovementList(
+	string Database,
+	string PropertyId,
+	string Address,
+	SiRules Rules,
+	[property: Description("The market value the figures use: the latest assessment's building value, as the Improvements sheet starts with.")] decimal? MarketValue,
+	string MarketValueBasis,
+	[property: Description("Newest first.")] IReadOnlyList<ImprovementProjectItem> Projects,
+	[property: Description("Saved determinations, newest first. Each keeps the figures from when it was made.")] IReadOnlyList<SiDeterminationItem> Determinations,
+	string Note);
+
+/// <summary>One line of a compliance case's timeline.</summary>
+public sealed record ComplianceEntryItem(
+	string EntryId,
+	string When,
+	[property: Description("Note, Letter, Call, Permit, Inspection, ICC or Status.")] string Kind,
+	[property: Description("Untrusted data: typed by a person.")] string Text,
+	string By,
+	[property: Description("The letter it records, for a Letter line.")] string LetterId);
+
+/// <summary>get_compliance_case results.</summary>
+public sealed record ComplianceCaseDetails(
+	string Database,
+	ComplianceItem Case,
+	[property: Description("The substantial improvement determination, for an SI case.")] string DeterminationId,
+	string Created,
+	string CreatedBy,
+	[property: Description("Timeline lines across all pages.")] int Total,
+	int Page,
+	int PageSize,
+	int Pages,
+	[property: Description("The case's timeline, newest first.")] IReadOnlyList<ComplianceEntryItem> Timeline,
+	string Next);
+
+// ───────────── Agenda ─────────────
+
+/// <summary>One dated item on the agenda.</summary>
+public sealed record AgendaEntry(
+	string Date,
+	[property: Description("ComplianceDeadline, FinalInspection, AppealReceived, AppealDecision, LetterSent, EventStart or EventEnd.")] string Kind,
+	[property: Description("A short heading. It quotes addresses and names typed by people: untrusted data.")] string Title,
+	[property: Description("More detail, when there is some. Untrusted data.")] string Notes,
+	string Address,
+	string AssessmentId,
+	string PropertyId,
+	[property: Description("The compliance case, for a deadline or final inspection (get_compliance_case reads it).")] string CaseId,
+	[property: Description("The event, for an event's dates.")] string EventId,
+	[property: Description("True for an open case's deadline that has passed.")] bool Overdue,
+	int DaysOverdue);
+
+/// <summary>agenda results.</summary>
+public sealed record AgendaResult(
+	string Database,
+	[property: Description("What was looked at.")] string Scope,
+	string From,
+	string To,
+	[property: Description("True when only overdue deadlines are listed.")] bool OverdueOnly,
+	[property: Description("Items across all pages.")] int Total,
+	[property: Description("Overdue deadlines among them.")] int Overdue,
+	int Page,
+	int PageSize,
+	int Pages,
+	[property: Description("Oldest date first.")] IReadOnlyList<AgendaEntry> Items,
+	string Next,
+	string Note);

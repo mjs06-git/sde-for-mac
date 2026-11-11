@@ -175,17 +175,20 @@ public sealed partial class ReadTools
 				&& (inEvent == null || (c.AssessmentID is Guid a && inEvent.Contains(a)));
 		}).ToList();
 		int pages = Math.Max(1, (rows.Count + pageSize - 1) / pageSize);
-		List<ComplianceItem> items = rows.Skip((page - 1) * pageSize).Take(pageSize).Select(r =>
-		{
-			ComplianceCaseRecord c = r.Case;
-			return new ComplianceItem(c.CaseID.ToString(), c.Kind, c.AssessmentID?.ToString(), c.PropertyID.ToString(), Blank(r.Address) ?? "(no address)", Blank(r.City),
-				Blank(r.ParcelNumber), Blank(Describe.Shorten(r.Owner, 120)), CompliancePaths.Label(c.Path), Blank(c.PermitNumber), Describe.Date(c.PermitIssuedOn),
-				Describe.Date(c.Deadline), r.IsOverdue, r.DaysOverdue, Blank(c.IccClaimNumber), IccStatuses.Label(c.IccStatus), c.IccAmount,
-				Describe.Date(c.EcReceivedOn), Describe.Date(c.FinalInspectionOn), Describe.Date(c.ComplianceCertOn), c.Status ?? ComplianceStatuses.Open,
-				Describe.Date(c.ClosedOn), Describe.Shorten(Blank(c.ClosedReason)), Describe.Shorten(Blank(c.Notes)));
-		}).ToList();
+		List<ComplianceItem> items = rows.Skip((page - 1) * pageSize).Take(pageSize).Select(CaseItem).ToList();
 		string next = page < pages ? $"Showing page {page} of {pages}. For more, call list_compliance_cases again with page = {page + 1} and the same filters." : null;
 		return new CompliancePage(sde.DatabasePath, rows.Count, rows.Count(r => r.Case.IsOpen), rows.Count(r => r.IsOverdue), rows.Count(r => !r.Case.IsOpen),
 			page, pageSize, pages, items, next);
+	}
+
+	/// <summary>A compliance case as list_compliance_cases and get_compliance_case show it.</summary>
+	private static ComplianceItem CaseItem(ComplianceRow r)
+	{
+		ComplianceCaseRecord c = r.Case;
+		return new ComplianceItem(c.CaseID.ToString(), c.Kind, c.AssessmentID?.ToString(), c.PropertyID.ToString(), Blank(r.Address) ?? "(no address)", Blank(r.City),
+			Blank(r.ParcelNumber), Blank(Describe.Shorten(r.Owner, 120)), CompliancePaths.Label(c.Path), Blank(c.PermitNumber), Describe.Date(c.PermitIssuedOn),
+			Describe.Date(c.Deadline), r.IsOverdue, r.DaysOverdue, Blank(c.IccClaimNumber), IccStatuses.Label(c.IccStatus), c.IccAmount,
+			Describe.Date(c.EcReceivedOn), Describe.Date(c.FinalInspectionOn), Describe.Date(c.ComplianceCertOn), c.Status ?? ComplianceStatuses.Open,
+			Describe.Date(c.ClosedOn), Describe.Shorten(Blank(c.ClosedReason)), Describe.Shorten(Blank(c.Notes)));
 	}
 }
