@@ -24,6 +24,14 @@ public sealed class AppFieldWriter(AppServices app) : IFieldWriter
 			app.Store.SaveAssessment(file, context);
 			return file;
 		})).GetTask();
+
+	/// <summary>
+	/// A status change from the phone, in one step on the UI thread through the write coordinator: an editor open on the
+	/// assessment is saved first and caught up after, around the store's own status change (lock and check-out checks,
+	/// edit history). Replaces the interface's default, which saved and reloaded with two extra no-change applies.
+	/// </summary>
+	public Task SetStatusAsync(Guid assessmentId, Action setStatus, SaveContext context) =>
+		Dispatcher.UIThread.InvokeAsync(() => app.Writes.Write(new[] { assessmentId }, setStatus)).GetTask();
 }
 
 /// <summary>HEIC to JPEG with macOS's sips (<see cref="PhotoConversion"/>); elsewhere photos are kept as they are.</summary>
