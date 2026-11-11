@@ -1,45 +1,39 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.EventSheetView"
              x:DataType="sh:EventSheetViewModel">
-  <StackPanel Spacing="12">
-    <Grid ColumnDefinitions="2*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="4">
+  <!-- A disaster event: name, kind, FEMA number, dates, datum offset and notes; Delete at the foot's left for an existing one -->
+  <StackPanel Spacing="16">
+    <Grid ColumnDefinitions="2*,*" ColumnSpacing="16" RowDefinitions="Auto,Auto" RowSpacing="4">
       <TextBlock Classes="fieldLabel" Text="Name" />
       <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Kind" />
       <TextBox Grid.Row="1" Text="{Binding Name}" PlaceholderText="For example: September flood" AutomationProperties.Name="Event name" />
       <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Kinds}" SelectedItem="{Binding Kind}" HorizontalAlignment="Stretch"
                 AutomationProperties.Name="Kind of event" />
     </Grid>
-    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="4">
+    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="16" RowDefinitions="Auto,Auto" RowSpacing="4">
       <TextBlock Classes="fieldLabel" Text="FEMA disaster number" />
-      <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Started" />
-      <TextBlock Grid.Column="2" Classes="fieldLabel" Text="Ended" />
+      <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Started" ToolTip.Tip="New assessments damaged in this range are offered this event." />
+      <TextBlock Grid.Column="2" Classes="fieldLabel" Text="Ended" ToolTip.Tip="New assessments damaged in this range are offered this event." />
       <TextBox Grid.Row="1" Text="{Binding DRNumber}" PlaceholderText="DR-0000" AutomationProperties.Name="FEMA disaster number" />
       <CalendarDatePicker Grid.Row="1" Grid.Column="1" SelectedDate="{Binding StartDate}" HorizontalAlignment="Stretch" SelectedDateFormat="Custom"
-                          CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" AutomationProperties.Name="Date the event started" />
+                          CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" AutomationProperties.Name="Date the event started"
+                          ToolTip.Tip="New assessments damaged in this range are offered this event." />
       <CalendarDatePicker Grid.Row="1" Grid.Column="2" SelectedDate="{Binding EndDate}" HorizontalAlignment="Stretch" SelectedDateFormat="Custom"
                           CustomDateFormatString="MMM d, yyyy" PlaceholderText="Still going" AutomationProperties.Name="Date the event ended" />
     </Grid>
-    <TextBlock Classes="muted" TextWrapping="Wrap"
-               Text="New assessments damaged in this range are offered this event." />
-    <StackPanel Spacing="4">
-      <TextBlock Classes="fieldLabel" Text="Datum offset (ft, optional)" />
-      <TextBox Text="{Binding DatumOffset}" Width="140" HorizontalAlignment="Left" PlaceholderText="0.0" AutomationProperties.Name="Datum offset in feet" />
-      <TextBlock Classes="muted" TextWrapping="Wrap"
-                 Text="Added to high-water marks in another vertical datum (for example NAVD 88 to NGVD 29)." />
-    </StackPanel>
-    <StackPanel Spacing="4">
-      <TextBlock Classes="fieldLabel" Text="Notes" />
-      <TextBox Text="{Binding Notes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="48" AutomationProperties.Name="Notes about the event" />
-    </StackPanel>
+    <Grid ColumnDefinitions="*,2*" ColumnSpacing="16" RowDefinitions="Auto,Auto" RowSpacing="4">
+      <TextBlock Classes="fieldLabel" Text="Datum offset (ft, optional)"
+                 ToolTip.Tip="Added to high-water marks in another vertical datum (for example NAVD 88 to NGVD 29)." />
+      <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Notes" />
+      <TextBox Grid.Row="1" Text="{Binding DatumOffset}" PlaceholderText="0.0" AutomationProperties.Name="Datum offset in feet" VerticalAlignment="Top"
+               ToolTip.Tip="Added to high-water marks in another vertical datum (for example NAVD 88 to NGVD 29)." />
+      <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Notes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="48" AutomationProperties.Name="Notes about the event" />
+    </Grid>
     <TextBlock Classes="danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding HasError}" />
-    <DockPanel>
-      <Button DockPanel.Dock="Left" Classes="link danger" Content="Delete Event…" Command="{Binding DeleteCommand}" IsVisible="{Binding IsExisting}" />
-      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-        <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-        <Button Classes="primary" Content="Save" IsDefault="True" Command="{Binding SaveCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      </StackPanel>
-    </DockPanel>
+    <c:SheetFooter LeadingText="Delete Event…" LeadingCommand="{Binding DeleteCommand}" IsLeadingDestructive="True" IsLeadingVisible="{Binding IsExisting}"
+                   PrimaryText="Save" PrimaryCommand="{Binding SaveCommand}" />
   </StackPanel>
 </UserControl>

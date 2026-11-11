@@ -5,8 +5,10 @@
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.DepthSheetView"
              x:DataType="sh:DepthSheetViewModel">
-  <StackPanel Spacing="12">
-    <TextBlock Classes="secondary" Text="{Binding Intro}" TextWrapping="Wrap" />
+  <!-- Flood Depth from High-Water Marks: where the water levels come from (one grouped box per source), then a
+       preview table of the proposed depths to tick -->
+  <StackPanel Spacing="16">
+    <TextBlock Text="{Binding Intro}" TextWrapping="Wrap" />
 
     <StackPanel Orientation="Horizontal" Spacing="16">
       <RadioButton GroupName="depthSource" IsChecked="{Binding IsMarksFile}" Content="High-water marks file" />
@@ -15,23 +17,20 @@
     </StackPanel>
 
     <!-- A file of marks -->
-    <Border Classes="subtle" Padding="14" IsVisible="{Binding IsMarksFile}">
-      <StackPanel Spacing="8">
-        <TextBlock Classes="muted" TextWrapping="Wrap" Text="CSV or GeoJSON with latitude, longitude and elevation in feet." />
-        <StackPanel Orientation="Horizontal" Spacing="10">
-          <Button Content="Choose File…" Command="{Binding ChooseMarksFileCommand}" />
-          <TextBlock Classes="fieldLabel" Text="Datum of marks that don't name one" VerticalAlignment="Center" />
-          <ComboBox ItemsSource="{Binding Datums}" SelectedItem="{Binding MarksDatum}" Width="130" AutomationProperties.Name="Datum of marks that don't name one" />
-        </StackPanel>
+    <Border Classes="card" IsVisible="{Binding IsMarksFile}">
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <Button Content="Choose File…" Command="{Binding ChooseMarksFileCommand}" ToolTip.Tip="CSV or GeoJSON with latitude, longitude and elevation in feet." />
+        <TextBlock Classes="fieldLabel" Text="Datum of marks that don't name one" VerticalAlignment="Center" />
+        <ComboBox ItemsSource="{Binding Datums}" SelectedItem="{Binding MarksDatum}" Width="130" AutomationProperties.Name="Datum of marks that don't name one" />
       </StackPanel>
     </Border>
 
     <!-- USGS -->
-    <Border Classes="subtle" Padding="14" IsVisible="{Binding IsUsgs}">
+    <Border Classes="card" IsVisible="{Binding IsUsgs}">
       <StackPanel Spacing="8">
-        <TextBlock Classes="muted" TextWrapping="Wrap" Text="USGS's surveyed marks for an event. Staff names are never read." />
         <Grid ColumnDefinitions="Auto,*,Auto,120,Auto" ColumnSpacing="8">
-          <Button Content="Load USGS Events" Command="{Binding LoadUsgsEventsCommand}" IsEnabled="{Binding IsNotBusy}" />
+          <Button Content="Load USGS Events" Command="{Binding LoadUsgsEventsCommand}" IsEnabled="{Binding IsNotBusy}"
+                  ToolTip.Tip="USGS's surveyed marks for an event. Staff names are never read." />
           <ComboBox Grid.Column="1" ItemsSource="{Binding UsgsEvents}" SelectedItem="{Binding SelectedUsgsEvent}" HorizontalAlignment="Stretch"
                     PlaceholderText="Load the events first" AutomationProperties.Name="USGS event">
             <ComboBox.ItemTemplate>
@@ -42,29 +41,29 @@
           </ComboBox>
           <TextBlock Grid.Column="2" Classes="fieldLabel" Text="States" VerticalAlignment="Center" />
           <TextBox Grid.Column="3" Text="{Binding UsgsStates}" PlaceholderText="OH, KY" AutomationProperties.Name="States" />
-          <Button Grid.Column="4" Classes="primary" Content="Download Marks" Command="{Binding DownloadUsgsMarksCommand}" IsEnabled="{Binding IsNotBusy}" />
+          <Button Grid.Column="4" Content="Download Marks" Command="{Binding DownloadUsgsMarksCommand}" IsEnabled="{Binding IsNotBusy}" />
         </Grid>
         <TextBlock Classes="caption" Text="{Binding UsgsNotice}" TextWrapping="Wrap" IsVisible="{Binding UsgsNotice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
       </StackPanel>
     </Border>
 
     <!-- A grid -->
-    <Border Classes="subtle" Padding="14" IsVisible="{Binding IsGrid}">
+    <Border Classes="card" IsVisible="{Binding IsGrid}">
       <StackPanel Spacing="8">
-        <TextBlock Classes="muted" TextWrapping="Wrap"
-                   Text="A GeoTIFF of water-surface elevations (not depths). Not included in backups." />
-        <StackPanel Orientation="Horizontal" Spacing="10">
-          <Button Content="Choose Grid…" Command="{Binding ChooseGridCommand}" />
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Button Content="Choose Grid…" Command="{Binding ChooseGridCommand}" ToolTip.Tip="A GeoTIFF of water-surface elevations (not depths)." />
           <RadioButton GroupName="gridUnits" IsChecked="{Binding GridInFeet}" Content="Feet" VerticalAlignment="Center" />
           <RadioButton GroupName="gridUnits" IsChecked="{Binding GridInMeters}" Content="Metres" VerticalAlignment="Center" />
           <TextBlock Classes="fieldLabel" Text="Datum" VerticalAlignment="Center" />
           <ComboBox ItemsSource="{Binding Datums}" SelectedItem="{Binding GridDatum}" Width="130" AutomationProperties.Name="Datum of the grid" />
         </StackPanel>
         <TextBlock Classes="secondary" Text="{Binding GridFile}" TextTrimming="CharacterEllipsis" />
+        <!-- Kept on screen: the grid file is not part of the database's backups -->
+        <TextBlock Classes="muted" TextWrapping="Wrap" Text="The grid is not included in backups." />
       </StackPanel>
     </Border>
 
-    <Expander Header="Options for marks" IsVisible="{Binding !IsGrid}">
+    <Expander Header="Options for marks" IsVisible="{Binding !IsGrid}" HorizontalAlignment="Stretch">
       <Grid ColumnDefinitions="Auto,110,Auto,90,Auto,90" ColumnSpacing="10">
         <TextBlock Classes="fieldLabel" Text="Search radius (m)" VerticalAlignment="Center" />
         <NumericUpDown Grid.Column="1" Value="{Binding RadiusMeters}" Minimum="50" Maximum="10000" Increment="100" FormatString="0" AutomationProperties.Name="Search radius in metres" />
@@ -77,20 +76,22 @@
 
     <TextBlock Classes="secondary" Text="{Binding MarksSummary}" TextWrapping="Wrap" IsVisible="{Binding MarksSummary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
 
-    <Border Classes="card flush" IsVisible="{Binding HasRows}">
-      <StackPanel>
-        <Grid ColumnDefinitions="36,2*,2*,2*,90,3*" ColumnSpacing="10" Margin="14,8">
-          <TextBlock Grid.Column="1" Classes="eyebrow" Text="Structure" />
-          <TextBlock Grid.Column="2" Classes="eyebrow" Text="Now" />
-          <TextBlock Grid.Column="3" Classes="eyebrow" Text="Proposed" />
-          <TextBlock Grid.Column="4" Classes="eyebrow" Text="Confidence" />
-          <TextBlock Grid.Column="5" Classes="eyebrow" Text="How" />
-        </Grid>
+    <Border Classes="sheetTable" IsVisible="{Binding HasRows}">
+      <DockPanel>
+        <Border DockPanel.Dock="Top" Classes="sheetTableHead">
+          <Grid ColumnDefinitions="36,2*,2*,2*,90,3*" ColumnSpacing="10">
+            <TextBlock Grid.Column="1" Text="Structure" />
+            <TextBlock Grid.Column="2" Text="Now" />
+            <TextBlock Grid.Column="3" Text="Proposed" />
+            <TextBlock Grid.Column="4" Text="Confidence" />
+            <TextBlock Grid.Column="5" Text="How" />
+          </Grid>
+        </Border>
         <ScrollViewer MaxHeight="300" HorizontalScrollBarVisibility="Disabled">
           <ItemsControl ItemsSource="{Binding Rows}">
             <ItemsControl.ItemTemplate>
               <DataTemplate DataType="sh:FloodDepthRowViewModel">
-                <Border Classes="rule" Padding="14,6">
+                <Border Classes="sheetTableRow">
                   <Grid ColumnDefinitions="36,2*,2*,2*,90,3*" ColumnSpacing="10">
                     <CheckBox IsChecked="{Binding IsChecked}" IsEnabled="{Binding CanApply}" AutomationProperties.Name="{Binding CheckName}" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Classes="medium" Text="{Binding Address}" VerticalAlignment="Center" TextWrapping="Wrap" />
@@ -104,14 +105,11 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
         </ScrollViewer>
-      </StackPanel>
+      </DockPanel>
     </Border>
     <TextBlock Classes="secondary" Text="{Binding Summary}" IsVisible="{Binding HasRows}" />
 
     <TextBlock Classes="danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding HasError}" />
-    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Classes="primary" Content="Save the Ticked Depths" IsDefault="True" Command="{Binding SaveCommand}" IsEnabled="{Binding HasRows}" HorizontalContentAlignment="Center" />
-    </StackPanel>
+    <c:SheetFooter PrimaryText="Save the Ticked Depths" PrimaryCommand="{Binding SaveCommand}" IsPrimaryEnabled="{Binding HasRows}" />
   </StackPanel>
 </UserControl>

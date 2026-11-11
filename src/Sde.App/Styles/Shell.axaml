@@ -4,8 +4,8 @@
         xmlns:app="using:Sde.App">
   <!--
     The window's frame: the sidebar (its sections, rows, foot and resizable edge), the title band and its search
-    field, inspector edges, sheets (scrim and chrome, with small, medium and large widths), the command palette, and
-    keyboard-key labels (Border.kbd). Every colour is a token, so the shell's look changes here and in Tokens.axaml.
+    field, inspector edges and keyboard-key labels (Border.kbd); sheets and the command palette are in Sheets.axaml.
+    Every colour is a token, so the shell's look changes here and in Tokens.axaml.
   -->
 
   <!-- Icons in a colour role -->
@@ -549,78 +549,7 @@
     <Setter Property="Text" Value="{Binding $parent[MenuItem].InputGesture, Converter={x:Static app:Converters.MacKeyGesture}}" />
   </Style>
 
-  <!-- Sheets, as on the Mac: the sheet hangs from the toolbar's lower edge; the window behind is not dimmed but can't be clicked -->
-  <Style Selector="Border.scrim">
-    <Setter Property="Background" Value="{DynamicResource BgOverlay}" />
-  </Style>
-  <Style Selector="Border.sheet">
-    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
-    <Setter Property="BorderThickness" Value="1,0,1,1" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusSheetAttached}" />
-    <Setter Property="Padding" Value="{StaticResource SheetPadding}" />
-    <Setter Property="BoxShadow" Value="{DynamicResource ShadowSheet}" />
-    <Setter Property="HorizontalAlignment" Value="Center" />
-    <Setter Property="VerticalAlignment" Value="Top" />
-    <Setter Property="Margin" Value="{StaticResource SheetMargin}" />
-    <Setter Property="MinWidth" Value="{StaticResource SheetWidthSmall}" />
-    <Setter Property="MaxWidth" Value="760" />
-  </Style>
-  <Style Selector="Border.sheet.sheetSmall">
-    <Setter Property="Width" Value="{StaticResource SheetWidthSmall}" />
-  </Style>
-  <Style Selector="Border.sheet.sheetMedium">
-    <Setter Property="Width" Value="{StaticResource SheetWidthMedium}" />
-  </Style>
-  <Style Selector="Border.sheet.sheetLarge">
-    <Setter Property="Width" Value="{StaticResource SheetWidthLarge}" />
-    <Setter Property="MaxWidth" Value="{StaticResource SheetWidthLarge}" />
-  </Style>
-
-  <!-- The command palette -->
-  <Style Selector="Border.palette">
-    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusSheet}" />
-    <Setter Property="BoxShadow" Value="{DynamicResource ShadowSheet}" />
-    <Setter Property="ClipToBounds" Value="True" />
-  </Style>
-  <Style Selector="Border.paletteFooter">
-    <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
-    <Setter Property="BorderThickness" Value="0,1,0,0" />
-    <Setter Property="Padding" Value="16,8" />
-  </Style>
-  <Style Selector="ListBox.palette">
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Padding" Value="6,4,6,6" />
-  </Style>
-  <Style Selector="ListBox.palette ListBoxItem">
-    <Setter Property="Padding" Value="0" />
-    <Setter Property="Margin" Value="0" />
-    <Setter Property="Background" Value="Transparent" />
-  </Style>
-  <Style Selector="ListBox.palette ListBoxItem /template/ ContentPresenter#PART_ContentPresenter, ListBox.palette ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBox.palette ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, ListBox.palette ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBox.palette ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter, ListBox.palette ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="Transparent" />
-  </Style>
-  <Style Selector="Border.paletteRow">
-    <Setter Property="Padding" Value="10,7" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
-    <Setter Property="Background" Value="Transparent" />
-  </Style>
-  <Style Selector="Border.paletteRow c|Icon">
-    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
-  </Style>
-  <Style Selector="ListBox.palette ListBoxItem:pointerover Border.paletteRow">
-    <Setter Property="Background" Value="{DynamicResource BgHover}" />
-  </Style>
-  <Style Selector="ListBox.palette ListBoxItem:selected Border.paletteRow">
-    <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
-  </Style>
-  <Style Selector="ListBox.palette ListBoxItem:selected Border.paletteRow c|Icon">
-    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
-  </Style>
+  <!-- Sheets, their scrim and the command palette are styled in Styles/Sheets.axaml -->
 
   <!-- A text box with no box (the palette's search) -->
   <Style Selector="TextBox.bare">

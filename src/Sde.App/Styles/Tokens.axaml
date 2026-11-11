@@ -149,6 +149,13 @@
   <x:Double x:Key="MapSurfaceOpacity">0.62</x:Double> <!-- the water-surface picture over the basemap -->
   <x:Double x:Key="MapHeatMaxAlpha">205</x:Double> <!-- the hottest heat-map pixel's alpha, 0 to 255 -->
 
+  <!-- Sheets (Styles/Sheets.axaml): the footer is a band across the card's foot, so it reaches out over SheetPadding;
+       its corners follow the card's (RadiusSheet less the card's 1 px border). Sheet buttons are at least 90 wide. -->
+  <Thickness x:Key="SheetFooterMargin">-24,8,-24,-20</Thickness>
+  <Thickness x:Key="SheetFooterPadding">24,14</Thickness>
+  <CornerRadius x:Key="RadiusSheetFooter">0,0,13,13</CornerRadius>
+  <x:Double x:Key="SheetButtonMinWidth">90</x:Double>
+
   <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">
       <!-- Colours (the brushes below use these) -->

@@ -323,4 +323,22 @@ public static class SheetConverters
 
 	/// <summary>True when the sheet size equals the parameter ("Small", "Medium" or "Large"), for the sheet chrome's width class.</summary>
 	public static readonly IValueConverter IsSize = new FuncValueConverter<SheetSize, string, bool>((size, name) => size.ToString() == name);
+
+	/// <summary>True for the first-run walkthrough, which shows its own large title in place of the chrome's.</summary>
+	public static readonly IValueConverter IsWelcome = new FuncValueConverter<SheetViewModel, bool>(sheet => sheet is WalkthroughSheetViewModel);
+
+	/// <summary>True when both values are the same object (a walkthrough page and the page being read).</summary>
+	public static readonly IMultiValueConverter Same = new FuncMultiValueConverter<object, bool>(values =>
+	{
+		List<object> all = values.ToList();
+		return all.Count == 2 && all[0] != null && ReferenceEquals(all[0], all[1]);
+	});
+
+	/// <summary>An item's place in its list, counting from 1 ("" when it is not in it): the walkthrough's step numbers.</summary>
+	public static readonly IMultiValueConverter Number = new FuncMultiValueConverter<object, string>(values =>
+	{
+		List<object> all = values.ToList();
+		int index = all.Count == 2 && all[1] is System.Collections.IList list ? list.IndexOf(all[0]) : -1;
+		return index < 0 ? "" : (index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+	});
 }

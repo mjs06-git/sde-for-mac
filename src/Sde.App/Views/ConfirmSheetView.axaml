@@ -1,0 +1,11 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.ConfirmSheetView"
+             x:DataType="sh:ConfirmSheetViewModel">
+  <StackPanel Spacing="16">
+    <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+    <c:SheetFooter PrimaryText="{Binding ConfirmText}" PrimaryCommand="{Binding ConfirmCommand}" IsPrimaryDestructive="{Binding IsDestructive}" />
+  </StackPanel>
+</UserControl>

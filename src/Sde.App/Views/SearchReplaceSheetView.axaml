@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:data="using:Sde.Data"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.SearchReplaceSheetView"
+             x:DataType="sh:SearchReplaceSheetViewModel">
+  <StackPanel Spacing="16">
+    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12" RowDefinitions="Auto,Auto" RowSpacing="4">
+      <TextBlock Classes="fieldLabel" Text="In" />
+      <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Find" />
+      <TextBlock Grid.Column="2" Classes="fieldLabel" Text="Replace with" />
+      <ComboBox Grid.Row="1" ItemsSource="{Binding Fields}" SelectedItem="{Binding SelectedField}" HorizontalAlignment="Stretch" MaxDropDownHeight="420" AutomationProperties.Name="Field to search">
+        <ComboBox.ItemTemplate>
+          <DataTemplate DataType="data:SearchField"><TextBlock Text="{Binding Label}" /></DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+      <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Find}" AutomationProperties.Name="Find" />
+      <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding ReplaceWith}" AutomationProperties.Name="Replace with" />
+    </Grid>
+    <Border Classes="sheetTable">
+      <DockPanel>
+        <Border DockPanel.Dock="Top" Classes="sheetTableHead">
+          <TextBlock Text="{Binding MatchText}" />
+        </Border>
+        <ScrollViewer MaxHeight="280" HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding Matches}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="data:SearchMatch">
+                <Border Classes="sheetTableRow">
+                  <Grid ColumnDefinitions="200,*">
+                    <TextBlock Classes="medium" Text="{Binding Address}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,12,0" />
+                    <TextBlock Grid.Column="1" TextTrimming="CharacterEllipsis" Classes="secondary" VerticalAlignment="Center">
+                      <Run Text="{Binding Before}" /><Run Text=" → " /><Run Text="{Binding After}" />
+                    </TextBlock>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+    <TextBlock Classes="medium" Text="{Binding ResultText}" TextWrapping="Wrap" IsVisible="{Binding ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+    <c:SheetFooter LeadingText="Undo This Change" LeadingCommand="{Binding RevertCommand}"
+                   CancelText="Done" PrimaryText="Replace All" PrimaryCommand="{Binding ReplaceAllCommand}" IsPrimaryDefault="False" />
+  </StackPanel>
+</UserControl>

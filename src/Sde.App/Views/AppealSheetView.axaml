@@ -1,22 +1,25 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.AppealSheetView"
              x:DataType="sh:AppealSheetViewModel">
-  <StackPanel Spacing="12">
+  <!-- Appeal (More in the editor): the appeal, then the contractor bids with what each would make the percent damaged.
+       Each part saves with its own button, so the footer is a single Done. -->
+  <StackPanel Spacing="16">
     <StackPanel Spacing="2">
-      <TextBlock Classes="semibold" Text="{Binding Address}" />
+      <TextBlock Classes="sheetSection" Text="{Binding Address}" />
       <TextBlock Classes="secondary" Text="{Binding CurrentText}" TextWrapping="Wrap" />
       <TextBlock Classes="muted" Text="{Binding StatusText}" TextWrapping="Wrap" />
     </StackPanel>
 
     <ScrollViewer MaxHeight="540" HorizontalScrollBarVisibility="Disabled">
-      <StackPanel Spacing="12" Margin="0,0,12,0">
+      <StackPanel Spacing="16" Margin="0,0,12,0">
         <!-- The appeal -->
-        <Border Classes="subtle">
-          <StackPanel Spacing="8">
-            <TextBlock Classes="h3" Text="The appeal" />
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="4">
+        <Border Classes="card">
+          <StackPanel Spacing="10">
+            <TextBlock Classes="sheetSection" Text="The appeal" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="16" RowDefinitions="Auto,Auto" RowSpacing="4">
               <TextBlock Classes="fieldLabel" Text="Received" />
               <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Outcome" />
               <CalendarDatePicker Grid.Row="1" SelectedDate="{Binding ReceivedOn}" HorizontalAlignment="Stretch" SelectedDateFormat="Custom"
@@ -33,66 +36,69 @@
               <TextBlock Classes="fieldLabel" Text="Notes" />
               <TextBox Text="{Binding Notes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="40" AutomationProperties.Name="Notes on the appeal" />
             </StackPanel>
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <Button Classes="primary" Content="Save Appeal" Command="{Binding SaveAppealCommand}" />
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <Button Content="Save Appeal" Command="{Binding SaveAppealCommand}" />
               <TextBlock Classes="medium" Text="{Binding SavedText}" VerticalAlignment="Center" TextWrapping="Wrap" />
             </StackPanel>
           </StackPanel>
         </Border>
 
         <!-- Bids -->
-        <StackPanel Spacing="6">
-          <TextBlock Classes="h3" Text="Contractor bids" />
-          <TextBlock Classes="muted" TextWrapping="Wrap"
-                     Text="Percent damaged with each bid as the repair cost. Nothing changes until you choose Use this bid." />
-          <TextBlock Classes="muted" Text="No bids yet." IsVisible="{Binding !HasBids}" />
-          <ItemsControl ItemsSource="{Binding Bids}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="sh:BidRowViewModel">
-                <Border Classes="subtle" Margin="0,0,0,6" Padding="12,8">
-                  <Grid ColumnDefinitions="*,190,Auto" ColumnSpacing="10">
-                    <StackPanel VerticalAlignment="Center">
-                      <TextBlock Classes="medium" Text="{Binding Contractor}" TextTrimming="CharacterEllipsis" />
-                      <TextBlock Classes="muted xs" Text="{Binding Detail}" TextWrapping="Wrap" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                      <TextBlock Classes="eyebrow" Text="With This Bid" />
-                      <TextBlock Classes="semibold" Text="{Binding WhatIfText}" TextWrapping="Wrap" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                      <TextBlock Classes="muted" Text="In use" VerticalAlignment="Center" IsVisible="{Binding IsInUse}" />
-                      <Button Content="Use This Bid…" IsVisible="{Binding CanUse}" AutomationProperties.Name="{Binding AccessibleUse}"
-                              Command="{Binding Use}" CommandParameter="{Binding}" />
-                      <Button Content="Remove…" AutomationProperties.Name="{Binding AccessibleRemove}"
-                              Command="{Binding Remove}" CommandParameter="{Binding}" />
-                    </StackPanel>
-                  </Grid>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+        <StackPanel Spacing="8">
+          <TextBlock Classes="sheetSection" Text="Contractor bids"
+                     ToolTip.Tip="Percent damaged with each bid as the repair cost. Nothing changes until you choose Use this bid." />
+          <TextBlock Classes="secondary" Text="No bids yet." IsVisible="{Binding !HasBids}" />
+          <Border Classes="sheetTable" IsVisible="{Binding HasBids}">
+            <ItemsControl ItemsSource="{Binding Bids}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="sh:BidRowViewModel">
+                  <Border Classes="sheetTableRow" Padding="14,8">
+                    <Grid ColumnDefinitions="*,190,Auto" ColumnSpacing="12">
+                      <StackPanel VerticalAlignment="Center">
+                        <TextBlock Classes="medium" Text="{Binding Contractor}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Classes="muted" Text="{Binding Detail}" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Classes="fieldLabel" Text="With this bid" />
+                        <TextBlock Classes="semibold" Text="{Binding WhatIfText}" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <TextBlock Classes="muted" Text="In use" VerticalAlignment="Center" IsVisible="{Binding IsInUse}" />
+                        <Button Content="Use This Bid…" IsVisible="{Binding CanUse}" AutomationProperties.Name="{Binding AccessibleUse}"
+                                Command="{Binding Use}" CommandParameter="{Binding}" />
+                        <Button Classes="danger" Content="Remove…" AutomationProperties.Name="{Binding AccessibleRemove}"
+                                Command="{Binding Remove}" CommandParameter="{Binding}" />
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
 
-          <Grid ColumnDefinitions="*,150,150" ColumnSpacing="10" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="4">
-            <TextBlock Classes="fieldLabel" Text="Contractor" />
-            <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Amount" />
-            <TextBlock Grid.Column="2" Classes="fieldLabel" Text="Date of the bid" />
-            <TextBox Grid.Row="1" Text="{Binding NewContractor}" AutomationProperties.Name="Contractor for the new bid" />
-            <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding NewAmount}" Minimum="0" FormatString="N2" ShowButtonSpinner="False" Classes="number"
-                           AutomationProperties.Name="Amount of the new bid">
-              <NumericUpDown.InnerLeftContent>
-                <TextBlock Classes="adorn" Text="$" Margin="10,0,0,0" />
-              </NumericUpDown.InnerLeftContent>
-            </NumericUpDown>
-            <CalendarDatePicker Grid.Row="1" Grid.Column="2" SelectedDate="{Binding NewBidDate}" HorizontalAlignment="Stretch" SelectedDateFormat="Custom"
-                                CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" AutomationProperties.Name="Date of the new bid" />
-            <TextBlock Grid.Row="2" Classes="fieldLabel" Text="Notes" Margin="0,4,0,0" />
-            <TextBox Grid.Row="3" Grid.ColumnSpan="2" Text="{Binding NewNotes}" AutomationProperties.Name="Notes on the new bid" />
-            <Button Grid.Row="3" Grid.Column="2" Content="Add Bid" Command="{Binding AddBidCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
-          </Grid>
+          <Border Classes="card">
+            <Grid ColumnDefinitions="*,150,150" ColumnSpacing="12" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="4">
+              <TextBlock Classes="fieldLabel" Text="Contractor" />
+              <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Amount" />
+              <TextBlock Grid.Column="2" Classes="fieldLabel" Text="Date of the bid" />
+              <TextBox Grid.Row="1" Text="{Binding NewContractor}" AutomationProperties.Name="Contractor for the new bid" />
+              <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding NewAmount}" Minimum="0" FormatString="N2" ShowButtonSpinner="False" Classes="number"
+                             AutomationProperties.Name="Amount of the new bid">
+                <NumericUpDown.InnerLeftContent>
+                  <TextBlock Classes="adorn" Text="$" Margin="10,0,0,0" />
+                </NumericUpDown.InnerLeftContent>
+              </NumericUpDown>
+              <CalendarDatePicker Grid.Row="1" Grid.Column="2" SelectedDate="{Binding NewBidDate}" HorizontalAlignment="Stretch" SelectedDateFormat="Custom"
+                                  CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" AutomationProperties.Name="Date of the new bid" />
+              <TextBlock Grid.Row="2" Classes="fieldLabel" Text="Notes" Margin="0,8,0,0" />
+              <TextBox Grid.Row="3" Grid.ColumnSpan="2" Text="{Binding NewNotes}" AutomationProperties.Name="Notes on the new bid" />
+              <Button Grid.Row="3" Grid.Column="2" Content="Add Bid" Command="{Binding AddBidCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+            </Grid>
+          </Border>
         </StackPanel>
       </StackPanel>
     </ScrollViewer>
 
-    <Button Classes="primary" Content="Done" IsDefault="True" HorizontalAlignment="Right" MinWidth="90" HorizontalContentAlignment="Center" Command="{Binding CancelCommand}" />
+    <c:SheetFooter IsDone="True" />
   </StackPanel>
 </UserControl>

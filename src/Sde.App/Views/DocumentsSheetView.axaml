@@ -85,9 +85,7 @@
 
     <TextBlock Classes="danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding HasError}" Name="DocumentsError" AutomationProperties.LiveSetting="Polite" />
 
-    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="Add Document…" Command="{Binding AddCommand}" IsVisible="{Binding !IsAdding}" Name="AddDocumentButton" />
-      <Button Classes="primary" Content="Done" Command="{Binding DoneCommand}" MinWidth="90" HorizontalContentAlignment="Center" IsDefault="{Binding !IsAdding}" />
-    </StackPanel>
+    <c:SheetFooter IsDone="True" DoneCommand="{Binding DoneCommand}" IsPrimaryDefault="{Binding !IsAdding}"
+                   LeadingText="Add Document…" LeadingCommand="{Binding AddCommand}" IsLeadingVisible="{Binding !IsAdding}" />
   </StackPanel>
 </UserControl>

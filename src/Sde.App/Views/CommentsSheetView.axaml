@@ -2,14 +2,16 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sh="using:Sde.App.ViewModels.Sheets"
              xmlns:v="using:Sde.App.Views"
+             xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.CommentsSheetView"
              x:DataType="sh:CommentsSheetViewModel">
-  <!-- The editor's Comments: the assessment's threads, with reply, resolve and a new comment -->
-  <StackPanel Spacing="12">
+  <!-- The editor's Comments: the assessment's threads, with reply, resolve and a new comment. Return belongs to the
+       comment boxes, so Done is not the default button. -->
+  <StackPanel Spacing="16">
     <TextBlock Classes="secondary" Text="{Binding Address}" TextTrimming="CharacterEllipsis" />
     <ScrollViewer MaxHeight="520" HorizontalScrollBarVisibility="Disabled">
       <v:CommentThreadsView DataContext="{Binding Threads}" Margin="0,0,12,0" />
     </ScrollViewer>
-    <Button Content="Done" HorizontalAlignment="Right" MinWidth="90" HorizontalContentAlignment="Center" Command="{Binding CancelCommand}" />
+    <c:SheetFooter IsDone="True" IsPrimaryDefault="False" />
   </StackPanel>
 </UserControl>

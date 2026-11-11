@@ -6,18 +6,15 @@
              x:DataType="sh:QuickLookSheetViewModel"
              Focusable="True" Name="QuickLook">
   <DockPanel>
-    <!-- Under the photo: its description and where it is in the list, then the actions -->
-    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" ColumnSpacing="16" Margin="0,14,0,0">
-      <StackPanel Spacing="2" VerticalAlignment="Center">
-        <TextBlock Classes="viewerCaption" Classes.secondary="{Binding !HasCaption}" Text="{Binding CaptionText}" Name="QuickLookCaption" />
-        <TextBlock Classes="viewerCount" Text="{Binding PositionText}" Name="QuickLookPosition" />
-      </StackPanel>
-      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-        <Button Content="{Binding MarkUpText}" Command="{Binding MarkUpCommand}" Name="QuickLookMarkUp" AutomationProperties.Name="Mark up this photo"
-                ToolTip.Tip="Water line, arrows, boxes and text" />
-        <Button Classes="primary" Content="Done" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      </StackPanel>
-    </Grid>
+    <!-- The actions, then above them the photo's description and where it is in the list. Space and Esc close the
+         viewer, so Return is left alone. -->
+    <c:SheetFooter DockPanel.Dock="Bottom" IsDone="True" IsPrimaryDefault="False"
+                   LeadingText="{Binding MarkUpText}" LeadingCommand="{Binding MarkUpCommand}"
+                   LeadingAutomationName="Mark up this photo" LeadingToolTip="Water line, arrows, boxes and text" />
+    <StackPanel DockPanel.Dock="Bottom" Spacing="2" Margin="0,14,0,0">
+      <TextBlock Classes="viewerCaption" Classes.secondary="{Binding !HasCaption}" Text="{Binding CaptionText}" Name="QuickLookCaption" />
+      <TextBlock Classes="viewerCount" Text="{Binding PositionText}" Name="QuickLookPosition" />
+    </StackPanel>
 
     <!-- The photo, fitted to the stage, with the chevrons on its sides -->
     <Border Classes="viewerStage" Name="Stage" MinHeight="300">

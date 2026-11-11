@@ -2,25 +2,32 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sh="using:Sde.App.ViewModels.Sheets"
              xmlns:help="using:Sde.App.Help"
+             xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.HelpIndexSheetView"
              x:DataType="sh:HelpIndexSheetViewModel">
-  <StackPanel Spacing="10">
-    <TextBlock Classes="secondary" TextWrapping="Wrap"
-               Text="What to enter in each field, with its page in FEMA's SDE manual." />
-    <TextBox Text="{Binding Search}" PlaceholderText="Search the help" AutomationProperties.Name="Search the help" />
-    <TextBlock Classes="muted" Text="{Binding CountText}" />
-    <Grid ColumnDefinitions="260,*" ColumnSpacing="16">
-      <ListBox ItemsSource="{Binding Entries}" SelectedItem="{Binding Selected}" Height="320" AutomationProperties.Name="Fields">
-        <ListBox.ItemTemplate>
-          <DataTemplate DataType="help:FieldHelpEntry">
-            <StackPanel Margin="2">
-              <TextBlock Classes="medium" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-              <TextBlock Classes="muted" Text="{Binding Step}" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
-      <ScrollViewer Grid.Column="1" Height="320" IsVisible="{Binding HasSelection}">
+  <!-- Help, SDE Help: every field's help, searchable, with its page in FEMA's manual. Done (Return) closes. -->
+  <StackPanel Spacing="16">
+    <Grid ColumnDefinitions="260,*" ColumnSpacing="20">
+      <StackPanel Spacing="8">
+        <TextBox Text="{Binding Search}" PlaceholderText="Search the help" AutomationProperties.Name="Search the help"
+                 ToolTip.Tip="What to enter in each field, with its page in FEMA's SDE manual.">
+          <TextBox.InnerLeftContent>
+            <c:Icon Kind="Search" Size="13" Classes="tertiary" Margin="8,0,0,0" />
+          </TextBox.InnerLeftContent>
+        </TextBox>
+        <ListBox Classes="sheetList" ItemsSource="{Binding Entries}" SelectedItem="{Binding Selected}" Height="300" AutomationProperties.Name="Fields">
+          <ListBox.ItemTemplate>
+            <DataTemplate DataType="help:FieldHelpEntry">
+              <StackPanel>
+                <TextBlock Classes="medium" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Classes="muted" Text="{Binding Step}" TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <TextBlock Classes="muted" Text="{Binding CountText}" />
+      </StackPanel>
+      <ScrollViewer Grid.Column="1" Height="360" IsVisible="{Binding HasSelection}">
         <StackPanel Spacing="8" DataContext="{Binding Selected}" x:DataType="help:FieldHelpEntry">
           <TextBlock Classes="h2" Text="{Binding Label}" TextWrapping="Wrap" />
           <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
@@ -29,15 +36,12 @@
       </ScrollViewer>
     </Grid>
     <TextBlock Classes="secondary" Text="{Binding MissingMessage}" TextWrapping="Wrap" IsVisible="{Binding ManualMissing}" />
-    <DockPanel>
-      <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+    <c:SheetFooter IsDone="True" LeadingText="Open the Manual at This Page" LeadingCommand="{Binding OpenAtPageCommand}"
+                   IsLeadingVisible="{Binding ManualAvailable}" IsLeadingEnabled="{Binding HasSelection}">
+      <StackPanel Orientation="Horizontal" Spacing="16">
         <Button Classes="link" Content="Open the Full Manual" Command="{Binding OpenManualCommand}" IsVisible="{Binding ManualAvailable}" />
         <Button Classes="link" Content="Open FEMA's SDE Page" Command="{Binding OpenFemaPageCommand}" IsVisible="{Binding ManualMissing}" />
       </StackPanel>
-      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-        <Button Content="Done" Command="{Binding CancelCommand}" IsDefault="True" MinWidth="90" HorizontalContentAlignment="Center" />
-        <Button Classes="primary" Content="Open the Manual at This Page" Command="{Binding OpenAtPageCommand}" IsVisible="{Binding ManualAvailable}" IsEnabled="{Binding HasSelection}" />
-      </StackPanel>
-    </DockPanel>
+    </c:SheetFooter>
   </StackPanel>
 </UserControl>

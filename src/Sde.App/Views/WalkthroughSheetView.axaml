@@ -1,19 +1,51 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:v="using:Sde.App.Views"
+             xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.WalkthroughSheetView"
              x:DataType="sh:WalkthroughSheetViewModel">
-  <!-- The sheet's title is the heading; each page is a sentence or two. The height fits the longest page, so the
-       buttons stay put from page to page. -->
+  <!-- The welcome: the brand mark and a large title (the sheet chrome hides its own), then every page as a numbered row,
+       the one being read in the soft accent. All rows always show, so Back and Next never move. -->
   <StackPanel Spacing="20">
-    <TextBlock Text="{Binding Current.Body}" TextWrapping="Wrap" MinHeight="36" />
-    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
-      <Button Classes="link" Content="Open the Sample Database" Command="{Binding OpenSampleCommand}" VerticalAlignment="Center" HorizontalAlignment="Left" />
-      <TextBlock Grid.Column="1" Classes="secondary num" Text="{Binding PositionText}" VerticalAlignment="Center" />
-      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-        <Button Content="Back" Command="{Binding BackCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-        <Button Classes="primary" Content="{Binding NextText}" Command="{Binding NextCommand}" IsDefault="True" MinWidth="90" HorizontalContentAlignment="Center" />
-      </StackPanel>
-    </Grid>
+    <StackPanel Spacing="12" Margin="0,-6,0,0">
+      <c:Icon Classes="welcomeMark" Kind="BrandMark" Size="44" />
+      <TextBlock Classes="welcomeTitle" Text="{Binding Title}" />
+    </StackPanel>
+    <ItemsControl ItemsSource="{Binding Pages}" Margin="-12,0">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate DataType="sh:WalkthroughPage">
+          <Border Classes="welcomeStep">
+            <Classes.current>
+              <MultiBinding Converter="{x:Static v:SheetConverters.Same}">
+                <Binding />
+                <Binding Path="$parent[ItemsControl].((sh:WalkthroughSheetViewModel)DataContext).Current" />
+              </MultiBinding>
+            </Classes.current>
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+              <Border Classes="welcomeNumber">
+                <TextBlock>
+                  <TextBlock.Text>
+                    <MultiBinding Converter="{x:Static v:SheetConverters.Number}">
+                      <Binding />
+                      <Binding Path="$parent[ItemsControl].((sh:WalkthroughSheetViewModel)DataContext).Pages" />
+                    </MultiBinding>
+                  </TextBlock.Text>
+                </TextBlock>
+              </Border>
+              <StackPanel Grid.Column="1" Spacing="2">
+                <TextBlock Classes="semibold" Text="{Binding Heading}" />
+                <TextBlock Classes="welcomeBody" Text="{Binding Body}" />
+              </StackPanel>
+            </Grid>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <c:SheetFooter LeadingText="Open the Sample Database" LeadingCommand="{Binding OpenSampleCommand}"
+                   CancelText="Back" CancelCommand="{Binding BackCommand}"
+                   PrimaryText="{Binding NextText}" PrimaryCommand="{Binding NextCommand}">
+      <TextBlock Classes="secondary num" Text="{Binding PositionText}" />
+    </c:SheetFooter>
   </StackPanel>
 </UserControl>

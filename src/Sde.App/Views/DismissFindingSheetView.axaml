@@ -5,11 +5,11 @@
              x:Class="Sde.App.Views.DismissFindingSheetView"
              x:DataType="sh:DismissFindingSheetViewModel">
   <!-- Review, Set aside: the finding, then why it doesn't need fixing -->
-  <StackPanel Spacing="12">
-    <Border Classes="subtle">
+  <StackPanel Spacing="16">
+    <Border Classes="card">
       <StackPanel Spacing="2">
-        <TextBlock Classes="eyebrow" Text="{Binding RuleTitle}" />
-        <TextBlock Classes="semibold" Text="{Binding Address}" TextWrapping="Wrap" />
+        <TextBlock Classes="sheetSection" Text="{Binding Address}" TextWrapping="Wrap" />
+        <TextBlock Classes="semibold sm" Text="{Binding RuleTitle}" TextWrapping="Wrap" />
         <TextBlock Classes="secondary" Text="{Binding Message}" TextWrapping="Wrap" />
       </StackPanel>
     </Border>
@@ -20,9 +20,6 @@
       <TextBlock Classes="danger" Text="{Binding Error}" IsVisible="{Binding HasError}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive" />
     </StackPanel>
     <TextBlock Classes="muted" Text="{Binding Note}" TextWrapping="Wrap" />
-    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Classes="primary" Content="Set Aside" Command="{Binding DismissCommand}" IsDefault="True" MinWidth="90" HorizontalContentAlignment="Center" />
-    </StackPanel>
+    <c:SheetFooter PrimaryText="Set Aside" PrimaryCommand="{Binding DismissCommand}" />
   </StackPanel>
 </UserControl>

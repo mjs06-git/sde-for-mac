@@ -50,10 +50,8 @@
       </DockPanel>
     </Border>
 
-    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="{Binding Submission.CancelText}" Command="{Binding Submission.CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Classes="primary" Content="Write to a Folder…" Command="{Binding Submission.WriteCommand}" IsEnabled="{Binding Submission.CanWrite}"
-              HorizontalContentAlignment="Center" />
-    </StackPanel>
+    <c:SheetFooter CancelText="{Binding Submission.CancelText}" CancelCommand="{Binding Submission.CancelCommand}"
+                   PrimaryText="Write to a Folder…" PrimaryCommand="{Binding Submission.WriteCommand}"
+                   IsPrimaryEnabled="{Binding Submission.CanWrite}" IsPrimaryDefault="False" />
   </StackPanel>
 </UserControl>

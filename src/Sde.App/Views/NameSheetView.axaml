@@ -1,0 +1,14 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.NameSheetView"
+             x:DataType="sh:NameSheetViewModel">
+  <StackPanel Spacing="16">
+    <StackPanel Spacing="4">
+      <TextBlock Classes="fieldLabel" Text="{Binding Label}" />
+      <TextBox Text="{Binding Name}" PlaceholderText="{Binding Placeholder}" AutomationProperties.Name="{Binding Label}" />
+    </StackPanel>
+    <c:SheetFooter PrimaryText="Save" PrimaryCommand="{Binding OkCommand}" />
+  </StackPanel>
+</UserControl>

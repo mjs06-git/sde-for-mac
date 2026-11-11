@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:c="using:Sde.App.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sh="using:Sde.App.ViewModels.Sheets"
              xmlns:vm="using:Sde.App.ViewModels"
@@ -33,9 +34,6 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
     </StackPanel>
-    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Classes="primary" Content="Add Tag" IsDefault="True" Command="{Binding SaveCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-    </StackPanel>
+    <c:SheetFooter PrimaryText="Add Tag" PrimaryCommand="{Binding SaveCommand}" />
   </StackPanel>
 </UserControl>

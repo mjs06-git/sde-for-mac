@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.PrintCaseFileSheetView"
              x:DataType="sh:PrintCaseFileSheetViewModel">
   <StackPanel Spacing="16">
@@ -10,9 +11,6 @@
                 Name="IncludeEditsBox" AutomationProperties.Name="Include field changes"
                 ToolTip.Tip="Every change to a field from the edit history, in the timeline" />
     </StackPanel>
-    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Classes="primary" Content="Print…" IsDefault="True" Command="{Binding PrintCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-    </StackPanel>
+    <c:SheetFooter PrimaryText="Print…" PrimaryCommand="{Binding PrintCommand}" />
   </StackPanel>
 </UserControl>
