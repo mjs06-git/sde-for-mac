@@ -24,9 +24,10 @@ public sealed partial class SdeStore
 	public void SetSiSettings(SiSettings settings) => SetSetting(SiSettingsKey, settings);
 
 	/// <summary>A structure's improvement projects, newest first (projects with no date last).</summary>
-	public List<ImprovementProjectRecord> GetImprovementProjects(Guid propertyId) =>
-		Database.Read(c => TableMap<ImprovementProjectRecord>.Select(c, "PropertyID = @propertyId", new { propertyId },
-			orderBy: "ProjectDate IS NULL, ProjectDate DESC, CreatedOn DESC").ToList());
+	public List<ImprovementProjectRecord> GetImprovementProjects(Guid propertyId) => Database.Read(c => GetImprovementProjects(c, propertyId));
+
+	internal static List<ImprovementProjectRecord> GetImprovementProjects(IDbConnection c, Guid propertyId) =>
+		TableMap<ImprovementProjectRecord>.Select(c, "PropertyID = @propertyId", new { propertyId }, orderBy: "ProjectDate IS NULL, ProjectDate DESC, CreatedOn DESC").ToList();
 
 	/// <summary>
 	/// Adds a project (ProjectID = Guid.Empty gets a new ID and CreatedOn) or saves changes to one, and records it in
@@ -107,8 +108,10 @@ public sealed partial class SdeStore
 	}
 
 	/// <summary>A structure's SI determinations, newest first.</summary>
-	public List<SIDeterminationRecord> GetSiDeterminations(Guid propertyId) =>
-		Database.Read(c => TableMap<SIDeterminationRecord>.Select(c, "PropertyID = @propertyId", new { propertyId }, orderBy: "DeterminedOn DESC").ToList());
+	public List<SIDeterminationRecord> GetSiDeterminations(Guid propertyId) => Database.Read(c => GetSiDeterminations(c, propertyId));
+
+	internal static List<SIDeterminationRecord> GetSiDeterminations(IDbConnection c, Guid propertyId) =>
+		TableMap<SIDeterminationRecord>.Select(c, "PropertyID = @propertyId", new { propertyId }, orderBy: "DeterminedOn DESC").ToList();
 
 	/// <summary>"BP-0002 Second-story addition", or whichever of the two the project has.</summary>
 	private static string Describe(ImprovementProjectRecord p)

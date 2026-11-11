@@ -69,15 +69,19 @@ public sealed partial class SdeStore
 	public const string CumulativeSettingsKey = "Cumulative.Settings";
 
 	/// <summary>This database's cumulative damage rule; off when none is saved (the NFIP minimum looks at each event on its own).</summary>
-	public Sde.Core.Assessments.CumulativeSettings GetCumulativeSettings() =>
-		GetSetting<Sde.Core.Assessments.CumulativeSettings>(CumulativeSettingsKey) ?? new Sde.Core.Assessments.CumulativeSettings();
+	public Sde.Core.Assessments.CumulativeSettings GetCumulativeSettings() => Database.Read(c => GetCumulativeSettings(c));
+
+	internal static Sde.Core.Assessments.CumulativeSettings GetCumulativeSettings(System.Data.IDbConnection c) =>
+		GetSetting<Sde.Core.Assessments.CumulativeSettings>(c, CumulativeSettingsKey) ?? new Sde.Core.Assessments.CumulativeSettings();
 
 	public void SetCumulativeSettings(Sde.Core.Assessments.CumulativeSettings settings) => SetSetting(CumulativeSettingsKey, settings);
 
 	/// <summary>An assessment's contractor bids, oldest first (by bid date, then amount).</summary>
-	public List<ContractorBidRecord> GetBids(Guid assessmentId) =>
-		Database.Read(c => TableMap<ContractorBidRecord>.Select(c, "AssessmentID = @assessmentId", new { assessmentId },
-			orderBy: "BidDate IS NULL, BidDate, Amount").ToList());
+	public List<ContractorBidRecord> GetBids(Guid assessmentId) => Database.Read(c => GetBids(c, new[] { assessmentId }));
+
+	/// <summary>The bids of several assessments, oldest first, over a connection the caller holds.</summary>
+	internal static List<ContractorBidRecord> GetBids(System.Data.IDbConnection c, IReadOnlyCollection<Guid> assessmentIds) =>
+		TableMap<ContractorBidRecord>.Select(c, "AssessmentID IN @assessmentIds", new { assessmentIds = IdText(assessmentIds) }, orderBy: "BidDate IS NULL, BidDate, Amount").ToList();
 
 	/// <summary>
 	/// Adds a bid (BidID = Guid.Empty gets a new ID) or saves changes to one, and records it in the assessment's
@@ -114,7 +118,13 @@ public sealed partial class SdeStore
 	});
 
 	/// <summary>An assessment's appeal, or null when none has been recorded.</summary>
-	public AppealRecord GetAppeal(Guid assessmentId) => Database.Read(c => TableMap<AppealRecord>.Get(c, new { AssessmentID = assessmentId }));
+	public AppealRecord GetAppeal(Guid assessmentId) => Database.Read(c => GetAppeals(c, new[] { assessmentId }).FirstOrDefault());
+
+	/// <summary>The appeals of several assessments (null: every appeal), over a connection the caller holds.</summary>
+	internal static List<AppealRecord> GetAppeals(System.Data.IDbConnection c, IReadOnlyCollection<Guid> assessmentIds) =>
+		assessmentIds == null
+			? TableMap<AppealRecord>.Select(c).ToList()
+			: TableMap<AppealRecord>.Select(c, "AssessmentID IN @assessmentIds", new { assessmentIds = IdText(assessmentIds) }).ToList();
 
 	/// <summary>
 	/// Records or updates an assessment's appeal. History gets "Appeal received" the first time and "Appeal outcome:

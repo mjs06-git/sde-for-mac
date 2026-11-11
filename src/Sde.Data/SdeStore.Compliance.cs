@@ -293,6 +293,9 @@ public sealed partial class SdeStore
 	}
 
 	/// <summary>A case's timeline, oldest first.</summary>
-	public List<ComplianceEntryRecord> GetComplianceEntries(Guid caseId) =>
-		Database.Read(c => TableMap<ComplianceEntryRecord>.Select(c, "CaseID = @caseId", new { caseId }, orderBy: "EntryOn, rowid").ToList());
+	public List<ComplianceEntryRecord> GetComplianceEntries(Guid caseId) => Database.Read(c => GetComplianceEntries(c, new[] { caseId }));
+
+	/// <summary>The timelines of several cases, oldest first, over a connection the caller holds.</summary>
+	internal static List<ComplianceEntryRecord> GetComplianceEntries(System.Data.IDbConnection c, IReadOnlyCollection<Guid> caseIds) =>
+		TableMap<ComplianceEntryRecord>.Select(c, "CaseID IN @caseIds", new { caseIds = IdText(caseIds) }, orderBy: "EntryOn, rowid").ToList();
 }
