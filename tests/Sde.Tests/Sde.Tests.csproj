@@ -23,6 +23,11 @@
     <ProjectReference Include="../../src/Sde.Cli/Sde.Cli.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- "sde report" draws the staff gauge with SkiaSharp, whose own package carries only the macOS and Windows natives; this lets the tests run on Linux CI too. -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
+  </ItemGroup>
+
   <!--
     The answer key (FEMA's decompiled engine, compiled unedited) is made locally by tools/answer-key/setup.sh and is not
     in the public repo. Without it the parity tests are skipped.
