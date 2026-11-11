@@ -5,17 +5,16 @@
     names (or the classes in Styles/), never literal values; StyleGuardTests checks that. Text colours keep at least
     4.5:1 contrast on the backgrounds they are used on, in both themes (ContrastTests).
 
-    The 3.5 look ("High-Water") comes from the app icon: water blue for the accent, navy ink for text, warm paper
-    for backgrounds, and the staff gauge's red for substantial damage, errors and destructive actions. The sizes
-    here are the Comfortable density; Styles/Density.Compact.axaml overrides them when Compact is chosen in Settings.
-    The Compact sizes are merged in after the style sheets load, so Styles/*.axaml look the size tokens up with
-    DynamicResource (ControlHeight, TableRowHeight and the like); radii and colours do not change with density.
+    The 3.5 look ("High-Water") comes from the app icon. A deep navy frame (the sidebar and the title band, in both
+    themes) surrounds bright content; a strong water blue is the accent; the staff gauge's red is kept for substantial
+    damage, errors and destructive actions. The frame has its own text colours (TextOnFrame and so on). The sizes here
+    are the Comfortable density; Styles/Density.Compact.axaml overrides them when Compact is chosen in Settings.
     docs/design/DESIGN-LANGUAGE.md has the rules.
   -->
 
-  <!-- The brand accent: the water blue of the app icon, at 6.3:1 under white text. Services/SystemAccent recolours
+  <!-- The brand accent: a strong water blue, at 5.5:1 under white text. Services/SystemAccent recolours
        every accent brush from the Mac's own accent instead when "Use the Mac's accent colour" is on in Settings. -->
-  <Color x:Key="AccentFallbackColor">#1E62A0</Color>
+  <Color x:Key="AccentFallbackColor">#1769C2</Color>
 
   <!-- Behind the phone form's QR code: always white, in both themes, so a phone camera can read it -->
   <SolidColorBrush x:Key="QrBackground" Color="#FFFFFF" />
@@ -127,50 +126,64 @@
   <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">
       <!-- Colours (the brushes below use these) -->
-      <Color x:Key="BgAppColor">#FAF7F2</Color>
-      <Color x:Key="BgSidebarColor">#F0EBE2</Color>
+      <Color x:Key="BgAppColor">#F3F6FA</Color>
+      <Color x:Key="BgSidebarColor">#EDF1F6</Color>
       <Color x:Key="BgSurfaceColor">#FFFFFF</Color>
-      <Color x:Key="BgSubtleColor">#F5F1EA</Color>
-      <Color x:Key="BgInspectorColor">#F8F5EF</Color>
-      <Color x:Key="BgHoverColor">#EFEAE1</Color>
-      <Color x:Key="BgPressedColor">#E4DED3</Color>
-      <Color x:Key="BgOverlayColor">#3D0B1626</Color> <!-- a sheet dims the window behind it -->
-      <Color x:Key="BgTooltipColor">#1B2A40</Color>
-      <Color x:Key="BorderDefaultColor">#E2DBCF</Color>
-      <Color x:Key="BorderStrongColor">#CBC2B3</Color>
-      <Color x:Key="BorderStrongHoverColor">#B5AB9A</Color>
-      <Color x:Key="BorderSubtleColor">#ECE6DB</Color>
-      <Color x:Key="TextPrimaryColor">#14233A</Color>
-      <Color x:Key="TextSecondaryColor">#4A5567</Color>
-      <Color x:Key="TextTertiaryColor">#596475</Color>
-      <Color x:Key="TextDisabledColor">#A9ADB5</Color>
+      <Color x:Key="BgSubtleColor">#F1F4F8</Color>
+      <Color x:Key="BgInspectorColor">#FAFBFD</Color>
+      <Color x:Key="BgHoverColor">#E9EEF4</Color>
+      <Color x:Key="BgPressedColor">#DDE4EC</Color>
+      <Color x:Key="BgOverlayColor">#52081321</Color> <!-- a sheet dims the window behind it -->
+      <Color x:Key="BgTooltipColor">#0E2540</Color>
+      <Color x:Key="BorderDefaultColor">#DCE3EB</Color>
+      <Color x:Key="BorderStrongColor">#BCC7D4</Color>
+      <Color x:Key="BorderStrongHoverColor">#A3B0C0</Color>
+      <Color x:Key="BorderSubtleColor">#E8EDF3</Color>
+      <Color x:Key="TextPrimaryColor">#0E1B2C</Color>
+      <Color x:Key="TextSecondaryColor">#45556A</Color>
+      <Color x:Key="TextTertiaryColor">#56667B</Color>
+      <Color x:Key="TextDisabledColor">#A6B0BD</Color>
       <Color x:Key="TextOnTooltipColor">#FFFFFF</Color>
-      <Color x:Key="AccentColor">#1A5791</Color>
-      <Color x:Key="AccentHoverColor">#154B7E</Color>
-      <Color x:Key="AccentPressedColor">#10406C</Color>
-      <Color x:Key="AccentFillColor">#1E62A0</Color>
-      <Color x:Key="AccentFillHoverColor">#1A568D</Color>
-      <Color x:Key="AccentFillPressedColor">#164B7B</Color>
-      <Color x:Key="AccentSoftColor">#DCE9F5</Color>
-      <Color x:Key="AccentSoftHoverColor">#CFE0F1</Color>
+      <Color x:Key="AccentColor">#1259A8</Color>
+      <Color x:Key="AccentHoverColor">#0F4D92</Color>
+      <Color x:Key="AccentPressedColor">#0C417C</Color>
+      <Color x:Key="AccentFillColor">#1769C2</Color>
+      <Color x:Key="AccentFillHoverColor">#145DAD</Color>
+      <Color x:Key="AccentFillPressedColor">#115199</Color>
+      <Color x:Key="AccentSoftColor">#DDEBFA</Color>
+      <Color x:Key="AccentSoftHoverColor">#CFE2F8</Color>
       <Color x:Key="OnAccentColor">#FFFFFF</Color>
-      <Color x:Key="FocusColor">#1E62A0</Color>
+      <Color x:Key="FocusColor">#1769C2</Color>
       <Color x:Key="DangerFgColor">#B50E28</Color>
-      <Color x:Key="DangerBgColor">#FBE7EA</Color>
+      <Color x:Key="DangerBgColor">#FCE8EB</Color>
       <Color x:Key="DangerFillColor">#C8102E</Color>
       <Color x:Key="DangerFillHoverColor">#AE0E28</Color>
       <Color x:Key="DangerFillPressedColor">#950C22</Color>
       <Color x:Key="WarningFgColor">#8A4700</Color>
-      <Color x:Key="WarningBgColor">#FBEBD3</Color>
-      <Color x:Key="SuccessFgColor">#1A6E37</Color>
-      <Color x:Key="SuccessBgColor">#E2F2E6</Color>
-      <Color x:Key="InfoFgColor">#1A5791</Color>
-      <Color x:Key="InfoBgColor">#E1ECF7</Color>
-      <Color x:Key="VioletFgColor">#62449F</Color>
-      <Color x:Key="VioletBgColor">#EEE9F8</Color>
-      <Color x:Key="NeutralFgColor">#4A5567</Color>
-      <Color x:Key="NeutralBgColor">#ECE7DE</Color>
-      <Color x:Key="ScrollThumbColor">#C9C0B1</Color>
+      <Color x:Key="WarningBgColor">#FDEFD9</Color>
+      <Color x:Key="SuccessFgColor">#17693A</Color>
+      <Color x:Key="SuccessBgColor">#E1F3E7</Color>
+      <Color x:Key="InfoFgColor">#1259A8</Color>
+      <Color x:Key="InfoBgColor">#E1EDFB</Color>
+      <Color x:Key="VioletFgColor">#5F3FA3</Color>
+      <Color x:Key="VioletBgColor">#EFEAFA</Color>
+      <Color x:Key="NeutralFgColor">#45556A</Color>
+      <Color x:Key="NeutralBgColor">#E9EDF2</Color>
+      <Color x:Key="ScrollThumbColor">#B9C3CF</Color>
+      <!-- The frame (3.5): the sidebar and title band are navy in both themes, with their own text colours -->
+      <Color x:Key="BgFrameColor">#0E2540</Color>
+      <Color x:Key="BgFrameHoverColor">#193656</Color>
+      <Color x:Key="BgFramePressedColor">#21456F</Color>
+      <Color x:Key="BgFrameFieldColor">#1B3A5E</Color>
+      <Color x:Key="BorderFrameColor">#234469</Color>
+      <Color x:Key="TextOnFrameColor">#FFFFFF</Color>
+      <Color x:Key="TextOnFrameSecondaryColor">#BCCADB</Color>
+      <Color x:Key="TextOnFrameTertiaryColor">#9DAFC5</Color>
+      <Color x:Key="AccentOnFrameColor">#7FBDF7</Color>
+      <Color x:Key="DangerOnFrameColor">#FF8F99</Color>
+      <Color x:Key="BgHeroColor">#0E2540</Color>
+      <Color x:Key="TextOnHeroColor">#FFFFFF</Color>
+      <Color x:Key="TextOnHeroSecondaryColor">#BCCADB</Color>
       <!-- Backgrounds -->
       <SolidColorBrush x:Key="BgApp" Color="{StaticResource BgAppColor}" /> <!-- the content area behind cards -->
       <SolidColorBrush x:Key="BgSidebar" Color="{StaticResource BgSidebarColor}" /> <!-- the sidebar and side panels -->
@@ -220,6 +233,19 @@
       <SolidColorBrush x:Key="NeutralFg" Color="{StaticResource NeutralFgColor}" /> <!-- neutral badges -->
       <SolidColorBrush x:Key="NeutralBg" Color="{StaticResource NeutralBgColor}" />
       <SolidColorBrush x:Key="ScrollThumb" Color="{StaticResource ScrollThumbColor}" /> <!-- scroll bar thumbs -->
+      <SolidColorBrush x:Key="BgFrame" Color="{StaticResource BgFrameColor}" /> <!-- the navy frame: the sidebar and the title band -->
+      <SolidColorBrush x:Key="BgFrameHover" Color="{StaticResource BgFrameHoverColor}" /> <!-- a row or button on the frame under the pointer -->
+      <SolidColorBrush x:Key="BgFramePressed" Color="{StaticResource BgFramePressedColor}" /> <!-- a row or button on the frame being pressed -->
+      <SolidColorBrush x:Key="BgFrameField" Color="{StaticResource BgFrameFieldColor}" /> <!-- the search field and other inputs on the frame -->
+      <SolidColorBrush x:Key="BorderFrame" Color="{StaticResource BorderFrameColor}" /> <!-- dividers and input borders on the frame -->
+      <SolidColorBrush x:Key="TextOnFrame" Color="{StaticResource TextOnFrameColor}" /> <!-- titles and selected rows on the frame -->
+      <SolidColorBrush x:Key="TextOnFrameSecondary" Color="{StaticResource TextOnFrameSecondaryColor}" /> <!-- rows and labels on the frame -->
+      <SolidColorBrush x:Key="TextOnFrameTertiary" Color="{StaticResource TextOnFrameTertiaryColor}" /> <!-- section labels, counts and placeholders on the frame -->
+      <SolidColorBrush x:Key="AccentOnFrame" Color="{StaticResource AccentOnFrameColor}" /> <!-- the brand mark and links on the frame -->
+      <SolidColorBrush x:Key="DangerOnFrame" Color="{StaticResource DangerOnFrameColor}" /> <!-- required-problem counts on the frame -->
+      <SolidColorBrush x:Key="BgHero" Color="{StaticResource BgHeroColor}" /> <!-- the result panel, the one dark card inside the content area -->
+      <SolidColorBrush x:Key="TextOnHero" Color="{StaticResource TextOnHeroColor}" /> <!-- the figure on the result panel -->
+      <SolidColorBrush x:Key="TextOnHeroSecondary" Color="{StaticResource TextOnHeroSecondaryColor}" /> <!-- supporting text on the result panel -->
       <!-- Older names, kept because code and views look them up by name -->
       <SolidColorBrush x:Key="WindowBg" Color="{StaticResource BgAppColor}" />
       <SolidColorBrush x:Key="SidebarBg" Color="{StaticResource BgSidebarColor}" />
@@ -242,32 +268,32 @@
       <SolidColorBrush x:Key="StatusSubstantialDot" Color="#C8102E" />
       <SolidColorBrush x:Key="StatusCloseDot" Color="#DE8A1B" />
       <SolidColorBrush x:Key="StatusNotSubstantialDot" Color="#2E9E57" />
-      <SolidColorBrush x:Key="StatusIncompleteDot" Color="#9A958B" />
+      <SolidColorBrush x:Key="StatusIncompleteDot" Color="#8D99A8" />
       <SolidColorBrush x:Key="StatusUndeterminedDot" Color="#8A63C9" />
       <SolidColorBrush x:Key="RequiredFg" Color="{StaticResource DangerFgColor}" />
       <SolidColorBrush x:Key="RecommendedFg" Color="{StaticResource WarningFgColor}" />
       <SolidColorBrush x:Key="SuggestedFg" Color="{StaticResource SuccessFgColor}" />
       <!-- Focus halo around inputs and the focused-control ring -->
-      <BoxShadows x:Key="FocusHalo">0 0 0 3 #731E62A0</BoxShadows>
+      <BoxShadows x:Key="FocusHalo">0 0 0 3 #731769C2</BoxShadows>
       <BoxShadows x:Key="ShadowPopup">0 6 20 0 #29000000</BoxShadows>
       <BoxShadows x:Key="ShadowSheet">0 10 30 0 #40000000</BoxShadows>
-      <BoxShadows x:Key="ShadowCard">0 0 0 0 #00000000</BoxShadows>
+      <BoxShadows x:Key="ShadowCard">0 1 3 0 #140E2540, 0 6 16 -4 #1A0E2540</BoxShadows>
       <!-- The bezel under a push button, a pop-up button and the selected segment (Mac controls sit slightly raised) -->
       <BoxShadows x:Key="ShadowControl">0 0.5 1.5 0 #24000000</BoxShadows>
       <!-- The staff gauge (Controls/StaffGauge): the dry staff, its graduations, the water, and the high-water mark.
            The water turns to the warning amber within ten points of the line and to the gauge red at or above it. -->
-      <SolidColorBrush x:Key="GaugeTrack" Color="#E7E1D6" />
-      <SolidColorBrush x:Key="GaugeTick" Color="#A69C8B" />
-      <SolidColorBrush x:Key="GaugeWater" Color="#2F78BD" />
+      <SolidColorBrush x:Key="GaugeTrack" Color="#E3E9F0" />
+      <SolidColorBrush x:Key="GaugeTick" Color="#8D99A8" />
+      <SolidColorBrush x:Key="GaugeWater" Color="#1F7AD6" />
       <SolidColorBrush x:Key="GaugeNear" Color="#D9871A" />
       <SolidColorBrush x:Key="GaugeDanger" Color="#C8102E" />
       <SolidColorBrush x:Key="GaugeMark" Color="#C8102E" />
       <SolidColorBrush x:Key="GaugeMarkHalo" Color="#FFFFFF" /> <!-- a thin gap either side of the mark where it crosses the water -->
       <!-- Mac surfaces with no WCAG text pair: the selected source-list row and a segmented control's track -->
-      <SolidColorBrush x:Key="SidebarSelection" Color="#DDD5C7" />
-      <SolidColorBrush x:Key="SegmentedTrack" Color="#E7E0D4" />
+      <SolidColorBrush x:Key="SidebarSelection" Color="#D5DEE9" />
+      <SolidColorBrush x:Key="SegmentedTrack" Color="#E3E9F0" />
       <SolidColorBrush x:Key="ControlFill" Color="#FFFFFF" />
-      <SolidColorBrush x:Key="ControlFillPressed" Color="#EFEAE1" />
+      <SolidColorBrush x:Key="ControlFillPressed" Color="#E9EEF4" />
       <!-- Fluent's resource keys, pointed at the tokens -->
       <SolidColorBrush x:Key="ButtonBackground" Color="{StaticResource BgSurfaceColor}" />
       <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{StaticResource BgHoverColor}" />
@@ -489,8 +515,8 @@
       <SolidColorBrush x:Key="SliderTrackValueFillPressed" Color="{StaticResource AccentFillPressedColor}" />
       <SolidColorBrush x:Key="SliderTrackValueFillDisabled" Color="{StaticResource TextDisabledColor}" />
       <SolidColorBrush x:Key="SliderThumbBackground" Color="#FFFFFF" />
-      <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#FBF9F5" />
-      <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="#EFEAE1" />
+      <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#F7F9FB" />
+      <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="#E9EEF4" />
       <SolidColorBrush x:Key="SliderThumbBackgroundDisabled" Color="{StaticResource TextDisabledColor}" />
       <SolidColorBrush x:Key="SliderTickBarFill" Color="{StaticResource BorderStrongColor}" />
       <SolidColorBrush x:Key="SliderInlineTickBarFill" Color="{StaticResource BgSurfaceColor}" />
@@ -578,34 +604,34 @@
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
       <!-- Colours (the brushes below use these) -->
-      <Color x:Key="BgAppColor">#0F1722</Color>
-      <Color x:Key="BgSidebarColor">#16202E</Color>
-      <Color x:Key="BgSurfaceColor">#1A2535</Color>
-      <Color x:Key="BgSubtleColor">#1C2838</Color>
-      <Color x:Key="BgInspectorColor">#162030</Color>
-      <Color x:Key="BgHoverColor">#223043</Color>
-      <Color x:Key="BgPressedColor">#2B3B51</Color>
-      <Color x:Key="BgOverlayColor">#80000000</Color>
-      <Color x:Key="BgTooltipColor">#33445C</Color>
-      <Color x:Key="BorderDefaultColor">#2A384B</Color>
-      <Color x:Key="BorderStrongColor">#44546A</Color>
-      <Color x:Key="BorderStrongHoverColor">#55667D</Color>
-      <Color x:Key="BorderSubtleColor">#212D3D</Color>
-      <Color x:Key="TextPrimaryColor">#E8EDF3</Color>
-      <Color x:Key="TextSecondaryColor">#A9B4C3</Color>
-      <Color x:Key="TextTertiaryColor">#9AA6B6</Color>
-      <Color x:Key="TextDisabledColor">#56647A</Color>
+      <Color x:Key="BgAppColor">#0F1A29</Color>
+      <Color x:Key="BgSidebarColor">#132030</Color>
+      <Color x:Key="BgSurfaceColor">#172536</Color>
+      <Color x:Key="BgSubtleColor">#1A2A3D</Color>
+      <Color x:Key="BgInspectorColor">#142131</Color>
+      <Color x:Key="BgHoverColor">#203247</Color>
+      <Color x:Key="BgPressedColor">#2A3F58</Color>
+      <Color x:Key="BgOverlayColor">#99000000</Color>
+      <Color x:Key="BgTooltipColor">#33475F</Color>
+      <Color x:Key="BorderDefaultColor">#26374B</Color>
+      <Color x:Key="BorderStrongColor">#41546C</Color>
+      <Color x:Key="BorderStrongHoverColor">#53687F</Color>
+      <Color x:Key="BorderSubtleColor">#1E2D3F</Color>
+      <Color x:Key="TextPrimaryColor">#EAF0F6</Color>
+      <Color x:Key="TextSecondaryColor">#A9B6C6</Color>
+      <Color x:Key="TextTertiaryColor">#98A6B8</Color>
+      <Color x:Key="TextDisabledColor">#56667B</Color>
       <Color x:Key="TextOnTooltipColor">#FFFFFF</Color>
-      <Color x:Key="AccentColor">#74B6EE</Color>
-      <Color x:Key="AccentHoverColor">#8FC5F3</Color>
-      <Color x:Key="AccentPressedColor">#5FA6E1</Color>
-      <Color x:Key="AccentFillColor">#256DAE</Color>
-      <Color x:Key="AccentFillHoverColor">#2163A0</Color>
-      <Color x:Key="AccentFillPressedColor">#1C598F</Color>
-      <Color x:Key="AccentSoftColor">#1B3350</Color>
-      <Color x:Key="AccentSoftHoverColor">#214060</Color>
+      <Color x:Key="AccentColor">#6DB5F5</Color>
+      <Color x:Key="AccentHoverColor">#8CC6F8</Color>
+      <Color x:Key="AccentPressedColor">#58A5E8</Color>
+      <Color x:Key="AccentFillColor">#1B6CC2</Color>
+      <Color x:Key="AccentFillHoverColor">#185FAC</Color>
+      <Color x:Key="AccentFillPressedColor">#155397</Color>
+      <Color x:Key="AccentSoftColor">#173556</Color>
+      <Color x:Key="AccentSoftHoverColor">#1D4168</Color>
       <Color x:Key="OnAccentColor">#FFFFFF</Color>
-      <Color x:Key="FocusColor">#74B6EE</Color>
+      <Color x:Key="FocusColor">#6DB5F5</Color>
       <Color x:Key="DangerFgColor">#FF7C88</Color>
       <Color x:Key="DangerBgColor">#40202A</Color>
       <Color x:Key="DangerFillColor">#C8102E</Color>
@@ -619,9 +645,23 @@
       <Color x:Key="InfoBgColor">#1A2F47</Color>
       <Color x:Key="VioletFgColor">#C6B5FF</Color>
       <Color x:Key="VioletBgColor">#2E2A48</Color>
-      <Color x:Key="NeutralFgColor">#A9B4C3</Color>
-      <Color x:Key="NeutralBgColor">#2A3647</Color>
-      <Color x:Key="ScrollThumbColor">#4B5B70</Color>
+      <Color x:Key="NeutralFgColor">#A9B6C6</Color>
+      <Color x:Key="NeutralBgColor">#2A3A4E</Color>
+      <Color x:Key="ScrollThumbColor">#4B5D73</Color>
+      <!-- The frame (3.5): the sidebar and title band are navy in both themes, with their own text colours -->
+      <Color x:Key="BgFrameColor">#081321</Color>
+      <Color x:Key="BgFrameHoverColor">#132438</Color>
+      <Color x:Key="BgFramePressedColor">#1B3049</Color>
+      <Color x:Key="BgFrameFieldColor">#14263B</Color>
+      <Color x:Key="BorderFrameColor">#1C3047</Color>
+      <Color x:Key="TextOnFrameColor">#FFFFFF</Color>
+      <Color x:Key="TextOnFrameSecondaryColor">#BCCADB</Color>
+      <Color x:Key="TextOnFrameTertiaryColor">#9DAFC5</Color>
+      <Color x:Key="AccentOnFrameColor">#7FBDF7</Color>
+      <Color x:Key="DangerOnFrameColor">#FF8F99</Color>
+      <Color x:Key="BgHeroColor">#0B1B2E</Color>
+      <Color x:Key="TextOnHeroColor">#FFFFFF</Color>
+      <Color x:Key="TextOnHeroSecondaryColor">#BCCADB</Color>
       <!-- Backgrounds -->
       <SolidColorBrush x:Key="BgApp" Color="{StaticResource BgAppColor}" /> <!-- the content area behind cards -->
       <SolidColorBrush x:Key="BgSidebar" Color="{StaticResource BgSidebarColor}" /> <!-- the sidebar and side panels -->
@@ -671,6 +711,19 @@
       <SolidColorBrush x:Key="NeutralFg" Color="{StaticResource NeutralFgColor}" /> <!-- neutral badges -->
       <SolidColorBrush x:Key="NeutralBg" Color="{StaticResource NeutralBgColor}" />
       <SolidColorBrush x:Key="ScrollThumb" Color="{StaticResource ScrollThumbColor}" /> <!-- scroll bar thumbs -->
+      <SolidColorBrush x:Key="BgFrame" Color="{StaticResource BgFrameColor}" /> <!-- the navy frame: the sidebar and the title band -->
+      <SolidColorBrush x:Key="BgFrameHover" Color="{StaticResource BgFrameHoverColor}" /> <!-- a row or button on the frame under the pointer -->
+      <SolidColorBrush x:Key="BgFramePressed" Color="{StaticResource BgFramePressedColor}" /> <!-- a row or button on the frame being pressed -->
+      <SolidColorBrush x:Key="BgFrameField" Color="{StaticResource BgFrameFieldColor}" /> <!-- the search field and other inputs on the frame -->
+      <SolidColorBrush x:Key="BorderFrame" Color="{StaticResource BorderFrameColor}" /> <!-- dividers and input borders on the frame -->
+      <SolidColorBrush x:Key="TextOnFrame" Color="{StaticResource TextOnFrameColor}" /> <!-- titles and selected rows on the frame -->
+      <SolidColorBrush x:Key="TextOnFrameSecondary" Color="{StaticResource TextOnFrameSecondaryColor}" /> <!-- rows and labels on the frame -->
+      <SolidColorBrush x:Key="TextOnFrameTertiary" Color="{StaticResource TextOnFrameTertiaryColor}" /> <!-- section labels, counts and placeholders on the frame -->
+      <SolidColorBrush x:Key="AccentOnFrame" Color="{StaticResource AccentOnFrameColor}" /> <!-- the brand mark and links on the frame -->
+      <SolidColorBrush x:Key="DangerOnFrame" Color="{StaticResource DangerOnFrameColor}" /> <!-- required-problem counts on the frame -->
+      <SolidColorBrush x:Key="BgHero" Color="{StaticResource BgHeroColor}" /> <!-- the result panel, the one dark card inside the content area -->
+      <SolidColorBrush x:Key="TextOnHero" Color="{StaticResource TextOnHeroColor}" /> <!-- the figure on the result panel -->
+      <SolidColorBrush x:Key="TextOnHeroSecondary" Color="{StaticResource TextOnHeroSecondaryColor}" /> <!-- supporting text on the result panel -->
       <!-- Older names, kept because code and views look them up by name -->
       <SolidColorBrush x:Key="WindowBg" Color="{StaticResource BgAppColor}" />
       <SolidColorBrush x:Key="SidebarBg" Color="{StaticResource BgSidebarColor}" />
@@ -698,20 +751,20 @@
       <SolidColorBrush x:Key="RecommendedFg" Color="{StaticResource WarningFgColor}" />
       <SolidColorBrush x:Key="SuggestedFg" Color="{StaticResource SuccessFgColor}" />
       <!-- Focus halo around inputs and the focused-control ring -->
-      <BoxShadows x:Key="FocusHalo">0 0 0 3 #8074B6EE</BoxShadows>
+      <BoxShadows x:Key="FocusHalo">0 0 0 3 #806DB5F5</BoxShadows>
       <BoxShadows x:Key="ShadowPopup">0 6 20 0 #66000000</BoxShadows>
       <BoxShadows x:Key="ShadowSheet">0 10 30 0 #8C000000</BoxShadows>
       <BoxShadows x:Key="ShadowCard">0 0 0 0 #00000000</BoxShadows>
       <BoxShadows x:Key="ShadowControl">0 0.5 1 0 #59000000</BoxShadows>
-      <SolidColorBrush x:Key="GaugeTrack" Color="#2A384B" />
+      <SolidColorBrush x:Key="GaugeTrack" Color="#26374B" />
       <SolidColorBrush x:Key="GaugeTick" Color="#61728A" />
       <SolidColorBrush x:Key="GaugeWater" Color="#4A93D6" />
       <SolidColorBrush x:Key="GaugeNear" Color="#F0A23A" />
       <SolidColorBrush x:Key="GaugeDanger" Color="#FF5A6B" />
       <SolidColorBrush x:Key="GaugeMark" Color="#FF5A6B" />
-      <SolidColorBrush x:Key="GaugeMarkHalo" Color="#1A2535" />
-      <SolidColorBrush x:Key="SidebarSelection" Color="#2B3B51" />
-      <SolidColorBrush x:Key="SegmentedTrack" Color="#233043" />
+      <SolidColorBrush x:Key="GaugeMarkHalo" Color="#172536" />
+      <SolidColorBrush x:Key="SidebarSelection" Color="#2A3F58" />
+      <SolidColorBrush x:Key="SegmentedTrack" Color="#1E2F44" />
       <SolidColorBrush x:Key="ControlFill" Color="#55667D" />
       <SolidColorBrush x:Key="ControlFillPressed" Color="#647790" />
       <!-- Fluent's resource keys, pointed at the tokens -->

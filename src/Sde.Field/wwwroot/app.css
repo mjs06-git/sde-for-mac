@@ -1,6 +1,6 @@
 /*
   The phone form, in SDE's "High-Water" look: the same colours as the Mac app (src/Sde.App/Styles/Tokens.axaml), in
-  light and dark. Warm paper page, white cards with hairline borders, water blue for actions, navy ink for text and
+  light and dark. A light page, white cards with hairline borders, a strong water blue for actions, navy ink for text and
   the staff gauge's red for substantial damage and errors. Every text colour keeps at least 4.5:1 on the backgrounds
   it is used on. Controls are at least 48 px tall for fingers; corners are a little rounder than on the Mac for touch.
   Public Sans is served by the Mac itself (never from the internet); the system font shows until it arrives.
@@ -22,32 +22,32 @@
 
 :root {
   color-scheme: light dark;
-  --bg: #faf7f2;
+  --bg: #f3f6fa;
   --surface: #ffffff;
-  --subtle: #f5f1ea;
-  --pressed: #e4ded3;
-  --border: #e2dbcf;
-  --border-strong: #cbc2b3;
-  --hairline: #ece6db;
-  --text: #14233a;
-  --text-2: #4a5567;
-  --text-3: #596475;
-  --accent: #1a5791;
-  --accent-fill: #1e62a0;
-  --accent-fill-pressed: #164b7b;
-  --accent-soft: #dce9f5;
-  --focus: #1e62a0;
+  --subtle: #f1f4f8;
+  --pressed: #dde4ec;
+  --border: #dce3eb;
+  --border-strong: #bcc7d4;
+  --hairline: #e8edf3;
+  --text: #0e1b2c;
+  --text-2: #45556a;
+  --text-3: #56667b;
+  --accent: #1259a8;
+  --accent-fill: #1769c2;
+  --accent-fill-pressed: #115199;
+  --accent-soft: #ddebfa;
+  --focus: #1769c2;
   --on-accent: #ffffff;
   --danger: #b50e28;
-  --danger-bg: #fbe7ea;
+  --danger-bg: #fce8eb;
   --warning: #8a4700;
-  --warning-bg: #fbebd3;
-  --success: #1a6e37;
-  --success-bg: #e2f2e6;
+  --warning-bg: #fdefd9;
+  --success: #17693a;
+  --success-bg: #e1f3e7;
   /* The staff gauge: track, ticks, water below the line, amber within 10 points of it, red at or above it */
-  --gauge-track: #f0ebe2;
-  --gauge-tick: #596475;
-  --gauge-water: #1e62a0;
+  --gauge-track: #edf1f6;
+  --gauge-tick: #56667b;
+  --gauge-water: #1769c2;
   --gauge-close: #b86e0a;
   --gauge-red: #c8102e;
   --gauge-mark: #c8102e;
@@ -59,21 +59,21 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1722;
-    --surface: #1a2535;
-    --subtle: #1c2838;
-    --pressed: #2b3b51;
-    --border: #2a384b;
-    --border-strong: #44546a;
-    --hairline: #212d3d;
-    --text: #e8edf3;
-    --text-2: #a9b4c3;
-    --text-3: #9aa6b6;
-    --accent: #74b6ee;
-    --accent-fill: #256dae;
-    --accent-fill-pressed: #1c598f;
-    --accent-soft: #1b3350;
-    --focus: #74b6ee;
+    --bg: #0f1a29;
+    --surface: #172536;
+    --subtle: #1a2a3d;
+    --pressed: #2a3f58;
+    --border: #26374b;
+    --border-strong: #41546c;
+    --hairline: #1e2d3f;
+    --text: #eaf0f6;
+    --text-2: #a9b6c6;
+    --text-3: #98a6b8;
+    --accent: #6db5f5;
+    --accent-fill: #1b6cc2;
+    --accent-fill-pressed: #155397;
+    --accent-soft: #173556;
+    --focus: #6db5f5;
     --on-accent: #ffffff;
     --danger: #ff7c88;
     --danger-bg: #40202a;
@@ -81,8 +81,8 @@
     --warning-bg: #3a2e1c;
     --success: #6bd08a;
     --success-bg: #1a3326;
-    --gauge-track: #223043;
-    --gauge-tick: #9aa6b6;
+    --gauge-track: #203247;
+    --gauge-tick: #98a6b8;
     --gauge-water: #3f8bd0;
     --gauge-close: #f5a53b;
     --gauge-red: #ff5a6b;

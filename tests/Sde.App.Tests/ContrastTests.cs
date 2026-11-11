@@ -29,6 +29,12 @@ public class ContrastTests
 		// The inspector panes (Structures, the editor's result), the selected table row and the sidebar's step outline
 		("TextPrimary", "BgInspector"), ("TextSecondary", "BgInspector"), ("TextTertiary", "BgInspector"), ("Accent", "BgInspector"), ("DangerFg", "BgInspector"),
 		("DangerFg", "AccentSoft"), ("DangerFg", "BgSidebar"), ("TextTertiary", "AccentSoft"),
+		// The navy frame (the sidebar and the title band) and the result panel have their own text colours
+		("TextOnFrame", "BgFrame"), ("TextOnFrame", "BgFrameHover"), ("TextOnFrame", "BgFramePressed"), ("TextOnFrame", "BgFrameField"),
+		("TextOnFrameSecondary", "BgFrame"), ("TextOnFrameSecondary", "BgFrameHover"), ("TextOnFrameSecondary", "BgFrameField"),
+		("TextOnFrameTertiary", "BgFrame"), ("TextOnFrameTertiary", "BgFrameHover"), ("TextOnFrameTertiary", "BgFrameField"),
+		("AccentOnFrame", "BgFrame"), ("AccentOnFrame", "BgFrameHover"), ("DangerOnFrame", "BgFrame"), ("DangerOnFrame", "BgFrameHover"),
+		("TextOnHero", "BgHero"), ("TextOnHeroSecondary", "BgHero"), ("DangerOnFrame", "BgHero"),
 		// The older names the result colours are looked up by
 		("StatusSubstantialFg", "StatusSubstantialBg"), ("StatusCloseFg", "StatusCloseBg"), ("StatusNotSubstantialFg", "StatusNotSubstantialBg"),
 		("StatusIncompleteFg", "StatusIncompleteBg"), ("StatusUndeterminedFg", "StatusUndeterminedBg"),

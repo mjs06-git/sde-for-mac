@@ -9,20 +9,20 @@ using Avalonia.Themes.Fluent;
 namespace Sde.App.Services;
 
 /// <summary>
-/// The accent colour. SDE's own is the water blue of its icon, set in Styles/Tokens.axaml. When "Use the Mac's accent
+/// The accent colour. SDE's own is a strong water blue, set in Styles/Tokens.axaml. When "Use the Mac's accent
 /// colour" is on (Settings, Appearance) the accent brushes are recoloured from System Settings instead, keeping text on
 /// and in the accent at 4.5:1 (the same rule ContrastTests checks).
 /// </summary>
 public static class SystemAccent
 {
 	/// <summary>SDE's accent: the accent tokens' own fill colour.</summary>
-	public static readonly Color Fallback = Color.Parse("#1E62A0");
+	public static readonly Color Fallback = Color.Parse("#1769C2");
 
 	/// <summary>The surfaces accent text has to be readable on. They mirror the tokens (ContrastTests checks they match).</summary>
-	public static readonly Color LightSidebar = Color.Parse("#F0EBE2");
+	public static readonly Color LightSidebar = Color.Parse("#EDF1F6");
 	public static readonly Color LightSurface = Colors.White;
-	public static readonly Color DarkSidebar = Color.Parse("#16202E");
-	public static readonly Color DarkSurface = Color.Parse("#1A2535");
+	public static readonly Color DarkSidebar = Color.Parse("#132030");
+	public static readonly Color DarkSurface = Color.Parse("#172536");
 
 	private static readonly Color White = Colors.White;
 
