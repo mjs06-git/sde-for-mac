@@ -342,10 +342,10 @@ public sealed partial class MapCanvas : Panel, IDisposable
 			_parked = _parked with { CenterX = x, CenterY = y, Resolution = resolution };
 			return;
 		}
-		// The change of view asks the engine for a redraw itself (Mapsui's navigator does), and the engine draws within a
-		// few milliseconds, once for the new view and the data it fetches for it. Redrawing here as well drew the map two
-		// or three times for each move; code that needs the new picture at once waits with LoadAsync.
 		_control.Map.Navigator.CenterOnAndZoomTo(new MPoint(x, y), resolution, 0);
+		// Redraw at once. A change of view already asks the engine for a full redraw (Mapsui's navigator does), so
+		// Refresh's own request would only draw the map a second time.
+		RedrawNow();
 	}
 
 	/// <summary>The margin, in pixels in all, that <see cref="FitToMarkers"/> leaves round the dots, clear of the page's floating controls.</summary>
@@ -835,6 +835,7 @@ public sealed partial class MapCanvas : Panel, IDisposable
 	private void CreateControl()
 	{
 		_control = new MapControl { Focusable = false, UseFling = false };
+		RedrawLoopShared = ShareRedrawLoop(_control);
 		AutomationProperties.SetAccessibilityView(_control, AccessibilityView.Raw);
 		Map map = _control.Map;
 		map.CRS = "EPSG:3857";
@@ -881,7 +882,7 @@ public sealed partial class MapCanvas : Panel, IDisposable
 	private void Refresh()
 	{
 		_control?.RefreshGraphics();
-		_control?.InvalidateVisual();
+		RedrawNow();
 	}
 
 	/// <summary>Fetches what the current view needs (tiles, rasterized layers) and waits for it, for tests and printing.</summary>
@@ -963,6 +964,78 @@ public sealed partial class MapCanvas : Panel, IDisposable
 
 	/// <summary>True once <see cref="Dispose"/> has run (and until the page shows the map again).</summary>
 	public bool IsDisposed => _disposed;
+
+	/// <summary>True when the engine's redraw loop asks this map for its redraws (see <see cref="ShareRedrawLoop"/>).</summary>
+	internal bool RedrawLoopShared { get; private set; }
+
+	/// <summary>
+	/// Mapsui 5.1's redraw loop (its RenderController) runs on a pool thread and asks the control to redraw whenever
+	/// something has changed since its last request. A change of view, a click or a finished edit also redraws at once,
+	/// so the loop's request often arrives after the map has already begun drawing the change, and would only draw the
+	/// same picture again: two draws for every move. This takes over the loop's callback. A request is skipped when a
+	/// draw has begun since it was made (the engine stamps the start of every draw, so a new stamp means a newer draw,
+	/// which shows every change up to the request); otherwise the map redraws. It also posts to the dispatcher this map
+	/// was made on rather than "the" UI dispatcher (see <see cref="UnhookRedrawLoop"/>). Returns false if a later Mapsui
+	/// renames the fields; the engine's own callback then stays, and MapEngineTests fails, so an upgrade can't drop this
+	/// quietly.
+	/// </summary>
+	private bool ShareRedrawLoop(MapControl control)
+	{
+		FieldInfo controllerField = typeof(MapControl).GetField("_renderController", BindingFlags.Instance | BindingFlags.NonPublic);
+		object controller = controllerField?.GetValue(control);
+		FieldInfo callback = controller?.GetType().GetField("_invalidateCanvas", BindingFlags.Instance | BindingFlags.NonPublic);
+		FieldInfo drawStarted = controller?.GetType().GetField("_timestampStartDraw", BindingFlags.Instance | BindingFlags.NonPublic);
+		if (callback == null || callback.FieldType != typeof(Action) || drawStarted == null || drawStarted.FieldType != typeof(int))
+		{
+			_lastDrawStart = null;
+			return false;
+		}
+		_lastDrawStart = () => (int)drawStarted.GetValue(controller);
+		callback.SetValue(controller, (Action)(() =>
+		{
+			// The stamp of the last draw to begin before this request (it may still be drawing).
+			int askedAfter = (int)drawStarted.GetValue(controller);
+			_ui.Post(() =>
+			{
+				if (_control != control)
+				{
+					return;
+				}
+				int now = (int)drawStarted.GetValue(controller);
+				// A draw has begun since the request, or one this map asked for has yet to begin (it will begin after
+				// the request): either shows every change up to the request.
+				if (now != askedAfter || (_redrawPending && now == _redrawAskedAfter))
+				{
+					return;
+				}
+				control.InvalidateVisual();
+			});
+		}));
+		return true;
+	}
+
+	/// <summary>Reads the stamp of the last draw the engine began (null when <see cref="ShareRedrawLoop"/> could not hook in).</summary>
+	private Func<int> _lastDrawStart;
+
+	/// <summary>True after <see cref="RedrawNow"/> until a draw begins: the stamp of the last draw before it is <see cref="_redrawAskedAfter"/>.</summary>
+	private bool _redrawPending;
+
+	private int _redrawAskedAfter;
+
+	/// <summary>Redraws the map on the next frame, and lets <see cref="ShareRedrawLoop"/> skip the engine's own request for it.</summary>
+	private void RedrawNow()
+	{
+		if (_control == null)
+		{
+			return;
+		}
+		if (_lastDrawStart != null)
+		{
+			_redrawAskedAfter = _lastDrawStart();
+			_redrawPending = true;
+		}
+		_control.InvalidateVisual();
+	}
 
 	/// <summary>True when the last <see cref="Dispose"/> could unhook the engine's redraw loop (see <see cref="UnhookRedrawLoop"/>).</summary>
 	internal bool RedrawLoopUnhooked { get; private set; }
