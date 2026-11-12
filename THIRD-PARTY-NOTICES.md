@@ -215,3 +215,20 @@ terms of the GPL: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html.
 The build uses mdbtools' own replacement for GLib (`--disable-glib`, part of the same source) and links `libmdb`
 statically, so no other third-party library is linked into the two programs. They use only macOS's own `libiconv`
 and `libSystem`.
+
+## Quick start video (not part of SDE.app)
+
+The video in `docs/video/` uses music and recorded sounds that their authors released under CC0 1.0, so they are in the
+public domain and need no attribution. They are credited here all the same.
+
+| Item | Author | License | Source |
+| --- | --- | --- | --- |
+| Music: "Chill lofi inspired" | omfgdude | CC0 1.0 | https://opengameart.org/content/chill-lofi-inspired |
+| Mouse Click (Small) | G.M_Isaac | CC0 1.0 | https://freesound.org/people/G.M_Isaac/sounds/860090/ |
+| Fast whoosh, bamboo swoosh through air, version 1 | zapsplat.com | CC0 1.0 | https://freesound.org/people/zapsplat.com/sounds/719636/ |
+| Pop 9 | D.S.G. | CC0 1.0 | https://freesound.org/people/D.S.G./sounds/328119/ |
+| soft-hit.wav | Krokulator | CC0 1.0 | https://freesound.org/people/Krokulator/sounds/653910/ |
+| Lock.wav | Plutoniumisotop | CC0 1.0 | https://freesound.org/people/Plutoniumisotop/sounds/371190/ |
+| G4 soft - kalimba | hollandm | CC0 1.0 | https://freesound.org/people/hollandm/sounds/691805/ |
+
+Its text is set in Public Sans (see Fonts above), and its screenshots are the ones in `docs/screenshots/`.
