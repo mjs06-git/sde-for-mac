@@ -5,6 +5,10 @@
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.TrashView"
              x:DataType="vm:TrashViewModel">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://SDE/Styles/Scope.Records.axaml" />
+  </UserControl.Styles>
+
   <!-- In the window's toolbar: restore or remove the selected rows, and empty it all (each asks first where it can't be undone) -->
   <v:PageChrome.Toolbar>
     <StackPanel Classes="pageToolbar">

@@ -197,6 +197,9 @@
       -->
       <Panel Name="SidebarHost" Classes="sidebarHost">
       <Border Classes="sidebar onFrame" Width="{Binding SidebarWidth}" Name="Sidebar">
+        <Border.Styles>
+          <StyleInclude Source="avares://SDE/Styles/Scope.Frame.axaml" />
+        </Border.Styles>
         <!-- Rows in reading order, so Tab goes down the sidebar and reaches Settings last -->
         <Grid RowDefinitions="Auto,Auto,*,Auto">
           <Panel Classes="sidebarTitleBar" Name="SidebarTitleBar"
@@ -541,6 +544,9 @@
               Classes.sheetMedium="{Binding Sheets.CurrentSize, Converter={x:Static v:SheetConverters.IsSize}, ConverterParameter=Medium}"
               Classes.sheetLarge="{Binding Sheets.CurrentSize, Converter={x:Static v:SheetConverters.IsSize}, ConverterParameter=Large}"
               Classes.welcome="{Binding Sheets.Current, Converter={x:Static v:SheetConverters.IsWelcome}}">
+        <Border.Styles>
+          <StyleInclude Source="avares://SDE/Styles/Scope.Sheets.axaml" />
+        </Border.Styles>
         <DockPanel>
           <Grid DockPanel.Dock="Top" Classes="sheetHead" ColumnDefinitions="*,Auto">
             <TextBlock Classes="sheetHeading" Text="{Binding Sheets.CurrentTitle}" />

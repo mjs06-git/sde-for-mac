@@ -6,6 +6,10 @@
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.CaseFileView"
              x:DataType="vm:CaseFileViewModel">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://SDE/Styles/Scope.Records.axaml" />
+  </UserControl.Styles>
+
   <UserControl.Resources>
     <!-- A line of a card (a letter, a case, a document): the title over its detail, a date or figure on the right -->
     <DataTemplate x:Key="CaseLine" x:DataType="vm:CaseFileLine">

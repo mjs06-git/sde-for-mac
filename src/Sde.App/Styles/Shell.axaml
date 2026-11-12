@@ -173,7 +173,7 @@
     <Setter Property="Margin" Value="0,0,12,0" />
   </Style>
   <!-- The rows: 12 px from the sidebar's edges, sections 16 px apart -->
-  <Style Selector=":is(Control).sidebarList">
+  <Style Selector="StackPanel.sidebarList, ItemsControl.sidebarList">
     <Setter Property="Margin" Value="12,0" />
   </Style>
   <Style Selector="StackPanel.sourceSection">
@@ -318,238 +318,238 @@
   <!-- ───────────── Controls on the frame (scoped by the "onFrame" class) ───────────── -->
 
   <!-- Icon buttons: light icons, the frame's hover and press -->
-  <Style Selector=":is(Control).onFrame Button.icon /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame Button.icon /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
   </Style>
-  <Style Selector=":is(Control).onFrame Button.icon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame Button.icon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgFrameHover}" />
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
   </Style>
-  <Style Selector=":is(Control).onFrame Button.icon:pressed /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame Button.icon:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgFramePressed}" />
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
   </Style>
-  <Style Selector=":is(Control).onFrame Button.icon:disabled /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame Button.icon:disabled /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrameTertiary}" />
   </Style>
-  <Style Selector=":is(Control).onFrame Button.icon:disabled">
+  <Style Selector="Border.onFrame Button.icon:disabled">
     <Setter Property="Opacity" Value="0.6" />
   </Style>
 
   <!-- Text buttons (a page's own toolbar items): a field on the frame with white text -->
-  <Style Selector=":is(Control).onFrame Button:not(.icon):not(.primary):not(.link):not(.nav) /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame Button:not(.icon):not(.primary):not(.link):not(.nav) /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgFrameField}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
     <Setter Property="BoxShadow" Value="0 0 0 0 #00000000" />
   </Style>
-  <Style Selector=":is(Control).onFrame Button:not(.icon):not(.primary):not(.link):not(.nav):pointerover /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame Button:not(.icon):not(.primary):not(.link):not(.nav):pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgFrameHover}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
   </Style>
-  <Style Selector=":is(Control).onFrame Button:not(.icon):not(.primary):not(.link):not(.nav):pressed /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame Button:not(.icon):not(.primary):not(.link):not(.nav):pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgFramePressed}" />
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
   </Style>
-  <Style Selector=":is(Control).onFrame Button:not(.icon):not(.primary):not(.link):not(.nav):disabled /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame Button:not(.icon):not(.primary):not(.link):not(.nav):disabled /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrameTertiary}" />
   </Style>
-  <Style Selector=":is(Control).onFrame Button.link /template/ ContentPresenter#PART_ContentPresenter, :is(Control).onFrame Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame Button.link /template/ ContentPresenter#PART_ContentPresenter, Border.onFrame Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Foreground" Value="{DynamicResource AccentOnFrame}" />
   </Style>
 
   <!-- Pull-downs: ghost on the navy, white text and chevron, the frame's hover -->
-  <Style Selector=":is(Control).onFrame DropDownButton /template/ Border#RootBorder">
+  <Style Selector="Border.onFrame DropDownButton /template/ Border#RootBorder">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="BoxShadow" Value="0 0 0 0 #00000000" />
     <Setter Property="TextElement.Foreground" Value="{DynamicResource TextOnFrame}" />
   </Style>
-  <Style Selector=":is(Control).onFrame DropDownButton /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame DropDownButton /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
   </Style>
-  <Style Selector=":is(Control).onFrame DropDownButton /template/ PathIcon#DropDownGlyph">
+  <Style Selector="Border.onFrame DropDownButton /template/ PathIcon#DropDownGlyph">
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
   </Style>
-  <Style Selector=":is(Control).onFrame DropDownButton:pointerover /template/ Border#RootBorder">
+  <Style Selector="Border.onFrame DropDownButton:pointerover /template/ Border#RootBorder">
     <Setter Property="Background" Value="{DynamicResource BgFrameHover}" />
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="TextElement.Foreground" Value="{DynamicResource TextOnFrame}" />
   </Style>
-  <Style Selector=":is(Control).onFrame DropDownButton:pointerover /template/ ContentPresenter#PART_ContentPresenter, :is(Control).onFrame DropDownButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame DropDownButton:pointerover /template/ ContentPresenter#PART_ContentPresenter, Border.onFrame DropDownButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
   </Style>
-  <Style Selector=":is(Control).onFrame DropDownButton:pointerover /template/ PathIcon#DropDownGlyph, :is(Control).onFrame DropDownButton:pressed /template/ PathIcon#DropDownGlyph">
+  <Style Selector="Border.onFrame DropDownButton:pointerover /template/ PathIcon#DropDownGlyph, Border.onFrame DropDownButton:pressed /template/ PathIcon#DropDownGlyph">
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
   </Style>
-  <Style Selector=":is(Control).onFrame DropDownButton:pressed /template/ Border#RootBorder">
+  <Style Selector="Border.onFrame DropDownButton:pressed /template/ Border#RootBorder">
     <Setter Property="Background" Value="{DynamicResource BgFramePressed}" />
     <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
-  <Style Selector=":is(Control).onFrame DropDownButton:disabled /template/ Border#RootBorder">
+  <Style Selector="Border.onFrame DropDownButton:disabled /template/ Border#RootBorder">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="TextElement.Foreground" Value="{DynamicResource TextOnFrameTertiary}" />
   </Style>
-  <Style Selector=":is(Control).onFrame DropDownButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame DropDownButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrameTertiary}" />
   </Style>
   <!-- A small pull-down that shows a value (the assessment's status): a field on the frame -->
-  <Style Selector=":is(Control).onFrame DropDownButton.sm /template/ Border#RootBorder">
+  <Style Selector="Border.onFrame DropDownButton.sm /template/ Border#RootBorder">
     <Setter Property="Background" Value="{DynamicResource BgFrameField}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
   </Style>
-  <Style Selector=":is(Control).onFrame DropDownButton.sm:pointerover /template/ Border#RootBorder">
+  <Style Selector="Border.onFrame DropDownButton.sm:pointerover /template/ Border#RootBorder">
     <Setter Property="Background" Value="{DynamicResource BgFrameHover}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
   </Style>
   <!-- New: solid accent, white icon, name and chevron -->
-  <Style Selector=":is(Control).onFrame DropDownButton.newButton /template/ Border#RootBorder">
+  <Style Selector="Border.onFrame DropDownButton.newButton /template/ Border#RootBorder">
     <Setter Property="Background" Value="{DynamicResource AccentFill}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentFill}" />
     <Setter Property="TextElement.Foreground" Value="{DynamicResource OnAccent}" />
   </Style>
-  <Style Selector=":is(Control).onFrame DropDownButton.newButton:pointerover /template/ Border#RootBorder">
+  <Style Selector="Border.onFrame DropDownButton.newButton:pointerover /template/ Border#RootBorder">
     <Setter Property="Background" Value="{DynamicResource AccentFillHover}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentFillHover}" />
   </Style>
-  <Style Selector=":is(Control).onFrame DropDownButton.newButton:pressed /template/ Border#RootBorder">
+  <Style Selector="Border.onFrame DropDownButton.newButton:pressed /template/ Border#RootBorder">
     <Setter Property="Background" Value="{DynamicResource AccentFillPressed}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentFillPressed}" />
   </Style>
-  <Style Selector=":is(Control).onFrame DropDownButton.newButton /template/ PathIcon#DropDownGlyph, :is(Control).onFrame DropDownButton.newButton:pointerover /template/ PathIcon#DropDownGlyph, :is(Control).onFrame DropDownButton.newButton:pressed /template/ PathIcon#DropDownGlyph">
+  <Style Selector="Border.onFrame DropDownButton.newButton /template/ PathIcon#DropDownGlyph, Border.onFrame DropDownButton.newButton:pointerover /template/ PathIcon#DropDownGlyph, Border.onFrame DropDownButton.newButton:pressed /template/ PathIcon#DropDownGlyph">
     <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
   </Style>
-  <Style Selector=":is(Control).onFrame DropDownButton.newButton /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame DropDownButton.newButton /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
   </Style>
 
   <!-- Segmented controls on the frame (the List / Map / Summary switch, a page's own): a darker track, the chosen
        segment raised in a lighter navy with a white icon -->
-  <Style Selector=":is(Control).onFrame ListBox.segmented">
+  <Style Selector="Border.onFrame ListBox.segmented">
     <Setter Property="Background" Value="{DynamicResource BgFrameField}" />
   </Style>
-  <Style Selector=":is(Control).onFrame Border.segmentedGroup, :is(Control).onFrame Border.toolbarGroup">
+  <Style Selector="Border.onFrame Border.segmentedGroup, Border.onFrame Border.toolbarGroup">
     <Setter Property="Background" Value="{DynamicResource BgFrameField}" />
   </Style>
-  <Style Selector=":is(Control).onFrame ListBox.segmented ListBoxItem /template/ ContentPresenter#PART_ContentPresenter, :is(Control).onFrame ListBox.segmented ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame ListBox.segmented ListBoxItem /template/ ContentPresenter#PART_ContentPresenter, Border.onFrame ListBox.segmented ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
   </Style>
-  <Style Selector=":is(Control).onFrame ListBox.segmented ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame ListBox.segmented ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
   </Style>
-  <Style Selector=":is(Control).onFrame ListBox.segmented ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, :is(Control).onFrame ListBox.segmented ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, :is(Control).onFrame ListBox.segmented ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame ListBox.segmented ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, Border.onFrame ListBox.segmented ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, Border.onFrame ListBox.segmented ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgFrameSelected}" />
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
     <Setter Property="BoxShadow" Value="0 1 2 0 #40000000" />
   </Style>
-  <Style Selector=":is(Control).onFrame RadioButton.segment /template/ ContentPresenter">
+  <Style Selector="Border.onFrame RadioButton.segment /template/ ContentPresenter">
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
   </Style>
-  <Style Selector=":is(Control).onFrame RadioButton.segment:checked /template/ Border#PART_Segment">
+  <Style Selector="Border.onFrame RadioButton.segment:checked /template/ Border#PART_Segment">
     <Setter Property="Background" Value="{DynamicResource BgFrameSelected}" />
   </Style>
-  <Style Selector=":is(Control).onFrame RadioButton.segment:checked /template/ ContentPresenter">
+  <Style Selector="Border.onFrame RadioButton.segment:checked /template/ ContentPresenter">
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
   </Style>
 
   <!-- Text boxes on the frame (the search field): a darker field, a frame border, white text, quiet placeholder -->
-  <Style Selector=":is(Control).onFrame TextBox">
+  <Style Selector="Border.onFrame TextBox">
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
     <Setter Property="CaretBrush" Value="{DynamicResource TextOnFrame}" />
     <Setter Property="PlaceholderForeground" Value="{DynamicResource TextOnFrameTertiary}" />
   </Style>
-  <Style Selector=":is(Control).onFrame TextBox /template/ Border#PART_BorderElement, :is(Control).onFrame TextBox:pointerover /template/ Border#PART_BorderElement">
+  <Style Selector="Border.onFrame TextBox /template/ Border#PART_BorderElement, Border.onFrame TextBox:pointerover /template/ Border#PART_BorderElement">
     <Setter Property="Background" Value="{DynamicResource BgFrameField}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
   </Style>
-  <Style Selector=":is(Control).onFrame TextBox:focus /template/ Border#PART_BorderElement">
+  <Style Selector="Border.onFrame TextBox:focus /template/ Border#PART_BorderElement">
     <Setter Property="Background" Value="{DynamicResource BgFrameField}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentOnFrame}" />
   </Style>
-  <Style Selector=":is(Control).onFrame TextBox /template/ TextPresenter#PART_TextPresenter, :is(Control).onFrame TextBox:pointerover /template/ TextPresenter#PART_TextPresenter, :is(Control).onFrame TextBox:focus /template/ TextPresenter#PART_TextPresenter">
+  <Style Selector="Border.onFrame TextBox /template/ TextPresenter#PART_TextPresenter, Border.onFrame TextBox:pointerover /template/ TextPresenter#PART_TextPresenter, Border.onFrame TextBox:focus /template/ TextPresenter#PART_TextPresenter">
     <Setter Property="TextElement.Foreground" Value="{DynamicResource TextOnFrame}" />
   </Style>
-  <Style Selector=":is(Control).onFrame TextBox c|Icon">
+  <Style Selector="Border.onFrame TextBox c|Icon">
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrameTertiary}" />
   </Style>
 
   <!-- Pop-up menus on the frame: a field, white text and chevrons -->
-  <Style Selector=":is(Control).onFrame ComboBox /template/ Border#Background, :is(Control).onFrame ComboBox:pointerover /template/ Border#Background, :is(Control).onFrame ComboBox:pressed /template/ Border#Background">
+  <Style Selector="Border.onFrame ComboBox /template/ Border#Background, Border.onFrame ComboBox:pointerover /template/ Border#Background, Border.onFrame ComboBox:pressed /template/ Border#Background">
     <Setter Property="Background" Value="{DynamicResource BgFrameField}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
     <Setter Property="BoxShadow" Value="0 0 0 0 #00000000" />
   </Style>
-  <Style Selector=":is(Control).onFrame ComboBox /template/ ContentControl#ContentPresenter, :is(Control).onFrame ComboBox:pointerover /template/ ContentControl#ContentPresenter">
+  <Style Selector="Border.onFrame ComboBox /template/ ContentControl#ContentPresenter, Border.onFrame ComboBox:pointerover /template/ ContentControl#ContentPresenter">
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
   </Style>
-  <Style Selector=":is(Control).onFrame ComboBox /template/ PathIcon#DropDownGlyph, :is(Control).onFrame ComboBox:pointerover /template/ PathIcon#DropDownGlyph">
+  <Style Selector="Border.onFrame ComboBox /template/ PathIcon#DropDownGlyph, Border.onFrame ComboBox:pointerover /template/ PathIcon#DropDownGlyph">
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
   </Style>
 
   <!-- Labels a page puts in its toolbar -->
-  <Style Selector=":is(Control).onFrame StackPanel.pageToolbar TextBlock.fieldLabel, :is(Control).onFrame StackPanel.pageToolbar TextBlock.secondary">
+  <Style Selector="Border.onFrame StackPanel.pageToolbar TextBlock.fieldLabel, Border.onFrame StackPanel.pageToolbar TextBlock.secondary">
     <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
   </Style>
 
   <!-- The step outline on the frame (the sidebar while an assessment is open): see Editor.axaml -->
 
   <!-- What a flyout opened from the frame holds keeps the light or dark theme: the on-frame looks above stop at its edge -->
-  <Style Selector=":is(Control).onFrame FlyoutPresenter Button.icon /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame FlyoutPresenter Button.icon /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
   </Style>
-  <Style Selector=":is(Control).onFrame FlyoutPresenter Button.icon:pointerover /template/ ContentPresenter#PART_ContentPresenter, :is(Control).onFrame FlyoutPresenter Button:not(.icon):not(.primary):not(.link):not(.nav):pointerover /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame FlyoutPresenter Button.icon:pointerover /template/ ContentPresenter#PART_ContentPresenter, Border.onFrame FlyoutPresenter Button:not(.icon):not(.primary):not(.link):not(.nav):pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgHover}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
-  <Style Selector=":is(Control).onFrame FlyoutPresenter Button:not(.icon):not(.primary):not(.link):not(.nav) /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame FlyoutPresenter Button:not(.icon):not(.primary):not(.link):not(.nav) /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource ButtonBackground}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
-  <Style Selector=":is(Control).onFrame FlyoutPresenter Button.subtle /template/ ContentPresenter#PART_ContentPresenter, :is(Control).onFrame FlyoutPresenter Button.ghost /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame FlyoutPresenter Button.subtle /template/ ContentPresenter#PART_ContentPresenter, Border.onFrame FlyoutPresenter Button.ghost /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
-  <Style Selector=":is(Control).onFrame FlyoutPresenter Button.link /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame FlyoutPresenter Button.link /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Foreground" Value="{DynamicResource Accent}" />
   </Style>
-  <Style Selector=":is(Control).onFrame FlyoutPresenter TextBox">
+  <Style Selector="Border.onFrame FlyoutPresenter TextBox">
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
     <Setter Property="CaretBrush" Value="{DynamicResource TextPrimary}" />
     <Setter Property="PlaceholderForeground" Value="{DynamicResource TextTertiary}" />
   </Style>
-  <Style Selector=":is(Control).onFrame FlyoutPresenter TextBox /template/ Border#PART_BorderElement, :is(Control).onFrame FlyoutPresenter TextBox:pointerover /template/ Border#PART_BorderElement">
+  <Style Selector="Border.onFrame FlyoutPresenter TextBox /template/ Border#PART_BorderElement, Border.onFrame FlyoutPresenter TextBox:pointerover /template/ Border#PART_BorderElement">
     <Setter Property="Background" Value="{DynamicResource BgSurface}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
   </Style>
-  <Style Selector=":is(Control).onFrame FlyoutPresenter TextBox:focus /template/ Border#PART_BorderElement">
+  <Style Selector="Border.onFrame FlyoutPresenter TextBox:focus /template/ Border#PART_BorderElement">
     <Setter Property="Background" Value="{DynamicResource BgSurface}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Focus}" />
   </Style>
-  <Style Selector=":is(Control).onFrame FlyoutPresenter TextBox /template/ TextPresenter#PART_TextPresenter, :is(Control).onFrame FlyoutPresenter TextBox:focus /template/ TextPresenter#PART_TextPresenter">
+  <Style Selector="Border.onFrame FlyoutPresenter TextBox /template/ TextPresenter#PART_TextPresenter, Border.onFrame FlyoutPresenter TextBox:focus /template/ TextPresenter#PART_TextPresenter">
     <Setter Property="TextElement.Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
-  <Style Selector=":is(Control).onFrame FlyoutPresenter ComboBox /template/ Border#Background, :is(Control).onFrame FlyoutPresenter ComboBox:pointerover /template/ Border#Background">
+  <Style Selector="Border.onFrame FlyoutPresenter ComboBox /template/ Border#Background, Border.onFrame FlyoutPresenter ComboBox:pointerover /template/ Border#Background">
     <Setter Property="Background" Value="{DynamicResource BgSurface}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
   </Style>
-  <Style Selector=":is(Control).onFrame FlyoutPresenter ComboBox /template/ ContentControl#ContentPresenter">
+  <Style Selector="Border.onFrame FlyoutPresenter ComboBox /template/ ContentControl#ContentPresenter">
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
-  <Style Selector=":is(Control).onFrame FlyoutPresenter DropDownButton /template/ Border#RootBorder">
+  <Style Selector="Border.onFrame FlyoutPresenter DropDownButton /template/ Border#RootBorder">
     <Setter Property="Background" Value="{DynamicResource ButtonBackground}" />
     <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrush}" />
     <Setter Property="TextElement.Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
-  <Style Selector=":is(Control).onFrame FlyoutPresenter DropDownButton /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector="Border.onFrame FlyoutPresenter DropDownButton /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
-  <Style Selector=":is(Control).onFrame FlyoutPresenter c|Icon">
+  <Style Selector="Border.onFrame FlyoutPresenter c|Icon">
     <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
   </Style>
 

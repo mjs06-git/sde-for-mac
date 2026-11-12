@@ -1,0 +1,199 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Sde.App.Controls">
+  <!--
+    Styles that only ever apply inside the sidebar (MainWindow), so they are included there rather than in App.axaml.
+    Avalonia tries every app-wide style on every new control, so keeping these out of App.axaml keeps the
+    Structures table and the map quick to draw. Put a style here only when its classes are used nowhere else.
+  -->
+  <!-- From Styles/Editor.axaml -->
+  <!-- The section's number in the sidebar outline: a small ring with the number in it; filled with the accent for the
+       step showing, red for a step with required problems -->
+  <Style Selector="ListBox.steps Border.stepBadge">
+    <Setter Property="Width" Value="{DynamicResource StepBadgeSize}" />
+    <Setter Property="Height" Value="{DynamicResource StepBadgeSize}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="ListBox.steps TextBlock.stepNumber">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="ListBox.steps Border.stepBadge.required">
+    <Setter Property="BorderBrush" Value="{DynamicResource DangerFg}" />
+  </Style>
+
+  <Style Selector="ListBox.steps Border.stepBadge.required TextBlock.stepNumber">
+    <Setter Property="Foreground" Value="{DynamicResource DangerFg}" />
+  </Style>
+
+  <Style Selector="ListBox.steps ListBoxItem:selected Border.stepBadge">
+    <Setter Property="Background" Value="{DynamicResource AccentFill}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentFill}" />
+  </Style>
+
+  <Style Selector="ListBox.steps ListBoxItem:selected Border.stepBadge.required">
+    <Setter Property="Background" Value="{DynamicResource DangerFill}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DangerFill}" />
+  </Style>
+
+  <Style Selector="ListBox.steps ListBoxItem:selected TextBlock.stepNumber">
+    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+  </Style>
+
+  <!-- How many fields to check: a small grey capsule (red text when some are required) -->
+  <Style Selector="Border.stepCount">
+    <Setter Property="MinWidth" Value="18" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
+    <Setter Property="Padding" Value="5,0" />
+    <Setter Property="Background" Value="{DynamicResource BgPressed}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Border.stepCount TextBlock">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Border.stepCount.required">
+    <Setter Property="Background" Value="{DynamicResource DangerBg}" />
+  </Style>
+
+  <Style Selector="Border.stepCount.required TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource DangerFg}" />
+  </Style>
+
+  <!-- ───────────── The step outline on the frame (the sidebar while an assessment is open) ───────────── -->
+  <!-- The steps as rows on the navy: quiet light titles, the frame's hover, the step showing on a lighter navy row -->
+  <Style Selector="Border.sidebar ListBox.steps">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Margin" Value="10,12" />
+  </Style>
+
+  <Style Selector="Border.sidebar ListBox.steps ListBoxItem">
+    <Setter Property="Padding" Value="8,0,10,0" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeightLarge}" />
+    <Setter Property="Margin" Value="0,0,0,2" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
+  </Style>
+
+  <Style Selector="Border.sidebar ListBox.steps ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="Border.sidebar ListBox.steps ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgFrameHover}" />
+  </Style>
+
+  <!-- The step showing: a lighter navy row behind the accent badge and the white title -->
+  <Style Selector="Border.sidebar ListBox.steps ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, Border.sidebar ListBox.steps ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, Border.sidebar ListBox.steps ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter, Border.sidebar ListBox.steps ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgFramePressed}" />
+  </Style>
+
+  <!-- The section's number in the outline on the frame: a ring; the step showing has a solid accent badge with a
+       white number; a step with required problems is marked in the frame's red; a finished step is quieter still -->
+  <Style Selector="Border.sidebar ListBox.steps Border.stepBadge">
+    <Setter Property="Width" Value="{DynamicResource StepBadgeSize}" />
+    <Setter Property="Height" Value="{DynamicResource StepBadgeSize}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
+    <Setter Property="BorderThickness" Value="1.5" />
+    <Setter Property="BorderBrush" Value="{DynamicResource TextOnFrameTertiary}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Border.sidebar ListBox.steps TextBlock.stepNumber">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Border.sidebar ListBox.steps Border.stepBadge.done">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
+    <Setter Property="Background" Value="{DynamicResource BgFrameField}" />
+  </Style>
+
+  <Style Selector="Border.sidebar ListBox.steps Border.stepBadge.done TextBlock.stepNumber">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameTertiary}" />
+  </Style>
+
+  <Style Selector="Border.sidebar ListBox.steps Border.stepBadge.required">
+    <Setter Property="BorderBrush" Value="{DynamicResource DangerOnFrame}" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <Style Selector="Border.sidebar ListBox.steps Border.stepBadge.required TextBlock.stepNumber">
+    <Setter Property="Foreground" Value="{DynamicResource DangerOnFrame}" />
+  </Style>
+
+  <Style Selector="Border.sidebar ListBox.steps ListBoxItem:selected Border.stepBadge">
+    <Setter Property="Background" Value="{DynamicResource AccentFill}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentFill}" />
+  </Style>
+
+  <Style Selector="Border.sidebar ListBox.steps ListBoxItem:selected Border.stepBadge.required">
+    <Setter Property="Background" Value="{DynamicResource DangerFill}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DangerFill}" />
+  </Style>
+
+  <Style Selector="Border.sidebar ListBox.steps ListBoxItem:selected TextBlock.stepNumber">
+    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+  </Style>
+
+  <Style Selector="Border.sidebar ListBox.steps TextBlock.stepTitle">
+    <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+
+  <Style Selector="Border.sidebar ListBox.steps ListBoxItem:pointerover TextBlock.stepTitle">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+
+  <Style Selector="Border.sidebar ListBox.steps ListBoxItem:selected TextBlock.stepTitle">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+
+  <!-- How many fields to check: a quiet number on the frame, in the frame's red when some are required -->
+  <Style Selector="Border.sidebar Border.stepCount">
+    <Setter Property="MinWidth" Value="18" />
+    <Setter Property="Height" Value="18" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
+    <Setter Property="Padding" Value="6,0" />
+    <Setter Property="Background" Value="{DynamicResource BgFrameField}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Border.sidebar Border.stepCount TextBlock">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Border.sidebar Border.stepCount.required TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource DangerOnFrame}" />
+  </Style>
+</Styles>

@@ -4,6 +4,10 @@
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.CommandPaletteView"
              x:DataType="shell:CommandPaletteViewModel">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://SDE/Styles/Scope.Overlays.axaml" />
+  </UserControl.Styles>
+
   <!-- ⌘K: a search box over a list of structures, pages and commands. ↑ ↓ move, Return opens, Esc closes. -->
   <Border Classes="palette" Width="600">
     <DockPanel>

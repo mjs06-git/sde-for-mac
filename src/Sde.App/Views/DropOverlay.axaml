@@ -5,6 +5,10 @@
              x:Class="Sde.App.Views.DropOverlay"
              x:DataType="vm:DropPlan"
              IsHitTestVisible="False">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://SDE/Styles/Scope.Overlays.axaml" />
+  </UserControl.Styles>
+
   <!-- Over the whole window while files are dragged over it: a dashed accent edge and a card saying what a drop does.
        It never takes the pointer, so page drop zones under it still get their drops. -->
   <Border Classes="dropOverlay" Classes.refused="{Binding !CanDrop}" Name="DropOverlayRoot">

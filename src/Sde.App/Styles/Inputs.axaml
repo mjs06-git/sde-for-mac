@@ -24,7 +24,7 @@
     <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
   </Style>
   <!-- Borders fade to their hover and focus colours (only with motion on) -->
-  <Style Selector=".motion TextBox /template/ Border#PART_BorderElement">
+  <Style Selector=":is(Window).motion TextBox /template/ Border#PART_BorderElement">
     <Setter Property="Transitions">
       <Transitions>
         <BrushTransition Property="BorderBrush" Duration="0:0:0.12" />

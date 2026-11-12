@@ -5,7 +5,8 @@ namespace Sde.App.Tests;
 /// <summary>
 /// Reduce Motion: the app animates only under the window's "motion" class (Services/Motion), which is left off when the
 /// Mac's Reduce Motion is on and in the tests. So every transition and animation in the styles must sit in a style whose
-/// selector (or an enclosing style's) starts from ".motion"; one anywhere else would still move with Reduce Motion on.
+/// selector (or an enclosing style's) starts from ".motion" or ":is(Window).motion" (the same class, looked for on the window
+/// only, which is cheaper for Avalonia to check); one anywhere else would still move with Reduce Motion on.
 /// </summary>
 public class MotionTests
 {
@@ -23,6 +24,10 @@ public class MotionTests
 		e.Name.LocalName is "Transitions" or "Animation" or "Style.Animations" ||
 		e.Name.LocalName == "Setter" && ((string)e.Attribute("Property"))?.EndsWith("Transitions", StringComparison.Ordinal) == true;
 
+	/// <summary>A selector that applies only under the window's "motion" class.</summary>
+	private static bool IsMotionGate(string selector) =>
+		selector.StartsWith(".motion", StringComparison.Ordinal) || selector.StartsWith(":is(Window).motion", StringComparison.Ordinal);
+
 	/// <summary>"Styles/Sheets.axaml:84 Animation" for every moving part with no ".motion" style round it.</summary>
 	internal static List<string> UngatedMotion(IEnumerable<string> files)
 	{
@@ -38,7 +43,7 @@ public class MotionTests
 					continue;
 				}
 				bool gated = e.Ancestors().Where(a => a.Name.LocalName == "Style")
-					.Any(s => ((string)s.Attribute("Selector"))?.Split(',').All(part => part.Trim().StartsWith(".motion", StringComparison.Ordinal)) == true);
+					.Any(s => ((string)s.Attribute("Selector"))?.Split(',').All(part => IsMotionGate(part.Trim())) == true);
 				if (!gated)
 				{
 					int line = ((System.Xml.IXmlLineInfo)e).LineNumber;

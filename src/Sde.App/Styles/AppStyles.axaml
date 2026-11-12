@@ -1,6 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:c="using:Sde.App.Controls">
+        xmlns:c="using:Sde.App.Controls"
+        xmlns:v="using:Sde.App.Views">
   <!--
     Surfaces and forms.
       Border.card (a grouped box, RadiusCard, CardPadding); Border.sheetBlock (a white sheet on the paper page, for a
@@ -64,7 +65,7 @@
     <Setter Property="VerticalAlignment" Value="Top" />
     <Setter Property="Margin" Value="12,4,0,0" />
   </Style>
-  <Style Selector=":is(Control).chart">
+  <Style Selector=":is(v|ChartBase).chart">
     <Setter Property="Height" Value="{StaticResource ChartHeight}" />
   </Style>
 

@@ -7,6 +7,10 @@
              xmlns:letters="using:Sde.Reports.Letters"
              x:Class="Sde.App.Views.ComplianceView"
              x:DataType="vm:ComplianceViewModel">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://SDE/Styles/Scope.Records.axaml" />
+  </UserControl.Styles>
+
 
   <!-- In the window's toolbar: the page's actions -->
   <v:PageChrome.Toolbar>

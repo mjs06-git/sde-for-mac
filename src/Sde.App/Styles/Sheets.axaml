@@ -18,6 +18,8 @@
       The first-run walkthrough: c|Icon.welcomeMark, TextBlock.welcomeTitle, Border.welcomeStep (current: the page
         being read) with Border.welcomeNumber.
       Border.palette and its parts (the ⌘K command palette), Border.jobCard (the long-task card).
+    The styles used only inside one area are in Styles/Scope.Overlays.axaml and Styles/Scope.Sheets.axaml, included
+    where that area is shown; this file keeps the ones used elsewhere too.
   -->
 
   <!-- The scrim: dims the window behind a sheet and takes its clicks -->
@@ -81,7 +83,7 @@
   </Style>
 
   <!-- Motion: the scrim fades in and the card slides down into place, only under the window's "motion" class -->
-  <Style Selector=".motion Border.scrim[IsVisible=True]">
+  <Style Selector=":is(Window).motion Border.scrim[IsVisible=True]">
     <Style.Animations>
       <Animation Duration="0:0:0.18" Easing="CubicEaseOut">
         <KeyFrame Cue="0%">
@@ -93,7 +95,7 @@
       </Animation>
     </Style.Animations>
   </Style>
-  <Style Selector=".motion Border.scrim[IsVisible=True] > Border.sheet">
+  <Style Selector=":is(Window).motion Border.scrim[IsVisible=True] > Border.sheet">
     <Style.Animations>
       <Animation Duration="0:0:0.18" Easing="CubicEaseOut">
         <KeyFrame Cue="0%">
@@ -179,168 +181,7 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
-  <!-- Inside a sheet -->
-  <!-- A group's heading ("From", "Bids") over its fields or rows -->
-  <Style Selector="TextBlock.sheetSection">
-    <Setter Property="FontSize" Value="{StaticResource FontSizeSubheadline}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-    <Setter Property="Margin" Value="0,0,0,2" />
-  </Style>
-  <!-- A small table: one white card, a tinted header row, rows on hairlines (as the app's tables) -->
-  <Style Selector="Border.sheetTable">
-    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderCard}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
-    <Setter Property="ClipToBounds" Value="True" />
-  </Style>
-  <Style Selector="Border.sheetTableHead">
-    <Setter Property="Background" Value="{DynamicResource BgTableHeader}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
-    <Setter Property="BorderThickness" Value="0,0,0,1" />
-    <Setter Property="MinHeight" Value="{DynamicResource TableHeaderHeight}" />
-    <Setter Property="Padding" Value="14,0" />
-  </Style>
-  <Style Selector="Border.sheetTableHead TextBlock">
-    <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
-    <Setter Property="VerticalAlignment" Value="Center" />
-  </Style>
-  <Style Selector="Border.sheetTableRow">
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
-    <Setter Property="BorderThickness" Value="0,0,0,1" />
-    <Setter Property="MinHeight" Value="{DynamicResource TableRowHeight}" />
-    <Setter Property="Padding" Value="14,6" />
-  </Style>
-  <!-- A list to pick one item from (backups, structures, help topics): a white card, the choice in the soft accent -->
-  <Style Selector="ListBox.sheetList">
-    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderCard}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
-    <Setter Property="Padding" Value="4" />
-  </Style>
-  <Style Selector="ListBox.sheetList ListBoxItem">
-    <Setter Property="Padding" Value="10,6" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
-    <Setter Property="MinHeight" Value="{DynamicResource TableRowHeight}" />
-  </Style>
-  <Style Selector="ListBox.sheetList ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
-  </Style>
-  <Style Selector="ListBox.sheetList ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, ListBox.sheetList ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
-  </Style>
-  <Style Selector="ListBox.sheetList ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource AccentSoftHover}" />
-  </Style>
-
-  <!-- The walkthrough: the brand mark, a large title and the pages as rows, the one being read in the soft accent -->
-  <Style Selector="c|Icon.welcomeMark">
-    <Setter Property="Foreground" Value="{DynamicResource AccentFill}" />
-    <Setter Property="HorizontalAlignment" Value="Left" />
-  </Style>
-  <Style Selector="TextBlock.welcomeTitle">
-    <Setter Property="FontSize" Value="{StaticResource FontSizeDisplay}" />
-    <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="LetterSpacing" Value="-0.4" />
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-    <Setter Property="TextWrapping" Value="Wrap" />
-  </Style>
-  <Style Selector="Border.welcomeStep">
-    <Setter Property="Padding" Value="12,10" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
-    <Setter Property="Background" Value="Transparent" />
-  </Style>
-  <Style Selector="Border.welcomeStep.current">
-    <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
-  </Style>
-  <Style Selector="Border.welcomeStep TextBlock.welcomeBody">
-    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
-    <Setter Property="TextWrapping" Value="Wrap" />
-  </Style>
-  <Style Selector="Border.welcomeStep.current TextBlock.welcomeBody">
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-  </Style>
-  <Style Selector="Border.welcomeNumber">
-    <Setter Property="Width" Value="{DynamicResource StepBadgeSize}" />
-    <Setter Property="Height" Value="{DynamicResource StepBadgeSize}" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
-    <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="VerticalAlignment" Value="Top" />
-  </Style>
-  <Style Selector="Border.welcomeNumber TextBlock">
-    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="FontFeatures" Value="+tnum" />
-    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
-    <Setter Property="HorizontalAlignment" Value="Center" />
-    <Setter Property="VerticalAlignment" Value="Center" />
-  </Style>
-  <Style Selector="Border.welcomeStep.current Border.welcomeNumber">
-    <Setter Property="Background" Value="{DynamicResource AccentFill}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource AccentFill}" />
-  </Style>
-  <Style Selector="Border.welcomeStep.current Border.welcomeNumber TextBlock">
-    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
-  </Style>
-
-  <!-- The command palette: a white card over the dimmed window, a large search line, rows with the choice in the soft accent -->
-  <Style Selector="Border.palette">
-    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderCard}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusSheet}" />
-    <Setter Property="BoxShadow" Value="{DynamicResource ShadowSheet}" />
-    <Setter Property="ClipToBounds" Value="True" />
-  </Style>
-  <Style Selector="Border.paletteFooter">
-    <Setter Property="Background" Value="{DynamicResource BgTableHeader}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
-    <Setter Property="BorderThickness" Value="0,1,0,0" />
-    <Setter Property="Padding" Value="16,10" />
-  </Style>
-  <Style Selector="ListBox.palette">
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Padding" Value="8,4,8,8" />
-  </Style>
-  <Style Selector="ListBox.palette ListBoxItem">
-    <Setter Property="Padding" Value="0" />
-    <Setter Property="Margin" Value="0" />
-    <Setter Property="Background" Value="Transparent" />
-  </Style>
-  <Style Selector="ListBox.palette ListBoxItem /template/ ContentPresenter#PART_ContentPresenter, ListBox.palette ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBox.palette ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, ListBox.palette ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBox.palette ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter, ListBox.palette ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="Transparent" />
-  </Style>
-  <Style Selector="TextBlock.paletteGroup">
-    <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
-    <Setter Property="Margin" Value="12,12,12,4" />
-  </Style>
-  <Style Selector="Border.paletteRow">
-    <Setter Property="Padding" Value="10,8" />
-    <Setter Property="MinHeight" Value="{DynamicResource TableRowHeight}" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
-    <Setter Property="Background" Value="Transparent" />
-  </Style>
-  <Style Selector="Border.paletteRow c|Icon">
-    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
-  </Style>
-  <Style Selector="ListBox.palette ListBoxItem:pointerover Border.paletteRow">
-    <Setter Property="Background" Value="{DynamicResource BgHover}" />
-  </Style>
-  <Style Selector="ListBox.palette ListBoxItem:selected Border.paletteRow">
-    <Setter Property="Background" Value="{DynamicResource RowSelectedFill}" />
-  </Style>
-  <Style Selector="ListBox.palette ListBoxItem:selected Border.paletteRow c|Icon">
-    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
-  </Style>
-  <Style Selector=".motion Panel#PaletteLayer[IsVisible=True]">
+  <Style Selector=":is(Window).motion Panel#PaletteLayer[IsVisible=True]">
     <Style.Animations>
       <Animation Duration="0:0:0.14" Easing="CubicEaseOut">
         <KeyFrame Cue="0%">

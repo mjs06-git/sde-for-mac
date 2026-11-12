@@ -6,6 +6,10 @@
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.AssessmentEditorView"
              x:DataType="ed:AssessmentEditorViewModel">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://SDE/Styles/Scope.Editor.axaml" />
+  </UserControl.Styles>
+
 
   <UserControl.DataTemplates>
     <!-- A group of fields, two to a row (one when the editor is narrow), on a hairline -->

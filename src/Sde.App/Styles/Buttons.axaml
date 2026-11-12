@@ -32,7 +32,7 @@
     <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
   </Style>
   <!-- Hover and press fade (only with motion on) -->
-  <Style Selector=".motion Button /template/ ContentPresenter#PART_ContentPresenter, .motion ToggleButton /template/ ContentPresenter#PART_ContentPresenter, .motion RepeatButton /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector=":is(Window).motion Button /template/ ContentPresenter#PART_ContentPresenter, :is(Window).motion ToggleButton /template/ ContentPresenter#PART_ContentPresenter, :is(Window).motion RepeatButton /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Transitions">
       <Transitions>
         <BrushTransition Property="Background" Duration="0:0:0.12" />
@@ -40,7 +40,7 @@
       </Transitions>
     </Setter>
   </Style>
-  <Style Selector=".motion DropDownButton /template/ Border#RootBorder">
+  <Style Selector=":is(Window).motion DropDownButton /template/ Border#RootBorder">
     <Setter Property="Transitions">
       <Transitions>
         <BrushTransition Property="Background" Duration="0:0:0.12" />
