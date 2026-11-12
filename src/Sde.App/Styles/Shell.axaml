@@ -279,18 +279,40 @@
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="16,0,16,0" />
   </Style>
-  <!-- The bright panel the frame wraps: the page background, its top-left corner rounded where it meets the frame -->
+  <!--
+    The bright panel the frame wraps: the page background, with a square clip. Its top-left corner looks rounded where it
+    meets the frame because a small cap in the frame's colour is drawn over that corner (Path.contentCorner). A clip with
+    a rounded corner would look the same but makes everything under it, the map included, draw on a slower path every
+    frame (about 10 percent slower panning with 50,000 shapes).
+  -->
   <Style Selector="Border.contentPanel">
     <Setter Property="Background" Value="{DynamicResource BgApp}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
     <Setter Property="BorderThickness" Value="1,1,0,0" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusContent}" />
     <Setter Property="ClipToBounds" Value="True" />
   </Style>
   <!-- With the sidebar hidden the panel runs to the window's edge: a square corner -->
   <Style Selector="Border.contentPanel.flush">
-    <Setter Property="CornerRadius" Value="0" />
     <Setter Property="BorderThickness" Value="0,1,0,0" />
+  </Style>
+  <!-- The rounded corner: the frame's colour outside a 14 px arc, and the panel's hairline along the arc. It sits over
+       the panel's top-left corner, including the 1 px border, and takes no clicks. -->
+  <Style Selector="Path.contentCorner">
+    <Setter Property="Data" Value="M0,0 H15 A15,15 0 0 0 0,15 Z" />
+    <Setter Property="Fill" Value="{DynamicResource BgFrame}" />
+    <Setter Property="Margin" Value="-1,-1,0,0" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+  <Style Selector="Path.contentCornerLine">
+    <Setter Property="Data" Value="M15,0.5 A14.5,14.5 0 0 0 0.5,15" />
+    <Setter Property="Stroke" Value="{DynamicResource BorderFrame}" />
+    <Setter Property="StrokeThickness" Value="1" />
+    <Setter Property="Margin" Value="-1,-1,0,0" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="IsHitTestVisible" Value="False" />
   </Style>
 
   <!-- ───────────── Controls on the frame (scoped by the "onFrame" class) ───────────── -->
