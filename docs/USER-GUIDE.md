@@ -1179,7 +1179,7 @@ adds one.
 
 | Problem | What to do |
 |---|---|
-| macOS says it can't check SDE, or that it can't be opened | Follow step 6 of [Install](../README.md#step-by-step): System Settings > Privacy & Security > **Open Anyway**. |
+| macOS says it can't check SDE, or that it can't be opened | Follow step 3 of [Install](../README.md#install): System Settings > Privacy & Security > **Open Anyway**. |
 | "was created by a newer version of this app" | Someone opened the database in a newer SDE. Update SDE. |
 | An `.mdb` import says mdbtools was not found | Your copy of SDE was built without the `.mdb` readers. Use a release build, or run `brew install mdbtools`. |
 | I can't change an assessment | It is **Final** or **Letter sent**. Choose another status from the status pop-up in the editor's toolbar; SDE asks for a reason. |

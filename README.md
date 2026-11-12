@@ -5,10 +5,11 @@
 **FEMA's Substantial Damage Estimator, on a Mac.** After a flood or other disaster, communities in the National Flood
 Insurance Program have to decide whether each damaged building is *substantially damaged*: whether repairing it would
 cost 50 percent or more of its value before the damage. FEMA's Substantial Damage Estimator (SDE 3.0) is the standard
-tool for that, and it runs only on Windows. SDE for Mac gives the same results and reads and writes the same files.
-It also adds tools for recovery work: events, an editable map, field teams and work packages, review and compliance
-tracking, imports from permit systems and assessor rolls, owner letters, a phone form for inspectors, AI assistants
-with permissions you control, edit history and automatic backups.
+tool for that, and it runs only on Windows. SDE for Mac gives the same results and reads and writes the same files,
+so you can trade files with offices that use FEMA's SDE.
+
+It is for floodplain administrators, building officials, inspectors and consultants in any community, county or
+state.
 
 > **Not a FEMA product.** SDE for Mac is an independent, unofficial port. It is not produced, endorsed or supported by
 > FEMA. It uses FEMA's calculation, cost tables and validation rules and is tested against FEMA's own engine, but every
@@ -20,173 +21,102 @@ with permissions you control, edit history and automatic backups.
 </picture>
 
 **[Download the latest release](../../releases/latest)** · [User guide](docs/USER-GUIDE.md) ·
-[Quick start video](docs/video/sde-for-mac-quick-start.mp4) · [What's new in 3.5](docs/WHATS-NEW-3.5.md) ·
+[Quick start video](#quick-start) · [What's new in 3.5](docs/WHATS-NEW-3.5.md) ·
 [Report a problem](../../issues/new/choose)
 
-## Contents
-- [Who it's for](#who-its-for)
-- [What it does](#what-it-does)
-- [Finding your way around](#finding-your-way-around)
-- [Install](#install)
-- [Quick start](#quick-start)
-- [User guide](#user-guide)
-- [Getting help](#getting-help)
-- [Building from source](#building-from-source)
-- [Documentation](#documentation)
-- [Contributing, security and license](#contributing-security-and-license)
-
-## Who it's for
-Floodplain administrators, building officials, inspectors and consultants who make substantial damage determinations
-and work on Macs. It is built for any community, county or state: nothing in it is specific to one place, agency or
-software vendor. If another office (or your state) uses FEMA's SDE on Windows, you can send files back and forth in
-both directions.
-
 ## What it does
-- **Assessments in eight short steps**, with the result updating as you type, FEMA's validation rules shown next to
-  each field, and help for every field that names the page of FEMA's manual it comes from.
-- **FEMA's files**: imports SDE export folders, SDE 2.x folders and FEMA `.mdb` databases; exports SDE_n folders that
-  FEMA's SDE imports; prints FEMA's reports as PDFs.
-- **Many structures at once**: sort, filter and save views; set one field on many structures; search and replace;
-  copy from a similar building; write a submission folder with every report, the FEMA package and a results
-  spreadsheet.
-- **Data from the field**: import inspections or parcels from any permit system, assessor roll or spreadsheet (`.csv`,
-  `.xlsx`, `.xls`, or a shapefile's `.dbf`); match a folder of photos to structures; look up coordinates and flood data
-  online; let inspectors fill in assessments from a phone over the office Wi-Fi.
-- **Events**: keep each disaster separate and look at one at a time; Structures, the map, the summary, exports and
-  letters follow the event chosen in the sidebar.
-- **A map you can work in**: layers from Shapefiles, GeoJSON, GeoPackages, CSV and ArcGIS services; styling, an
-  attribute table, selecting, measuring, editing your own layers, copying values onto structures, printing, and FEMA's
-  flood zones as an overlay.
-- **Field work**: teams with routes, worksheets and a phone list; work packages to take assessments to a Mac with no
-  connection and back; maps kept for offline use; flood depth from high-water marks; elevation certificates read from
-  FEMA's form; photo markup.
-- **Office work**: a review queue with quality checks and comments, a compliance and ICC tracker with letters, and web
-  maps to share with partners or the public.
-- **Results**: an event summary with a PDF version, GeoPackage and GeoJSON files for GIS, owner letters from Word
-  templates, substantial improvement determinations, appeals with contractor bids, and optional cumulative damage.
-- **AI assistants**: Claude and other assistants can read and check a database and make reports; they change it only
-  when you allow it, and every change can be reverted.
-- **Safety nets**: review statuses that lock finished assessments, edit history, undo, Recently Deleted, and automatic
-  daily backups.
+- **Assessments in eight short steps.** The result updates as you type, with FEMA's validation rules and help beside
+  each field.
+- **FEMA's files.** It imports SDE export folders and `.mdb` databases, exports folders that FEMA's SDE imports, and
+  prints FEMA's reports as PDFs.
+- **Your own data.** Import inspections or parcels from a permit system, assessor roll or spreadsheet, match photos to
+  structures, and let inspectors fill in assessments from a phone.
+- **A map and events.** Work on a map with your own layers and FEMA's flood zones, and keep each disaster separate.
+- **Field and office work.** Field teams and work packages, a review queue, a compliance tracker and owner letters.
+- **Safety nets.** Finished assessments lock, every edit is kept in the history, and backups run daily. AI assistants
+  can read a database, and change it only when you allow it.
 
-## Finding your way around
-SDE 3.5 sits in a navy frame: the sidebar and the toolbar around a bright working area. [What's new in
-3.5](docs/WHATS-NEW-3.5.md) lists what is new and where everything from 3.0 moved.
-
-- **The sidebar** lists your structures: **All Structures**, then smart groups (Substantially Damaged, Near
-  Threshold, Not Substantial, Incomplete) with counts, then your **pinned** structures, **saved views**, **tags** and
-  **events**, the **Review**, **Compliance**, **Agenda** and **Assignments** pages, **Import & Export** and **Recently
-  Deleted**, with **Settings** at the foot. Drag its edge to make it wider.
-- **The toolbar** switches Structures between **List**, **Map** and **Summary** (⌘1, ⌘2, ⌘3), holds the open page's
-  actions, makes new structures with the **New** pull-down, and searches the list.
-- **The inspector** at the right of a page shows the selected row, led by its percent damaged on a staff gauge
-  (⌥⌘I hides it). While an assessment is open, the sidebar lists its eight sections. Each structure also has a
-  **Case File** with everything that happened to it.
-- **The menus** hold everything else: databases and imports in **File**, the pages in **View** (⌘1 to ⌘8), events
-  and the event summary in **Event**, and **Settings** in the SDE menu (⌘,).
-- **Settings › Appearance** chooses light, dark or matching your Mac, SDE's blue or your Mac's accent colour, and
-  Comfortable or Compact sizes.
+The [user guide](docs/USER-GUIDE.md) covers all of it, including substantial improvement, appeals and cumulative
+damage.
 
 ## Install
+You need a Mac with **macOS 12 Monterey or later** (Apple silicon or Intel) and about 200 MB of disk space.
 
-### What you need
-- A Mac with **macOS 12 Monterey or later**, either Apple silicon (M1 or newer) or Intel.
-- About 200 MB of disk space for the app, plus room for your photos.
-- An internet connection for online maps and layers, optional online look-ups and USGS high-water marks. See
-  [SECURITY.md](SECURITY.md#what-sde-sends-over-the-internet) for what these services receive.
-- SDE never checks for updates by itself. Only when you choose **Help > Check for Updates** does it ask GitHub for the
-  latest release, sending the app's name and version and nothing about your data. It downloads and installs nothing.
+1. **Download.** Open the [latest release](../../releases/latest) and, under **Assets**, download
+   `SDE-<version>-osx-arm64.zip` for Apple silicon (M1 or newer) or `SDE-<version>-osx-x64.zip` for Intel.
+   **Apple menu > About This Mac** shows which you have.
+2. **Install.** Double-click the zip, then drag **SDE** into your **Applications** folder.
+3. **Open it.** Double-click **SDE** in Applications. If macOS says it can't check SDE for malicious software, click
+   **Done**, open **System Settings > Privacy & Security**, scroll to **Security**, click **Open Anyway** and confirm
+   with your password or Touch ID. This happens once.
+4. **Take the short walkthrough** that appears the first time. It ends with an offer to open the sample database.
 
-### Step by step
-1. **Check which kind of Mac you have.** Open the Apple menu (top-left corner) and choose **About This Mac**. If it says **Chip: Apple M1** (or
-   M2, M3 and so on) you have Apple silicon. If it says **Processor** with **Intel** in it, you have an Intel Mac.
-2. **Download the app.** Open the [latest release](../../releases/latest). Under **Assets**, download one zip:
-   - `SDE-<version>-osx-arm64.zip` for **Apple silicon**, or
-   - `SDE-<version>-osx-x64.zip` for **Intel**.
-3. **Unzip it.** Double-click the zip in your Downloads folder. An app called **SDE**, with a flooded-house icon,
-   appears next to it.
-4. **Move it to Applications.** Drag **SDE** into the **Applications** folder in the Finder sidebar.
-5. **Open it.** Double-click **SDE** in Applications (or press ⌘ Space, type `SDE`, press Return).
-6. **If macOS blocks it.** Unless a release says it is signed with a Developer ID, macOS shows a message that it can't
-   check SDE for malicious software. This happens once:
-   1. Click **Done** (not *Move to Trash*).
-   2. Open **System Settings** > **Privacy & Security**.
-   3. Scroll down to **Security**. Next to the message about SDE, click **Open Anyway**.
-   4. Enter your password or use Touch ID, then click **Open**.
-7. **Take the short walkthrough** that appears the first time. It ends with an offer to open the sample database,
-   which is the best place to try things.
+An internet connection is needed only for online maps, layers and look-ups. SDE checks for updates only when you choose
+**Help > Check for Updates**, and installs nothing by itself.
+[SECURITY.md](SECURITY.md#what-sde-sends-over-the-internet) lists what each online service receives.
 
-**Optional: check the download.** Each release lists SHA-256 checksums in `SHA256SUMS`. In Terminal, run
-`shasum -a 256 ~/Downloads/SDE-*.zip` and compare the result with the line for your file.
+<details>
+<summary>Updating, uninstalling and checking the download</summary>
 
-### Updating
-Quit SDE, download the new release, and replace the old app in Applications with the new one. Your databases, photos,
-settings and import profiles are kept, because they live outside the app. A new version opens databases from earlier
-versions, and the previous version can still open a database after a newer one has used it.
+- **Updating.** Quit SDE and replace the app in Applications with the new release. Your databases, photos, settings
+  and import profiles live outside the app and are kept. A new version opens databases from earlier versions, and the
+  previous version can still open a database after a newer one has used it.
+- **Uninstalling.** Drag SDE to the Trash. Your data stays where it is: the default database, its photos and its
+  backups are in `~/Library/Application Support/SDE/`, and the log files are in `~/Library/Logs/SDE/`. Delete those
+  folders only if you are sure you no longer need the assessments in them.
+- **Checking the download.** Each release lists SHA-256 checksums in `SHA256SUMS`. In Terminal, run
+  `shasum -a 256 ~/Downloads/SDE-*.zip` and compare the result with the line for your file.
 
-### Uninstalling
-Drag SDE from Applications to the Trash. Your data stays where it is: the default database, its photos and its
-backups are in `~/Library/Application Support/SDE/`, and the log files are in `~/Library/Logs/SDE/`. Delete those
-folders too only if you are sure you no longer need the assessments in them.
+</details>
 
 ## Quick start
-A first session takes about 15 minutes. The video shows installing SDE and the seven steps below in under two
-minutes.
+A first session takes about 15 minutes. The video shows installing SDE and these seven steps in under two minutes.
 
-[![Watch the quick start video (1 minute 41 seconds)](docs/video/poster.png)](docs/video/sde-for-mac-quick-start.mp4)
+https://github.com/user-attachments/assets/2a0e1517-e7ba-459c-b6ca-86bd8b1a0feb
 
-1. **Practise first.** Choose **Help > Open Sample Database**. It holds made-up buildings, shows a banner so you always
-   know you are in it, and never touches your own data. Open a few structures and look around.
-2. **Make a database for your event.** Choose **File > New Database…** and save it in a folder named for the event
-   (for example `2026-09 River flood`). You can keep separate databases or use events within one database.
-3. **Set it up once.** Choose **SDE > Settings…** (⌘,). Type **Your name** (it goes into edit history), then fill in
-   **Defaults** with what is the same for every building in this event: the community, FIRM panel information, cost data
-   and so on. Turn on **Fill new structures with my default values**.
-4. **Assess a building.** In **Structures** (⌘1), click **New** (+) in the toolbar and choose **Residential
-   Structure** (⌘N) or **Non-Residential Structure** (⇧⌘N). Work through the eight steps on the left. The percent
-   damaged appears on the right as soon as there is enough to calculate, and **To Check** lists anything still
-   missing. Your work saves itself.
-5. **Bring in what you already have.** If the data is in FEMA's SDE, choose **File > Import SDE Data…** (⌘I). If it
-   is in a permit system, a spreadsheet or an assessor roll, choose **File > Import Inspections or Parcels…** (⇧⌘I).
-6. **Review and finish.** When an assessment has been checked, set its status (the pop-up in the toolbar) to
-   **Final**. That locks it against accidental changes.
-7. **Send the results.** In Structures, click **Export** above the list and choose **Submission Folder…**. You get a
-   PDF report for each building, the list reports, the FEMA package (`SDE_1`) for FEMA or your state, and a
-   spreadsheet of results.
-
-## User guide
-The **[user guide](docs/USER-GUIDE.md)** explains every task step by step:
-
-1. [How SDE is organised](docs/USER-GUIDE.md#1-how-sde-is-organised)
-2. [Setting up for an event](docs/USER-GUIDE.md#2-setting-up-for-an-event)
-3. [Adding structures](docs/USER-GUIDE.md#3-adding-structures)
-4. [Assessing a structure, step by step](docs/USER-GUIDE.md#4-assessing-a-structure-step-by-step)
-5. [Photos](docs/USER-GUIDE.md#5-photos)
-6. [Reviewing, locking and undoing](docs/USER-GUIDE.md#6-reviewing-locking-and-undoing)
-7. [Working with many structures](docs/USER-GUIDE.md#7-working-with-many-structures)
-8. [Looking up locations and flood data online](docs/USER-GUIDE.md#8-looking-up-locations-and-flood-data-online)
-9. [The map and the summary](docs/USER-GUIDE.md#9-the-map-and-the-summary)
-10. [Reports and sending results to FEMA or your state](docs/USER-GUIDE.md#10-reports-and-sending-results-to-fema-or-your-state)
-11. [Owner letters](docs/USER-GUIDE.md#11-owner-letters)
-12. [Substantial improvement](docs/USER-GUIDE.md#12-substantial-improvement)
-13. [Appeals and contractor bids](docs/USER-GUIDE.md#13-appeals-and-contractor-bids)
-14. [Cumulative damage](docs/USER-GUIDE.md#14-cumulative-damage)
-15. [The phone form](docs/USER-GUIDE.md#15-the-phone-form)
-16. [AI assistants](docs/USER-GUIDE.md#16-ai-assistants)
-17. [Backups, moving and sharing](docs/USER-GUIDE.md#17-backups-moving-and-sharing)
-18. [Troubleshooting](docs/USER-GUIDE.md#18-troubleshooting)
-19. [Keyboard shortcuts](docs/USER-GUIDE.md#19-keyboard-shortcuts)
+1. **Practice first.** Choose **Help > Open Sample Database**. It holds made-up buildings and never touches your own
+   data.
+2. **Make a database for your event.** Choose **File > New Database…** and save it in a folder named for the event,
+   such as `2026-09 River flood`.
+3. **Set it up once.** In **SDE > Settings…** (⌘,), type **Your name**, fill in **Defaults** with what every building
+   in the event shares, and turn on **Fill new structures with my default values**.
+4. **Assess a building.** Click **New** in the toolbar and choose **Residential Structure** (⌘N) or **Non-Residential
+   Structure** (⇧⌘N), then work through the eight steps on the left. The percent damaged appears as soon as there is
+   enough to calculate. Your work saves itself.
+5. **Bring in what you already have.** **File > Import SDE Data…** (⌘I) reads data from FEMA's SDE. **File > Import
+   Inspections or Parcels…** (⇧⌘I) reads a permit system, a spreadsheet or an assessor roll.
+6. **Review and finish.** When an assessment has been checked, set its status to **Final**. That locks it.
+7. **Send the results.** In Structures, click **Export** and choose **Submission Folder…**. You get a PDF report for
+   each building, the list reports, the FEMA package (`SDE_1`) and a spreadsheet of results.
 
 ## Getting help
-- **In the app**: the **?** next to a field explains what to enter and gives the relevant page of FEMA's SDE User
-  Manual. Search **Help > SDE Help** for field help, or open the manual from **Help > FEMA SDE User Manual**.
-- **Questions about substantial damage rules** (what counts, your ordinance, appeals): your state's NFIP coordinator
-  or your FEMA regional office. FEMA's *Substantial Improvement/Substantial Damage Desk Reference* (FEMA P-758) is the
-  main reference.
-- **Something wrong with the app**: [open an issue](../../issues/new/choose) and pick the form that fits. If a result
-  differs from FEMA's SDE on Windows, use the *Result differs from FEMA's SDE* form. **Never attach real owner names,
-  addresses, photos or databases**: describe the building's values instead.
-- **A security problem**: please don't open a public issue. See [SECURITY.md](SECURITY.md).
+- **In the app:** the **?** beside a field explains it and names the page of FEMA's SDE User Manual. **Help > SDE
+  Help** searches the field help.
+- **Substantial damage rules** (what counts, your ordinance, appeals): ask your state's NFIP coordinator or your FEMA
+  regional office. FEMA's *Substantial Improvement/Substantial Damage Desk Reference* (FEMA P-758) is the main
+  reference.
+- **A problem with the app:** [open an issue](../../issues/new/choose) and pick the form that fits. Never attach real
+  owner names, addresses, photos or databases. Describe the building's values instead.
+- **A security problem:** don't open a public issue. See [SECURITY.md](SECURITY.md).
+
+## Documentation
+**For users**
+- [User guide](docs/USER-GUIDE.md): every task, step by step.
+- [Importing inspections or parcels](docs/IMPORTING.md)
+- [Owner letters](docs/LETTERS.md)
+- [Phone form](docs/PHONE-FORM.md)
+- [AI assistants (MCP)](docs/MCP.md)
+- What's new in [3.5](docs/WHATS-NEW-3.5.md), [3.0](docs/WHATS-NEW-3.0.md), [2.5](docs/WHATS-NEW-2.5.md) and
+  [2.0](docs/WHATS-NEW-2.0.md)
+
+**For developers and reviewers**
+- [How FEMA's SDE works](docs/SDE-ARCHITECTURE.md)
+- [Porting notes](docs/PORTING-NOTES.md): every difference from the original.
+- [Test report](docs/TEST-REPORT.md): what the tests establish, and what they don't.
+- [Online services](docs/ONLINE-SERVICES.md)
+- [Windows cross-check kit](docs/windows-crosscheck/README.md): compare results with FEMA's SDE on Windows.
+- [Releasing](docs/RELEASING.md): building, signing and publishing the app.
+- [Design language](docs/design/DESIGN-LANGUAGE.md)
 
 ## Building from source
 You need the .NET 10 SDK (`brew install dotnet`, or from Microsoft).
@@ -196,61 +126,10 @@ dotnet build Sde.sln
 dotnet test Sde.sln
 ```
 
-To build the app itself (writes `out/<arch>/SDE.app` and a zip in `out/`):
-
-```bash
-bash tools/packaging/package_app.sh osx-arm64          # or osx-x64, or both
-bash tools/packaging/build_mdbtools.sh osx-arm64       # puts the .mdb readers inside the app
-bash tools/packaging/sign_app.sh osx-arm64             # signs the app and rewrites the zip
-```
-
-The report tests use poppler (`brew install poppler`) and the `.mdb` tests use mdbtools (`brew install mdbtools`).
-The tests that compare this port with FEMA's own engine and database need FEMA's SDE 3.0 installer, which is not in
-this repository; without it they are skipped. To run them, get the installer (`SDE3_04062018.zip`) from FEMA and run:
-
-```bash
-tools/answer-key/setup.sh path/to/SDE3_04062018.zip   # needs msitools and mdbtools
-```
-
-It checks the installer against a pinned SHA-256, unpacks it into `extracted/`, decompiles FEMA's assemblies into
-`decomp/` with a pinned ILSpy for reference, and creates `reference/OriginalCalc`, which compiles FEMA's engine
-unedited as the tests' answer key. Those folders are ignored by git and must never be committed.
-
-| Path | Contents |
-|---|---|
-| `src/Sde.Calculation` | FEMA's damage engine, ported with as few changes as possible |
-| `src/Sde.Core`, `src/Sde.Data` | FEMA's records, validation and file formats; SQLite storage, history, backups |
-| `src/Sde.App` | The Avalonia app |
-| `src/Sde.Reports` | PDF reports, the submission folder, letters, event summary, SI determination |
-| `src/Sde.Interop` | Excel, KMZ, GIS, imports, online look-ups, photo metadata |
-| `src/Sde.Field` | The phone form's local web server |
-| `src/Sde.Mcp` | The server for AI assistants (`SDE mcp`, see [MCP.md](docs/MCP.md)) |
-| `src/Sde.Cli` | The `sde` command-line tool |
-| `tests/` | Tests and synthetic fixtures |
-| `tools/` | The answer-key setup, packaging, the app icon's sources, fixture generators |
-| `docs/` | User guides, how it works, what changed from FEMA's version, test report, screenshots |
-
-## Documentation
-**For users**
-- [User guide](docs/USER-GUIDE.md): every task, step by step.
-- [Importing inspections or parcels](docs/IMPORTING.md): profiles, matching, updates and the submission folder in detail.
-- [Owner letters](docs/LETTERS.md): templates and every placeholder.
-- [Phone form](docs/PHONE-FORM.md): setup, pairing, and what it does and doesn't protect against.
-- What's new in [3.5](docs/WHATS-NEW-3.5.md), [3.0](docs/WHATS-NEW-3.0.md), [2.5](docs/WHATS-NEW-2.5.md) and [2.0](docs/WHATS-NEW-2.0.md).
-- [AI assistants (MCP)](docs/MCP.md): connecting Claude Desktop or Claude Code, and every tool.
-
-**For developers and reviewers**
-- [How FEMA's SDE works](docs/SDE-ARCHITECTURE.md).
-- [Porting notes](docs/PORTING-NOTES.md): every difference from the original, including original bugs fixed.
-- [Test report](docs/TEST-REPORT.md): what the tests establish, and what they don't.
-- [Online services](docs/ONLINE-SERVICES.md): the Census and FEMA services used, and what to verify live.
-- [Windows cross-check kit](docs/windows-crosscheck/README.md): about an hour to compare results with FEMA's SDE on
-  Windows.
-- [Releasing](docs/RELEASING.md): how releases are built, signed and published.
-- [Design language](docs/design/DESIGN-LANGUAGE.md): the rules behind the 3.5 look, and the tests that enforce them.
+[CONTRIBUTING.md](CONTRIBUTING.md) covers the tools the tests need, the tests that compare this port with FEMA's own
+engine, and where things are in the repository.
 
 ## Contributing, security and license
-Contributions are welcome; read [CONTRIBUTING.md](CONTRIBUTING.md) first, because results must stay identical to
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, because results must stay identical to
 FEMA's. Report security problems privately as described in [SECURITY.md](SECURITY.md). The code is under the
-[MIT license](LICENSE); third-party components and their licenses are listed in
-[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+[MIT license](LICENSE), and third-party components are listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
