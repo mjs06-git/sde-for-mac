@@ -4,6 +4,7 @@ using Sde.Cli;
 namespace Sde.Tests.Data;
 
 /// <summary>The sde command line: only "init" makes a new database.</summary>
+[Collection("CommandLine")]
 public class CommandLineTests
 {
 	/// <summary>Runs sde with <paramref name="args"/> and returns its exit code with what it printed.</summary>

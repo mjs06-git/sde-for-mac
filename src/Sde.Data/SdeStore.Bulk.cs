@@ -82,10 +82,16 @@ public sealed partial class SdeStore
 	/// <summary>
 	/// Puts back what one bulk edit, copy, replace or AI assistant call changed, as a new batch ("Revert"). A value
 	/// someone has changed again since is left as it is and counted in <see cref="BulkResult.ChangedSince"/>. Changes
-	/// made to structures on their own (a replace in a structure field) are put back on the structures.
+	/// made to structures on their own (a replace in a structure field) are put back on the structures. A merge of two
+	/// structures is undone as a whole instead (see <see cref="UndoMerge"/>).
 	/// </summary>
 	public BulkResult RevertBatch(string batchId, SaveContext context = null)
 	{
+		if (IsMergeBatch(batchId))
+		{
+			MergeUndoResult undone = UndoMerge(batchId, context);
+			return new BulkResult { BatchId = undone.BatchId, Changed = undone.AssessmentsMovedBack + 1 };
+		}
 		List<EditHistoryRecord> rows = GetBatch(batchId).Where(r => r.Field != null && FieldCatalog.Get(r.Field) != null).ToList();
 		Dictionary<Guid, AssessmentFile> files = new Dictionary<Guid, AssessmentFile>();
 		Dictionary<Guid, PropertyRecord> properties = new Dictionary<Guid, PropertyRecord>();

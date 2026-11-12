@@ -1,5 +1,7 @@
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
+using Avalonia.Threading;
 using Avalonia.Layout;
 using Sde.App.Controls;
 using Avalonia.Interactivity;
@@ -32,6 +34,7 @@ public partial class StructuresView : UserControl
 			_subscribed.FocusSearchRequested -= FocusSearch;
 			_subscribed.ColumnsChanged -= ApplyColumns;
 			_subscribed.PropertyChanged -= OnVmPropertyChanged;
+			_subscribed.FilterEditRequested -= OpenChipEditor;
 		}
 		_subscribed = DataContext as StructuresViewModel;
 		if (_subscribed != null)
@@ -39,6 +42,7 @@ public partial class StructuresView : UserControl
 			_subscribed.FocusSearchRequested += FocusSearch;
 			_subscribed.ColumnsChanged += ApplyColumns;
 			_subscribed.PropertyChanged += OnVmPropertyChanged;
+			_subscribed.FilterEditRequested += OpenChipEditor;
 			ApplyColumns();
 		}
 	}
@@ -123,6 +127,69 @@ public partial class StructuresView : UserControl
 		{
 			Vm.OpenCommand.Execute(Vm.Selected);
 		}
+	}
+
+	/// <summary>Add Filter, then a field: the menu closes (the new chip's editor opens instead).</summary>
+	private void OnAddFilterClick(object sender, RoutedEventArgs e) => AddFilterButton.Flyout?.Hide();
+
+	/// <summary>Opens the editor under a filter's chip (after Add Filter made it).</summary>
+	private void OpenChipEditor(string key)
+	{
+		Dispatcher.UIThread.Post(() =>
+		{
+			Button label = FilterChipList.GetVisualDescendants().OfType<Button>()
+				.FirstOrDefault(b => b.Classes.Contains("filterChipLabel") && (b.DataContext as FilterChipViewModel)?.Key == key);
+			label?.Flyout?.ShowAt(label);
+		}, DispatcherPriority.Background);
+	}
+
+	private static string ChipKey(object sender) => ((sender as FlyoutBase)?.Target?.DataContext as FilterChipViewModel)?.Key;
+
+	/// <summary>A chip's editor opened: the chip stays while it is edited.</summary>
+	private void OnChipEditorOpened(object sender, EventArgs e)
+	{
+		if (ChipKey(sender) is string key)
+		{
+			Vm?.BeginEditFilter(key);
+		}
+	}
+
+	/// <summary>A chip's editor closed: a chip left with no value goes.</summary>
+	private void OnChipEditorClosed(object sender, EventArgs e)
+	{
+		if (ChipKey(sender) is string key)
+		{
+			Vm?.DropPendingFilter(key);
+		}
+	}
+
+	/// <summary>Add Tag opened: the cursor goes in its name box, ready to type.</summary>
+	private void OnAddTagOpened(object sender, EventArgs e)
+	{
+		Dispatcher.UIThread.Post(() =>
+		{
+			TextBox box = ((sender as Flyout)?.Content as Control)?.GetVisualDescendants().OfType<TextBox>().FirstOrDefault()
+				?? (sender as Flyout)?.Content as TextBox;
+			box?.Focus();
+		}, DispatcherPriority.Background);
+	}
+
+	/// <summary>Return in Add Tag's box: the one tag that matches, or a new tag with that name.</summary>
+	private void OnTagQueryKeyDown(object sender, KeyEventArgs e)
+	{
+		if (e.Key != Key.Enter || Vm == null)
+		{
+			return;
+		}
+		if (Vm.CanCreateTag)
+		{
+			Vm.CreateTagForSelectedCommand.Execute(null);
+		}
+		else if (Vm.TagSuggestions.Count > 0)
+		{
+			Vm.AddTagToSelectedCommand.Execute(Vm.TagSuggestions[0]);
+		}
+		e.Handled = true;
 	}
 
 	private void OnListKeyDown(object sender, KeyEventArgs e)

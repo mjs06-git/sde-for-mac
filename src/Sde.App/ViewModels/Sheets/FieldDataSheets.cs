@@ -130,7 +130,7 @@ public sealed partial class AutoFillSheetViewModel : SheetViewModel
 		StatusText = "Asking the online services…";
 		try
 		{
-			OnlineLookup lookup = new OnlineLookup(_app.HttpClientFactory(), _app.Store.Reference);
+			OnlineLookup lookup = _app.CreateOnlineLookup();
 			OnlineLookupResult result = await lookup.LookupAsync(_property, ct);
 			if (ct.IsCancellationRequested)
 			{

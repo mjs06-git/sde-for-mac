@@ -7,6 +7,7 @@ namespace Sde.Reports.Tests;
 /// Writes one sample PDF of each report to docs/sample-reports/ for people to look at.
 /// Only runs when SDE_WRITE_SAMPLE_REPORTS=1 (so a normal test run does not touch the repo):
 /// <c>SDE_WRITE_SAMPLE_REPORTS=1 dotnet test tests/Sde.Reports.Tests --filter SampleReports</c>
+/// Add <c>SDE_SAMPLE_REPORTS_DIR=/some/folder</c> to write them there instead.
 /// </summary>
 public sealed class SampleReports
 {
@@ -19,7 +20,10 @@ public sealed class SampleReports
 		}
 		using TempDatabase db = new TempDatabase();
 		List<AssessmentFile> files = Dataset(db);
-		string dir = Path.Combine(TestPaths.Root, "docs", "sample-reports");
+		// SDE_SAMPLE_REPORTS_DIR writes them somewhere else, to look at a change without touching the repo.
+		string dir = Environment.GetEnvironmentVariable("SDE_SAMPLE_REPORTS_DIR") is string other && other.Length > 0
+			? other
+			: Path.Combine(TestPaths.Root, "docs", "sample-reports");
 		Directory.CreateDirectory(dir);
 		foreach ((ReportKind kind, string name) in new[]
 		{

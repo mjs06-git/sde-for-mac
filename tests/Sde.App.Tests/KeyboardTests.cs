@@ -67,9 +67,10 @@ public class KeyboardTests
 	public void CmdNumbers_FollowTheSidebarOrder()
 	{
 		using UiSession ui = new UiSession();
-		Assert.Equal(new[] { "Structures", "Map", "Summary", "Review", "Compliance", "Assignments", "Recently Deleted", "Import & Export", "Settings" },
+		Assert.Equal(new[] { "Structures", "Map", "Summary", "Review", "Compliance", "Agenda", "Assignments", "Recently Deleted", "Import & Export", "Settings" },
 			ui.Main.SidebarItems.Select(i => i.Title));
 		Assert.Null(ui.Main.SidebarItems.Single(i => i.Page == ViewModels.Page.Settings).Shortcut);
+		Assert.Null(ui.Main.SidebarItems.Single(i => i.Page == ViewModels.Page.Agenda).Shortcut);
 		List<NavItemViewModel> sidebar = ui.Main.SidebarItems.Where(i => i.Shortcut != null).ToList();
 		PhysicalKey[] digits = { PhysicalKey.Digit1, PhysicalKey.Digit2, PhysicalKey.Digit3, PhysicalKey.Digit4, PhysicalKey.Digit5, PhysicalKey.Digit6, PhysicalKey.Digit7, PhysicalKey.Digit8 };
 		for (int i = digits.Length - 1; i >= 0; i--)

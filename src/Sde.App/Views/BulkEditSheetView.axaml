@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.BulkEditSheetView"
+             x:DataType="sh:BulkEditSheetViewModel">
+  <StackPanel Spacing="16">
+    <StackPanel Spacing="4">
+      <TextBlock Classes="fieldLabel" Text="Field" />
+      <ComboBox ItemsSource="{Binding Fields}" SelectedItem="{Binding SelectedField}" HorizontalAlignment="Stretch" MaxDropDownHeight="420"
+                PlaceholderText="Choose a field" AutomationProperties.Name="Field to set" />
+    </StackPanel>
+    <ContentControl Content="{Binding Input}" IsVisible="{Binding HasField}" HorizontalAlignment="Left" />
+    <TextBlock Classes="secondary" Text="{Binding Summary}" TextWrapping="Wrap" />
+    <TextBlock Classes="medium" Text="{Binding ResultText}" TextWrapping="Wrap" IsVisible="{Binding ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+    <c:SheetFooter LeadingText="Undo This Change" LeadingCommand="{Binding RevertCommand}"
+                   CancelText="Done" PrimaryText="Apply" PrimaryCommand="{Binding ApplyCommand}" IsPrimaryDefault="False" />
+  </StackPanel>
+</UserControl>

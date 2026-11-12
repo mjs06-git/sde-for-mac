@@ -17,11 +17,11 @@ public sealed class SdeDatabase
 	public const int SchemaVersion = 1;
 
 	/// <summary>
-	/// The version of the Mac-only tables (2 = v2.0, 3 = v2.5). Kept apart from <see cref="SchemaVersion"/>, which an
-	/// older version of this app checks before opening a file: adding Mac-only tables never stops an older version from
-	/// opening it.
+	/// The version of the Mac-only tables (2 = v2.0, 3 = v2.5 and v3.0, 4 = v3.5). Kept apart from
+	/// <see cref="SchemaVersion"/>, which an older version of this app checks before opening a file: adding Mac-only
+	/// tables never stops an older version from opening it.
 	/// </summary>
-	public const int MacSchemaVersion = 3;
+	public const int MacSchemaVersion = 4;
 
 	/// <summary>The per-database setting holding <see cref="DatabaseId"/>.</summary>
 	public const string DatabaseIdKey = "DatabaseId";

@@ -11,7 +11,7 @@
     <NativeMenu>
       <NativeMenuItem Header="About Substantial Damage Estimator" Click="OnAboutClicked" />
       <NativeMenuItemSeparator />
-      <NativeMenuItem Header="Settings…" Gesture="Cmd+OemComma" Click="OnAboutClicked" />
+      <NativeMenuItem Header="Settings…" Gesture="Cmd+OemComma" Click="OnSettingsClicked" />
     </NativeMenu>
   </NativeMenu.Menu>
 
@@ -29,7 +29,7 @@
   <Application.DataTemplates>
     <!-- One editor per kind of field; used by every form in the app. -->
     <DataTemplate DataType="f:TextFieldViewModel">
-      <StackPanel Classes="field" Classes.wide="{Binding IsWide}" IsVisible="{Binding IsVisible}">
+      <StackPanel Classes="field" Classes.wide="{Binding IsWide}" Classes.required="{Binding IsRequiredIssue}" IsVisible="{Binding IsVisible}">
         <DockPanel Classes="fieldHead">
           <Button DockPanel.Dock="Right" Classes="link sm" Content="Insert Snippet" IsVisible="{Binding HasSnippets}" IsEnabled="{Binding IsEnabled}" Padding="0"
                   AutomationProperties.Name="{Binding Label, StringFormat='Insert a snippet into {0}'}">
@@ -48,13 +48,17 @@
         <TextBox Text="{Binding Text}" AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" PlaceholderText="{Binding Placeholder}" MaxLength="{Binding MaxLength}"
                  AcceptsReturn="{Binding IsMultiline}" TextWrapping="Wrap" IsEnabled="{Binding IsEnabled}"
                  Classes.multiline="{Binding IsMultiline}" />
-        <TextBlock Classes="issue" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
-                   Classes.suggested="{Binding IsSuggestedIssue}" Text="{Binding IssueMessage}" IsVisible="{Binding ShowIssueInline}" />
+        <DockPanel Classes="issueLine" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
+                   Classes.suggested="{Binding IsSuggestedIssue}" IsVisible="{Binding ShowIssueInline}">
+          <c:Icon DockPanel.Dock="Left" Kind="WarningCircle" />
+          <TextBlock Classes="issue" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
+                     Classes.suggested="{Binding IsSuggestedIssue}" Text="{Binding IssueMessage}" />
+        </DockPanel>
       </StackPanel>
     </DataTemplate>
 
     <DataTemplate DataType="f:NumberFieldViewModel">
-      <StackPanel Classes="field" Classes.wide="{Binding IsWide}" IsVisible="{Binding IsVisible}">
+      <StackPanel Classes="field" Classes.wide="{Binding IsWide}" Classes.required="{Binding IsRequiredIssue}" IsVisible="{Binding IsVisible}">
         <DockPanel Classes="fieldHead">
           <StackPanel Orientation="Horizontal" Spacing="3">
             <TextBlock Classes="fieldLabel" Text="{Binding Label}" ToolTip.Tip="{Binding Help}" />
@@ -74,13 +78,17 @@
             <TextBlock Classes="adorn" Text="{Binding Suffix}" Margin="0,0,10,0" IsVisible="{Binding Suffix, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           </NumericUpDown.InnerRightContent>
         </NumericUpDown>
-        <TextBlock Classes="issue" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
-                   Classes.suggested="{Binding IsSuggestedIssue}" Text="{Binding IssueMessage}" IsVisible="{Binding ShowIssueInline}" />
+        <DockPanel Classes="issueLine" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
+                   Classes.suggested="{Binding IsSuggestedIssue}" IsVisible="{Binding ShowIssueInline}">
+          <c:Icon DockPanel.Dock="Left" Kind="WarningCircle" />
+          <TextBlock Classes="issue" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
+                     Classes.suggested="{Binding IsSuggestedIssue}" Text="{Binding IssueMessage}" />
+        </DockPanel>
       </StackPanel>
     </DataTemplate>
 
     <DataTemplate DataType="f:DateFieldViewModel">
-      <StackPanel Classes="field" Classes.wide="{Binding IsWide}" IsVisible="{Binding IsVisible}">
+      <StackPanel Classes="field" Classes.wide="{Binding IsWide}" Classes.required="{Binding IsRequiredIssue}" IsVisible="{Binding IsVisible}">
         <DockPanel Classes="fieldHead">
           <StackPanel Orientation="Horizontal" Spacing="3">
             <TextBlock Classes="fieldLabel" Text="{Binding Label}" ToolTip.Tip="{Binding Help}" />
@@ -90,15 +98,19 @@
             </Button>
           </StackPanel>
         </DockPanel>
-        <CalendarDatePicker SelectedDate="{Binding Date}" AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" IsEnabled="{Binding IsEnabled}" HorizontalAlignment="Stretch"
-                            SelectedDateFormat="Custom" CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" />
-        <TextBlock Classes="issue" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
-                   Classes.suggested="{Binding IsSuggestedIssue}" Text="{Binding IssueMessage}" IsVisible="{Binding ShowIssueInline}" />
+        <c:DateField SelectedDate="{Binding Date}" AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" IsEnabled="{Binding IsEnabled}"
+                     HorizontalAlignment="Left" Width="{DynamicResource DateFieldWidth}" />
+        <DockPanel Classes="issueLine" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
+                   Classes.suggested="{Binding IsSuggestedIssue}" IsVisible="{Binding ShowIssueInline}">
+          <c:Icon DockPanel.Dock="Left" Kind="WarningCircle" />
+          <TextBlock Classes="issue" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
+                     Classes.suggested="{Binding IsSuggestedIssue}" Text="{Binding IssueMessage}" />
+        </DockPanel>
       </StackPanel>
     </DataTemplate>
 
     <DataTemplate DataType="f:ChoiceFieldViewModel">
-      <StackPanel Classes="field" Classes.wide="{Binding IsWide}" IsVisible="{Binding IsVisible}">
+      <StackPanel Classes="field" Classes.wide="{Binding IsWide}" Classes.required="{Binding IsRequiredIssue}" IsVisible="{Binding IsVisible}">
         <DockPanel Classes="fieldHead">
           <StackPanel Orientation="Horizontal" Spacing="3">
             <TextBlock Classes="fieldLabel" Text="{Binding Label}" ToolTip.Tip="{Binding Help}" />
@@ -110,13 +122,17 @@
         </DockPanel>
         <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}" MaxWidth="280" HorizontalAlignment="Left" AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Help}" IsEnabled="{Binding IsEnabled}"
                   MaxDropDownHeight="360" />
-        <TextBlock Classes="issue" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
-                   Classes.suggested="{Binding IsSuggestedIssue}" Text="{Binding IssueMessage}" IsVisible="{Binding ShowIssueInline}" />
+        <DockPanel Classes="issueLine" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
+                   Classes.suggested="{Binding IsSuggestedIssue}" IsVisible="{Binding ShowIssueInline}">
+          <c:Icon DockPanel.Dock="Left" Kind="WarningCircle" />
+          <TextBlock Classes="issue" Classes.required="{Binding IsRequiredIssue}" Classes.recommended="{Binding IsRecommendedIssue}"
+                     Classes.suggested="{Binding IsSuggestedIssue}" Text="{Binding IssueMessage}" />
+        </DockPanel>
       </StackPanel>
     </DataTemplate>
 
     <DataTemplate DataType="f:BoolFieldViewModel">
-      <StackPanel Classes="field" Classes.wide="{Binding IsWide}" IsVisible="{Binding IsVisible}">
+      <StackPanel Classes="field" Classes.wide="{Binding IsWide}" Classes.required="{Binding IsRequiredIssue}" IsVisible="{Binding IsVisible}">
         <Panel Classes="fieldHead" />
         <StackPanel Orientation="Horizontal" Spacing="3">
           <CheckBox IsChecked="{Binding Value}" Content="{Binding Label}" IsEnabled="{Binding IsEnabled}" />
@@ -145,5 +161,13 @@
     <StyleInclude Source="avares://SDE/Styles/AppStyles.axaml" />
     <StyleInclude Source="avares://SDE/Styles/Shell.axaml" />
     <StyleInclude Source="avares://SDE/Styles/Editor.axaml" />
+    <StyleInclude Source="avares://SDE/Styles/Accessibility.axaml" />
+    <StyleInclude Source="avares://SDE/Styles/AppLevel.axaml" />
+    <StyleInclude Source="avares://SDE/Styles/DataPages.axaml" />
+    <StyleInclude Source="avares://SDE/Styles/CaseFile.axaml" />
+    <StyleInclude Source="avares://SDE/Styles/Workflow.axaml" />
+    <StyleInclude Source="avares://SDE/Styles/Map.axaml" />
+    <StyleInclude Source="avares://SDE/Styles/StructuresPage.axaml" />
+    <StyleInclude Source="avares://SDE/Styles/Sheets.axaml" />
   </Application.Styles>
 </Application>

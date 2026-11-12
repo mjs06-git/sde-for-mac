@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.QuickLookSheetView"
+             x:DataType="sh:QuickLookSheetViewModel"
+             Focusable="True" Name="QuickLook">
+  <DockPanel>
+    <!-- The actions, then above them the photo's description and where it is in the list. Space and Esc close the
+         viewer, so Return is left alone. -->
+    <c:SheetFooter DockPanel.Dock="Bottom" IsDone="True" IsPrimaryDefault="False"
+                   LeadingText="{Binding MarkUpText}" LeadingCommand="{Binding MarkUpCommand}"
+                   LeadingAutomationName="Mark up this photo" LeadingToolTip="Water line, arrows, boxes and text" />
+    <StackPanel DockPanel.Dock="Bottom" Spacing="2" Margin="0,14,0,0">
+      <TextBlock Classes="viewerCaption" Classes.secondary="{Binding !HasCaption}" Text="{Binding CaptionText}" Name="QuickLookCaption" />
+      <TextBlock Classes="viewerCount" Text="{Binding PositionText}" Name="QuickLookPosition" />
+    </StackPanel>
+
+    <!-- The photo, fitted to the stage, with the chevrons on its sides -->
+    <Border Classes="viewerStage" Name="Stage" MinHeight="300">
+      <Grid>
+        <Image Source="{Binding Image}" Stretch="Uniform" Margin="64,16" IsVisible="{Binding HasImage}" Name="QuickLookImage"
+               AutomationProperties.Name="{Binding AccessibleName}" />
+        <TextBlock Classes="viewerEmpty" Text="Loading…" IsVisible="{Binding IsLoading}" />
+        <TextBlock Classes="viewerEmpty" Text="{Binding FileName, StringFormat='{}{0} can’t be shown'}" IsVisible="{Binding IsUnreadable}" />
+        <Button Classes="viewerChevron" HorizontalAlignment="Left" Command="{Binding PreviousCommand}" Name="QuickLookPrevious"
+                AutomationProperties.Name="Previous photo" ToolTip.Tip="Previous Photo (Left Arrow)">
+          <c:Icon Kind="CaretLeft" Size="18" />
+        </Button>
+        <Button Classes="viewerChevron" HorizontalAlignment="Right" Command="{Binding NextCommand}" Name="QuickLookNext"
+                AutomationProperties.Name="Next photo" ToolTip.Tip="Next Photo (Right Arrow)">
+          <c:Icon Kind="CaretRight" Size="18" />
+        </Button>
+      </Grid>
+    </Border>
+  </DockPanel>
+</UserControl>

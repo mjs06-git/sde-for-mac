@@ -1,32 +1,37 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.BulkAutoFillSheetView"
              x:DataType="sh:BulkAutoFillSheetViewModel">
-  <StackPanel Spacing="12">
-    <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
-    <TextBlock Classes="muted" TextWrapping="Wrap" Text="Values that would replace existing ones aren't ticked." />
-    <ScrollViewer MaxHeight="400">
+  <!-- What the online look-up found for each checked structure: one small table per structure -->
+  <StackPanel Spacing="16">
+    <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" ToolTip.Tip="Values that would replace existing ones aren't ticked." />
+    <ScrollViewer MaxHeight="400" HorizontalScrollBarVisibility="Disabled">
       <ItemsControl ItemsSource="{Binding Structures}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="sh:StructureProposalsViewModel">
-            <Border Classes="subtle" Padding="12,8" Margin="0,0,0,8">
-              <StackPanel Spacing="4">
-                <TextBlock Classes="semibold" Text="{Binding Address}" />
-                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" IsVisible="{Binding HasMessage}"
+            <Border Classes="sheetTable" Margin="0,0,0,12">
+              <StackPanel>
+                <Border Classes="sheetTableHead">
+                  <TextBlock Classes="semibold" Text="{Binding Address}" />
+                </Border>
+                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" IsVisible="{Binding HasMessage}" Margin="14,8"
                            Classes="issue" Classes.required="{Binding IsError}" Classes.recommended="{Binding !IsError}" />
                 <ItemsControl ItemsSource="{Binding Rows}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="sh:ProposalRowViewModel">
-                      <Grid ColumnDefinitions="30,1.3*,1.3*,1.6*" Margin="0,2">
-                        <CheckBox IsChecked="{Binding IsChecked}" IsEnabled="{Binding CanCheck}" AutomationProperties.Name="{Binding CheckLabel}" VerticalAlignment="Top" />
-                        <TextBlock Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,8,0" />
-                        <TextBlock Grid.Column="2" Text="{Binding CurrentText}" Classes="secondary" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,8,0" />
-                        <StackPanel Grid.Column="3" VerticalAlignment="Center">
-                          <TextBlock Text="{Binding ProposedText}" TextWrapping="Wrap" />
-                          <TextBlock Classes="issue recommended" Text="{Binding Note}" IsVisible="{Binding HasNote}" />
-                        </StackPanel>
-                      </Grid>
+                      <Border Classes="sheetTableRow">
+                        <Grid ColumnDefinitions="30,1.3*,1.3*,1.6*">
+                          <CheckBox IsChecked="{Binding IsChecked}" IsEnabled="{Binding CanCheck}" AutomationProperties.Name="{Binding CheckLabel}" VerticalAlignment="Top" />
+                          <TextBlock Grid.Column="1" Classes="medium" Text="{Binding Label}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,8,0" />
+                          <TextBlock Grid.Column="2" Text="{Binding CurrentText}" Classes="secondary" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,8,0" />
+                          <StackPanel Grid.Column="3" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding ProposedText}" TextWrapping="Wrap" />
+                            <TextBlock Classes="issue recommended" Text="{Binding Note}" IsVisible="{Binding HasNote}" />
+                          </StackPanel>
+                        </Grid>
+                      </Border>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -36,11 +41,8 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
     </ScrollViewer>
-    <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding Caution}" />
+    <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{Binding Caution}" />
     <TextBlock Classes="medium" Text="{Binding ResultText}" TextWrapping="Wrap" IsVisible="{Binding ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="Done" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Classes="primary" Content="Apply Ticked Values" Command="{Binding ApplyCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-    </StackPanel>
+    <c:SheetFooter CancelText="Done" PrimaryText="Apply Ticked Values" PrimaryCommand="{Binding ApplyCommand}" IsPrimaryDefault="False" />
   </StackPanel>
 </UserControl>

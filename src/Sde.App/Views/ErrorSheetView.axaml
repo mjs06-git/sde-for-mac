@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:svc="using:Sde.App.Services"
+             xmlns:v="using:Sde.App.Views"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.ErrorSheetView"
+             x:DataType="svc:ErrorSheetViewModel">
+  <StackPanel Spacing="16">
+    <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+    <TextBox Classes="mono" Text="{Binding Details, Mode=OneWay}" IsReadOnly="True" IsVisible="{Binding ShowDetails}" TextWrapping="Wrap" MaxHeight="260"
+             AutomationProperties.Name="Error details" />
+    <c:SheetFooter IsDone="True" DoneText="OK">
+      <Button Classes="link" Content="{Binding ShowDetails, Converter={x:Static v:SheetConverters.DetailsToggle}}" Command="{Binding ToggleDetailsCommand}"
+              AutomationProperties.Name="Show details" />
+    </c:SheetFooter>
+  </StackPanel>
+</UserControl>

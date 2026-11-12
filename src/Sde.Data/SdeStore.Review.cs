@@ -53,8 +53,11 @@ public sealed partial class SdeStore
 	public const int MaxCommentLength = 4000;
 
 	/// <summary>An assessment's comments and replies, oldest first.</summary>
-	public List<ReviewCommentRecord> GetReviewComments(Guid assessmentId) =>
-		Database.Read(c => TableMap<ReviewCommentRecord>.Select(c, "AssessmentID = @assessmentId", new { assessmentId }, orderBy: "CreatedOn, rowid").ToList());
+	public List<ReviewCommentRecord> GetReviewComments(Guid assessmentId) => Database.Read(c => GetReviewComments(c, new[] { assessmentId }));
+
+	/// <summary>The comments of several assessments, oldest first, over a connection the caller holds.</summary>
+	internal static List<ReviewCommentRecord> GetReviewComments(System.Data.IDbConnection c, IReadOnlyCollection<Guid> assessmentIds) =>
+		TableMap<ReviewCommentRecord>.Select(c, "AssessmentID IN @assessmentIds", new { assessmentIds = IdText(assessmentIds) }, orderBy: "CreatedOn, rowid").ToList();
 
 	/// <summary>
 	/// Adds a comment (or, with <paramref name="parentId"/>, a reply) to an assessment. Comments can be added to Final

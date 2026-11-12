@@ -779,3 +779,74 @@ CREATE TABLE IF NOT EXISTS MapBookmark (
 	SortOrder  INTEGER NOT NULL DEFAULT 0,
 	CreatedOn  TEXT
 );
+
+-- ───────────────────────── Mac-only, added in v3.5 (MacSchemaVersion 4) ─────────────────────────
+-- Same rules as before: new tables only (no existing table is ever changed, so v3.0 can still open the file), foreign
+-- keys to FEMA's rows use ON DELETE CASCADE, and none of it is ever exported.
+
+-- Tags: a person's own labels for structures ("Revisit", "Owner called"), for filtering the Structures list and
+-- counting in the sidebar. Colour is one of a few names (SdeStore TagColours). A structure keeps its tags while it is
+-- in Recently deleted; they go with it when it is removed for good.
+CREATE TABLE IF NOT EXISTS Tag (
+	TagID     INTEGER PRIMARY KEY AUTOINCREMENT,
+	Name      TEXT NOT NULL UNIQUE COLLATE NOCASE,
+	Colour    TEXT NOT NULL,
+	SortOrder INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS PropertyTag (
+	PropertyID TEXT NOT NULL REFERENCES Property(PropertyID) ON DELETE CASCADE,
+	TagID      INTEGER NOT NULL REFERENCES Tag(TagID) ON DELETE CASCADE,
+	PRIMARY KEY (PropertyID, TagID)
+);
+CREATE INDEX IF NOT EXISTS IX_PropertyTag_Tag ON PropertyTag(TagID);
+
+-- The last flood map lookup (FEMA's NFHL) made for a structure, whether or not its values were applied, so the Review
+-- checks can compare the entered zone with the map without going online. One row per structure, replaced by the next
+-- lookup. Latitude and Longitude are where it was looked up: a structure moved since then has a stale lookup.
+CREATE TABLE IF NOT EXISTS FloodLookup (
+	PropertyID         TEXT PRIMARY KEY NOT NULL REFERENCES Property(PropertyID) ON DELETE CASCADE,
+	Zone               TEXT,               -- FLD_ZONE, e.g. AE
+	ZoneSubtype        TEXT,               -- ZONE_SUBTY, e.g. FLOODWAY
+	InFloodway         INTEGER NOT NULL DEFAULT 0,
+	Bfe                REAL,               -- base flood elevation in feet, or NULL
+	BfeDatum           TEXT,               -- e.g. NAVD88
+	FirmPanel          TEXT,
+	PanelSuffix        TEXT,
+	PanelEffectiveDate TEXT,
+	CommunityId        TEXT,
+	CommunityName      TEXT,
+	Source             TEXT NOT NULL,      -- e.g. FEMA NFHL
+	Latitude           REAL,
+	Longitude          REAL,
+	RetrievedOn        TEXT NOT NULL,      -- UTC
+	RetrievedBy        TEXT
+);
+
+-- High-water marks kept with an event (loaded in the depth tool from a file or USGS), so the Review checks and the map
+-- can use them later without the file or the internet. One set per event; EventID NULL is the set for every event that
+-- has none of its own. Loading new marks for an event replaces its set.
+CREATE TABLE IF NOT EXISTS HighWaterMarkSet (
+	SetID     TEXT PRIMARY KEY NOT NULL,
+	EventID   TEXT REFERENCES Event(EventID) ON DELETE CASCADE,
+	Source    TEXT NOT NULL,               -- "File: marks.csv" or "USGS STN event 123 (name)"
+	DatumName TEXT,                        -- the datum given for marks that don't name one, or NULL
+	MarkCount INTEGER NOT NULL DEFAULT 0,
+	LoadedOn  TEXT,
+	LoadedBy  TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS UX_HighWaterMarkSet_Event ON HighWaterMarkSet(COALESCE(EventID, ''));
+
+CREATE TABLE IF NOT EXISTS HighWaterMarkRow (
+	SetID       TEXT NOT NULL REFERENCES HighWaterMarkSet(SetID) ON DELETE CASCADE,
+	Seq         INTEGER NOT NULL,          -- the mark's place in the set
+	MarkId      TEXT,                      -- the source's ID (USGS's HWM ID, or the file's row)
+	Label       TEXT,
+	Latitude    REAL NOT NULL,
+	Longitude   REAL NOT NULL,
+	ElevationFt REAL NOT NULL,
+	DatumName   TEXT,
+	Quality     INTEGER,                   -- USGS's rating, 1 (best) to 6 (unknown)
+	Kind        TEXT,                      -- Debris, Seed line, Mud
+	PRIMARY KEY (SetID, Seq)
+);

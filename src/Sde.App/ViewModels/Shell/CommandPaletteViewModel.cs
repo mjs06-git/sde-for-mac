@@ -21,7 +21,7 @@ public sealed class PaletteItem
 		Keywords = keywords;
 	}
 
-	/// <summary>"Structures", "Pages" or "Commands": shown as a heading above the first item of each group.</summary>
+	/// <summary>"Recent", "Structures", "Pages" or "Commands": shown as a heading above the first item of each group.</summary>
 	public string Group { get; }
 
 	public string Title { get; }
@@ -69,6 +69,7 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 	private readonly AppServices _app;
 	private readonly MainViewModel _main;
 	private List<PaletteItem> _structures = new();
+	private List<PaletteItem> _recent = new();
 
 	public CommandPaletteViewModel(AppServices app, MainViewModel main)
 	{
@@ -99,7 +100,7 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 	[RelayCommand]
 	public void Open()
 	{
-		_structures = LoadStructures();
+		LoadStructures();
 		Query = "";
 		Refresh();
 		IsOpen = true;
@@ -134,7 +135,10 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 		Selected = Results[next];
 	}
 
-	/// <summary>Lists what matches the search: up to <see cref="MaxStructures"/> structures, then pages, then commands.</summary>
+	/// <summary>
+	/// Lists what matches the search: up to <see cref="MaxStructures"/> structures, then pages, then commands. With nothing
+	/// typed, the structures opened recently come first (Recent).
+	/// </summary>
 	private void Refresh()
 	{
 		List<string> words = (Query ?? "").ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
@@ -143,11 +147,16 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 		{
 			list.AddRange(_structures.Where(s => s.Matches(words)).Take(MaxStructures));
 		}
+		else
+		{
+			list.AddRange(_recent);
+		}
 		list.AddRange(Pages().Where(p => p.Matches(words)));
 		if (words.Count > 0)
 		{
 			list.AddRange(SettingsPages().Where(p => p.Matches(words)));
 			list.AddRange(EventPages().Where(p => p.Matches(words)));
+			list.AddRange(TagPages().Where(p => p.Matches(words)));
 		}
 		list.AddRange(Commands().Where(c => c.Matches(words)));
 		string group = null;
@@ -165,24 +174,33 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 		IsEmpty = Results.Count == 0;
 	}
 
-	private List<PaletteItem> LoadStructures()
+	/// <summary>Reads the structures to search, and the recent ones (each structure's latest assessment) for the Recent group.</summary>
+	private void LoadStructures()
 	{
 		try
 		{
-			return _app.Store.ListStructures()
-				.OrderByDescending(s => s.LastUpdate)
-				.Select(s => new PaletteItem("Structures", string.IsNullOrWhiteSpace(s.Address) ? "(No address)" : s.Address.Trim(),
-					string.Join(" · ", new[] { s.Owner, s.City }.Where(x => !string.IsNullOrWhiteSpace(x))),
-					s.StructureTypeID == 2 ? "NonResidential" : "Structures", null, () => _main.OpenStructure(s),
-					string.Join(" ", s.ParcelNumber, s.ExternalId, s.ZipCode, s.NFIPCommunityName)))
-				.ToList();
+			List<StructureSummary> all = _app.Store.ListStructures().OrderByDescending(s => s.LastUpdate).ToList();
+			_structures = all.Select(s => Item("Structures", s)).ToList();
+			Dictionary<Guid, StructureSummary> latest = new();
+			foreach (StructureSummary s in all)
+			{
+				latest.TryAdd(s.PropertyID, s);
+			}
+			_recent = _main.RecentStructureIds.Where(latest.ContainsKey).Select(id => Item("Recent", latest[id])).ToList();
 		}
 		catch (Exception ex) when (ex is not OutOfMemoryException)
 		{
 			AppLog.Write("Couldn't list structures for the command palette", ex);
-			return new List<PaletteItem>();
+			_structures = new List<PaletteItem>();
+			_recent = new List<PaletteItem>();
 		}
 	}
+
+	private PaletteItem Item(string group, StructureSummary s) =>
+		new PaletteItem(group, string.IsNullOrWhiteSpace(s.Address) ? "(No address)" : s.Address.Trim(),
+			string.Join(" · ", new[] { s.Owner, s.City }.Where(x => !string.IsNullOrWhiteSpace(x))),
+			s.StructureTypeID == 2 ? "NonResidential" : "Structures", null, () => _main.OpenStructure(s),
+			string.Join(" ", s.ParcelNumber, s.ExternalId, s.ZipCode, s.NFIPCommunityName));
 
 	private IEnumerable<PaletteItem> Pages() =>
 		_main.SidebarItems.Select(n => new PaletteItem("Pages", n.Title, null, n.Icon, n.Shortcut, () => _main.ShowCommand.Execute(n.Page), "go page"));
@@ -199,6 +217,10 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 	private IEnumerable<PaletteItem> EventPages() =>
 		_main.Events.Events.Select(e => new PaletteItem("Pages", e.Name, "Event", "Event", null, () => _main.Events.ChooseCommand.Execute(e), "event show only"));
 
+	/// <summary>Each tag, as "Tag: Revisit", to show the structures with it ("revisit", "tag"); only once something is typed.</summary>
+	private IEnumerable<PaletteItem> TagPages() =>
+		_main.Structures.AllTags.Select(t => new PaletteItem("Pages", "Tag: " + t.Name, "Tag", "Filter", null, () => _main.ShowTag(t.Id), "tag tags label"));
+
 	private IEnumerable<PaletteItem> Commands()
 	{
 		PaletteItem Command(string title, string icon, string shortcut, ICommand command, object parameter = null, string keywords = null) =>
@@ -211,6 +233,10 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 			}, keywords);
 
 		SettingsViewModel settings = _main.Settings;
+		if (_main.CurrentStructureId is Guid structure)
+		{
+			yield return Command("Case file of this structure", "Clipboard", null, _main.ShowCaseFileCommand, structure, "history timeline record everything letters appeals documents");
+		}
 		yield return Command("New residential structure", "Plus", "⌘N", _main.Structures.NewStructureCommand, "1", "add assessment house");
 		yield return Command("New non-residential structure", "Plus", "⇧⌘N", _main.Structures.NewStructureCommand, "2", "add assessment business commercial");
 		yield return Command("Import inspections or parcels…", "Import", "⇧⌘I", _main.OpenSourceImportCommand, keywords: "csv excel accela");
@@ -220,7 +246,11 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 		yield return Command("Set a field on checked structures…", "Edit", null, _main.Structures.BulkEditCommand, keywords: "bulk");
 		yield return Command("Set event for checked structures…", "Event", null, _main.Structures.SetEventCommand, keywords: "disaster");
 		yield return Command("Assign checked structures to a team…", "Assignments", null, _main.Structures.AssignToTeamCommand, keywords: "field route crew");
+		yield return Command("Manage tags…", "Filter", null, _main.Structures.ManageTagsCommand, keywords: "label rename colour color");
+		yield return Command("Export this list to CSV…", "Export", null, _main.Structures.ExportListToCsvCommand, keywords: "spreadsheet table");
+		yield return Command("Export this list to Excel…", "Export", null, _main.Structures.ExportListToExcelCommand, keywords: "spreadsheet table xlsx");
 		yield return Command("New team…", "Assignments", null, _main.Assignments.NewTeamCommand, keywords: "field crew");
+		yield return Command("Add agenda dates to Calendar…", "Agenda", null, _main.Agenda.AddToCalendarCommand, keywords: "ics deadlines calendar export");
 		yield return Command("Make a web map…", "Globe", null, _main.Structures.WebMapCommand, keywords: "share public leaflet html");
 		yield return Command("Check in a work package…", "Download", null, _main.ImportExport.CheckInCommand, keywords: "sdework field back");
 		yield return Command("Open a work package…", "Download", null, _main.OpenWorkPackageCommand, keywords: "sdework field offline");

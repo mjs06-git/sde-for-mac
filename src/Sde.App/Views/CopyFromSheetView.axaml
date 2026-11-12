@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:data="using:Sde.Data"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.CopyFromSheetView"
+             x:DataType="sh:CopyFromSheetViewModel">
+  <StackPanel Spacing="16">
+    <TextBox Text="{Binding Search}" PlaceholderText="Search address or owner" AutomationProperties.Name="Search for the structure to copy from">
+      <TextBox.InnerLeftContent>
+        <c:Icon Kind="Search" Size="13" Classes="tertiary" Margin="8,0,0,0" />
+      </TextBox.InnerLeftContent>
+    </TextBox>
+    <ListBox Classes="sheetList" ItemsSource="{Binding Sources}" SelectedItem="{Binding Source}" Height="200" AutomationProperties.Name="Structure to copy from">
+      <ListBox.ItemTemplate>
+        <DataTemplate DataType="data:StructureSummary">
+          <StackPanel>
+            <TextBlock Classes="medium" Text="{Binding Address}" />
+            <TextBlock Classes="muted" Text="{Binding Owner}" />
+          </StackPanel>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+    <Border Classes="card">
+      <StackPanel Spacing="6">
+        <TextBlock Classes="sheetSection" Text="Copy" ToolTip.Tip="Location, owner and damage percentages are never copied." />
+        <ItemsControl ItemsSource="{Binding Steps}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="sh:CopyStepViewModel">
+              <CheckBox Content="{Binding Title}" IsChecked="{Binding IsChecked}" Margin="0,2" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </Border>
+    <c:SheetFooter PrimaryText="Copy" PrimaryCommand="{Binding CopyCommand}" IsPrimaryDefault="False"
+                   PrimaryToolTip="Location, owner and damage percentages are never copied." />
+  </StackPanel>
+</UserControl>

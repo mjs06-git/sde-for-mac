@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.HistorySheetView"
+             x:DataType="sh:HistorySheetViewModel">
+  <StackPanel Spacing="16">
+    <TextBlock Classes="secondary" Text="Nothing has been recorded for this assessment yet." IsVisible="{Binding IsEmpty}" />
+    <Border Classes="sheetTable" IsVisible="{Binding !IsEmpty}">
+      <DockPanel>
+        <Border DockPanel.Dock="Top" Classes="sheetTableHead">
+          <Grid ColumnDefinitions="170,*">
+            <TextBlock Text="When" />
+            <TextBlock Grid.Column="1" Text="Change" />
+          </Grid>
+        </Border>
+        <ScrollViewer MaxHeight="420" HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding Rows}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="sh:HistoryRowViewModel">
+                <Border Classes="sheetTableRow">
+                  <Grid ColumnDefinitions="170,*">
+                    <StackPanel Margin="0,0,12,0">
+                      <TextBlock Classes="sm" Text="{Binding When}" />
+                      <TextBlock Classes="muted" Text="{Binding Who}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                      <TextBlock Classes="medium" Text="{Binding What}" TextWrapping="Wrap" />
+                      <TextBlock Classes="secondary" Text="{Binding Change}" IsVisible="{Binding HasChange}" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+    <c:SheetFooter IsDone="True" />
+  </StackPanel>
+</UserControl>

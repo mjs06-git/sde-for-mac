@@ -6,16 +6,18 @@ and press Publish.
 
 ## Steps
 
-1. Set `<Version>` in `src/Sde.App/Sde.App.csproj` (for example `2.0.0`) and commit. The workflow stops if the tag and this
+1. Set `<Version>` in `src/Sde.App/Sde.App.csproj` (for example `3.5.0`). For a release with new features, update
+   What's New in `src/Sde.App/Services/WhatsNew.cs` (its `Version` and a few groups of one line each), which every
+   copy shows once after updating. Commit. The workflow stops if the tag and this
    number disagree, because the zip names come from the project file.
 2. Make sure CI (`.github/workflows/ci.yml`) is green on that commit.
-3. Tag and push: `git tag v2.0.0 && git push origin v2.0.0`.
-4. Wait for the Release workflow. It produces, on a draft release named "SDE for Mac 2.0.0":
-   - `SDE-2.0.0-osx-arm64.zip` (Apple Silicon)
-   - `SDE-2.0.0-osx-x64.zip` (Intel)
+3. Tag and push: `git tag v3.5.0 && git push origin v3.5.0`.
+4. Wait for the Release workflow. It produces, on a draft release named "SDE for Mac 3.5.0":
+   - `SDE-3.5.0-osx-arm64.zip` (Apple Silicon)
+   - `SDE-3.5.0-osx-x64.zip` (Intel)
    - `SHA256SUMS`
 5. Open the draft, read the generated notes, add anything the commit log does not say, and publish. A tag with a hyphen
-   (`v2.1.0-beta1`) is marked as a pre-release.
+   (`v3.6.0-beta1`) is marked as a pre-release.
 Re-running the workflow for the same tag replaces the files on the existing release.
 
 ## What the workflow does

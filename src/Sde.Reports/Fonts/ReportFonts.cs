@@ -20,6 +20,9 @@ internal static class ReportFonts
 	private static readonly object _lock = new();
 	private static readonly ReportFontResolver _resolver = new();
 
+	/// <summary>The bytes of one embedded face, e.g. "PublicSans-SemiBold", for drawings made outside PDFsharp.</summary>
+	public static byte[] Face(string faceName) => _resolver.GetFont(faceName);
+
 	/// <summary>
 	/// Installs the resolver once (thread-safe, idempotent). PDFsharp allows the global resolver to be set
 	/// only once and before the first font is used: if the host app already installed its own resolver,

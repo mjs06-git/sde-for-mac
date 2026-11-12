@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.PrintCaseFileSheetView"
+             x:DataType="sh:PrintCaseFileSheetViewModel">
+  <StackPanel Spacing="16">
+    <StackPanel Spacing="8">
+      <CheckBox Content="Include the timeline" IsChecked="{Binding IncludeTimeline}" Name="IncludeTimelineBox" />
+      <CheckBox Content="{Binding EditsLabel}" IsChecked="{Binding IncludeEdits}" IsEnabled="{Binding IncludeTimeline}" Margin="24,0,0,0"
+                Name="IncludeEditsBox" AutomationProperties.Name="Include field changes"
+                ToolTip.Tip="Every change to a field from the edit history, in the timeline" />
+    </StackPanel>
+    <c:SheetFooter PrimaryText="Print…" PrimaryCommand="{Binding PrintCommand}" />
+  </StackPanel>
+</UserControl>

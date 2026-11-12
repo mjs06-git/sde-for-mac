@@ -26,11 +26,22 @@ public sealed partial class ImportExportViewModel
 		{
 			return;
 		}
-		List<string> photos = Directory.EnumerateFiles(folder)
-			.Where(p => AssessmentEditorViewModel.PhotoPatterns.Any(pat => p.EndsWith(pat[1..], StringComparison.OrdinalIgnoreCase)))
-			.Where(p => !Path.GetFileName(p).StartsWith('.'))
-			.Order(StringComparer.OrdinalIgnoreCase)
-			.ToList();
+		await MatchPhotosAsync(folder, PhotosIn(folder));
+	}
+
+	/// <summary>The photos directly in a folder (not hidden files), in name order.</summary>
+	public static List<string> PhotosIn(string folder) => Directory.EnumerateFiles(folder)
+		.Where(p => AssessmentEditorViewModel.PhotoPatterns.Any(pat => p.EndsWith(pat[1..], StringComparison.OrdinalIgnoreCase)))
+		.Where(p => !Path.GetFileName(p).StartsWith('.'))
+		.Order(StringComparer.OrdinalIgnoreCase)
+		.ToList();
+
+	/// <summary>
+	/// Works out which structure each of <paramref name="photos"/> (from <paramref name="folder"/>) belongs to and shows
+	/// the matches for review, as Match a Photo Folder does. Also used for photos dropped on the window.
+	/// </summary>
+	public async Task MatchPhotosAsync(string folder, List<string> photos)
+	{
 		if (photos.Count == 0)
 		{
 			_app.Dialogs.Notify("No photos found", "That folder has no photos (JPEG, PNG, HEIC, GIF, BMP or TIFF) in it.");

@@ -247,8 +247,10 @@ public sealed partial class SdeStore
 			new { assessmentId }, orderBy: "ChangedOn DESC, HistoryID DESC").ToList());
 
 	/// <summary>A structure's history (all its assessments and its own fields), newest first.</summary>
-	public List<EditHistoryRecord> GetPropertyHistory(Guid propertyId) =>
-		Database.Read(c => TableMap<EditHistoryRecord>.Select(c, "PropertyID = @propertyId", new { propertyId }, orderBy: "ChangedOn DESC, HistoryID DESC").ToList());
+	public List<EditHistoryRecord> GetPropertyHistory(Guid propertyId) => Database.Read(c => GetPropertyHistory(c, propertyId));
+
+	internal static List<EditHistoryRecord> GetPropertyHistory(IDbConnection c, Guid propertyId) =>
+		TableMap<EditHistoryRecord>.Select(c, "PropertyID = @propertyId", new { propertyId }, orderBy: "ChangedOn DESC, HistoryID DESC").ToList();
 
 	/// <summary>Every row written by one bulk edit or import, in the order written.</summary>
 	public List<EditHistoryRecord> GetBatch(string batchId) =>

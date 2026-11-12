@@ -50,8 +50,11 @@ public sealed partial class SdeStore
 	}
 
 	/// <summary>An assessment's letters, newest first.</summary>
-	public List<LetterLogRecord> GetLetters(Guid assessmentId) =>
-		Database.Read(c => TableMap<LetterLogRecord>.Select(c, "AssessmentID = @assessmentId", new { assessmentId }, orderBy: "GeneratedOn DESC").ToList());
+	public List<LetterLogRecord> GetLetters(Guid assessmentId) => Database.Read(c => GetLetters(c, new[] { assessmentId }));
+
+	/// <summary>The letters of several assessments, newest first, over a connection the caller holds.</summary>
+	internal static List<LetterLogRecord> GetLetters(System.Data.IDbConnection c, IReadOnlyCollection<Guid> assessmentIds) =>
+		TableMap<LetterLogRecord>.Select(c, "AssessmentID IN @assessmentIds", new { assessmentIds = IdText(assessmentIds) }, orderBy: "GeneratedOn DESC").ToList();
 
 	/// <summary>
 	/// Marks an assessment's letter as sent: every letter of it not yet marked gets <paramref name="sentOn"/> (today

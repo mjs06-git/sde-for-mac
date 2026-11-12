@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:c="using:Sde.App.Controls"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:vm="using:Sde.App.ViewModels"
+             xmlns:app="using:Sde.App"
+             x:Class="Sde.App.Views.TagSheetView"
+             x:DataType="sh:TagSheetViewModel">
+  <!-- New Tag: a name and a colour -->
+  <StackPanel Spacing="12">
+    <TextBlock Classes="secondary" Text="{Binding Intro}" IsVisible="{Binding HasIntro}" />
+    <StackPanel Spacing="4">
+      <TextBlock Classes="fieldLabel" Text="Name" />
+      <TextBox Text="{Binding Name}" PlaceholderText="For example: Revisit" MaxLength="40" AutomationProperties.Name="Name of the tag" />
+      <TextBlock Classes="danger" Text="{Binding Problem}" IsVisible="{Binding HasProblem}" TextWrapping="Wrap" />
+    </StackPanel>
+    <StackPanel Spacing="4">
+      <TextBlock Classes="fieldLabel" Text="Colour" />
+      <ItemsControl ItemsSource="{Binding Colours}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Orientation="Horizontal" Spacing="2" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:TagColourChoice">
+            <Button Classes="swatch" AutomationProperties.Name="{Binding Name}" ToolTip.Tip="{Binding Name}"
+                    Command="{Binding $parent[UserControl].((sh:TagSheetViewModel)DataContext).ChooseColourCommand}" CommandParameter="{Binding}">
+              <Border Classes="swatchRing" Classes.chosen="{Binding IsChosen}">
+                <Ellipse app:ThemeBrush.Fill="{Binding DotKey}" />
+              </Border>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+    <c:SheetFooter PrimaryText="Add Tag" PrimaryCommand="{Binding SaveCommand}" />
+  </StackPanel>
+</UserControl>

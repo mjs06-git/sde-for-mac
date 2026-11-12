@@ -4,18 +4,18 @@
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.ManageEventsSheetView"
              x:DataType="sh:ManageEventsSheetViewModel">
-  <StackPanel Spacing="12">
-    <TextBlock Classes="secondary" TextWrapping="Wrap"
-               Text="An event groups one disaster's assessments." />
-    <c:EmptyState IsVisible="{Binding IsEmpty}" Icon="Event" Title="No events yet" Text="Add one for each disaster you assess." />
-    <Border Classes="card flush" IsVisible="{Binding !IsEmpty}">
+  <!-- Event, Manage Events: the events as one small table, each with Edit; New Event at the foot's left, Done applies nothing -->
+  <StackPanel Spacing="16">
+    <TextBlock Classes="secondary" Text="No events yet." IsVisible="{Binding IsEmpty}"
+               ToolTip.Tip="An event groups one disaster's assessments. Add one for each disaster you assess." />
+    <Border Classes="sheetTable" IsVisible="{Binding !IsEmpty}" ToolTip.Tip="An event groups one disaster's assessments.">
       <ScrollViewer MaxHeight="360" HorizontalScrollBarVisibility="Disabled">
         <ItemsControl ItemsSource="{Binding Rows}">
           <ItemsControl.ItemTemplate>
             <DataTemplate DataType="sh:EventRowViewModel">
-              <Border Classes="rule" Padding="14,10">
+              <Border Classes="sheetTableRow" Padding="14,10">
                 <Grid ColumnDefinitions="Auto,*,Auto">
-                  <c:Icon Kind="Event" Size="16" Classes="secondary" VerticalAlignment="Center" Margin="0,0,10,0" />
+                  <c:Icon Kind="Event" Size="16" Classes="secondary" VerticalAlignment="Center" Margin="0,0,12,0" />
                   <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock Classes="medium" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                     <TextBlock Classes="muted" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" />
@@ -28,14 +28,7 @@
         </ItemsControl>
       </ScrollViewer>
     </Border>
-    <DockPanel>
-      <Button DockPanel.Dock="Left" Command="{Binding NewCommand}" AutomationProperties.Name="New event">
-        <StackPanel Orientation="Horizontal" Spacing="6">
-          <c:Icon Kind="Plus" Size="14" />
-          <TextBlock Text="New event" />
-        </StackPanel>
-      </Button>
-      <Button Classes="primary" Content="Done" IsDefault="True" HorizontalAlignment="Right" MinWidth="90" HorizontalContentAlignment="Center" Command="{Binding DoneCommand}" />
-    </DockPanel>
+    <c:SheetFooter IsDone="True" DoneCommand="{Binding DoneCommand}"
+                   LeadingText="New Event…" LeadingCommand="{Binding NewCommand}" LeadingAutomationName="New event" />
   </StackPanel>
 </UserControl>

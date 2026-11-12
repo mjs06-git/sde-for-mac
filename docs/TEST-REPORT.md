@@ -1,5 +1,12 @@
 # Step 4 test report: does the Mac SDE work?
 
+On 2026-11-11 (v3.5), 1,744 automated tests passed on Linux (a cloud container, .NET 10.0.404). 36 were skipped: 34
+compare against FEMA's SDE 3.0 and need its installer, one GeoPackage check needs QGIS, and one photo test needs
+macOS (HEIC conversion). Three failed for reasons that
+belong to the container, not the code (see "v3.5" below). The answer-key tests last passed on macOS with v3.0 and
+nothing in v3.5 changes the calculation, the seed data or the exchange formats, but they should be run on a Mac with
+the answer key before 3.5 is tagged.
+
 On 2026-10-28 (v3.0), 1,232 automated tests passed with none skipped on macOS with the answer key installed:
 Core 339, Interop 234, App (UI) 283, Gis 187, Reports 86, Mcp 57 and Field 46. The "v3.0: the redesign" section
 describes the changes. Earlier results and observations are retained below as a historical record.
@@ -122,7 +129,7 @@ once the window is activated, which a background run never does: **check them by
 
 ## v1.5: Accela import and the submission folder
 
-There is no real Accela export yet, so these checks use synthetic exports (`tests/fixtures/accela/`): one with a row
+These checks use synthetic exports, not a real Accela export. The Accela importer was generalised in v2.0 into Source Import with import profiles (see `docs/PORTING-NOTES.md`). The fixtures are in `tests/fixtures/accela/`: one with a row
 per inspection, and the same inspections as a checklist with a row per item, including RanchFlood and a checklist
 item answered twice.
 
@@ -193,16 +200,66 @@ report tests ran unchanged and all pass. The UI tests were updated for the new l
 
 The packaged app (arm64, and x64 under Rosetta) was opened on a new database and checked by eye.
 
+## v3.5: the new look and fifteen additions
+3.5 changes the look and adds features; it does not change the calculation, FEMA's tables or the exchange formats.
+The engine, import and report tests ran unchanged and pass.
+
+| Project | Passed | Skipped | Failed |
+|---|---|---|---|
+| Sde.Tests (calculation, data, command line) | 395 | 34 (answer key) | 1 |
+| Sde.App.Tests (the app, rendered off-screen) | 464 | 1 (needs macOS) | 2 |
+| Sde.Interop.Tests | 332 | 0 | 0 |
+| Sde.Gis.Tests | 209 | 1 (needs QGIS) | 0 |
+| Sde.Field.Tests (phone form) | 158 | 0 | 0 |
+| Sde.Reports.Tests | 104 | 0 | 0 |
+| Sde.Mcp.Tests (AI assistant server) | 82 | 0 | 0 |
+
+The three failures are not caused by 3.5 and also fail on the 3.0 code in the same container:
+- `ReviewFixTests.Import_APhotoThatCantBeCopied_IsAWarning_NotAFailure` makes a photo unreadable, which has no effect
+  when the tests run as root, as they do in the container.
+- `MapToolsTests.FiftyThousandPolygons_PanQuickly` and `MapEditTests.FiftyThousandPolygons_EditQuickly` time 50,000
+  polygons against a limit set for a Mac; the shared container is slower.
+
+What the 3.5 tests add:
+- **The look**: every text colour at 4.5:1 or better in light and dark, and again with Increase Contrast (7:1 for
+  primary text); the phone form and the reports use the same brand colours as the app (`BrandAgreementTests`); no
+  text clipped by its control at either density (`FitTests`, also run with `SDE_TEST_COMPACT=1`); every sheet has
+  exactly one footer (`SheetTests`); every animation sits behind Reduce Motion (`MotionTests`).
+- **The keyboard and VoiceOver**: every tab stop on every page and the new sheets has a name; Tab follows reading
+  order and never gets stuck; Tab stays inside a sheet or the palette and Esc closes them.
+- **Each addition**: tags, merging duplicates (every related row follows the kept structure, and undo restores both
+  structures exactly), the case file and its PDF, the agenda and its calendar file, Export This List (rows, columns
+  and real numbers), pinned and recent structures, the remembered layout, the map's clusters, heat map and water
+  surface (including prints), What's New, Check for Updates (against faked GitHub answers, and nothing calls it at
+  start-up), drops on the window, the date field, several buildings from one imported record, the phone form's new
+  steps (with security tests for each new endpoint), stored flood lookups and high-water marks, and the new
+  assistant tools and `sde` commands.
+
+**Opening a 3.5 database in 3.0.** A database made by 3.5, with rows in every new table (tags, a flood lookup, a set
+of high-water marks) and a pinned structure, was opened with the 3.0 `sde` tool built from the 3.0 release commit.
+`info`, `list` and `show` worked, and the file was byte-for-byte the same afterwards: 3.0 leaves a newer database's
+tables alone.
+
+**Online services** were checked live on 2026-11-11 (`docs/ONLINE-SERVICES.md`). Two differences were found and fixed:
+USGS now sends event types and statuses as numbers, and FEMA's flood layer sometimes sends `<Null>` for a blank
+subtype.
+
+**Screenshots** in `docs/screenshots` were rendered off-screen on Linux with the bundled typeface. They match the app
+closely, but a refresh on a Mac is the final reference.
+
 ## Not covered
+- **3.5 on a Mac.** The packaged app, the native menus, Increase Contrast and Reduce Motion read from System Settings,
+  and the Mac's accent colour option need a check by hand on a Mac, along with the answer-key tests.
 - **Real exports.** The column guesses, header names and the example profiles need real (anonymised) files; see `docs/IMPORTING.md`.
 - **File → Import Inspections or Parcels…** in the menu bar (like the other menus, check by hand).
 - **FEMA's SDE on Windows**: importing our files, entering the same cases, and exporting back. Use
   `docs/windows-crosscheck/README.md`, which takes about an hour.
 - **The File/View menus and the macOS save panel**, by hand.
-- **Importing `.mdb` files on a Mac that has never had Homebrew.** The packaged app now carries its own mdbtools
+- **Importing `.mdb` files on a Mac that has never had Homebrew**, as a clean-machine run. The packaged app carries its own mdbtools
   (`tools/packaging/build_mdbtools.sh`). On the build Mac, both architectures' copies give byte-identical output to
   Homebrew's mdbtools on every table of the test database and of FEMA's shipped database, and SDE's `.mdb` import ran
   through them with Homebrew left out of the search.
-- **Live online services** (Census geocoder, FEMA NFHL): the tests use hand-written fixtures, not live responses. See `docs/ONLINE-SERVICES.md`.
+- **Live online services** in the tests: they use hand-written fixtures, not live responses. The services were checked
+  live once, on 2026-11-11; see `docs/ONLINE-SERVICES.md`.
 - **The phone form on a real phone**, the map with live tiles, drag-and-drop with a real mouse, and real camera photos
   (EXIF). See the "check on a Mac" lists in `docs/PHONE-FORM.md` and `docs/ONLINE-SERVICES.md`.

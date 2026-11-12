@@ -103,6 +103,9 @@ public static class SaveVia
 
 	/// <summary>Values read from an elevation certificate.</summary>
 	public const string EcImport = "EC import";
+
+	/// <summary>Merging a duplicate structure into the one being kept.</summary>
+	public const string Merge = "Merge";
 }
 
 /// <summary>Where an assessment is in the review workflow. An assessment with no status row is a Draft.</summary>

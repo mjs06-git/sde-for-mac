@@ -14,6 +14,19 @@ public interface IFieldWriter
 
 	/// <summary>Saves a new assessment (and its structure).</summary>
 	Task<AssessmentFile> AddAsync(AssessmentFile file, SaveContext context);
+
+	/// <summary>
+	/// Runs <paramref name="setStatus"/>, a status change of one assessment through the store (which checks locks and
+	/// check-outs and records it in edit history). By default an open editor on the Mac is saved first and caught up after,
+	/// through <see cref="ApplyAsync"/> with no change (which writes nothing when nothing changed). A writer that can run
+	/// the change inside its own write coordination does so instead.
+	/// </summary>
+	async Task SetStatusAsync(Guid assessmentId, Action setStatus, SaveContext context)
+	{
+		await ApplyAsync(assessmentId, _ => { }, context);
+		setStatus();
+		await ApplyAsync(assessmentId, _ => { }, context);
+	}
 }
 
 /// <summary>Turns a photo into one SDE can use (HEIC to JPEG on a Mac).</summary>
@@ -51,6 +64,15 @@ public sealed class DirectFieldWriter(Func<SdeStore> store) : IFieldWriter
 		{
 			store().SaveAssessment(file, context);
 			return Task.FromResult(file);
+		}
+	}
+
+	public Task SetStatusAsync(Guid assessmentId, Action setStatus, SaveContext context)
+	{
+		lock (_gate)
+		{
+			setStatus();
+			return Task.CompletedTask;
 		}
 	}
 }

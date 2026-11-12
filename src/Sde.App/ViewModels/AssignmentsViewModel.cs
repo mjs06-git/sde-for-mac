@@ -184,7 +184,14 @@ public sealed partial class AssignmentsViewModel : ViewModelBase
 
 	/// <summary>The row selected in the route table (its context menu's Open and Directions act on it).</summary>
 	[ObservableProperty]
+	[NotifyPropertyChangedFor(nameof(HasSelectedStop))]
 	public partial AssignmentRowViewModel SelectedStop { get; set; }
+
+	/// <summary>A route row is selected: the inspector shows it under the team.</summary>
+	public bool HasSelectedStop => SelectedStop != null;
+
+	/// <summary>The page's shell, for the shared inspector width and the inspector switch.</summary>
+	public MainViewModel Shell => _main;
 
 	/// <summary>How many structures on the route are checked (Remove from Team takes those off).</summary>
 	public int CheckedCount => Stops.Count(s => s.IsChecked);

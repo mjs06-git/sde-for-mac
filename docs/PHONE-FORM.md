@@ -10,14 +10,29 @@ on iPhone, Chrome on Android), with nothing to install. From the phone, an inspe
 - fill in the fields of its assessment, step by step, as in the Mac's editor (only the fields that apply are shown, and
   the same rules run: a new structure type clears the stories, a cause other than flood clears the flood details, and so
   on);
+- enter the percent damaged of each building element (**Damage by element**), with quick values 0, 25, 50, 75 and 100
+  or an exact number; the elements are the ones the Mac shows for the structure type (residential, manufactured house
+  or non-residential);
+- enter the cost adjustments on the **Cost & depreciation** step: the standard lines offered for the structure (garage,
+  porch and so on) and up to 7 additional lines of your own;
+- set the assessment's status to **Draft** or **Reviewed**;
+- start another assessment of a structure that already has one, for a re-inspection, and switch between a structure's
+  assessments;
 - take photos with the phone's camera, or choose them from the phone, and add them to the assessment.
 
-Every change is saved on the Mac straight away. If the same assessment is open in the Mac's editor, the editor updates.
+Every change is saved on the Mac straight away, and SDE works out the result again exactly as it does after an edit on
+the Mac; the phone only shows what the Mac worked out. If the same assessment is open in the Mac's editor, the editor
+updates.
 Edit history records **Phone** as the way each change was made and the name the inspector entered when pairing as the
 person who made it.
 
-The phone form doesn't do everything the Mac does: damage percentages by element, cost adjustments, statuses, reports,
-deleting, and import and export stay on the Mac.
+The phone form doesn't do everything the Mac does. These stay on the Mac:
+
+- making an assessment **Final**, marking its letter sent, setting **Appeal**, and reopening a Final or Letter sent
+  assessment;
+- reports and letters, deleting, and import and export;
+- the square-footage calculator, the depth table's damage suggestions, custom fields, and changing or removing photos
+  already added.
 
 ## Using it
 
@@ -44,15 +59,36 @@ when you quit SDE, or automatically after 12 hours. The card shows how long is l
 
 <p>
   <img src="screenshots/90-phone-find.png" alt="My assignments on the phone" width="260">
-  <img src="screenshots/91-phone-edit.png" alt="An assessment open on the phone" width="260">
+  <img src="screenshots/91-phone-edit.png" alt="An assessment open on the phone, with its result and status" width="260">
+  <img src="screenshots/93-phone-damage.png" alt="Damage by element on the phone, with quick values for each element" width="260">
 </p>
+
+On **Damage by element**, tap one of the quick values for each element, or type an exact percentage in its box. Each
+element shows its share of the replacement cost and its damage in dollars, and the step ends with the total damage. On
+**Cost & depreciation**, each adjustment line saves when you leave its quantity or unit cost; **Add a line** shows the
+next additional line.
 
 Several phones can be paired at once. Each QR code and PIN can pair one phone and expires after 10 minutes; a new code
 appears as soon as one is used. **New code** on the Mac makes a fresh one at any time. Each paired phone is listed on
 the Mac with **Revoke**, which signs it out immediately.
 
 An assessment that is **Final** or **Letter sent** can be read on the phone but not changed; the phone says so, and it
-can be reopened on the Mac.
+can be reopened on the Mac. To look at the structure again, tap **Start another assessment** at the bottom of the page.
+
+### Status
+
+The **Status** card sets **Draft** or **Reviewed**, the two statuses before a determination is made. The Mac has no
+separate inspector and reviewer roles, so the phone allows only these two: Final and Letter sent lock an assessment and
+are set on the Mac, and Appeal goes with the appeal recorded on the Mac. An assessment under appeal shows its status on
+the phone, which says its status is changed on the Mac. Every status change is in edit history with the inspector's
+name.
+
+### Re-inspections
+
+**Start another assessment** (under **Assessments of this structure**) asks once, then starts a new Draft assessment of
+the same structure, as **New assessment for this structure** does on the Mac. Its own fields start empty; the address,
+owner and building details are the structure's and are shared. The list above the button shows each assessment of the
+structure; tap one to open it.
 
 Photos can be JPEG, PNG or HEIC, up to 25 MB each. HEIC photos (the iPhone's default format) are converted to JPEG on the
 Mac, as when photos are added on the Mac.
@@ -89,12 +125,17 @@ What protects the phone form:
 - **Limits.** Requests are limited to 1 MB, photos to 25 MB, and uploaded files must really be JPEG, PNG or HEIC images
   (checked by their content, not their name: a JPEG or PNG must describe a picture with a size, and a HEIC must convert).
   The Mac converts at most two HEIC photos at a time, and gives up on one after a minute.
-- **Same rules as the Mac.** Values are checked like the editor checks them, including its lowest and highest numbers,
-  Final and Letter sent assessments can't be changed, and every change is recorded in edit history. Assessments checked
-  out in a work package can be read but not changed. A structure's own fields (address, owner, flood zone,
-  elevations) belong to all of its assessments, so the phone can't change them while another assessment of the
-  structure is Final, Letter sent or checked out. It also can't start a second assessment of a structure; that is done
-  on the Mac.
+- **Same rules as the Mac.** Values are checked like the editor checks them, including its lowest and highest numbers
+  (an element's percent damaged from 0 to 100, a cost adjustment's quantity 0 or more), only elements and adjustments
+  that apply to the structure are accepted, Final and Letter sent assessments can't be changed, and every change is
+  recorded in edit history. Assessments checked out in a work package can be read but not changed. The phone can set
+  only Draft or Reviewed, never to or from Final or Letter sent, and never out of Appeal.
+- **A structure's own fields.** A structure's own fields (address, owner, flood zone, elevations) belong to all of its
+  assessments, so the phone can't change them while another assessment of the structure is Final, Letter sent or
+  checked out. The Mac's editor can; the phone is stricter, because a change there would also change the inputs of the
+  locked assessment. A new assessment of such a structure can still be started from the phone, and its own fields
+  filled in. Starting another assessment needs a separate, deliberate request from the page, so a double tap can't
+  start two.
 
 What it doesn't protect against:
 
@@ -102,8 +143,8 @@ What it doesn't protect against:
   that phone until it is revoked or the server stops.
 - Anyone on the same network can open the pairing page. Without the QR token or PIN they can't get further, but they
   could use up the PIN attempts and pause PIN pairing for 10 minutes (the QR code still works).
-- A paired phone can change any assessment that isn't Final or Letter sent, and add structures and photos. Pair only
-  phones you trust, and revoke a phone that is lost.
+- A paired phone can change any assessment that isn't Final, Letter sent or checked out (including marking it Reviewed),
+  and add structures, assessments and photos. Pair only phones you trust, and revoke a phone that is lost.
 - It checks devices by network address and pairing, not by user account. There are no passwords.
 
 ### Networks where it won't work
@@ -123,5 +164,12 @@ the phone form won't start.
 - `src/Sde.App/Services/PhoneFormService.cs` and `Views/PhoneFormPanel.axaml`: the Settings card, `caffeinate` while
   running, and stopping on quit.
 - `tests/Sde.Field.Tests`: the server over real HTTP on 127.0.0.1 (pairing, cookies, the custom header, locks, uploads,
-  history). `tests/Sde.App.Tests/PhoneFormUiTests.cs`: the Settings card and a change reaching the open editor.
+  history, element damage, cost adjustments, status and re-inspections, each checked against what the store's engine
+  works out). The endpoints that change an assessment are `POST /api/assessments/{id}/changes`, `/elements`
+  (`{"elements":[{"id":4,"damaged":50}]}`), `/costs` (`{"adjustments":[{"id":…,"quantity":…,"unitCost":…}],
+  "additional":[{"line":1,"name":…,"quantity":…,"unitCost":…}]}`), `/status` (`{"status":"Reviewed"}`) and `/photos`, and
+  `POST /api/properties/{id}/assessments` (`{"another":true}` for a structure that already has one).
+- Status changes go through `IFieldWriter.SetStatusAsync`. Its default saves an editor open on the Mac first and catches
+  it up after (with `ApplyAsync` and no change); a writer that can run the change inside its own write coordination can
+  implement it instead. `tests/Sde.App.Tests/PhoneFormUiTests.cs`: the Settings card and a change reaching the open editor.
 - The packaged app's `Info.plist` has `NSLocalNetworkUsageDescription` (see `tools/packaging/package_app.sh`).

@@ -84,6 +84,68 @@ public static class QaRules
 	}
 
 	/// <summary>
+	/// <see cref="Check"/>, plus the checks that could not run because the data they compare with is not already
+	/// available: the flood map zone check without a stored lookup, the high-water mark check without marks. Nothing here
+	/// goes online. An unavailable check is listed, never skipped silently.
+	/// </summary>
+	public static QaResult CheckWithStatus(QaInput input) => new QaResult(Check(input), NotChecked(input));
+
+	/// <summary>The checks that cannot run, or cannot run for every structure, with the data they are missing.</summary>
+	public static List<QaNotChecked> NotChecked(QaInput input)
+	{
+		if (input?.Reference == null)
+		{
+			throw new ArgumentException("The quality checks need the reference data.", nameof(input));
+		}
+		Context ctx = new Context(input);
+		List<QaNotChecked> list = new List<QaNotChecked>();
+		if (ctx.Structures.Count > 0)
+		{
+			QaRuleInfo zone = Rule(QaRuleIds.ZoneDiffersFromNfhl);
+			int total = ctx.Structures.Count;
+			HashSet<Guid> stale = input.StaleFloodLookups == null ? new HashSet<Guid>() : new HashSet<Guid>(input.StaleFloodLookups);
+			List<PropertyRecord> missing = ctx.Structures.Where(p => input.NfhlZones == null || !input.NfhlZones.ContainsKey(p.PropertyID)).ToList();
+			int moved = missing.Count(p => stale.Contains(p.PropertyID));
+			int none = missing.Count - moved;
+			if (none == total)
+			{
+				list.Add(new QaNotChecked(zone.Id, zone.Title, QaNotCheckedReason.NoStoredFloodLookup, "Not checked: no stored flood lookup.", CanCheckOnline: true));
+			}
+			else if (none > 0)
+			{
+				list.Add(new QaNotChecked(zone.Id, zone.Title, QaNotCheckedReason.NoStoredFloodLookup,
+					$"Not checked for {none} of {total} structures: no stored flood lookup.", CanCheckOnline: true, none));
+			}
+			if (moved == total)
+			{
+				string what = total == 1 ? "the structure has moved since its flood lookup" : "the structures have moved since their flood lookups";
+				list.Add(new QaNotChecked(zone.Id, zone.Title, QaNotCheckedReason.StaleFloodLookup, $"Not checked: {what}.", CanCheckOnline: true));
+			}
+			else if (moved > 0)
+			{
+				list.Add(new QaNotChecked(zone.Id, zone.Title, QaNotCheckedReason.StaleFloodLookup,
+					$"Not checked for {moved} of {total} structures: moved since the flood lookup.", CanCheckOnline: true, moved));
+			}
+		}
+		if (ctx.Files.Count > 0)
+		{
+			QaRuleInfo marks = Rule(QaRuleIds.DepthVsHighWaterMarks);
+			HashSet<Guid> without = input.AssessmentsWithoutMarks == null ? new HashSet<Guid>() : new HashSet<Guid>(input.AssessmentsWithoutMarks);
+			int none = input.HighWaterMarkEstimates == null ? ctx.Files.Count : ctx.Files.Count(f => without.Contains(f.Assessment.AssessmentID));
+			if (none == ctx.Files.Count)
+			{
+				list.Add(new QaNotChecked(marks.Id, marks.Title, QaNotCheckedReason.NoHighWaterMarks, "Not checked: no high-water marks stored.", CanCheckOnline: true));
+			}
+			else if (none > 0)
+			{
+				list.Add(new QaNotChecked(marks.Id, marks.Title, QaNotCheckedReason.NoHighWaterMarks,
+					$"Not checked for {none} of {ctx.Files.Count} assessments: no high-water marks stored for their event.", CanCheckOnline: true, none));
+			}
+		}
+		return list;
+	}
+
+	/// <summary>
 	/// The findings with any matching dismissal attached. A dismissal matches its rule, object and detail exactly; for a
 	/// check that compares structures it also matches the same group seen from another of its structures. Dismissals of
 	/// checks that can't be set aside are ignored.

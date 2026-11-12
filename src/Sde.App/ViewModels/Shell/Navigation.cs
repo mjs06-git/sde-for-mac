@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Sde.App.Controls;
+using Sde.App.ViewModels.Editor;
 
 namespace Sde.App.ViewModels.Shell;
 
@@ -95,7 +96,72 @@ public sealed partial class SourceRowViewModel : ObservableObject
 	private void Show() => _choose();
 }
 
-/// <summary>A titled section of the source list (Library, Events, Workflow): page rows and source rows.</summary>
+/// <summary>A pinned structure in the sidebar: its address and result dot; choosing it opens its latest assessment.</summary>
+public sealed partial class PinnedRowViewModel : ObservableObject
+{
+	private readonly Action<PinnedRowViewModel> _open;
+	private readonly Action<PinnedRowViewModel> _unpin;
+
+	public PinnedRowViewModel(StructureRowViewModel row, Action<PinnedRowViewModel> open, Action<PinnedRowViewModel> unpin)
+	{
+		Row = row;
+		_open = open;
+		_unpin = unpin;
+	}
+
+	/// <summary>The structure as the list shows it (its latest assessment's result).</summary>
+	public StructureRowViewModel Row { get; }
+
+	public Guid PropertyId => Row.Summary.PropertyID;
+
+	public string Title => Row.Address;
+
+	/// <summary>The result's tile, for the dot's colour.</summary>
+	public ResultState State => Row.State;
+
+	/// <summary>"123 River Street, Substantially Damaged": the tooltip and what VoiceOver reads.</summary>
+	public string ToolTip => $"{Row.Address}, {Row.Result}";
+
+	[RelayCommand]
+	private void Show() => _open(this);
+
+	/// <summary>The row's menu: Unpin.</summary>
+	[RelayCommand]
+	private void Unpin() => _unpin(this);
+}
+
+/// <summary>A saved view of the structure list in the sidebar: choosing it shows Structures with the view's filters, sort and columns.</summary>
+public sealed partial class SavedViewRowViewModel : ObservableObject
+{
+	private readonly Action<string> _apply;
+	private readonly Func<string, Task> _rename;
+	private readonly Action<string> _delete;
+
+	public SavedViewRowViewModel(string name, Action<string> apply, Func<string, Task> rename, Action<string> delete)
+	{
+		Title = name;
+		_apply = apply;
+		_rename = rename;
+		_delete = delete;
+	}
+
+	public string Title { get; }
+
+	/// <summary>True while the list shows this view (until a filter, the sort or the columns change).</summary>
+	[ObservableProperty]
+	public partial bool IsActive { get; set; }
+
+	[RelayCommand]
+	private void Show() => _apply(Title);
+
+	[RelayCommand]
+	private Task Rename() => _rename(Title);
+
+	[RelayCommand]
+	private void Delete() => _delete(Title);
+}
+
+/// <summary>A titled section of the source list (Library, Pinned, Saved Views, Events, Workflow, Data): page rows and source rows.</summary>
 public sealed class SourceSectionViewModel(string title, System.Collections.ObjectModel.ObservableCollection<object> rows)
 {
 	public string Title { get; } = title;

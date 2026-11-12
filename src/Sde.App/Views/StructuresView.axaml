@@ -17,6 +17,7 @@
                       <MenuItem Header="Set Event…" Command="{Binding SetEventCommand}" />
                       <MenuItem Header="Assign to Team…" Command="{Binding AssignToTeamCommand}" ToolTip.Tip="A field team's route and worksheets" />
                       <MenuItem Header="Search and Replace…" Command="{Binding SearchReplaceCommand}" />
+                      <MenuItem Header="Tags" ItemsSource="{Binding TagMenuItems}" ToolTip.Tip="The checked structures, or the selected one" />
                       <Separator />
                       <MenuItem Header="Look Up Flood Data Online…" Command="{Binding LookUpFloodDataCommand}" ToolTip.Tip="Census geocoder coordinates and FEMA NFHL flood zones, for you to review" />
                       <MenuItem Header="Flood Depth from High-Water Marks…" Command="{Binding FloodDepthCommand}" ToolTip.Tip="A file of marks, USGS marks for an event, or a water-surface grid, for you to review" />
@@ -36,12 +37,15 @@
                     </MenuFlyout>
                   </DropDownButton.Flyout>
                 </DropDownButton>
-          <DropDownButton Content="Export" ToolTip.Tip="The checked structures, or the whole list when none are checked">
+          <DropDownButton Content="Export" Name="ExportButton" ToolTip.Tip="The checked structures, or the whole list when none are checked">
                   <DropDownButton.Flyout>
                     <MenuFlyout>
                       <MenuItem Header="FEMA SDE Export Folder…" Command="{Binding ExportCheckedCommand}" />
-                      <MenuItem Header="Excel…" Command="{Binding ExportCheckedToExcelCommand}" />
+                      <MenuItem Header="FEMA Excel Workbook…" Command="{Binding ExportCheckedToExcelCommand}" ToolTip.Tip="FEMA's columns, one row per assessment" />
                       <MenuItem Header="Web Map…" Command="{Binding WebMapCommand}" ToolTip.Tip="A web page of these structures on a map" />
+                      <Separator />
+                      <MenuItem Header="This List to CSV…" Command="{Binding ExportListToCsvCommand}" ToolTip.Tip="The rows and columns shown here, as they are" />
+                      <MenuItem Header="This List to Excel…" Command="{Binding ExportListToExcelCommand}" ToolTip.Tip="The rows and columns shown here, as they are" />
                       <Separator />
                       <MenuItem Header="Submission Folder…" Command="{Binding OpenSubmissionCommand}" ToolTip.Tip="Reports and the FEMA package in one folder" />
                       <MenuItem Header="Work Package for the Field…" Command="{Binding WorkPackageCommand}" ToolTip.Tip="Take these assessments to a Mac in the field and bring them back" />
@@ -58,56 +62,122 @@
 
   <!-- The toolbar names the list (and the sidebar's smart groups filter it); the page is the table, edge to edge. -->
   <DockPanel>
-    <!-- Scope bar: what to show -->
-    <Border DockPanel.Dock="Top" Classes="scopeBar">
-      <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-          <ComboBox Classes="sm" SelectedIndex="{Binding TypeFilter}" AutomationProperties.Name="Structure type filter">
-            <ComboBoxItem Content="All Types" />
-            <ComboBoxItem Content="Residential" />
-            <ComboBoxItem Content="Non-Residential" />
-          </ComboBox>
-          <ComboBox Classes="sm" SelectedIndex="{Binding SourceFilter}" IsVisible="{Binding HasImported}" AutomationProperties.Name="Source filter">
-            <ComboBoxItem Content="All Sources" />
-            <ComboBoxItem Content="Imported" />
-            <ComboBoxItem Content="Entered in SDE" />
-          </ComboBox>
-          <DropDownButton Classes="sm" Content="{Binding FiltersButtonText}" AutomationProperties.Name="More filters">
-                  <DropDownButton.Flyout>
-                    <Flyout Placement="BottomEdgeAlignedLeft">
-                      <StackPanel Spacing="10" Width="400" Margin="4">
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="4">
-                          <TextBlock Classes="fieldLabel" Text="Inspected from" />
-                          <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Inspected to" />
-                          <CalendarDatePicker Grid.Row="1" SelectedDate="{Binding InspectedFrom}" HorizontalAlignment="Stretch" AutomationProperties.Name="Inspected from" />
-                          <CalendarDatePicker Grid.Row="1" Grid.Column="1" SelectedDate="{Binding InspectedTo}" HorizontalAlignment="Stretch" AutomationProperties.Name="Inspected to" />
-                        </Grid>
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="4">
-                          <TextBlock Classes="fieldLabel" Text="Damaged at least (%)" />
-                          <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Damaged at most (%)" />
-                          <NumericUpDown Grid.Row="1" Value="{Binding MinPercent}" Minimum="0" Maximum="100" Increment="5" FormatString="0.#" AutomationProperties.Name="Damaged at least, percent" />
-                          <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding MaxPercent}" Minimum="0" Maximum="100" Increment="5" FormatString="0.#" AutomationProperties.Name="Damaged at most, percent" />
-                        </Grid>
-                        <Grid ColumnDefinitions="2*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="4">
-                          <TextBlock Classes="fieldLabel" Text="Street" />
-                          <TextBlock Grid.Column="1" Classes="fieldLabel" Text="ZIP code" />
-                          <TextBox Grid.Row="1" Text="{Binding StreetFilter}" AutomationProperties.Name="Street name filter" />
-                          <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ZipFilter}" AutomationProperties.Name="ZIP code filter" />
-                        </Grid>
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="4">
-                          <TextBlock Classes="fieldLabel" Text="Parcel number" />
-                          <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Status" />
-                          <TextBox Grid.Row="1" Text="{Binding ParcelFilter}" AutomationProperties.Name="Parcel number filter" />
-                          <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{x:Static vm:StructuresViewModel.StatusChoices}" SelectedIndex="{Binding StatusFilter}" HorizontalAlignment="Stretch" AutomationProperties.Name="Status filter" />
-                        </Grid>
-                        <Button Classes="link" Content="Clear Filters" Command="{Binding ClearFiltersCommand}" />
+    <!-- The filter bar: Add Filter, a chip for each filter in use (click it to change the value, × to take it off) and
+         Clear; saved views and the column choice at the right -->
+    <Border DockPanel.Dock="Top" Classes="scopeBar onPaper filterBar" Name="FilterBar">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <WrapPanel Classes="filterChips" VerticalAlignment="Center">
+          <DropDownButton Classes="sm" Name="AddFilterButton" AutomationProperties.Name="Add a filter" ToolTip.Tip="Show only structures that match">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <c:Icon Kind="Filter" Size="12" VerticalAlignment="Center" />
+              <TextBlock Text="Add Filter" VerticalAlignment="Center" />
+            </StackPanel>
+            <DropDownButton.Flyout>
+              <Flyout Placement="BottomEdgeAlignedLeft">
+                <ItemsControl Classes="filterFields" ItemsSource="{Binding FilterFields}" MinWidth="180">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FilterField">
+                      <Button Classes="subtle" Content="{Binding Title}" Click="OnAddFilterClick"
+                              Command="{Binding $parent[UserControl].((vm:StructuresViewModel)DataContext).AddFilterCommand}" CommandParameter="{Binding Key}" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Flyout>
+            </DropDownButton.Flyout>
+          </DropDownButton>
+          <ItemsControl Classes="filterChipList" ItemsSource="{Binding FilterChips}" Name="FilterChipList">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:FilterChipViewModel">
+                <Border Classes="filterChip">
+                  <StackPanel Orientation="Horizontal">
+                    <Button Classes="filterChipLabel" AutomationProperties.Name="{Binding EditName}" ToolTip.Tip="Change">
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Classes="filterChipTitle" Text="{Binding Title, StringFormat='{}{0}:'}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding ValueText}" VerticalAlignment="Center" MaxWidth="240" TextTrimming="CharacterEllipsis" />
                       </StackPanel>
-                    </Flyout>
-                  </DropDownButton.Flyout>
-                </DropDownButton>
+                      <Button.Flyout>
+                        <Flyout Placement="BottomEdgeAlignedLeft" Opened="OnChipEditorOpened" Closed="OnChipEditorClosed">
+                          <ContentControl Content="{Binding}">
+                            <ContentControl.DataTemplates>
+                              <DataTemplate DataType="vm:ChoiceFilterChipViewModel">
+                                <StackPanel Classes="filterEditor">
+                                  <TextBlock Classes="fieldLabel" Text="{Binding Title}" />
+                                  <ListBox Classes="filterChoices" ItemsSource="{Binding Options}" SelectedIndex="{Binding SelectedIndex}"
+                                           AutomationProperties.Name="{Binding Title}" />
+                                </StackPanel>
+                              </DataTemplate>
+                              <DataTemplate DataType="vm:TextFilterChipViewModel">
+                                <StackPanel Classes="filterEditor">
+                                  <TextBlock Classes="fieldLabel" Text="{Binding Title}" />
+                                  <TextBox Text="{Binding Text}" PlaceholderText="Contains" AutomationProperties.Name="{Binding Title}" />
+                                </StackPanel>
+                              </DataTemplate>
+                              <DataTemplate DataType="vm:DateFilterChipViewModel">
+                                <Grid Classes="filterEditor" ColumnDefinitions="*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="4" MinWidth="320">
+                                  <TextBlock Classes="fieldLabel" Text="Inspected from" />
+                                  <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Inspected to" />
+                                  <c:DateField Grid.Row="1" SelectedDate="{Binding From}" HorizontalAlignment="Stretch" AutomationProperties.Name="Inspected from" />
+                                  <c:DateField Grid.Row="1" Grid.Column="1" SelectedDate="{Binding To}" HorizontalAlignment="Stretch" AutomationProperties.Name="Inspected to" />
+                                </Grid>
+                              </DataTemplate>
+                              <DataTemplate DataType="vm:PercentFilterChipViewModel">
+                                <Grid Classes="filterEditor" ColumnDefinitions="*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="4" MinWidth="320">
+                                  <TextBlock Classes="fieldLabel" Text="Damaged at least (%)" />
+                                  <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Damaged at most (%)" />
+                                  <NumericUpDown Grid.Row="1" Value="{Binding Minimum}" Minimum="0" Maximum="100" Increment="5" FormatString="0.#" AutomationProperties.Name="Damaged at least, percent" />
+                                  <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding Maximum}" Minimum="0" Maximum="100" Increment="5" FormatString="0.#" AutomationProperties.Name="Damaged at most, percent" />
+                                </Grid>
+                              </DataTemplate>
+                              <DataTemplate DataType="vm:TagsFilterChipViewModel">
+                                <StackPanel Classes="filterEditor">
+                                  <ListBox Classes="segmented" SelectedIndex="{Binding MatchIndex}" AutomationProperties.Name="Match">
+                                    <ListBoxItem Content="Any of These" />
+                                    <ListBoxItem Content="All of These" />
+                                  </ListBox>
+                                  <ScrollViewer MaxHeight="280" HorizontalScrollBarVisibility="Disabled">
+                                    <ItemsControl ItemsSource="{Binding Choices}">
+                                      <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:TagFilterChoice">
+                                          <CheckBox IsChecked="{Binding IsSelected}" AutomationProperties.Name="{Binding Tag.Name}">
+                                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                              <Ellipse Classes="tagDot" app:ThemeBrush.Fill="{Binding Tag.DotKey}" />
+                                              <TextBlock Text="{Binding Tag.Name}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                          </CheckBox>
+                                        </DataTemplate>
+                                      </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                  </ScrollViewer>
+                                </StackPanel>
+                              </DataTemplate>
+                            </ContentControl.DataTemplates>
+                          </ContentControl>
+                        </Flyout>
+                      </Button.Flyout>
+                    </Button>
+                    <Border Classes="chipDivider" />
+                    <Button Classes="filterChipRemove" Command="{Binding RemoveCommand}" AutomationProperties.Name="{Binding RemoveName}" ToolTip.Tip="Remove Filter">
+                      <c:Icon Kind="Close" Size="10" />
+                    </Button>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Button Classes="chip" IsVisible="{Binding HasOnly}" Command="{Binding ClearOnlyCommand}"
+                  ToolTip.Tip="Show Every Structure" AutomationProperties.Name="{Binding OnlyLabel, StringFormat='Showing {0}. Show all structures'}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="{Binding OnlyLabel}" VerticalAlignment="Center" />
+              <c:Icon Kind="Close" Size="10" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button Classes="link sm" Content="Clear" VerticalAlignment="Center" IsVisible="{Binding HasActiveFilters}" Command="{Binding ClearFiltersCommand}"
+                  AutomationProperties.Name="Clear filters" ToolTip.Tip="Take Off Every Filter" />
+        </WrapPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
           <DropDownButton Classes="sm" Content="Views" AutomationProperties.Name="Saved views">
                   <DropDownButton.Flyout>
-                    <Flyout Placement="BottomEdgeAlignedLeft">
+                    <Flyout Placement="BottomEdgeAlignedRight">
                       <StackPanel Spacing="4" MinWidth="240">
                         <TextBlock Classes="muted" Text="No saved views" IsVisible="{Binding !HasSavedViews}" Margin="4" />
                         <ItemsControl ItemsSource="{Binding SavedViews}">
@@ -133,7 +203,7 @@
                 </DropDownButton>
           <DropDownButton Classes="sm" Content="Columns" AutomationProperties.Name="Choose columns">
                   <DropDownButton.Flyout>
-                    <Flyout Placement="BottomEdgeAlignedLeft">
+                    <Flyout Placement="BottomEdgeAlignedRight">
                       <ItemsControl ItemsSource="{Binding Columns}" MinWidth="180">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate x:DataType="vm:ColumnChoice">
@@ -144,42 +214,8 @@
                     </Flyout>
                   </DropDownButton.Flyout>
                 </DropDownButton>
-          <Button Classes="chip" IsVisible="{Binding HasOnly}" Command="{Binding ClearOnlyCommand}"
-                  ToolTip.Tip="Show Every Structure" AutomationProperties.Name="{Binding OnlyLabel, StringFormat='Showing {0}. Show all structures'}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <TextBlock Text="{Binding OnlyLabel}" VerticalAlignment="Center" />
-              <c:Icon Kind="Close" Size="10" VerticalAlignment="Center" />
-            </StackPanel>
-          </Button>
         </StackPanel>
       </Grid>
-    </Border>
-
-    <!-- Submission folder (Export, then Submission folder) -->
-    <Border DockPanel.Dock="Top" Classes="inlinePanel" IsVisible="{Binding Submission.IsOpen}">
-      <StackPanel Spacing="10">
-        <TextBlock Classes="h3" Text="Submission Folder" ToolTip.Tip="A PDF report per assessment, the percent damaged list, the community report, the FEMA package (SDE_1) and results.csv" />
-        <TextBlock Classes="semibold" Text="{Binding Submission.Count}" />
-        <StackPanel Orientation="Horizontal" Spacing="16" IsEnabled="{Binding !Submission.IsWriting}">
-          <TextBlock Text="Report for each" VerticalAlignment="Center" />
-          <ComboBox SelectedIndex="{Binding Submission.ReportIndex}" Width="210" AutomationProperties.Name="Report for each assessment">
-            <ComboBoxItem Content="Summary (one page)" />
-            <ComboBoxItem Content="Detailed report" />
-          </ComboBox>
-          <CheckBox Content="With photos" IsChecked="{Binding Submission.IncludePhotos}" />
-          <CheckBox Content="Include incomplete assessments" IsChecked="{Binding Submission.IncludeIncomplete}" />
-        </StackPanel>
-        <CheckBox Content="Add marked-up copies of photos" IsChecked="{Binding Submission.IncludeMarkedUpCopies}" IsEnabled="{Binding !Submission.IsWriting}"
-                  ToolTip.Tip="A Marked-up photos folder with the marks drawn on. FEMA's package keeps the original photos either way." />
-        <StackPanel Spacing="4" IsVisible="{Binding Submission.ProgressText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-          <ProgressBar Value="{Binding Submission.ProgressValue}" Maximum="100" Height="6" IsVisible="{Binding Submission.IsWriting}" AutomationProperties.Name="Progress" />
-          <TextBlock Classes="muted" Text="{Binding Submission.ProgressText}" TextTrimming="CharacterEllipsis" />
-        </StackPanel>
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <Button Content="{Binding Submission.CancelText}" Command="{Binding Submission.CancelCommand}" />
-          <Button Classes="primary" Content="Write to a Folder…" Command="{Binding Submission.WriteCommand}" IsEnabled="{Binding Submission.CanWrite}" />
-        </StackPanel>
-      </StackPanel>
     </Border>
 
     <!-- The list, with a status bar under it (how many are shown and in what order, or how many are checked), and the
@@ -187,14 +223,14 @@
     <Grid ColumnDefinitions="*,Auto">
     <DockPanel>
         <Panel DockPanel.Dock="Bottom">
-          <Border Classes="statusBar">
+          <Border Classes="statusBar onPaper">
             <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center">
               <TextBlock Text="{Binding CountText}" />
               <TextBlock Text="·" />
               <TextBlock Text="{Binding SortText}" />
             </StackPanel>
           </Border>
-          <Border Classes="statusBar" IsVisible="{Binding HasChecked}">
+          <Border Classes="statusBar onPaper" IsVisible="{Binding HasChecked}">
             <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" VerticalAlignment="Center">
               <TextBlock Text="{Binding CheckedText}" ToolTip.Tip="Change, Reports and Export use the checked structures" />
               <Button Classes="link" Content="Clear" Command="{Binding ClearCheckedCommand}" AutomationProperties.Name="Uncheck every structure" />
@@ -202,39 +238,47 @@
           </Border>
         </Panel>
         <Grid>
-          <DataGrid Name="Grid" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}" IsVisible="{Binding HasRows}"
+          <!-- The table: one white card on the page -->
+          <Border Classes="tableSheet" IsVisible="{Binding HasRows}">
+          <Border Classes="tableClip">
+          <DataGrid Name="Grid" ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected}"
                     IsReadOnly="True" CanUserSortColumns="True" CanUserReorderColumns="False" CanUserResizeColumns="True" SelectionMode="Single"
-                    GridLinesVisibility="None" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
+                    GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
+                    v:TableLayout.Key="Structures"
                     AutomationProperties.Name="Structures" Sorting="OnSorting" DoubleTapped="OnRowDoubleTapped" KeyDown="OnListKeyDown">
             <DataGrid.ContextMenu>
               <ContextMenu>
                 <MenuItem Header="Open" Command="{Binding OpenCommand}" CommandParameter="{Binding Selected}" />
+                <MenuItem Header="Case File" Command="{Binding Shell.ShowCaseFileCommand}" CommandParameter="{Binding Selected}" />
+                <MenuItem Header="Pin" Command="{Binding PinCommand}" CommandParameter="{Binding Selected}" IsVisible="{Binding !SelectedIsPinned}" />
+                <MenuItem Header="Unpin" Command="{Binding UnpinCommand}" CommandParameter="{Binding Selected}" IsVisible="{Binding SelectedIsPinned}" />
                 <MenuItem Header="Copy from Another Structure…" Command="{Binding CopyFromCommand}" CommandParameter="{Binding Selected}" />
                 <MenuItem Header="Set a Field on the Checked Structures…" Command="{Binding BulkEditCommand}" />
                 <MenuItem Header="Set Event for the Checked Structures…" Command="{Binding SetEventCommand}" />
+                <MenuItem Header="Tags" ItemsSource="{Binding TagMenuItems}" />
                 <Separator />
-                <MenuItem Header="Move to Recently Deleted" Command="{Binding TrashCommand}" CommandParameter="{Binding Selected}" />
+                <MenuItem Header="Move to Recently Deleted" Classes="destructive" Command="{Binding TrashCommand}" CommandParameter="{Binding Selected}" />
               </ContextMenu>
             </DataGrid.ContextMenu>
             <DataGrid.Columns>
-              <DataGridTemplateColumn Width="34" CanUserSort="False" CanUserResize="False">
+              <DataGridTemplateColumn Width="34" MinWidth="34" CanUserSort="False" CanUserResize="False">
                 <DataGridTemplateColumn.Header>
-                  <CheckBox IsChecked="{Binding AllChecked}" AutomationProperties.Name="Check or uncheck all shown" ToolTip.Tip="Check or uncheck all shown" />
+                  <CheckBox IsChecked="{Binding AllChecked}" Margin="-5,0,0,0" AutomationProperties.Name="Check or uncheck all shown" ToolTip.Tip="Check or uncheck all shown" />
                 </DataGridTemplateColumn.Header>
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
-                    <CheckBox IsChecked="{Binding IsChecked}" HorizontalAlignment="Center" AutomationProperties.Name="{Binding Address, StringFormat='Include {0}'}" />
+                    <CheckBox Classes="rowCheck" IsChecked="{Binding IsChecked}" HorizontalAlignment="Center" AutomationProperties.Name="{Binding Address, StringFormat='Include {0}'}" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Structure" SortMemberPath="Address" Width="1.6*" MinWidth="160">
+              <DataGridTemplateColumn Header="Structure" SortMemberPath="Address" Width="1.4*" MinWidth="148">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <TextBlock Classes="cell" Text="{Binding Address}" ToolTip.Tip="{Binding Detail}" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Owner" SortMemberPath="Owner" Width="1.2*">
+              <DataGridTemplateColumn Header="Owner" SortMemberPath="Owner" Width="1*" MinWidth="96">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <TextBlock Classes="cell secondary" Text="{Binding Owner}" />
@@ -248,14 +292,14 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Type" SortMemberPath="Type" Width="124">
+              <DataGridTemplateColumn Header="Type" SortMemberPath="Type" Width="116" MinWidth="116">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <TextBlock Classes="cell secondary" Text="{Binding Type}" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Inspected" SortMemberPath="Inspected" Width="112">
+              <DataGridTemplateColumn Header="Inspected" SortMemberPath="Inspected" Width="96" MinWidth="96">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <TextBlock Classes="cell secondary" Text="{Binding Inspected}" ToolTip.Tip="{Binding Inspector}" />
@@ -269,14 +313,37 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Status" SortMemberPath="Status" Width="100">
+              <DataGridTemplateColumn Header="Status" SortMemberPath="Status" Width="76" MinWidth="76">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <TextBlock Classes="cell secondary" Text="{Binding Status}" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="ZIP" SortMemberPath="Zip" Width="80">
+              <DataGridTemplateColumn Header="Tags" SortMemberPath="Tags" Width="1.2*" MinWidth="56">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate x:DataType="vm:StructureRowViewModel">
+                    <ItemsControl ItemsSource="{Binding Tags}" Margin="8,0" VerticalAlignment="Center" ClipToBounds="True" ToolTip.Tip="{Binding TagsText}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <c:TagStrip Spacing="4" />
+                        </ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TagViewModel">
+                          <Border Classes="tagChip">
+                            <DockPanel>
+                              <Ellipse DockPanel.Dock="Left" Classes="tagDot" Margin="0,0,5,0" app:ThemeBrush.Fill="{Binding DotKey}" />
+                              <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                            </DockPanel>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="ZIP" SortMemberPath="Zip" Width="80" MinWidth="80">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <TextBlock Classes="cell secondary num" Text="{Binding Zip}" />
@@ -290,7 +357,7 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="FIRM zone" SortMemberPath="FirmZone" Width="90">
+              <DataGridTemplateColumn Header="FIRM zone" SortMemberPath="FirmZone" Width="90" MinWidth="90">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <TextBlock Classes="cell secondary" Text="{Binding FirmZone}" />
@@ -304,22 +371,25 @@
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Last changed" SortMemberPath="Updated" Width="112">
+              <DataGridTemplateColumn Header="Last changed" SortMemberPath="Updated" Width="112" MinWidth="112">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <TextBlock Classes="cell secondary" Text="{Binding Updated}" />
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Damaged" SortMemberPath="Damaged" Width="96">
+              <DataGridTemplateColumn Header="Damaged" SortMemberPath="Damaged" Width="136" MinWidth="136">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
-                    <TextBlock Classes="cell money" Text="{Binding PercentText}"
-                               app:ThemeBrush.Foreground="{Binding State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Classes="cellFigure" Text="{Binding PercentText}"
+                                 app:ThemeBrush.Foreground="{Binding State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
+                      <c:StaffGauge Grid.Column="1" Classes="cellGauge" Value="{Binding PercentValue}" IsEmpty="{Binding !HasPercent}" />
+                    </Grid>
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Result" SortMemberPath="Result" Width="1.5*" MinWidth="150">
+              <DataGridTemplateColumn Header="Result" SortMemberPath="Result" Width="1.8*" MinWidth="184">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate x:DataType="vm:StructureRowViewModel">
                     <DockPanel Classes="result" Margin="8,0" VerticalAlignment="Center" ToolTip.Tip="{Binding Result}">
@@ -331,12 +401,16 @@
               </DataGridTemplateColumn>
             </DataGrid.Columns>
           </DataGrid>
+          </Border>
+          </Border>
 
           <!-- Empty states -->
-          <c:EmptyState IsVisible="{Binding IsEmpty}" Title="{Binding EmptyTitle}">
+          <c:EmptyState IsVisible="{Binding IsEmpty}" Title="{Binding EmptyTitle}" MaxWidth="640">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Button Classes="primary" Content="New Residential" Command="{Binding NewStructureCommand}" CommandParameter="1" />
               <Button Content="New Non-Residential" Command="{Binding NewStructureCommand}" CommandParameter="2" />
+              <Button Content="Open Sample Database" Command="{Binding Shell.OpenSampleDatabaseCommand}" IsVisible="{Binding CanOpenSample}"
+                      ToolTip.Tip="Practise on made-up structures; your database stays as it is" />
             </StackPanel>
           </c:EmptyState>
           <c:EmptyState IsVisible="{Binding NoMatches}" Title="No Matches">
@@ -345,76 +419,168 @@
         </Grid>
     </DockPanel>
 
-    <Border Grid.Column="1" Classes="inspector" Width="264" IsVisible="{Binding IsInspectorVisible}">
+    <!-- The selected structure: the result hero, then its facts and costs on a white card with the actions -->
+    <Border Grid.Column="1" Classes="inspector cards" IsVisible="{Binding IsInspectorVisible}" Width="{Binding Shell.InspectorWidth}" Name="Inspector">
       <Grid>
-        <DockPanel Margin="16" IsVisible="{Binding HasSelectedDetail}">
-          <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-            <DropDownButton Content="Report" IsEnabled="{Binding CanReportSelected}" AutomationProperties.Name="Report of the selected structure">
-              <DropDownButton.Flyout>
-                <MenuFlyout>
-                  <MenuItem Header="Summary Report" Command="{Binding PrintSelectedCommand}" CommandParameter="Summary" />
-                  <MenuItem Header="Detailed Report" Command="{Binding PrintSelectedCommand}" CommandParameter="Detail" />
-                </MenuFlyout>
-              </DropDownButton.Flyout>
-            </DropDownButton>
-            <Button Classes="primary" Content="Open" Command="{Binding OpenCommand}" CommandParameter="{Binding Selected}" AutomationProperties.Name="Open the selected structure" />
-          </StackPanel>
-          <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Spacing="12" DataContext="{Binding SelectedDetail}" x:DataType="vm:StructureDetail">
-              <StackPanel Spacing="2">
-                <TextBlock Classes="semibold" Text="{Binding Row.Address}" TextWrapping="Wrap" />
-                <TextBlock Classes="secondary sm" Text="{Binding Kind}" TextWrapping="Wrap" />
-              </StackPanel>
-              <StackPanel Spacing="4">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                  <TextBlock Classes="inspectorFigure" Text="{Binding Row.PercentText}" IsVisible="{Binding Row.HasPercent}"
-                             app:ThemeBrush.Foreground="{Binding Row.State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
-                  <TextBlock Classes="secondary sm" Text="{Binding Row.Result}" VerticalAlignment="Bottom" Margin="0,0,0,3" TextWrapping="Wrap" />
-                </StackPanel>
-                <StackPanel Spacing="4" IsVisible="{Binding Row.HasPercent}">
-                  <Panel>
-                    <ProgressBar Classes="threshold" Minimum="0" Maximum="100" Value="{Binding PercentValue}"
-                                 app:ThemeBrush.Foreground="{Binding Row.State, Converter={x:Static app:Converters.StatusDotKey}}"
-                                 AutomationProperties.Name="Percent damaged against the 50% threshold" />
-                    <Grid ColumnDefinitions="*,Auto,*">
-                      <Border Grid.Column="1" Classes="thresholdTick" />
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasSelectedDetail}">
+          <StackPanel Spacing="14" Margin="0,0,20,20">
+            <c:ResultHero Name="InspectorHero" DataContext="{Binding SelectedDetail}" x:DataType="vm:StructureDetail"
+                          Title="{Binding Row.Address}" Subtitle="{Binding Kind}" PercentText="{Binding Row.PercentText}" HasPercent="{Binding Row.HasPercent}"
+                          Verdict="{Binding Row.Result}" IsSubstantial="{Binding Row.State, Converter={x:Static app:Converters.IsSubstantial}}"
+                          LineText="{Binding LineText}" Value="{Binding PercentValue}" />
+
+            <Border Classes="sideCard">
+              <StackPanel Spacing="16">
+                <StackPanel Spacing="16" DataContext="{Binding SelectedDetail}" x:DataType="vm:StructureDetail">
+                  <StackPanel Spacing="8">
+                    <TextBlock Classes="cardTitle" Text="Structure" />
+                    <Grid Classes="facts" ColumnDefinitions="88,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                      <TextBlock Classes="factLabel" Text="Owner" />
+                      <TextBlock Grid.Column="1" Text="{Binding Row.Owner}" TextWrapping="Wrap" />
+                      <TextBlock Grid.Row="1" Classes="factLabel" Text="Community" />
+                      <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Row.Place}" TextWrapping="Wrap" />
+                      <TextBlock Grid.Row="2" Classes="factLabel" Text="Inspected" />
+                      <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Row.Inspected}" />
+                      <TextBlock Grid.Row="3" Classes="factLabel" Text="Inspector" />
+                      <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Row.Inspector}" TextWrapping="Wrap" />
+                      <TextBlock Grid.Row="4" Classes="factLabel" Text="Status" />
+                      <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Row.Status}" />
                     </Grid>
-                  </Panel>
-                  <Grid ColumnDefinitions="*,Auto,*">
-                    <TextBlock Classes="xs secondary num" Text="0%" />
-                    <TextBlock Grid.Column="1" Classes="xs secondary num" Text="50%" />
-                    <TextBlock Grid.Column="2" Classes="xs secondary num" Text="100%" HorizontalAlignment="Right" />
-                  </Grid>
+                  </StackPanel>
+
+                  <Border Classes="hairline" IsVisible="{Binding HasAssessment}" />
+                  <StackPanel Spacing="8" IsVisible="{Binding HasAssessment}">
+                    <TextBlock Classes="cardTitle" Text="Costs" />
+                    <Grid Classes="facts" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
+                      <TextBlock Classes="factLabel" Text="Replacement cost" />
+                      <TextBlock Grid.Column="1" Classes="money" Text="{Binding ReplacementCost, Converter={x:Static app:Converters.MoneyWhole}}" />
+                      <TextBlock Grid.Row="1" Classes="factLabel" Text="Actual cash value" />
+                      <TextBlock Grid.Row="1" Grid.Column="1" Classes="money" Text="{Binding ActualCashValue, Converter={x:Static app:Converters.MoneyWhole}}" />
+                      <TextBlock Grid.Row="2" Classes="factLabel" Text="Damages" />
+                      <TextBlock Grid.Row="2" Grid.Column="1" Classes="money semibold" Text="{Binding Damages, Converter={x:Static app:Converters.MoneyWhole}}" />
+                    </Grid>
+                  </StackPanel>
+                </StackPanel>
+
+                <!-- The structure's tags: each with a ×, and Add Tag (type to find one, or to make a new one) -->
+                <Border Classes="hairline" />
+                <StackPanel Spacing="8" Name="InspectorTags">
+                  <DockPanel>
+                    <DropDownButton DockPanel.Dock="Right" Classes="sm" Name="AddTagButton" AutomationProperties.Name="Add a tag" ToolTip.Tip="Add a Tag to This Structure">
+                      <StackPanel Orientation="Horizontal" Spacing="5">
+                        <c:Icon Kind="Plus" Size="12" VerticalAlignment="Center" />
+                        <TextBlock Text="Add Tag" VerticalAlignment="Center" />
+                      </StackPanel>
+                      <DropDownButton.Flyout>
+                        <Flyout Placement="BottomEdgeAlignedRight" Opened="OnAddTagOpened">
+                          <StackPanel Spacing="8" Width="248">
+                            <TextBox Name="TagQueryBox" Text="{Binding TagQuery}" PlaceholderText="Find or make a tag" AutomationProperties.Name="Tag name"
+                                     KeyDown="OnTagQueryKeyDown" />
+                            <ScrollViewer MaxHeight="220" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding HasTagSuggestions}">
+                              <ItemsControl ItemsSource="{Binding TagSuggestions}">
+                                <ItemsControl.ItemTemplate>
+                                  <DataTemplate x:DataType="vm:TagViewModel">
+                                    <Button Classes="subtle" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                            Command="{Binding $parent[UserControl].((vm:StructuresViewModel)DataContext).AddTagToSelectedCommand}" CommandParameter="{Binding}"
+                                            AutomationProperties.Name="{Binding Name, StringFormat='Add the tag {0}'}">
+                                      <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Ellipse Classes="tagDot" app:ThemeBrush.Fill="{Binding DotKey}" />
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                      </StackPanel>
+                                    </Button>
+                                  </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                            </ScrollViewer>
+                            <StackPanel Spacing="6" IsVisible="{Binding CanCreateTag}">
+                              <Border Classes="hairline" IsVisible="{Binding HasTagSuggestions}" />
+                              <ItemsControl ItemsSource="{Binding NewTagColours}" AutomationProperties.Name="Colour of the new tag">
+                                <ItemsControl.ItemsPanel>
+                                  <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="2" />
+                                  </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                  <DataTemplate x:DataType="vm:TagColourChoice">
+                                    <Button Classes="swatch" AutomationProperties.Name="{Binding Name}" ToolTip.Tip="{Binding Name}"
+                                            Command="{Binding $parent[UserControl].((vm:StructuresViewModel)DataContext).ChooseNewTagColourCommand}" CommandParameter="{Binding}">
+                                      <Border Classes="swatchRing" Classes.chosen="{Binding IsChosen}">
+                                        <Ellipse app:ThemeBrush.Fill="{Binding DotKey}" />
+                                      </Border>
+                                    </Button>
+                                  </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                              <Button Classes="primary" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Content="{Binding CreateTagText}"
+                                      Command="{Binding CreateTagForSelectedCommand}" />
+                            </StackPanel>
+                            <TextBlock Classes="danger" Text="{Binding TagProblem}" TextWrapping="Wrap"
+                                       IsVisible="{Binding TagProblem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                          </StackPanel>
+                        </Flyout>
+                      </DropDownButton.Flyout>
+                    </DropDownButton>
+                    <TextBlock Classes="cardTitle" Text="Tags" VerticalAlignment="Center" />
+                  </DockPanel>
+                  <ItemsControl Classes="tagWrapList" ItemsSource="{Binding SelectedTags}" IsVisible="{Binding HasSelectedTags}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <WrapPanel />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:TagViewModel">
+                        <Border Classes="tagChip removable">
+                          <StackPanel Orientation="Horizontal" Spacing="5">
+                            <Ellipse Classes="tagDot" app:ThemeBrush.Fill="{Binding DotKey}" />
+                            <TextBlock Text="{Binding Name}" />
+                            <Button Classes="icon" ToolTip.Tip="Remove Tag" AutomationProperties.Name="{Binding Name, StringFormat='Remove the tag {0}'}"
+                                    Command="{Binding $parent[UserControl].((vm:StructuresViewModel)DataContext).RemoveTagFromSelectedCommand}" CommandParameter="{Binding}">
+                              <c:Icon Kind="Close" Size="10" />
+                            </Button>
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Classes="muted" Text="No tags" IsVisible="{Binding !HasSelectedTags}" />
+                </StackPanel>
+
+                <Border Classes="hairline" />
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                  <DropDownButton Content="Report" IsEnabled="{Binding CanReportSelected}" AutomationProperties.Name="Report of the selected structure">
+                    <DropDownButton.Flyout>
+                      <MenuFlyout>
+                        <MenuItem Header="Summary Report" Command="{Binding PrintSelectedCommand}" CommandParameter="Summary" />
+                        <MenuItem Header="Detailed Report" Command="{Binding PrintSelectedCommand}" CommandParameter="Detail" />
+                      </MenuFlyout>
+                    </DropDownButton.Flyout>
+                  </DropDownButton>
+                  <Button Classes="icon" Command="{Binding Shell.ShowCaseFileCommand}" CommandParameter="{Binding Selected}" Name="InspectorCaseFile"
+                          AutomationProperties.Name="Case file of the selected structure" ToolTip.Tip="Case File">
+                    <c:Icon Kind="Clipboard" Size="16" />
+                  </Button>
+                  <Button Classes="icon" Command="{Binding PinCommand}" CommandParameter="{Binding Selected}" IsVisible="{Binding !SelectedIsPinned}"
+                          AutomationProperties.Name="Pin" ToolTip.Tip="Pin to the Sidebar">
+                    <c:Icon Kind="PushPin" Size="16" />
+                  </Button>
+                  <Button Classes="icon" Command="{Binding UnpinCommand}" CommandParameter="{Binding Selected}" IsVisible="{Binding SelectedIsPinned}"
+                          AutomationProperties.Name="Unpin" ToolTip.Tip="Unpin from the Sidebar">
+                    <c:Icon Kind="PushPinFilled" Size="16" Classes="accent" />
+                  </Button>
+                  <Button Classes="primary" Content="Open" Command="{Binding OpenCommand}" CommandParameter="{Binding Selected}" MinWidth="88"
+                          HorizontalContentAlignment="Center" AutomationProperties.Name="Open the selected structure" />
                 </StackPanel>
               </StackPanel>
-              <Border Classes="hairline" />
-              <Grid Classes="facts" ColumnDefinitions="96,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-                <TextBlock Classes="secondary" Text="Owner" />
-                <TextBlock Grid.Column="1" Text="{Binding Row.Owner}" TextWrapping="Wrap" />
-                <TextBlock Grid.Row="1" Classes="secondary" Text="Community" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Row.Place}" TextWrapping="Wrap" />
-                <TextBlock Grid.Row="2" Classes="secondary" Text="Inspected" />
-                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Row.Inspected}" />
-                <TextBlock Grid.Row="3" Classes="secondary" Text="Inspector" />
-                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Row.Inspector}" TextWrapping="Wrap" />
-                <TextBlock Grid.Row="4" Classes="secondary" Text="Status" />
-                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Row.Status}" />
-              </Grid>
-              <Border Classes="hairline" IsVisible="{Binding HasAssessment}" />
-              <Grid Classes="facts" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" IsVisible="{Binding HasAssessment}">
-                <TextBlock Classes="secondary" Text="Replacement cost" />
-                <TextBlock Grid.Column="1" Classes="money" Text="{Binding ReplacementCost, Converter={x:Static app:Converters.MoneyWhole}}" />
-                <TextBlock Grid.Row="1" Classes="secondary" Text="Actual cash value" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Classes="money" Text="{Binding ActualCashValue, Converter={x:Static app:Converters.MoneyWhole}}" />
-                <TextBlock Grid.Row="2" Classes="secondary" Text="Damages" />
-                <TextBlock Grid.Row="2" Grid.Column="1" Classes="money" Text="{Binding Damages, Converter={x:Static app:Converters.MoneyWhole}}" />
-              </Grid>
-            </StackPanel>
-          </ScrollViewer>
-        </DockPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
         <c:EmptyState IsVisible="{Binding !HasSelectedDetail}" Title="No Selection" />
       </Grid>
     </Border>
+    <!-- The inspector's leading edge drags its width (shared with the editor's result panel) -->
+    <c:ResizeHandle Grid.Column="1" Classes="inspectorEdge" Name="InspectorResizer" IsVisible="{Binding IsInspectorVisible}"
+                    Value="{Binding Shell.InspectorWidth}" ResetCommand="{Binding Shell.ResetInspectorWidthCommand}" GrowsRight="False" />
     </Grid>
   </DockPanel>
 </UserControl>

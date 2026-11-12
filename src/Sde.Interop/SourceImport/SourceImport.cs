@@ -43,6 +43,24 @@ public sealed class ImportRow
 	/// <summary>"" when the profile has no inspection ID column (and always for structures).</summary>
 	public string InspectionId { get; init; }
 
+	/// <summary>
+	/// The record ID as written in the file. It differs from <see cref="RecordId"/> only for a row that was split into
+	/// several buildings, where <see cref="RecordId"/> is this ID plus "#2", "#Unit B" and so on. Null for rows with no ID.
+	/// </summary>
+	public string BaseRecordId { get; init; }
+
+	/// <summary>1-based position of this structure among the buildings its source row became; 0 when the row was not split.</summary>
+	public int SplitIndex { get; init; }
+
+	/// <summary>How many structures the source row became (1 when it was not split). Rows with the same <see cref="RowNumber"/> belong together.</summary>
+	public int SplitCount { get; init; } = 1;
+
+	/// <summary>The text that tells this building apart ("Bldg 2", "Unit B"), put in the profile's suffix field; null when not split.</summary>
+	public string SplitLabel { get; init; }
+
+	/// <summary>The row came from a source row that covers several buildings (see <see cref="SourceProfile.SplitMode"/>).</summary>
+	public bool IsSplit => SplitIndex > 0;
+
 	public ImportRowStatus Status { get; internal set; }
 
 	/// <summary>The assessment as it would be saved (calculated). Null for structures and for rows without a record ID.</summary>
@@ -94,12 +112,56 @@ public sealed class ImportRow
 	internal decimal? ShapeTotal { get; set; }
 }
 
+/// <summary>
+/// A structure imported earlier from a record that covers several buildings, whose building is no longer in the file
+/// (the count went down, or the item left the list). It is only reported: the import never deletes or changes it.
+/// </summary>
+public sealed class MissingSplitStructure
+{
+	/// <summary>The record ID of the link ("BLD-1#3", "P-7#Unit B").</summary>
+	public string RecordId { get; init; }
+
+	/// <summary>The record ID as written in the file.</summary>
+	public string BaseRecordId { get; init; }
+
+	/// <summary>The structure in SDE.</summary>
+	public Guid PropertyId { get; init; }
+
+	/// <summary>Plain-English line for the preview, such as "123 Main St: BLD-1#3 is no longer in the file".</summary>
+	public string Description { get; init; }
+}
+
+/// <summary>The rows of one source row: one row when it was not split, one per building when it was.</summary>
+public sealed class ImportRowGroup
+{
+	/// <summary>The row's number in the file.</summary>
+	public int RowNumber { get; init; }
+
+	/// <summary>The record ID as written in the file.</summary>
+	public string RecordId { get; init; }
+
+	/// <summary>The resulting rows, in building order.</summary>
+	public List<ImportRow> Rows { get; init; } = new();
+
+	public bool IsSplit => Rows.Count > 0 && Rows[0].IsSplit;
+}
+
 /// <summary>The result of applying a profile to a file: one row per record. Nothing is saved.</summary>
 public sealed class SourcePreview
 {
 	public SourceShaped Shaped { get; init; }
 	public SourceProfile Profile { get; init; }
+	/// <summary>One row per resulting structure, in file order. A source row that covers several buildings gives several rows in a row (see <see cref="Groups"/>).</summary>
 	public List<ImportRow> Rows { get; } = new();
+
+	/// <summary>The rows grouped under the source row they came from, in file order. A group of one is an ordinary row.</summary>
+	public List<ImportRowGroup> Groups => Rows
+		.GroupBy(r => r.RowNumber)
+		.Select(g => new ImportRowGroup { RowNumber = g.Key, RecordId = g.First().BaseRecordId ?? g.First().RecordId, Rows = g.ToList() })
+		.ToList();
+
+	/// <summary>Structures made earlier from a record that now has fewer buildings. They are reported here and never deleted.</summary>
+	public List<MissingSplitStructure> MissingSplitStructures { get; } = new();
 
 	/// <summary>Problems with the profile (nothing can be imported until they are fixed).</summary>
 	public List<string> MappingProblems { get; } = new();
@@ -210,6 +272,21 @@ public static class SourceImport
 		{
 			preview.MappingProblems.Add("To match by address, choose the columns that hold it (Location & owner → Street number and name).");
 		}
+		int splitColumn = -1;
+		if (profile.SplitMode != SourceSplitMode.None)
+		{
+			splitColumn = table.IndexOf(profile.SplitColumn);
+			if (string.IsNullOrWhiteSpace(profile.SplitColumn))
+			{
+				preview.MappingProblems.Add(profile.SplitMode == SourceSplitMode.CountColumn
+					? "Choose the column that holds the number of buildings in each record."
+					: "Choose the column that lists the buildings of each record.");
+			}
+			else if (splitColumn < 0)
+			{
+				preview.MappingProblems.Add($"The column '{profile.SplitColumn}' (the buildings of each record) is not in the sheet.");
+			}
+		}
 		Dictionary<string, int> columns = new(StringComparer.Ordinal);
 		foreach (SourceFieldInfo field in SourceFields.All)
 		{
@@ -247,49 +324,95 @@ public static class SourceImport
 		SourceRowBuilder builder = new SourceRowBuilder(profile, store, columns);
 		Matcher matcher = new Matcher(profile, store, builder, structures);
 		Dictionary<string, int> seenKeys = new(StringComparer.OrdinalIgnoreCase);
+		HashSet<string> produced = new(StringComparer.OrdinalIgnoreCase);
+		HashSet<string> splitBases = new(StringComparer.OrdinalIgnoreCase);
+		bool unitMatching = profile.MatchBy == SourceMatchBy.Address && profile.AddressMatchUnit;
 		foreach (SourceRow source in table.Rows)
 		{
 			ct.ThrowIfCancellationRequested();
 			string recordId = recordColumn >= 0 ? Text.Clean(source[recordColumn]) : null;
 			string inspectionId = inspectionColumn >= 0 ? Text.Clean(source[inspectionColumn]) ?? "" : "";
-			ImportRow row = new ImportRow { RowNumber = source.RowNumber, RecordId = recordId, InspectionId = inspectionId };
-			preview.Rows.Add(row);
 			if (recordId == null)
 			{
-				Fail(row, "No record ID");
+				ImportRow missing = new ImportRow { RowNumber = source.RowNumber, RecordId = null, InspectionId = inspectionId };
+				preview.Rows.Add(missing);
+				Fail(missing, "No record ID");
 				continue;
 			}
-			string key = Key(recordId, inspectionId);
-			if (seenKeys.TryGetValue(key, out int first))
+			List<string> splitWarnings = new();
+			List<SplitPart> parts = SourceSplit.Plan(profile, splitColumn >= 0 ? Text.Clean(source[splitColumn]) : null, splitWarnings, out string splitProblem);
+			if (parts == null)
 			{
-				Fail(row, structures ? $"Same record as row {first}"
-					: inspectionId.Length > 0 ? $"Same record and inspection as row {first}"
-					: $"Same record as row {first}; choose an inspection ID column to import each inspection");
+				ImportRow whole = new ImportRow { RowNumber = source.RowNumber, RecordId = recordId, BaseRecordId = recordId, InspectionId = inspectionId };
+				preview.Rows.Add(whole);
+				Fail(whole, splitProblem);
 				continue;
 			}
-			seenKeys[key] = row.RowNumber;
+			if (profile.SplitMode != SourceSplitMode.None)
+			{
+				splitBases.Add(recordId);
+			}
+			List<string> readWarnings = new();
+			Dictionary<string, string> baseValues = builder.ReadValues(source, readWarnings);
+			foreach (SplitPart part in parts)
+			{
+				string id = recordId + part.RecordSuffix;
+				ImportRow row = new ImportRow
+				{
+					RowNumber = source.RowNumber,
+					RecordId = id,
+					BaseRecordId = recordId,
+					InspectionId = inspectionId,
+					SplitIndex = part.Index,
+					SplitCount = part.Count,
+					SplitLabel = part.Label,
+				};
+				preview.Rows.Add(row);
+				row.Warnings.AddRange(splitWarnings);
+				row.Warnings.AddRange(readWarnings);
+				produced.Add(id);
+				string key = Key(id, inspectionId);
+				if (seenKeys.TryGetValue(key, out int first))
+				{
+					Fail(row, structures ? $"Same record as row {first}"
+						: inspectionId.Length > 0 ? $"Same record and inspection as row {first}"
+						: $"Same record as row {first}; choose an inspection ID column to import each inspection");
+					continue;
+				}
+				seenKeys[key] = row.RowNumber;
 
-			Dictionary<string, string> values = builder.ReadValues(source, row.Warnings);
-			try
-			{
-				if (structures)
+				Dictionary<string, string> values = new(baseValues, StringComparer.Ordinal);
+				if (part.IsSplit)
 				{
-					BuildStructure(row, values, builder, matcher, store);
+					string field = profile.EffectiveSplitSuffixField;
+					values[field] = values.TryGetValue(field, out string existing) ? existing + " " + part.Label : part.Label;
 				}
-				else
+				bool allowMatch = !part.IsSplit || unitMatching;
+				try
 				{
-					BuildInspection(row, key, values, builder, matcher, store);
+					if (structures)
+					{
+						BuildStructure(row, values, builder, matcher, store, allowMatch);
+					}
+					else
+					{
+						BuildInspection(row, key, values, builder, matcher, store, allowMatch);
+					}
 				}
+				catch (Exception e) when (e is not OperationCanceledException)
+				{
+					row.Problems.Add("Couldn't build the " + (structures ? "structure" : "assessment") + ": " + e.Message);
+				}
+				if (row.Problems.Count > 0 && row.Status != ImportRowStatus.Ambiguous)
+				{
+					row.Status = ImportRowStatus.Problem;
+				}
+				row.Selected = row.CanImport;
 			}
-			catch (Exception e) when (e is not OperationCanceledException)
-			{
-				row.Problems.Add("Couldn't build the " + (structures ? "structure" : "assessment") + ": " + e.Message);
-			}
-			if (row.Problems.Count > 0 && row.Status != ImportRowStatus.Ambiguous)
-			{
-				row.Status = ImportRowStatus.Problem;
-			}
-			row.Selected = row.CanImport;
+		}
+		if (splitBases.Count > 0)
+		{
+			ReportMissingSplits(preview, matcher, store, splitBases, produced);
 		}
 		return preview;
 	}
@@ -363,9 +486,46 @@ public static class SourceImport
 		};
 	}
 
+	/// <summary>
+	/// Structures made earlier from a record in this file whose building is gone from it now (the count went down, or
+	/// the item left the list). They are listed for the person to deal with; the import never deletes or changes them.
+	/// </summary>
+	private static void ReportMissingSplits(SourcePreview preview, Matcher matcher, SdeStore store, HashSet<string> bases, HashSet<string> produced)
+	{
+		foreach ((string linkId, Guid propertyId) in matcher.AllLinked())
+		{
+			if (produced.Contains(linkId))
+			{
+				continue;
+			}
+			string baseId = bases.FirstOrDefault(b => string.Equals(b, linkId, StringComparison.OrdinalIgnoreCase)
+				|| linkId.StartsWith(b + "#", StringComparison.OrdinalIgnoreCase));
+			if (baseId == null || preview.MissingSplitStructures.Any(m => m.PropertyId == propertyId && m.RecordId == linkId))
+			{
+				continue;
+			}
+			PropertyRecord p = store.GetProperty(propertyId);
+			string where = p == null ? "A structure" : Text.Clean(Text.Join(p.StreetNumber, p.StreetName)) ?? "A structure";
+			preview.MissingSplitStructures.Add(new MissingSplitStructure
+			{
+				RecordId = linkId,
+				BaseRecordId = baseId,
+				PropertyId = propertyId,
+				Description = $"{where}: {linkId} is no longer in the file. It was left as it is.",
+			});
+		}
+		if (preview.MissingSplitStructures.Count > 0)
+		{
+			int n = preview.MissingSplitStructures.Count;
+			preview.Notes.Add(n == 1
+				? "1 structure imported earlier from these records is no longer in the file. It was not changed or deleted."
+				: $"{n} structures imported earlier from these records are no longer in the file. They were not changed or deleted.");
+		}
+	}
+
 	// ───────────────────────── Inspections ─────────────────────────
 
-	private static void BuildInspection(ImportRow row, string key, Dictionary<string, string> values, SourceRowBuilder builder, Matcher matcher, SdeStore store)
+	private static void BuildInspection(ImportRow row, string key, Dictionary<string, string> values, SourceRowBuilder builder, Matcher matcher, SdeStore store, bool allowMatch)
 	{
 		string recordId = row.RecordId;
 		if (matcher.Links.TryGetValue(key, out ExternalLinkRecord link) && store.LoadAssessment(link.AssessmentID) is AssessmentFile existing)
@@ -388,7 +548,7 @@ public static class SourceImport
 			matcher.FileRecords[recordId] = linkedStructure;
 			builder.BuildNew(row, linkedStructure, isNewStructure: false, values);
 		}
-		else if (matcher.Find(values, row) is PropertyRecord match)
+		else if (allowMatch && matcher.Find(values, row) is PropertyRecord match)
 		{
 			row.Status = ImportRowStatus.Attach;
 			matcher.Claim(match, recordId, row.RowNumber);
@@ -424,7 +584,7 @@ public static class SourceImport
 
 	// ───────────────────────── Structures ─────────────────────────
 
-	private static void BuildStructure(ImportRow row, Dictionary<string, string> values, SourceRowBuilder builder, Matcher matcher, SdeStore store)
+	private static void BuildStructure(ImportRow row, Dictionary<string, string> values, SourceRowBuilder builder, Matcher matcher, SdeStore store, bool allowMatch)
 	{
 		if (matcher.StructureLinks.TryGetValue(row.RecordId, out StructureLinkRecord link) && store.GetProperty(link.PropertyID) is PropertyRecord { Active: true } existing)
 		{
@@ -438,7 +598,7 @@ public static class SourceImport
 			matcher.Claim(existing, row.RecordId, row.RowNumber);
 			return;
 		}
-		if (matcher.Find(values, row) is PropertyRecord match)
+		if (allowMatch && matcher.Find(values, row) is PropertyRecord match)
 		{
 			row.Status = ImportRowStatus.Attach;
 			row.SourceValues = values;
@@ -609,6 +769,10 @@ public static class SourceImport
 
 		/// <summary>Structures: links by record.</summary>
 		public Dictionary<string, StructureLinkRecord> StructureLinks { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+		/// <summary>Every record ID of this source that is already linked to a structure, with that structure.</summary>
+		public IEnumerable<(string RecordId, Guid PropertyId)> AllLinked() =>
+			_structures ? StructureLinks.Values.Select(l => (l.RecordId, l.PropertyID)) : Links.Values.Select(l => (l.RecordId, l.PropertyID));
 
 		public bool IsLocked(Guid assessmentId) => _statuses != null && _statuses.TryGetValue(assessmentId, out AssessmentStatusRecord s) && s.IsLocked;
 

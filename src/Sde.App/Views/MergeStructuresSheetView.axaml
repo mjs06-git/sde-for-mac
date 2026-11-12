@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.MergeStructuresSheetView"
+             x:DataType="sh:MergeStructuresSheetViewModel">
+  <UserControl.Resources>
+    <!-- A list of plain sentences under a small heading -->
+    <DataTemplate x:Key="Line" x:DataType="x:String">
+      <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <!-- Review, Merge…: which structure to keep, what the merge does, then Cancel or Merge -->
+  <StackPanel Spacing="16">
+    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+      <RadioButton Classes="mergeChoice" GroupName="KeepChoice" IsChecked="{Binding KeepFirst}" AutomationProperties.Name="{Binding First.Address, StringFormat='Keep {0}'}">
+        <Border Classes="mergeSide" Classes.kept="{Binding KeepFirst}">
+          <StackPanel Spacing="2">
+            <TextBlock Classes="semibold" Text="{Binding First.Address}" TextWrapping="Wrap" />
+            <TextBlock Classes="secondary sm" Text="{Binding First.Owner}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Classes="secondary sm" Text="{Binding First.Parcel}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Classes="secondary sm" Text="{Binding First.Assessments}" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </Border>
+      </RadioButton>
+      <RadioButton Grid.Column="1" Classes="mergeChoice" GroupName="KeepChoice" IsChecked="{Binding KeepSecond}" AutomationProperties.Name="{Binding Second.Address, StringFormat='Keep {0}'}">
+        <Border Classes="mergeSide" Classes.kept="{Binding KeepSecond}">
+          <StackPanel Spacing="2">
+            <TextBlock Classes="semibold" Text="{Binding Second.Address}" TextWrapping="Wrap" />
+            <TextBlock Classes="secondary sm" Text="{Binding Second.Owner}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Classes="secondary sm" Text="{Binding Second.Parcel}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Classes="secondary sm" Text="{Binding Second.Assessments}" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </Border>
+      </RadioButton>
+    </Grid>
+    <TextBlock Classes="secondary" Text="{Binding Outcome}" TextWrapping="Wrap" />
+
+    <!-- Why it can't be done -->
+    <Border Classes="subtle" IsVisible="{Binding HasConflicts}">
+      <DockPanel>
+        <c:Icon DockPanel.Dock="Left" Kind="ErrorCircle" Size="16" Classes="danger" VerticalAlignment="Top" Margin="0,1,10,0" />
+        <StackPanel Spacing="4">
+          <TextBlock Classes="semibold" Text="This merge can't be done" />
+          <ItemsControl ItemsSource="{Binding Conflicts}" ItemTemplate="{StaticResource Line}" AutomationProperties.LiveSetting="Assertive" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <ScrollViewer MaxHeight="320" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="14">
+        <StackPanel Spacing="4" IsVisible="{Binding HasMoving}">
+          <TextBlock Classes="cardTitle" Text="Moves to the kept structure" />
+          <ItemsControl ItemsSource="{Binding Moving}" ItemTemplate="{StaticResource Line}" />
+        </StackPanel>
+        <StackPanel Spacing="4" IsVisible="{Binding HasFilled}">
+          <TextBlock Classes="cardTitle" Text="Blank fields filled in from the other record" />
+          <ItemsControl ItemsSource="{Binding Filled}" ItemTemplate="{StaticResource Line}" />
+        </StackPanel>
+        <StackPanel Spacing="4" IsVisible="{Binding HasDifferences}">
+          <TextBlock Classes="cardTitle" Text="Where they differ" />
+          <ItemsControl ItemsSource="{Binding Differences}" ItemTemplate="{StaticResource Line}" />
+        </StackPanel>
+        <StackPanel Spacing="4" IsVisible="{Binding HasStayingBehind}">
+          <TextBlock Classes="cardTitle" Text="Stays with the removed record" />
+          <ItemsControl ItemsSource="{Binding StayingBehind}" ItemTemplate="{StaticResource Line}" />
+        </StackPanel>
+        <StackPanel Spacing="4" IsVisible="{Binding HasWarnings}">
+          <TextBlock Classes="cardTitle" Text="Worth checking" />
+          <ItemsControl ItemsSource="{Binding Warnings}" ItemTemplate="{StaticResource Line}" />
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+
+    <c:SheetFooter PrimaryText="Merge" PrimaryCommand="{Binding MergeCommand}" PrimaryAutomationName="Merge the structures" />
+  </StackPanel>
+</UserControl>

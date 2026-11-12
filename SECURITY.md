@@ -49,6 +49,7 @@ services. Requests include:
 | You add a layer from an ArcGIS web address | The selected ArcGIS service | Layer and feature requests, including the map extent |
 | You request USGS high-water marks | USGS Short-Term Network service (or the configured service) | The selected event ID and state codes |
 | You click a FEMA link in Help | FEMA's website | An ordinary web page request |
+| You choose **Help > Check for Updates** | GitHub (api.github.com) | A request for SDE for Mac's latest release, with the app's name and version. Nothing about you, your Mac or your data. It never runs by itself |
 
 The phone form serves the local network only. It is off until someone starts it, and it never connects to the
 internet. Exported web maps load basemap tiles in the viewer's browser. If you connect an AI assistant, the assistant

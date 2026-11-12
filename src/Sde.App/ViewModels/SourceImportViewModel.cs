@@ -187,11 +187,17 @@ public sealed partial class SourcePreviewRowViewModel(ImportRow row, ReferenceDa
 
 	public string Record => Row.RecordId == null ? "(no record ID)" : Row.InspectionId is { Length: > 0 } i ? $"{Row.RecordId} · {i}" : Row.RecordId;
 
+	/// <summary>A building of a row that covers several ("Bldg 2", "Unit B").</summary>
+	public bool IsSplit => Row.IsSplit;
+
+	/// <summary>What tells this building apart from the others of its row; null when the row was not split.</summary>
+	public string Building => Row.SplitLabel;
+
 	public string Address
 	{
 		get
 		{
-			if (Row.File?.Property is not PropertyRecord p)
+			if (Row.Property is not PropertyRecord p) // a structures import has no assessment, only the structure
 			{
 				return "";
 			}
@@ -402,6 +408,10 @@ public sealed partial class SourceImportViewModel : ViewModelBase
 		RawColumns = new[] { None };
 		FieldColumnChoices = new[] { SourceFieldRowViewModel.NotImported };
 		PreviewRows.Clear();
+		PreviewGroups.Clear();
+		MissingSplitStructures.Clear();
+		OnPropertyChanged(nameof(HasMissingSplitStructures));
+		OnPropertyChanged(nameof(HasIssues));
 		Values.Clear();
 		FilterValues.Clear();
 		MappingProblems = PreviewSummary = ShapeNotes = TableSummary = BuildingValueQuestion = null;
@@ -581,6 +591,7 @@ public sealed partial class SourceImportViewModel : ViewModelBase
 		_suspend = false;
 		Reshape();
 		_suspend = true;
+		ShowSplit(p);
 		foreach (SourceFieldRowViewModel r in AllRows)
 		{
 			SourceFieldMap m = p.Fields.GetValueOrDefault(r.Info.Key);
@@ -766,6 +777,7 @@ public sealed partial class SourceImportViewModel : ViewModelBase
 		FieldColumnChoices = new[] { SourceFieldRowViewModel.NotImported }.Concat(_shaped.Table.Columns).ToList();
 		bool wasSuspended = _suspend;
 		_suspend = true;
+		RefreshSplitColumns();
 		foreach (SourceFieldRowViewModel r in AllRows)
 		{
 			r.RefreshColumns();
@@ -1102,6 +1114,7 @@ public sealed partial class SourceImportViewModel : ViewModelBase
 		Part(ImportRowStatus.Problem, "can't be imported", "can't be imported");
 		PreviewSummary = (parts.Count == 0 ? (IsStructuresMode ? "No structures" : "No inspections") : string.Join(" · ", parts))
 			+ (preview.Rows.Count > MaxPreviewRows ? $" · showing the first {MaxPreviewRows}" : "");
+		ShowGroups(preview);
 		ShowValues(preview);
 		UpdateImportText();
 	}
@@ -1166,9 +1179,14 @@ public sealed partial class SourceImportViewModel : ViewModelBase
 		{
 			return;
 		}
-		Dictionary<int, bool> include = PreviewRows.ToDictionary(r => r.Row.RowNumber, r => r.Include && r.CanInclude);
-		int created = _preview.Rows.Count(r => r.Selected && r.CanImport && include.GetValueOrDefault(r.RowNumber, true) && r.Status is not (ImportRowStatus.Update or ImportRowStatus.Unchanged));
-		int updated = _preview.Rows.Count(r => r.Selected && r.CanImport && include.GetValueOrDefault(r.RowNumber, true) && r.Status == ImportRowStatus.Update);
+		// Keyed by the row in the file and the building: the buildings of a split row share the row number.
+		Dictionary<(int Row, int Building), bool> include = new();
+		foreach (SourcePreviewRowViewModel r in PreviewRows)
+		{
+			include[RowKey(r.Row)] = r.Include && r.CanInclude;
+		}
+		int created = _preview.Rows.Count(r => r.Selected && r.CanImport && include.GetValueOrDefault(RowKey(r), true) && r.Status is not (ImportRowStatus.Update or ImportRowStatus.Unchanged));
+		int updated = _preview.Rows.Count(r => r.Selected && r.CanImport && include.GetValueOrDefault(RowKey(r), true) && r.Status == ImportRowStatus.Update);
 		string what = IsStructuresMode ? "structure" : "assessment";
 		string message = string.Join(" and ", new[]
 		{
@@ -1191,7 +1209,7 @@ public sealed partial class SourceImportViewModel : ViewModelBase
 			}
 			foreach (SourcePreviewRowViewModel r in PreviewRows)
 			{
-				r.Row.Selected = include.GetValueOrDefault(r.Row.RowNumber, r.Include) && r.CanInclude;
+				r.Row.Selected = include.GetValueOrDefault(RowKey(r.Row), r.Include) && r.CanInclude;
 			}
 			return await _app.Jobs.RunAsync($"Importing {Path.GetFileName(source)}",
 				(_, _) => SourceImport.Import(_app.Store, preview, source), "Couldn't import (nothing was changed)", canStop: false);

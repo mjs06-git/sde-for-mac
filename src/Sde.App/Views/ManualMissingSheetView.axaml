@@ -1,0 +1,11 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.ManualMissingSheetView"
+             x:DataType="sh:ManualMissingSheetViewModel">
+  <StackPanel Spacing="16">
+    <TextBlock Text="{Binding MissingMessage}" TextWrapping="Wrap" />
+    <c:SheetFooter CancelText="Done" PrimaryText="Open FEMA's SDE Page" PrimaryCommand="{Binding OpenFemaPageCommand}" />
+  </StackPanel>
+</UserControl>

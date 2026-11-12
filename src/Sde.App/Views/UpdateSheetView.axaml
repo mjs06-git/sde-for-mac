@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.UpdateSheetView"
+             x:DataType="sh:UpdateSheetViewModel">
+  <!-- A badge and the answer in a line or two, then the buttons for that answer. -->
+  <StackPanel Spacing="20">
+    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+      <Panel>
+        <Border Classes="statusBadge" IsVisible="{Binding IsChecking}">
+          <c:Icon Kind="Globe" />
+        </Border>
+        <Border Classes="statusBadge success" IsVisible="{Binding IsUpToDate}">
+          <c:Icon Kind="CheckCircle" />
+        </Border>
+        <Border Classes="statusBadge" IsVisible="{Binding IsNewer}">
+          <c:Icon Kind="Download" />
+        </Border>
+        <Border Classes="statusBadge warning" IsVisible="{Binding IsFailed}">
+          <c:Icon Kind="WarningCircle" />
+        </Border>
+      </Panel>
+      <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+        <TextBlock Classes="statusHeadline" Text="{Binding Headline}" Name="UpdateHeadline" />
+        <TextBlock Classes="secondary" Text="{Binding Detail}" TextWrapping="Wrap" Name="UpdateDetail" />
+        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsChecking}" Margin="0,8,0,0" AutomationProperties.Name="Checking" />
+      </StackPanel>
+    </Grid>
+    <!-- Checking: Cancel. Up to date: Done. Newer: Not Now and Open the Download Page. Could not check: Close and Try Again. -->
+    <c:SheetFooter IsDone="{Binding IsUpToDate}" DoneCommand="{Binding DoneCommand}"
+                   PrimaryText="{Binding PrimaryText}" PrimaryCommand="{Binding PrimaryCommand}" IsPrimaryVisible="{Binding HasPrimary}"
+                   CancelText="{Binding CancelText}" />
+  </StackPanel>
+</UserControl>

@@ -21,7 +21,7 @@ public sealed partial class DashboardViewModel
 		{
 			int assessed = Math.Min(t.Assessed, t.Assigned);
 			string detail = $"{assessed:N0} of {t.Assigned:N0} assessed" + (t.Done > 0 ? $", {t.Done:N0} done" : "") + (t.Skipped > 0 ? $", {t.Skipped:N0} skipped" : "");
-			return (t.Name, t.Assigned, detail, new[] { (assessed, "Accent"), (t.Assigned - assessed, "StatusIncompleteFg") });
+			return (t.Name, t.Assigned, detail, new[] { (assessed, "Accent"), (t.Assigned - assessed, "StatusIncompleteDot") });
 		}));
 	}
 }

@@ -2,56 +2,70 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:c="using:Sde.App.Controls">
   <!--
-    Tables, in the Mac's look (DataGrid, on top of its Fluent theme): 24 px rows (TableRowHeight) striped with BgSubtle,
-    body text with tabular numbers, a quiet 12 px header with hairline column separators, a caret for the sorted column,
-    and the selected row filled with the accent, its text white.
+    Tables (DataGrid, on top of its Fluent theme): a white working surface (put the table in a Border.tableSheet on the
+    paper page), rows TableRowHeight high with hairline dividers (GridLinesVisibility="Horizontal"), a header row of
+    small semibold labels on a hairline, a caret for the sorted column, and the selected row in the soft accent with its
+    text still ink. Tabular figures are for number and money cells only (the num and money classes), so dates such as
+    "Nov 11, 2026" keep their natural spacing. Rows fade their hover when motion is on.
   -->
 
   <Style Selector="DataGrid">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
-    <Setter Property="TextElement.FontFeatures" Value="+tnum" />
     <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderSubtle}" />
     <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource BorderSubtle}" />
   </Style>
 
   <Style Selector="DataGridCell">
     <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
-    <Setter Property="MinHeight" Value="{StaticResource TableRowHeight}" />
+    <Setter Property="MinHeight" Value="{DynamicResource TableRowHeight}" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <!-- A cell's focus shows as the row's selection; no extra box -->
   <Style Selector="DataGridCell:focus /template/ Grid#FocusVisual">
     <Setter Property="IsVisible" Value="False" />
   </Style>
 
+  <!-- The header row: small semibold labels on the surface, a hairline under it -->
   <Style Selector="DataGridColumnHeader">
     <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
-    <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
-    <Setter Property="MinHeight" Value="26" />
+    <Setter Property="Background" Value="{DynamicResource BgTableHeader}" />
+    <Setter Property="MinHeight" Value="{DynamicResource TableHeaderHeight}" />
     <Setter Property="Padding" Value="8,0,4,0" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
-  <!-- A hairline between column headers, as in Finder's list view -->
-  <Style Selector="DataGridColumnHeader /template/ Rectangle#VerticalSeparator">
+  <Style Selector="DataGrid /template/ Rectangle#PART_ColumnHeadersAndRowsSeparator">
     <Setter Property="Fill" Value="{DynamicResource BorderDefault}" />
-    <Setter Property="Margin" Value="0,5" />
+  </Style>
+  <!-- A short hairline between column headers, for resizing -->
+  <Style Selector="DataGridColumnHeader /template/ Rectangle#VerticalSeparator">
+    <Setter Property="Fill" Value="{DynamicResource BorderSubtle}" />
+    <Setter Property="Margin" Value="0,8" />
   </Style>
   <Style Selector="DataGrid">
     <Setter Property="RowBackground" Value="Transparent" />
   </Style>
-  <Style Selector="DataGridRow:nth-child(2n)">
-    <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
-  </Style>
+  <!-- Selection: the soft accent behind ink text with a 3 px accent edge at the row's leading side (a solid slab of blue
+       fought the red and amber of the results) -->
   <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
-    <Setter Property="Fill" Value="{DynamicResource AccentFill}" />
+    <Setter Property="Fill" Value="{DynamicResource RowSelectedFill}" />
     <Setter Property="Opacity" Value="1" />
   </Style>
-  <Style Selector="DataGridRow:selected">
-    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+  <Style Selector="DataGridRow:selected:pointerover /template/ Rectangle#BackgroundRectangle">
+    <Setter Property="Fill" Value="{DynamicResource RowSelectedHoverFill}" />
   </Style>
-  <Style Selector="DataGridRow:selected TextBlock">
-    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+  <Style Selector="DataGridRow:selected TextBlock.cell.secondary">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector=".motion DataGridRow /template/ Rectangle#BackgroundRectangle">
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.12" />
+      </Transitions>
+    </Setter>
   </Style>
   <Style Selector="DataGridColumnHeader:sortascending, DataGridColumnHeader:sortdescending">
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
@@ -81,17 +95,56 @@
 
   <!-- A scope bar above a table (filters on the left, actions on the right) and a status bar under it, as in Finder -->
   <Style Selector="Border.scopeBar">
-    <Setter Property="Height" Value="34" />
-    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="Height" Value="{DynamicResource ScopeBarHeight}" />
+    <Setter Property="Padding" Value="16,0" />
     <Setter Property="Background" Value="{DynamicResource BgApp}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
     <Setter Property="BorderThickness" Value="0,0,0,1" />
   </Style>
+  <!-- On a page whose table is a sheet, the scope bar sits on the paper with no rule of its own -->
+  <Style Selector="Border.scopeBar.onPaper">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="20,0" />
+    <Setter Property="Height" Value="{DynamicResource ScopeBarHeight}" />
+    <Setter Property="Margin" Value="0,6,0,4" />
+  </Style>
   <Style Selector="Border.statusBar">
-    <Setter Property="Height" Value="24" />
+    <Setter Property="Height" Value="{DynamicResource StatusBarHeight}" />
     <Setter Property="Background" Value="{DynamicResource BgApp}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
     <Setter Property="BorderThickness" Value="0,1,0,0" />
+  </Style>
+  <Style Selector="Border.statusBar.onPaper">
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <!-- The table's working surface: one white card on the page with the card shadow; the rows are clipped to its
+       corners by the inner border (a border that clips can't also cast a shadow) -->
+  <Style Selector="Border.tableSheet">
+    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderCard}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource ShadowCard}" />
+    <Setter Property="Margin" Value="20,0,20,0" />
+  </Style>
+  <Style Selector="Border.tableClip">
+    <Setter Property="CornerRadius" Value="11" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <!-- The percent damaged in a table cell: tabular and bold (red only when substantial, from the view) -->
+  <Style Selector="TextBlock.cellFigure">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+    <Setter Property="TextAlignment" Value="Right" />
+    <Setter Property="Margin" Value="8,0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- The percent damaged in a table: the figure, then a small staff gauge -->
+  <Style Selector="c|StaffGauge.cellGauge">
+    <Setter Property="Width" Value="{StaticResource GaugeMiniWidth}" />
+    <Setter Property="IsMini" Value="True" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="0,0,8,0" />
   </Style>
   <Style Selector="Border.statusBar TextBlock">
     <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
@@ -118,10 +171,6 @@
   <Style Selector="DataGridRow c|Badge">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Padding" Value="0" />
-  </Style>
-  <Style Selector="DataGridRow:selected Ellipse.dot">
-    <Setter Property="Stroke" Value="{DynamicResource OnAccent}" />
-    <Setter Property="StrokeThickness" Value="1" />
   </Style>
 
   <!-- The strip above a table: counts and sort on the left; the "N selected" bar covers it while rows are checked -->

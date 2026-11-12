@@ -1,0 +1,115 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Sde.App.Controls">
+  <!--
+    Accessibility: what VoiceOver reads, what the keyboard reaches, and the date field.
+      Names: a row of a ListBox.steps list (the editor's steps, Settings' categories) is read by its Title.
+      Tables: CheckBox.rowCheck, the check box at the start of a table row, is not a stop of its own: Tab reaches the
+        table once, the arrows move through its rows and Space checks the selected row (Services/KeyboardFocus).
+      Motion: a switch's knob slides only with motion on (the window's "motion" class, Services/Motion).
+      Date field (Controls/DateField, TextBox.dateField): a text box with Button.dateFieldButton parts at its end
+        (Button.dateFieldClear while there is a date, Button.dateFieldPick for the calendar), ControlHeight high like
+        every input. In error (":error") its border is red and the line under it says what to type. Its calendar is
+        Fluent's, in the tokens' colours (Styles/Tokens.axaml, CalendarView*) with small day cells.
+    Increase Contrast's colours are a resource dictionary of their own (Styles/Contrast.High.axaml).
+  -->
+
+  <!-- ───────────── Names ───────────── -->
+  <Style Selector="ListBox.steps ListBoxItem">
+    <Setter Property="AutomationProperties.Name" Value="{ReflectionBinding Title}" />
+  </Style>
+
+  <!-- ───────────── Tables: one stop for the whole table ───────────── -->
+  <Style Selector="CheckBox.rowCheck">
+    <Setter Property="IsTabStop" Value="False" />
+  </Style>
+
+  <!-- ───────────── Motion: the switch's knob slides only with motion on ───────────── -->
+  <Style Selector=".motion ToggleSwitch">
+    <Setter Property="KnobTransitions">
+      <Transitions>
+        <DoubleTransition Easing="CubicEaseOut" Property="Canvas.Left" Duration="0:0:0.2" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <!-- ───────────── Date field ───────────── -->
+  <Style Selector="TextBox.dateField">
+    <Setter Property="MinWidth" Value="{DynamicResource DateFieldWidth}" />
+    <Setter Property="Padding" Value="8,0,2,0" />
+    <Setter Property="AutomationProperties.HelpText" Value="Type a date such as 11/11/2026. Up and down arrows change the day." />
+  </Style>
+  <Style Selector="TextBox.dateField:error /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{DynamicResource DangerFg}" />
+  </Style>
+  <Style Selector="TextBox.dateField Button.dateFieldButton">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="{DynamicResource ControlHeightSmall}" />
+    <Setter Property="Margin" Value="0,0,1,0" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="TextBox.dateField Button.dateFieldButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="BoxShadow" Value="none" />
+  </Style>
+  <Style Selector="TextBox.dateField Button.dateFieldButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector="TextBox.dateField Button.dateFieldButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgPressed}" />
+  </Style>
+  <Style Selector="TextBox.dateField Button.dateFieldClear">
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiary}" />
+  </Style>
+  <Style Selector="TextBox.dateField Button.dateFieldPick:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+  </Style>
+  <!-- The month to pick from: on a white card, today and the chosen day in the accent -->
+  <Style Selector="Calendar">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <!-- Fluent's month is sized for 40 px days; these are 32 by 30, so it needs less height (its width is fixed) -->
+  <Style Selector="FlyoutPresenter > Calendar">
+    <Setter Property="Height" Value="292" />
+  </Style>
+  <Style Selector="CalendarDayButton, CalendarButton">
+    <Setter Property="MinWidth" Value="32" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Margin" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+  </Style>
+  <!-- Days of the next and last month are quiet -->
+  <Style Selector="CalendarDayButton:inactive">
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiary}" />
+  </Style>
+  <!-- The month's name and its arrows: plain text and icons, not push buttons -->
+  <Style Selector="CalendarItem /template/ Button">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="MinHeight" Value="0" />
+  </Style>
+  <Style Selector="CalendarItem /template/ Button /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="BoxShadow" Value="none" />
+  </Style>
+  <Style Selector="CalendarItem /template/ Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgHover}" />
+  </Style>
+  <Style Selector="CalendarItem /template/ Button#PART_HeaderButton">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+  </Style>
+</Styles>

@@ -4,7 +4,7 @@
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.AiAssistantsPanel"
              x:DataType="vm:AiAssistantsViewModel">
-  <StackPanel Spacing="14">
+  <StackPanel Spacing="20">
     <Border Classes="card settings">
       <StackPanel Classes="settingsGroup">
         <Border Classes="settingsRow">

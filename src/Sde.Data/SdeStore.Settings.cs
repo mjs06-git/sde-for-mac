@@ -12,7 +12,13 @@ public sealed partial class SdeStore
 	/// </summary>
 	public T GetSetting<T>(string key, T fallback = default)
 	{
-		string json = Database.Read(c => TableMap<MacSettingRecord>.Get(c, new { Key = key })?.Value);
+		return Database.Read(c => GetSetting(c, key, fallback));
+	}
+
+	/// <summary><see cref="GetSetting{T}(string, T)"/> over a connection the caller holds.</summary>
+	internal static T GetSetting<T>(System.Data.IDbConnection c, string key, T fallback = default)
+	{
+		string json = TableMap<MacSettingRecord>.Get(c, new { Key = key })?.Value;
 		if (json == null)
 		{
 			return fallback;

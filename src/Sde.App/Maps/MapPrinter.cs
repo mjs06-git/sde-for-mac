@@ -39,6 +39,15 @@ public sealed class MapPrintScene
 	/// <summary>How structure labels look, or null for none.</summary>
 	public LabelStyle MarkerLabels { get; init; }
 
+	/// <summary>The structures as clusters, as on screen, or null to print a dot for each marker.</summary>
+	public IReadOnlyList<MapClusterMark> Clusters { get; init; }
+
+	/// <summary>True when the structure dots are left out (under a heat map).</summary>
+	public bool MarkersHidden { get; init; }
+
+	/// <summary>The analysis pictures shown on screen (the water surface, the heat map), bottom first, drawn over the layers.</summary>
+	public IReadOnlyList<MapRasterOverlay> Rasters { get; init; } = Array.Empty<MapRasterOverlay>();
+
 	/// <summary>The legend: the structures, then each layer shown (top first).</summary>
 	public IReadOnlyList<Sde.Reports.MapLegendGroup> Legend { get; init; } = Array.Empty<Sde.Reports.MapLegendGroup>();
 }
@@ -247,10 +256,18 @@ public static class MapPrinter
 					labels.Add(b.Labels);
 				}
 			}
+			// The analysis pictures, as on screen: over the layers, under the labels and the structures.
+			foreach (MapRasterOverlay raster in scene.Rasters ?? Array.Empty<MapRasterOverlay>())
+			{
+				layers.Add(AnalysisLayers.Raster(raster));
+			}
 			layers.AddRange(labels);
-			MemoryLayer dots = new MemoryLayer("Structures") { Style = null, Features = StructureDots.Dots(scene.Markers, theme) };
+			List<IFeature> structures = scene.MarkersHidden ? new List<IFeature>()
+				: scene.Clusters != null ? AnalysisLayers.Clusters(scene.Clusters, scene.Markers, theme)
+				: StructureDots.Dots(scene.Markers, theme);
+			MemoryLayer dots = new MemoryLayer("Structures") { Style = null, Features = structures };
 			layers.Add(dots);
-			if (scene.MarkerLabels != null && scene.MarkerLabels.IsVisibleAt(scale))
+			if (scene.MarkerLabels != null && !scene.MarkersHidden && scene.Clusters == null && scene.MarkerLabels.IsVisibleAt(scale))
 			{
 				layers.Add(StructureDots.LabelLayer(StructureDots.LabelPoints(scene.Markers), scene.MarkerLabels, theme));
 			}
@@ -259,6 +276,7 @@ public static class MapPrinter
 				layer.Attribution.Enabled = false;
 			}
 			MapLabelRenderer.Register();
+			MapClusterRenderer.Register();
 			using RenderService service = new RenderService();
 			MapRenderer renderer = new MapRenderer();
 			Viewport viewport = new Viewport(scene.CenterX, scene.CenterY, resolution, 0, dipW, dipH);

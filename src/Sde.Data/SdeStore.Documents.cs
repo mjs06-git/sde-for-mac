@@ -44,8 +44,10 @@ public static class DocumentKinds
 public sealed partial class SdeStore
 {
 	/// <summary>A structure's documents, newest first.</summary>
-	public List<DocumentRecord> GetDocuments(Guid propertyId) =>
-		Database.Read(c => TableMap<DocumentRecord>.Select(c, "PropertyID = @propertyId", new { propertyId }, orderBy: "AddedOn DESC").ToList());
+	public List<DocumentRecord> GetDocuments(Guid propertyId) => Database.Read(c => GetDocuments(c, propertyId));
+
+	internal static List<DocumentRecord> GetDocuments(System.Data.IDbConnection c, Guid propertyId) =>
+		TableMap<DocumentRecord>.Select(c, "PropertyID = @propertyId", new { propertyId }, orderBy: "AddedOn DESC").ToList();
 
 	public DocumentRecord GetDocument(Guid documentId) => Database.Read(c => TableMap<DocumentRecord>.Get(c, new { DocumentID = documentId }));
 

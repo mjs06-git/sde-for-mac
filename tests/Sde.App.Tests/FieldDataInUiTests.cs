@@ -134,4 +134,79 @@ public class FieldDataInUiTests
 		Assert.Equal(2.5m, now.Assessment.DepthOfFloodAboveFFE);
 		Assert.Contains(ui.Store.GetHistory(id), h => h.Via == SaveVia.DepthTool);
 	}
+
+	[AvaloniaFact]
+	public async Task FloodDepth_KeepsTheLoadedMarksWithTheEvent_AndLoadsThemNextTime()
+	{
+		using UiSession ui = WithSamples();
+		Guid id = Ranch(ui);
+		ui.Store.Apply(id, f =>
+		{
+			f.Property.Latitude = 39.7m;
+			f.Property.Longitude = -84.2m;
+			f.Property.Datum = "NAVD88";
+			f.Property.FirstFloorElevation = 740m;
+			f.Assessment.DepthOfFlood = 745m;
+		});
+		EventRecord flood = ui.Store.SaveEvent(new EventRecord { Name = "Example flood" });
+		ui.Store.SetEvent(new[] { id }, flood.EventID);
+		string csv = Path.Combine(ui.Folder, "marks.csv");
+		File.WriteAllText(csv, "latitude,longitude,elev_ft,vertical_datum_name,hwm_quality_id\n39.7005,-84.2,742.5,NAVD88,2\n39.6995,-84.2,742.5,NAVD88,2\n");
+		ui.Store.UserName = "Reviewer";
+		ui.Services.RaiseDataChanged();
+		ui.Pump();
+
+		async Task<DepthSheetViewModel> OpenTool()
+		{
+			ui.Main.Structures.Rows.Single(r => r.AssessmentID == id).IsChecked = true;
+			Task depth = ui.Main.Structures.FloodDepthCommand.ExecuteAsync(null);
+			ui.Pump();
+			await Task.Yield();
+			return Assert.IsType<DepthSheetViewModel>(ui.Main.Sheets.Current);
+		}
+
+		DepthSheetViewModel sheet = await OpenTool();
+		Assert.Equal("Keep these marks with the event", sheet.KeepMarksLabel);
+		Assert.True(sheet.KeepMarks);
+		Assert.False(sheet.HasStoredMarks);
+		ui.Dialogs.Answers.Enqueue(new[] { csv });
+		await sheet.ChooseMarksFileCommand.ExecuteAsync(null);
+		ui.Pump();
+		StoredHighWaterMarks kept = ui.Store.GetHighWaterMarks(flood.EventID);
+		Assert.Equal(("File: marks.csv", 2), (kept.Set.Source, kept.Marks.Count));
+		Assert.StartsWith("Stored with the event: File: marks.csv, 2 marks, loaded on ", sheet.StoredMarksText);
+		Assert.EndsWith(" by Reviewer.", sheet.StoredMarksText);
+		Assert.Equal(kept.Marks, ui.Services.HighWaterMarks.Marks);   // and for the map
+		// Unticking forgets the marks just kept; ticking again keeps them.
+		sheet.KeepMarks = false;
+		Assert.Null(ui.Store.GetHighWaterMarks(flood.EventID));
+		Assert.False(sheet.HasStoredMarks);
+		sheet.KeepMarks = true;
+		Assert.NotNull(ui.Store.GetHighWaterMarks(flood.EventID));
+		Assert.Empty(AccessibilityTests.Unnamed(ui.Window));
+		sheet.CancelCommand.Execute(null);
+		ui.Pump();
+
+		// The Review checks use them, offline.
+		Assert.Single(Sde.Core.Quality.QaRules.Check(ui.Store.LoadQaInput(new[] { id })), f => f.RuleId == Sde.Core.Quality.QaRuleIds.DepthVsHighWaterMarks);
+
+		// Next time the tool opens for the event, they are already there.
+		DepthSheetViewModel again = await OpenTool();
+		Assert.True(again.HasStoredMarks);
+		Assert.Contains("File: marks.csv", again.StoredMarksText);
+		Assert.Contains("742.5 ft", Assert.Single(again.Rows).Proposed);
+		again.RemoveStoredMarksCommand.Execute(null);
+		Assert.False(again.HasStoredMarks);
+		Assert.Null(ui.Store.GetHighWaterMarks(flood.EventID));
+		Assert.Single(again.Rows);   // still loaded in the open sheet
+		again.CancelCommand.Execute(null);
+		ui.Pump();
+
+		// Opening the database again offers no marks to the map; keeping them again does.
+		ui.Services.Open(ui.Store.Database.FilePath);
+		Assert.False(ui.Services.HighWaterMarks.HasMarks);
+		ui.Store.SaveHighWaterMarks(flood.EventID, kept.Marks, "File: marks.csv");
+		ui.Services.Open(ui.Store.Database.FilePath);
+		Assert.Equal(("marks.csv", 2), (ui.Services.HighWaterMarks.Source, ui.Services.HighWaterMarks.Marks.Count));
+	}
 }

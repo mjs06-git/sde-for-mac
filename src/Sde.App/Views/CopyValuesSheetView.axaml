@@ -2,9 +2,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sh="using:Sde.App.ViewModels.Sheets"
              xmlns:vm="using:Sde.App.ViewModels"
+             xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.CopyValuesSheetView"
              x:DataType="sh:CopyValuesSheetViewModel">
-  <StackPanel Spacing="14">
+  <!-- Map, Copy Values from Areas: which areas' field goes into which structure field, then a preview table to tick -->
+  <StackPanel Spacing="16">
     <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
       <StackPanel Spacing="4">
         <TextBlock Classes="fieldLabel" Text="From the areas of" />
@@ -34,26 +36,29 @@
                    AutomationProperties.Name="Copy onto every structure on the map" />
     </StackPanel>
 
-    <StackPanel Spacing="6">
-      <TextBlock Classes="medium" Text="{Binding SummaryText}" AutomationProperties.LiveSetting="Polite" />
-      <Border Classes="card flush" IsVisible="{Binding HasRows}">
+    <StackPanel Spacing="8">
+      <TextBlock Classes="medium" Text="{Binding SummaryText}" AutomationProperties.LiveSetting="Polite"
+                 ToolTip.Tip="Each value is checked as if typed, and the copy can be reverted. Locked and checked-out assessments are skipped." />
+      <Border Classes="sheetTable" IsVisible="{Binding HasRows}">
         <DockPanel>
-          <Grid DockPanel.Dock="Top" ColumnDefinitions="32,2*,*,*,2*" Margin="10,6">
-            <TextBlock Grid.Column="1" Classes="eyebrow" Text="Structure" />
-            <TextBlock Grid.Column="2" Classes="eyebrow" Text="Now" />
-            <TextBlock Grid.Column="3" Classes="eyebrow" Text="New" />
-            <TextBlock Grid.Column="4" Classes="eyebrow" Text="How It Was Matched" />
-          </Grid>
+          <Border DockPanel.Dock="Top" Classes="sheetTableHead">
+            <Grid ColumnDefinitions="32,2*,*,*,2*">
+              <TextBlock Grid.Column="1" Text="Structure" />
+              <TextBlock Grid.Column="2" Text="Now" />
+              <TextBlock Grid.Column="3" Text="New" />
+              <TextBlock Grid.Column="4" Text="How It Was Matched" />
+            </Grid>
+          </Border>
           <ScrollViewer MaxHeight="300" HorizontalScrollBarVisibility="Disabled">
             <ItemsControl ItemsSource="{Binding Rows}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="sh:CopyValueRowViewModel">
-                  <Border Classes="rule" Padding="10,4">
+                  <Border Classes="sheetTableRow">
                     <Grid ColumnDefinitions="32,2*,*,*,2*">
                       <CheckBox IsChecked="{Binding IsTicked}" IsEnabled="{Binding CanCopy}" VerticalAlignment="Center" AutomationProperties.Name="{Binding TickName}" />
-                      <TextBlock Grid.Column="1" Text="{Binding Address}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="2" Classes="secondary" Text="{Binding Now}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="3" Classes="medium" Text="{Binding New}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Text="{Binding Address}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,8,0" />
+                      <TextBlock Grid.Column="2" Classes="secondary" Text="{Binding Now}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,8,0" />
+                      <TextBlock Grid.Column="3" Classes="medium" Text="{Binding New}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,8,0" />
                       <TextBlock Grid.Column="4" Classes="muted" Text="{Binding How}" TextWrapping="Wrap" VerticalAlignment="Center" />
                     </Grid>
                   </Border>
@@ -63,13 +68,8 @@
           </ScrollViewer>
         </DockPanel>
       </Border>
-      <TextBlock Classes="muted" TextWrapping="Wrap"
-                 Text="Each value is checked as if typed, and the copy can be reverted. Locked and checked-out assessments are skipped." />
     </StackPanel>
 
-    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Classes="primary" Content="{Binding CopyText}" Command="{Binding CopyCommand}" IsDefault="True" MinWidth="90" HorizontalContentAlignment="Center" />
-    </StackPanel>
+    <c:SheetFooter PrimaryText="{Binding CopyText}" PrimaryCommand="{Binding CopyCommand}" />
   </StackPanel>
 </UserControl>

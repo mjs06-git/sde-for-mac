@@ -1,26 +1,29 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.PackageCompareSheetView"
              x:DataType="sh:PackageCompareSheetViewModel">
-  <StackPanel Spacing="12">
-    <TextBlock Classes="secondary" Text="{Binding Message}" TextWrapping="Wrap" />
-    <Border Classes="card flush" IsVisible="{Binding HasRows}">
-      <StackPanel>
-        <Grid ColumnDefinitions="36,2*,2*,2*" Margin="14,8">
-          <TextBlock Grid.Column="1" Classes="eyebrow" Text="Field" />
-          <TextBlock Grid.Column="2" Classes="eyebrow" Text="Here" />
-          <TextBlock Grid.Column="3" Classes="eyebrow" Text="In the Package" />
-        </Grid>
+  <StackPanel Spacing="16">
+    <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+    <Border Classes="sheetTable" IsVisible="{Binding HasRows}">
+      <DockPanel>
+        <Border DockPanel.Dock="Top" Classes="sheetTableHead">
+          <Grid ColumnDefinitions="36,2*,2*,2*">
+            <TextBlock Grid.Column="1" Text="Field" />
+            <TextBlock Grid.Column="2" Text="Here" />
+            <TextBlock Grid.Column="3" Text="In the Package" />
+          </Grid>
+        </Border>
         <ScrollViewer MaxHeight="400" HorizontalScrollBarVisibility="Disabled">
           <ItemsControl ItemsSource="{Binding Rows}">
             <ItemsControl.ItemTemplate>
               <DataTemplate DataType="sh:PackageDiffRowViewModel">
-                <Border Classes="rule" Padding="14,6">
+                <Border Classes="sheetTableRow">
                   <Grid ColumnDefinitions="36,2*,2*,2*">
                     <CheckBox IsChecked="{Binding IsChecked}" AutomationProperties.Name="{Binding CheckName}" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Classes="medium" Text="{Binding Label}" VerticalAlignment="Center" TextWrapping="Wrap" />
-                    <TextBlock Grid.Column="2" Classes="secondary" Text="{Binding Here}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <TextBlock Grid.Column="1" Classes="medium" Text="{Binding Label}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,8,0" />
+                    <TextBlock Grid.Column="2" Classes="secondary" Text="{Binding Here}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,8,0" />
                     <TextBlock Grid.Column="3" Text="{Binding Field}" VerticalAlignment="Center" TextWrapping="Wrap" />
                   </Grid>
                 </Border>
@@ -28,12 +31,9 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
         </ScrollViewer>
-      </StackPanel>
+      </DockPanel>
     </Border>
     <TextBlock Classes="danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding HasError}" />
-    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Classes="primary" Content="Copy the Ticked Values" IsDefault="True" Command="{Binding CopyCommand}" IsVisible="{Binding HasRows}" HorizontalContentAlignment="Center" />
-    </StackPanel>
+    <c:SheetFooter PrimaryText="Copy the Ticked Values" PrimaryCommand="{Binding CopyCommand}" IsPrimaryVisible="{Binding HasRows}" />
   </StackPanel>
 </UserControl>

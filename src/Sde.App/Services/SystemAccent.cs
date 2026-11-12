@@ -9,51 +9,108 @@ using Avalonia.Themes.Fluent;
 namespace Sde.App.Services;
 
 /// <summary>
-/// Follows the Mac's accent colour (System Settings, Appearance), the way native apps do. The tokens in
-/// Styles/Tokens.axaml ship a blue that matches the Mac's default; on a Mac set to another accent the accent brushes
-/// are recoloured from it, keeping text on and in the accent at 4.5:1 (the same rule ContrastTests checks).
+/// The accent colour. SDE's own is a strong water blue, set in Styles/Tokens.axaml. When "Use the Mac's accent
+/// colour" is on (Settings, Appearance) the accent brushes are recoloured from System Settings instead, keeping text on
+/// and in the accent at 4.5:1 (the same rule ContrastTests checks).
 /// </summary>
 public static class SystemAccent
 {
-	/// <summary>The accent tokens' colours when the Mac doesn't report one (tests, other platforms).</summary>
-	public static readonly Color Fallback = Color.Parse("#0A64D6");
+	/// <summary>SDE's accent: the accent tokens' own fill colour.</summary>
+	public static readonly Color Fallback = Color.Parse("#1769C2");
+
+	/// <summary>The surfaces accent text has to be readable on. They mirror the tokens (ContrastTests checks they match).</summary>
+	public static readonly Color LightSidebar = Color.Parse("#EDF1F6");
+	public static readonly Color LightSurface = Colors.White;
+	public static readonly Color DarkSidebar = Color.Parse("#132030");
+	public static readonly Color DarkSurface = Color.Parse("#172536");
 
 	private static readonly Color White = Colors.White;
-	private static readonly Color LightSidebar = Color.Parse("#EBEBEA");
-	private static readonly Color DarkSidebar = Color.Parse("#2B2B2D");
-	private static readonly Color DarkSurface = Color.Parse("#252527");
+
+	/// <summary>The tokens' own accent colours, kept the first time they are recoloured so SDE's accent can be put back.</summary>
+	private static Dictionary<(ThemeVariant, string), Color> _brand;
+	private static Dictionary<ThemeVariant, object> _brandHalo;
+	private static EventHandler<PlatformColorValues> _following;
 
 	/// <summary>Recolours the accent from the Mac's setting now and whenever it changes.</summary>
 	public static void Follow(Application app)
 	{
 		IPlatformSettings settings = app.PlatformSettings;
-		if (settings is null)
+		if (settings is null || _following is not null)
 		{
 			return;
 		}
 		Apply(app, settings.GetColorValues().AccentColor1);
-		settings.ColorValuesChanged += (_, values) => Apply(app, values.AccentColor1);
+		_following = (_, values) => Apply(app, values.AccentColor1);
+		settings.ColorValuesChanged += _following;
+	}
+
+	/// <summary>Stops following the Mac and puts SDE's own accent back.</summary>
+	public static void UseBrand(Application app)
+	{
+		if (_following is not null && app.PlatformSettings is IPlatformSettings settings)
+		{
+			settings.ColorValuesChanged -= _following;
+		}
+		_following = null;
+		if (_brand is null)
+		{
+			return;
+		}
+		foreach (((ThemeVariant theme, string key), Color colour) in _brand)
+		{
+			if (app.TryGetResource(key, theme, out object value) && value is SolidColorBrush brush)
+			{
+				brush.Color = colour;
+			}
+		}
+		foreach ((ThemeVariant theme, object halo) in _brandHalo)
+		{
+			if (ThemeDictionary(app, theme) is IResourceDictionary dictionary)
+			{
+				dictionary["FocusHalo"] = halo;
+			}
+		}
+		SetFluentAccent(app, Fallback);
 	}
 
 	/// <summary>Sets every accent brush, the focus halo and Fluent's own accent from <paramref name="accent"/>.</summary>
 	public static void Apply(Application app, Color accent)
 	{
 		accent = Color.FromRgb(accent.R, accent.G, accent.B);
+		bool remember = _brand is null;
+		if (remember)
+		{
+			_brand = new Dictionary<(ThemeVariant, string), Color>();
+			_brandHalo = new Dictionary<ThemeVariant, object>();
+		}
 		foreach ((ThemeVariant theme, Dictionary<string, Color> colours) in Derive(accent))
 		{
 			foreach ((string key, Color colour) in colours)
 			{
 				if (app.TryGetResource(key, theme, out object value) && value is SolidColorBrush brush)
 				{
+					if (remember)
+					{
+						_brand[(theme, key)] = brush.Color;
+					}
 					brush.Color = colour;
 				}
 			}
 			if (ThemeDictionary(app, theme) is IResourceDictionary dictionary)
 			{
+				if (remember && dictionary.TryGetValue("FocusHalo", out object brandHalo))
+				{
+					_brandHalo[theme] = brandHalo;
+				}
 				Color halo = colours["Focus"];
 				dictionary["FocusHalo"] = new BoxShadows(new BoxShadow { Spread = 3, Color = Color.FromArgb(0x73, halo.R, halo.G, halo.B) });
 			}
 		}
+		SetFluentAccent(app, accent);
+	}
+
+	private static void SetFluentAccent(Application app, Color accent)
+	{
 		if (app.Styles.OfType<FluentTheme>().FirstOrDefault() is FluentTheme fluent)
 		{
 			foreach (ColorPaletteResources palette in fluent.Palettes.Values)

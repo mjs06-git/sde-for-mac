@@ -7,39 +7,38 @@
              x:Class="Sde.App.Views.AssignmentsView"
              x:DataType="vm:AssignmentsViewModel">
   <UserControl.Styles>
-    <!--
-      A selected route row is filled with the accent and its text turns white (DataGrid.axaml); the status menu in it
-      keeps its own text colour on its own fill, and the directions pin turns white with the text.
-    -->
+    <!-- The status menu in a selected route row keeps its own text colour on its own fill -->
     <Style Selector="DataGridRow:selected ComboBox TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
     </Style>
-    <Style Selector="DataGridRow:selected Button.icon c|Icon">
-      <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
-    </Style>
   </UserControl.Styles>
 
-  <!-- In the window's toolbar: a new team, the selected team's route actions, and the rest in a More menu -->
+  <!-- In the window's toolbar: the route's main actions, and everything else in More -->
   <v:PageChrome.Toolbar>
     <StackPanel Classes="pageToolbar">
-      <Button Content="New Team…" Command="{Binding NewTeamCommand}" AutomationProperties.Name="New team" />
       <Button Content="Order Route" Command="{Binding OrderRouteCommand}" IsEnabled="{Binding HasStops}"
               ToolTip.Tip="A short driving order, by straight-line distance" />
-      <Button Content="Route Sheet…" Command="{Binding RouteSheetCommand}" IsEnabled="{Binding HasStops}" AutomationProperties.Name="Save the route sheet as a PDF" />
-      <Button Content="Worksheets…" Command="{Binding WorksheetsCommand}" IsEnabled="{Binding HasStops}" AutomationProperties.Name="Save the field worksheets as a PDF" />
-      <Button Content="Remove from Team…" Command="{Binding UnassignCommand}" IsEnabled="{Binding HasChecked}"
-              AutomationProperties.Name="Remove the checked structures from the team" ToolTip.Tip="Take the checked structures off the team" />
-      <Button Classes="icon toolbar" AutomationProperties.Name="More team actions" ToolTip.Tip="More">
-        <c:Icon Kind="More" Size="18" />
-        <Button.Flyout>
+      <Button Classes="primary" Content="Route Sheet…" Command="{Binding RouteSheetCommand}" IsEnabled="{Binding HasStops}" AutomationProperties.Name="Save the route sheet as a PDF" />
+      <DropDownButton Content="More" AutomationProperties.Name="More team actions">
+        <DropDownButton.Flyout>
           <MenuFlyout Placement="BottomEdgeAlignedRight">
+            <MenuItem Header="Worksheets…" Command="{Binding WorksheetsCommand}" IsEnabled="{Binding HasStops}"
+                      ToolTip.Tip="The field worksheets as a PDF, a page per structure" />
             <MenuItem Header="Keep Map Offline…" Command="{Binding KeepOfflineCommand}" IsEnabled="{Binding HasStops}"
                       ToolTip.Tip="Keep the background map around these structures on this Mac, for the field" />
             <Separator />
+            <MenuItem Header="Remove from Team…" Command="{Binding UnassignCommand}" IsEnabled="{Binding HasChecked}"
+                      ToolTip.Tip="Take the checked structures off the team" />
+            <Separator />
+            <MenuItem Header="New Team…" Command="{Binding NewTeamCommand}" />
             <MenuItem Header="Edit Team…" Command="{Binding EditTeamCommand}" />
             <MenuItem Header="Remove Team…" Command="{Binding RemoveTeamCommand}" />
           </MenuFlyout>
-        </Button.Flyout>
+        </DropDownButton.Flyout>
+      </DropDownButton>
+      <Button Classes="icon toolbar" Command="{Binding Shell.Structures.ToggleInspectorCommand}" IsVisible="{Binding HasTeams}"
+              AutomationProperties.Name="Show or hide the inspector" ToolTip.Tip="Show or Hide Inspector (⌥⌘I)">
+        <c:Icon Kind="Inspector" Size="18" />
       </Button>
     </StackPanel>
   </v:PageChrome.Toolbar>
@@ -47,133 +46,201 @@
   <Panel>
     <!-- No teams yet -->
     <c:EmptyState IsVisible="{Binding HasNoTeams}" Title="No Teams" ToolTip.Tip="Make a team, then assign structures from Structures or the map">
-      <Button Content="New Team…" Command="{Binding NewTeamCommand}" AutomationProperties.Name="Make the first team" />
+      <Button Classes="primary" Content="New Team…" Command="{Binding NewTeamCommand}" AutomationProperties.Name="Make the first team" />
     </c:EmptyState>
 
-    <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding HasTeams}">
-      <!-- The teams: a plain list in a flush pane at the left, rows divided by hairlines -->
-      <Border Classes="inspector" Width="240" BorderThickness="0,0,1,0">
-        <DockPanel>
-          <TextBlock DockPanel.Dock="Top" Classes="eyebrow" Text="Teams" Margin="14,12,14,6" />
-          <ListBox Classes="rows" ItemsSource="{Binding Teams}" SelectedItem="{Binding SelectedTeam}" AutomationProperties.Name="Teams">
-            <ListBox.ContextMenu>
-              <ContextMenu>
-                <MenuItem Header="Edit Team…" Command="{Binding EditTeamCommand}" />
-                <MenuItem Header="Remove Team…" Command="{Binding RemoveTeamCommand}" />
-              </ContextMenu>
-            </ListBox.ContextMenu>
-            <ListBox.ItemTemplate>
-              <DataTemplate x:DataType="vm:TeamRowViewModel">
-                <Border Classes="listRow" AutomationProperties.Name="{Binding Name}">
-                  <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                    <Ellipse Classes="dot" Fill="{Binding Colour}" VerticalAlignment="Top" Margin="0,5,0,0" />
-                    <StackPanel Grid.Column="1" Spacing="2">
-                      <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                      <TextBlock Classes="secondary sm" Text="{Binding ProgressText}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Members}" />
-                      <ProgressBar Value="{Binding Fraction}" Maximum="1" Height="4" MinHeight="4" Margin="0,4,0,2"
-                                   IsVisible="{Binding Assigned, Converter={x:Static app:Converters.IsPositive}}" AutomationProperties.AccessibilityView="Raw" />
-                    </StackPanel>
-                  </Grid>
-                </Border>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
-        </DockPanel>
-      </Border>
+    <!-- The teams card and the selected team's route card, the team in the status line, the team and the selected stop in the inspector -->
+    <c:ListDetailPage IsVisible="{Binding HasTeams}" InspectorWidth="{Binding Shell.InspectorWidth}" IsInspectorVisible="{Binding Shell.Structures.IsInspectorVisible}"
+                      ResetInspectorWidthCommand="{Binding Shell.ResetInspectorWidthCommand}">
+      <c:ListDetailPage.Status>
+        <StackPanel Classes="pageStatus" Orientation="Horizontal" Margin="12,0">
+          <TextBlock Text="{Binding StatusText}" TextTrimming="CharacterEllipsis" />
+          <TextBlock Text="{Binding Message, StringFormat=' · {0}'}" IsVisible="{Binding Message, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     TextTrimming="CharacterEllipsis" MaxWidth="420" ToolTip.Tip="{Binding Message}" AutomationProperties.LiveSetting="Polite" />
+        </StackPanel>
+      </c:ListDetailPage.Status>
 
-      <!-- The selected team's route, edge to edge, with the team and the last action in the status bar -->
-      <DockPanel Grid.Column="1">
-        <Border DockPanel.Dock="Bottom" Classes="statusBar">
-          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="12,0">
-            <TextBlock Text="{Binding StatusText}" TextTrimming="CharacterEllipsis" />
-            <TextBlock Text="{Binding Message, StringFormat=' · {0}'}" IsVisible="{Binding Message, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                       TextTrimming="CharacterEllipsis" MaxWidth="420" ToolTip.Tip="{Binding Message}" AutomationProperties.LiveSetting="Polite" />
-          </StackPanel>
-        </Border>
-        <Grid>
-          <DataGrid Name="Route" ItemsSource="{Binding Stops}" SelectedItem="{Binding SelectedStop}" IsVisible="{Binding HasStops}"
-                    IsReadOnly="True" CanUserSortColumns="False" CanUserReorderColumns="False" CanUserResizeColumns="True" SelectionMode="Single"
-                    GridLinesVisibility="None" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
-                    AutomationProperties.Name="Route" ToolTip.Tip="In route order. Double-click to open."
-                    DoubleTapped="OnRouteDoubleTapped" KeyDown="OnRouteKeyDown">
-            <DataGrid.ContextMenu>
-              <ContextMenu>
-                <MenuItem Header="Open" Command="{Binding OpenCommand}" CommandParameter="{Binding SelectedStop}" />
-                <MenuItem Header="Directions in Maps" Command="{Binding DirectionsCommand}" CommandParameter="{Binding SelectedStop}" />
-                <Separator />
-                <MenuItem Header="Remove from Team…" Command="{Binding UnassignCommand}" IsEnabled="{Binding HasChecked}" />
-              </ContextMenu>
-            </DataGrid.ContextMenu>
-            <DataGrid.Columns>
-              <DataGridTemplateColumn Width="34" MinWidth="34" CanUserResize="False">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate x:DataType="vm:AssignmentRowViewModel">
-                    <CheckBox IsChecked="{Binding IsChecked}" HorizontalAlignment="Center" AutomationProperties.Name="{Binding Address, StringFormat='Check {0}'}" />
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="#" Width="40" MinWidth="40" CanUserResize="False">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate x:DataType="vm:AssignmentRowViewModel">
-                    <TextBlock Classes="cell" Text="{Binding Number}" />
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Structure" Width="1.4*" MinWidth="120">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate x:DataType="vm:AssignmentRowViewModel">
-                    <TextBlock Classes="cell" Text="{Binding Address}" />
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Result" Width="1.2*" MinWidth="120">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate x:DataType="vm:AssignmentRowViewModel">
-                    <Grid Classes="result" ColumnDefinitions="Auto,*" ColumnSpacing="7" Margin="8,0" VerticalAlignment="Center">
-                      <Ellipse Classes="dot" app:ThemeBrush.Fill="{Binding State, Converter={x:Static app:Converters.StatusDotKey}}" />
-                      <TextBlock Grid.Column="1" Text="{Binding Result}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding Result}" />
+      <Grid ColumnDefinitions="Auto,*">
+        <!-- The teams: a list in a card with + and - under it -->
+        <Border Classes="teamsColumn listCard">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Classes="cardTitle" Text="Teams" Margin="16,14,16,2" />
+            <Border DockPanel.Dock="Bottom" Classes="cardFooter">
+              <StackPanel Orientation="Horizontal" Spacing="2">
+                <Button Classes="icon sm" Command="{Binding NewTeamCommand}" AutomationProperties.Name="New team" ToolTip.Tip="New Team…">
+                  <c:Icon Kind="Plus" Size="14" />
+                </Button>
+                <Button Classes="icon sm" Command="{Binding RemoveTeamCommand}" AutomationProperties.Name="Remove team" ToolTip.Tip="Remove Team…">
+                  <c:Icon Kind="Minus" Size="14" />
+                </Button>
+              </StackPanel>
+            </Border>
+            <ListBox Classes="teamList" ItemsSource="{Binding Teams}" SelectedItem="{Binding SelectedTeam}" AutomationProperties.Name="Teams">
+              <ListBox.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="Edit Team…" Command="{Binding EditTeamCommand}" />
+                  <MenuItem Header="Remove Team…" Command="{Binding RemoveTeamCommand}" />
+                </ContextMenu>
+              </ListBox.ContextMenu>
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:TeamRowViewModel">
+                  <Border Classes="teamRow" AutomationProperties.Name="{Binding Name}">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                      <Border Classes="teamChip" Background="{Binding Colour}" />
+                      <StackPanel Grid.Column="1" Spacing="2">
+                        <TextBlock Classes="medium" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Classes="secondary sm" Text="{Binding ProgressText}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Members}" />
+                        <ProgressBar Value="{Binding Fraction}" Maximum="1" Height="4" MinHeight="4" MinWidth="0" Margin="0,4,0,0"
+                                     IsVisible="{Binding Assigned, Converter={x:Static app:Converters.IsPositive}}" AutomationProperties.AccessibilityView="Raw" />
+                      </StackPanel>
                     </Grid>
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Code" Width="84" MinWidth="84">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate x:DataType="vm:AssignmentRowViewModel">
-                    <TextBlock Classes="cell mono" Text="{Binding Code}" ToolTip.Tip="Worksheet code" />
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Due" Width="64" MinWidth="64">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate x:DataType="vm:AssignmentRowViewModel">
-                    <TextBlock Classes="cell" Text="{Binding Due}" />
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-              <DataGridTemplateColumn Header="Status" Width="124" MinWidth="124">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate x:DataType="vm:AssignmentRowViewModel">
-                    <ComboBox Classes="sm" ItemsSource="{x:Static vm:AssignmentsViewModel.StatusChoices}" SelectedIndex="{Binding StatusIndex}"
-                              AutomationProperties.Name="{Binding StatusName}" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="6,0" />
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-              <DataGridTemplateColumn Width="40" MinWidth="40" CanUserResize="False">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate x:DataType="vm:AssignmentRowViewModel">
-                    <Button Classes="icon sm" IsVisible="{Binding HasMapsLink}" HorizontalAlignment="Center" VerticalAlignment="Center"
-                            Command="{Binding $parent[UserControl].((vm:AssignmentsViewModel)DataContext).DirectionsCommand}" CommandParameter="{Binding}"
-                            AutomationProperties.Name="{Binding MapsName}" ToolTip.Tip="Directions in Maps">
-                      <c:Icon Kind="MapPin" Size="14" />
-                    </Button>
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-            </DataGrid.Columns>
-          </DataGrid>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </Border>
+
+        <!-- The selected team's route: one table card -->
+        <Grid Grid.Column="1">
+          <Border Classes="tableSheet" IsVisible="{Binding HasStops}">
+            <Border Classes="tableClip">
+              <DataGrid Name="Route" ItemsSource="{Binding Stops}" SelectedItem="{Binding SelectedStop}"
+                        IsReadOnly="True" CanUserSortColumns="False" CanUserReorderColumns="False" CanUserResizeColumns="True" SelectionMode="Single"
+                        GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="{StaticResource TableRowHeight}"
+                        AutomationProperties.Name="Route" ToolTip.Tip="In route order. Double-click to open."
+                        DoubleTapped="OnRouteDoubleTapped" KeyDown="OnRouteKeyDown">
+                <DataGrid.ContextMenu>
+                  <ContextMenu>
+                    <MenuItem Header="Open" Command="{Binding OpenCommand}" CommandParameter="{Binding SelectedStop}" />
+                    <MenuItem Header="Directions in Maps" Command="{Binding DirectionsCommand}" CommandParameter="{Binding SelectedStop}" />
+                    <Separator />
+                    <MenuItem Header="Remove from Team…" Command="{Binding UnassignCommand}" IsEnabled="{Binding HasChecked}" />
+                  </ContextMenu>
+                </DataGrid.ContextMenu>
+                <DataGrid.Columns>
+                  <DataGridTemplateColumn Width="34" MinWidth="34" CanUserResize="False">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate x:DataType="vm:AssignmentRowViewModel">
+                        <CheckBox Classes="rowCheck" IsChecked="{Binding IsChecked}" HorizontalAlignment="Center" AutomationProperties.Name="{Binding Address, StringFormat='Check {0}'}" />
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn Header="#" Width="40" MinWidth="40" CanUserResize="False">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate x:DataType="vm:AssignmentRowViewModel">
+                        <TextBlock Classes="cell num secondary" Text="{Binding Number}" />
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn Header="Structure" Width="1.4*" MinWidth="110">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate x:DataType="vm:AssignmentRowViewModel">
+                        <TextBlock Classes="cell" Text="{Binding Address}" />
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn Header="Result" Width="1.2*" MinWidth="100">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate x:DataType="vm:AssignmentRowViewModel">
+                        <Grid Classes="result" ColumnDefinitions="Auto,*" ColumnSpacing="7" Margin="8,0" VerticalAlignment="Center">
+                          <Ellipse Classes="dot" app:ThemeBrush.Fill="{Binding State, Converter={x:Static app:Converters.StatusDotKey}}" />
+                          <TextBlock Grid.Column="1" Text="{Binding Result}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding Result}" />
+                        </Grid>
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn Header="Code" Width="76" MinWidth="76">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate x:DataType="vm:AssignmentRowViewModel">
+                        <TextBlock Classes="cell mono secondary" Text="{Binding Code}" ToolTip.Tip="Worksheet code" />
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn Header="Due" Width="60" MinWidth="60">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate x:DataType="vm:AssignmentRowViewModel">
+                        <TextBlock Classes="cell secondary" Text="{Binding Due}" />
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn Header="Status" Width="116" MinWidth="116">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate x:DataType="vm:AssignmentRowViewModel">
+                        <ComboBox Classes="sm" ItemsSource="{x:Static vm:AssignmentsViewModel.StatusChoices}" SelectedIndex="{Binding StatusIndex}"
+                                  AutomationProperties.Name="{Binding StatusName}" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="6,0" />
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn Width="40" MinWidth="40" CanUserResize="False">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate x:DataType="vm:AssignmentRowViewModel">
+                        <Button Classes="icon sm" IsVisible="{Binding HasMapsLink}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Command="{Binding $parent[UserControl].((vm:AssignmentsViewModel)DataContext).DirectionsCommand}" CommandParameter="{Binding}"
+                                AutomationProperties.Name="{Binding MapsName}" ToolTip.Tip="Directions in Maps">
+                          <c:Icon Kind="MapPin" Size="14" />
+                        </Button>
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                </DataGrid.Columns>
+              </DataGrid>
+            </Border>
+          </Border>
           <c:EmptyState IsVisible="{Binding HasNoStops}" Title="No Structures Assigned" ToolTip.Tip="Assign from Structures (Change, Assign to Team) or the map" />
         </Grid>
-      </DockPanel>
-    </Grid>
+      </Grid>
+
+      <!-- The selected team, then the selected stop -->
+      <c:ListDetailPage.Inspector>
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Classes="inspectorStack">
+            <Border Classes="sideCard" IsVisible="{Binding HasTeam}">
+              <StackPanel Spacing="12">
+                <StackPanel Spacing="12" DataContext="{Binding SelectedTeam}" x:DataType="vm:TeamRowViewModel">
+                  <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="10">
+                    <Border Classes="teamChip" Background="{Binding Colour}" Margin="0,5,0,0" />
+                    <TextBlock Grid.Column="1" Classes="cardTitle" Text="{Binding Name}" TextWrapping="Wrap" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Classes="secondary sm" Text="{Binding Members}" TextWrapping="Wrap" />
+                  </Grid>
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding ProgressText}" TextWrapping="Wrap" />
+                    <ProgressBar Value="{Binding Fraction}" Maximum="1" Height="6" MinHeight="6" MinWidth="0" AutomationProperties.AccessibilityView="Raw" />
+                  </StackPanel>
+                </StackPanel>
+                <Border Classes="hairline" />
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                  <Button Content="Worksheets…" Command="{Binding WorksheetsCommand}" IsEnabled="{Binding HasStops}" AutomationProperties.Name="Save the field worksheets as a PDF" />
+                  <Button Content="Edit Team…" Command="{Binding EditTeamCommand}" AutomationProperties.Name="Edit the team" />
+                </StackPanel>
+              </StackPanel>
+            </Border>
+            <Border Classes="sideCard" IsVisible="{Binding HasSelectedStop}">
+              <StackPanel Spacing="12">
+                <StackPanel Spacing="12" DataContext="{Binding SelectedStop}" x:DataType="vm:AssignmentRowViewModel">
+                  <TextBlock Classes="cardTitle" Text="{Binding Address}" TextWrapping="Wrap" />
+                  <Grid Classes="facts" ColumnDefinitions="76,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                    <TextBlock Classes="factLabel" Text="Stop" />
+                    <TextBlock Grid.Column="1" Classes="num" Text="{Binding Number}" />
+                    <TextBlock Grid.Row="1" Classes="factLabel" Text="Result" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Result}" TextWrapping="Wrap" />
+                    <TextBlock Grid.Row="2" Classes="factLabel" Text="Code" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Classes="mono" Text="{Binding Code}" />
+                    <TextBlock Grid.Row="3" Classes="factLabel" Text="Due" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Due}" />
+                  </Grid>
+                </StackPanel>
+                <Border Classes="hairline" />
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                  <Button Content="Directions" Command="{Binding DirectionsCommand}" CommandParameter="{Binding SelectedStop}" AutomationProperties.Name="Directions to the selected stop in Maps" />
+                  <Button Classes="primary" Content="Open" Command="{Binding OpenCommand}" CommandParameter="{Binding SelectedStop}" MinWidth="88" HorizontalContentAlignment="Center"
+                          AutomationProperties.Name="Open the selected stop" />
+                </StackPanel>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </c:ListDetailPage.Inspector>
+    </c:ListDetailPage>
   </Panel>
 </UserControl>

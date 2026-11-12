@@ -84,7 +84,10 @@ internal static class OnlineHttp
 		return null;
 	}
 
-	/// <summary>A property as trimmed text, or null when missing or blank.</summary>
+	/// <summary>
+	/// A property as trimmed text, or null when missing, blank, or the placeholder text <c>&lt;Null&gt;</c> (any case) that
+	/// some ArcGIS services write instead of a real JSON null. Every caller gets this, so no field shows "&lt;Null&gt;".
+	/// </summary>
 	public static string Text(JsonElement element, string name)
 	{
 		JsonElement? v = Prop(element, name);
@@ -93,7 +96,12 @@ internal static class OnlineHttp
 			return null;
 		}
 		string s = v.Value.ValueKind == JsonValueKind.String ? v.Value.GetString() : v.Value.ToString();
-		return string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+		if (string.IsNullOrWhiteSpace(s))
+		{
+			return null;
+		}
+		s = s.Trim();
+		return string.Equals(s, "<Null>", StringComparison.OrdinalIgnoreCase) ? null : s;
 	}
 
 	/// <summary>A property as a number (JSON numbers or numeric text), or null.</summary>

@@ -1,5 +1,8 @@
 using System.Diagnostics;
 using Avalonia;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
+using Avalonia.Styling;
 using Avalonia.Controls;
 using Avalonia.Data.Converters;
 using Avalonia.Input;
@@ -29,7 +32,15 @@ public partial class MainWindow : Window, IDialogs
 	public MainWindow()
 	{
 		InitializeComponent();
+		// Styles animate only under this class, so Reduce Motion (and the off-screen tests) get none.
+		if (Motion.Enabled)
+		{
+			Classes.Add(Motion.Class);
+		}
 		this.FindControl<ItemsControl>("ToastList").ItemsSource = Toasts.Items;
+		SetUpWindowDrops();
+		// Tab always moves on; a sheet or the palette keeps Tab inside it and gives focus back when it closes.
+		KeyboardFocus.Attach(this, "SheetLayer", "SheetCard", "PaletteLayer");
 		ContentControl pages = this.FindControl<ContentControl>("PageHost");
 		pages.TemplateApplied += (_, _) =>
 		{
@@ -58,17 +69,118 @@ public partial class MainWindow : Window, IDialogs
 	/// <summary>The toasts shown at the bottom of the window (<see cref="Notify(string, string, bool)"/> adds one).</summary>
 	public ToastHost Toasts { get; } = new ToastHost();
 
-	// ───────────── Shell: switchers, palette ─────────────
+	// ───────────── Shell: the sidebar, the palette ─────────────
 
-	/// <summary>A row in a switcher's flyout was chosen: the flyout closes (its command runs as well).</summary>
-	private void OnFlyoutItemClick(object sender, RoutedEventArgs e)
+	/// <summary>How long the sidebar takes to slide in or out (only with motion on).</summary>
+	private static readonly TimeSpan SidebarSlide = TimeSpan.FromMilliseconds(180);
+
+	/// <summary>
+	/// Shows or hides the sidebar. With motion on, its width slides between nothing and its full width (the host clips
+	/// it); otherwise, and in the tests, it simply appears or goes.
+	/// </summary>
+	private async void ShowSidebar(MainViewModel main, bool animate)
 	{
-		this.FindControl<Button>("EventSwitcher")?.Flyout?.Hide();
-		this.FindControl<Button>("DatabaseButton")?.Flyout?.Hide();
+		Panel host = this.FindControl<Panel>("SidebarHost");
+		bool visible = main.IsSidebarVisible;
+		if (!animate || !Classes.Contains(Motion.Class) || !IsLoaded)
+		{
+			host.IsVisible = visible;
+			return;
+		}
+		double full = main.SidebarWidth;
+		Animation slide = new Animation
+		{
+			Duration = SidebarSlide,
+			Easing = new CubicEaseOut(),
+			Children =
+			{
+				new KeyFrame { Cue = new Cue(0), Setters = { new Setter(WidthProperty, visible ? 0d : full) } },
+				new KeyFrame { Cue = new Cue(1), Setters = { new Setter(WidthProperty, visible ? full : 0d) } },
+			},
+		};
+		host.IsVisible = true;
+		await slide.RunAsync(host);
+		host.IsVisible = main.IsSidebarVisible;
 	}
 
 	/// <summary>A click outside the command palette closes it.</summary>
 	private void OnPaletteScrimPressed(object sender, PointerPressedEventArgs e) => (DataContext as MainViewModel)?.Palette.Close();
+
+	// ───────────── Files dropped anywhere on the window ─────────────
+
+	/// <summary>The overlay shown while files are dragged over the window (added over everything, never hit-tested).</summary>
+	private readonly DropOverlay _dropOverlay = new DropOverlay
+	{
+		IsVisible = false,
+		Name = "DropOverlay",
+		DataContext = new DropPlan(DropKind.None, "", "", Array.Empty<string>()),
+	};
+
+	/// <summary>The overlay, for tests.</summary>
+	public DropOverlay DropOverlayView => _dropOverlay;
+
+	/// <summary>
+	/// Files can be dropped anywhere: while they are dragged over the window an overlay says what a drop would do, and a
+	/// drop goes to <see cref="DropRouter"/>. Page drop zones (Import &amp; Export, Import Inspections or Parcels, the
+	/// editor's photos) mark their events handled, so they take their own drops and the overlay stays out of their way.
+	/// Nothing is taken while a sheet or the command palette shows.
+	/// </summary>
+	private void SetUpWindowDrops()
+	{
+		((Panel)Content).Children.Add(_dropOverlay);
+		DragDrop.SetAllowDrop(this, true);
+		AddHandler(DragDrop.DragEnterEvent, OnWindowDragOver, RoutingStrategies.Bubble, handledEventsToo: true);
+		AddHandler(DragDrop.DragOverEvent, OnWindowDragOver, RoutingStrategies.Bubble, handledEventsToo: true);
+		AddHandler(DragDrop.DragLeaveEvent, (_, _) => HideDropOverlay(), RoutingStrategies.Bubble, handledEventsToo: true);
+		AddHandler(DragDrop.DropEvent, OnWindowDrop, RoutingStrategies.Bubble, handledEventsToo: true);
+	}
+
+	/// <summary>The local paths of the files being dragged (none for text, or for files without a path).</summary>
+	private static IReadOnlyList<string> DraggedPaths(DragEventArgs e) =>
+		e.DataTransfer.TryGetFiles()?.Select(f => f.TryGetLocalPath()).Where(p => p != null).ToList() ?? (IReadOnlyList<string>)Array.Empty<string>();
+
+	/// <summary>True when window-level drops are ignored: a sheet or the command palette is showing.</summary>
+	private static bool DropsBlocked(MainViewModel main) => main.Sheets.HasSheet || main.Palette.IsOpen;
+
+	private void OnWindowDragOver(object sender, DragEventArgs e)
+	{
+		if (DataContext is not MainViewModel main || e.Handled)
+		{
+			// A page's own drop zone has it (its tint shows instead).
+			HideDropOverlay();
+			return;
+		}
+		e.Handled = true;
+		IReadOnlyList<string> paths = DraggedPaths(e);
+		DropPlan plan = DropsBlocked(main) || paths.Count == 0 ? null : main.Drops.Plan(paths);
+		if (plan == null || plan.Kind == DropKind.None)
+		{
+			e.DragEffects = DragDropEffects.None;
+			HideDropOverlay();
+			return;
+		}
+		e.DragEffects = plan.CanDrop ? DragDropEffects.Copy : DragDropEffects.None;
+		_dropOverlay.DataContext = plan;
+		_dropOverlay.IsVisible = true;
+	}
+
+	/// <summary>Hides the overlay. Its plan stays, so its bindings never see the window's view model.</summary>
+	private void HideDropOverlay() => _dropOverlay.IsVisible = false;
+
+	private async void OnWindowDrop(object sender, DragEventArgs e)
+	{
+		HideDropOverlay();
+		if (e.Handled || DataContext is not MainViewModel main || DropsBlocked(main))
+		{
+			return;
+		}
+		e.Handled = true;
+		IReadOnlyList<string> paths = DraggedPaths(e);
+		if (paths.Count > 0)
+		{
+			await main.Drops.DropAsync(paths);
+		}
+	}
 
 	// ───────────── Edit menu: acts on the text box that has the cursor ─────────────
 
@@ -120,6 +232,8 @@ public partial class MainWindow : Window, IDialogs
 		if (DataContext is MainViewModel main)
 		{
 			AddPageShortcuts(main);
+			ShowSidebar(main, animate: false);
+			Closed += (_, _) => main.CancelLayoutSave();
 			// Others' saves are checked for while the window is active (and at once when it becomes active).
 			Activated += (_, _) => main.WindowActivated(true);
 			Deactivated += (_, _) => main.WindowActivated(false);
@@ -128,6 +242,10 @@ public partial class MainWindow : Window, IDialogs
 				if (args.PropertyName == nameof(MainViewModel.RecentDatabases))
 				{
 					RebuildRecent(main);
+				}
+				else if (args.PropertyName == nameof(MainViewModel.IsSidebarVisible))
+				{
+					ShowSidebar(main, animate: true);
 				}
 			};
 			RebuildRecent(main);
@@ -277,7 +395,7 @@ public partial class MainWindow : Window, IDialogs
 	public Task CopyTextAsync(string text) => Clipboard?.SetTextAsync(text) ?? Task.CompletedTask;
 }
 
-/// <summary>Small converters for the window's sheets and switchers.</summary>
+/// <summary>Small converters for the window's sheets.</summary>
 public static class SheetConverters
 {
 	public static readonly IValueConverter DetailsToggle = new FuncValueConverter<bool, string>(shown => shown ? "Hide details" : "Show details");
@@ -285,10 +403,21 @@ public static class SheetConverters
 	/// <summary>True when the sheet size equals the parameter ("Small", "Medium" or "Large"), for the sheet chrome's width class.</summary>
 	public static readonly IValueConverter IsSize = new FuncValueConverter<SheetSize, string, bool>((size, name) => size.ToString() == name);
 
-	/// <summary>True when every value is the same object (the chosen event, for its check mark).</summary>
+	/// <summary>True for the first-run walkthrough and What's New, which show their own large title in place of the chrome's.</summary>
+	public static readonly IValueConverter IsWelcome = new FuncValueConverter<SheetViewModel, bool>(sheet => sheet is WalkthroughSheetViewModel or WhatsNewSheetViewModel);
+
+	/// <summary>True when both values are the same object (a walkthrough page and the page being read).</summary>
 	public static readonly IMultiValueConverter Same = new FuncMultiValueConverter<object, bool>(values =>
 	{
-		List<object> list = values.ToList();
-		return list.Count > 1 && list.All(v => Equals(v, list[0]));
+		List<object> all = values.ToList();
+		return all.Count == 2 && all[0] != null && ReferenceEquals(all[0], all[1]);
+	});
+
+	/// <summary>An item's place in its list, counting from 1 ("" when it is not in it): the walkthrough's step numbers.</summary>
+	public static readonly IMultiValueConverter Number = new FuncMultiValueConverter<object, string>(values =>
+	{
+		List<object> all = values.ToList();
+		int index = all.Count == 2 && all[1] is System.Collections.IList list ? list.IndexOf(all[0]) : -1;
+		return index < 0 ? "" : (index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
 	});
 }
