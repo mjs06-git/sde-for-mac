@@ -389,6 +389,7 @@ public class AppLevelUiTests
 		Assert.Equal(DropKind.SdeExport, plan.Kind);
 		Assert.Equal("Drop to import", plan.Title);
 		Assert.StartsWith("An SDE 2.x export folder", plan.Description);
+		AssertDropIcon(ui, overlay, "AccentSoft", "Accent");
 		ui.Snapshot("95-drop-overlay");
 
 		Drag(ui, RawDragEventType.DragLeave, export);
@@ -399,7 +400,26 @@ public class AppLevelUiTests
 		Assert.True(overlay.IsVisible);
 		Assert.False(Assert.IsType<DropPlan>(overlay.DataContext).CanDrop);
 		Assert.Equal("Can't import this", ((DropPlan)overlay.DataContext).Title);
+		// A drop that can't be used shows a quiet grey icon, not the accent one.
+		AssertDropIcon(ui, overlay, "BgSubtle", "TextSecondary");
+		ui.Snapshot("95b-drop-overlay-refused");
 		Drag(ui, RawDragEventType.DragLeave, odd);
+	}
+
+	/// <summary>The overlay's icon badge and icon use these colour tokens.</summary>
+	private static void AssertDropIcon(UiSession ui, DropOverlay overlay, string badgeToken, string iconToken)
+	{
+		ui.Pump();
+		Border badge = overlay.GetVisualDescendants().OfType<Border>().Single(b => b.Classes.Contains("dropIcon"));
+		Sde.App.Controls.Icon icon = badge.GetVisualDescendants().OfType<Sde.App.Controls.Icon>().Single();
+		Assert.Equal(Token(badge, badgeToken), Assert.IsAssignableFrom<Avalonia.Media.ISolidColorBrush>(badge.Background).Color);
+		Assert.Equal(Token(icon, iconToken), Assert.IsAssignableFrom<Avalonia.Media.ISolidColorBrush>(icon.Foreground).Color);
+	}
+
+	private static Avalonia.Media.Color Token(Control control, string key)
+	{
+		Assert.True(control.TryFindResource(key, control.ActualThemeVariant, out object value), key);
+		return Assert.IsAssignableFrom<Avalonia.Media.ISolidColorBrush>(value).Color;
 	}
 
 	[AvaloniaFact]

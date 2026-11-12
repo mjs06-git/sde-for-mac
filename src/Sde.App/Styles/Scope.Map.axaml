@@ -2,9 +2,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:c="using:Sde.App.Controls">
   <!--
-    Styles that only ever apply inside the Map page, so they are included there rather than in App.axaml.
-    Avalonia tries every app-wide style on every new control, so keeping these out of App.axaml keeps the
-    Structures table and the map quick to draw. Put a style here only when its classes are used nowhere else.
+    Styles that only ever apply inside the Map page, so they are included there rather than in App.axaml. Avalonia tries
+    every app-wide style on every new control, so keeping these out of App.axaml keeps the Structures table and the map
+    quick to draw. Put a style here only when its classes are used nowhere else.
   -->
   <!-- From Styles/Map.axaml -->
   <!-- A floating card over the map -->

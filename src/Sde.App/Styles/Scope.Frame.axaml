@@ -3,8 +3,8 @@
         xmlns:c="using:Sde.App.Controls">
   <!--
     Styles that only ever apply inside the sidebar (MainWindow), so they are included there rather than in App.axaml.
-    Avalonia tries every app-wide style on every new control, so keeping these out of App.axaml keeps the
-    Structures table and the map quick to draw. Put a style here only when its classes are used nowhere else.
+    Avalonia tries every app-wide style on every new control, so keeping these out of App.axaml keeps the Structures
+    table and the map quick to draw. Put a style here only when its classes are used nowhere else.
   -->
   <!-- From Styles/Editor.axaml -->
   <!-- The section's number in the sidebar outline: a small ring with the number in it; filled with the accent for the
