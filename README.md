@@ -20,7 +20,8 @@ with permissions you control, edit history and automatic backups.
 </picture>
 
 **[Download the latest release](../../releases/latest)** · [User guide](docs/USER-GUIDE.md) ·
-[What's new in 3.5](docs/WHATS-NEW-3.5.md) · [Report a problem](../../issues/new/choose)
+[Quick start video](docs/video/sde-for-mac-quick-start.mp4) · [What's new in 3.5](docs/WHATS-NEW-3.5.md) ·
+[Report a problem](../../issues/new/choose)
 
 ## Contents
 - [Who it's for](#who-its-for)
@@ -129,7 +130,10 @@ backups are in `~/Library/Application Support/SDE/`, and the log files are in `~
 folders too only if you are sure you no longer need the assessments in them.
 
 ## Quick start
-A first session takes about 15 minutes.
+A first session takes about 15 minutes. The video shows installing SDE and the seven steps below in under two
+minutes.
+
+[![Watch the quick start video (1 minute 41 seconds)](docs/video/poster.png)](docs/video/sde-for-mac-quick-start.mp4)
 
 1. **Practise first.** Choose **Help > Open Sample Database**. It holds made-up buildings, shows a banner so you always
    know you are in it, and never touches your own data. Open a few structures and look around.
