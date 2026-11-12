@@ -278,7 +278,7 @@ public class MapEngineTests
 		int Ink(double zoom)
 		{
 			view.Map.SetView(dot.Latitude, dot.Longitude, zoom);
-			ui.Pump();
+			MapTestSupport.Settle(ui, view);
 			WriteableBitmap frame = MapTestSupport.Capture(ui);
 			Point p = MapTestSupport.InWindow(ui, view, view.Map.ToScreen(dot.Latitude, dot.Longitude));
 			AColor text = MapTestSupport.ThemeColour("TextPrimary");

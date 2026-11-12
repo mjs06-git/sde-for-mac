@@ -342,10 +342,10 @@ public sealed partial class MapCanvas : Panel, IDisposable
 			_parked = _parked with { CenterX = x, CenterY = y, Resolution = resolution };
 			return;
 		}
+		// The change of view asks the engine for a redraw itself (Mapsui's navigator does), and the engine draws within a
+		// few milliseconds, once for the new view and the data it fetches for it. Redrawing here as well drew the map two
+		// or three times for each move; code that needs the new picture at once waits with LoadAsync.
 		_control.Map.Navigator.CenterOnAndZoomTo(new MPoint(x, y), resolution, 0);
-		// Redraw at once. A change of view already asks the engine for a full redraw (Mapsui's navigator does), so
-		// Refresh's own request would only draw the map a second time.
-		_control.InvalidateVisual();
 	}
 
 	/// <summary>The margin, in pixels in all, that <see cref="FitToMarkers"/> leaves round the dots, clear of the page's floating controls.</summary>
