@@ -218,7 +218,7 @@ and `libSystem`.
 
 ## Quick start video (not part of SDE.app)
 
-The video in `docs/video/` uses music and recorded sounds that their authors released under CC0 1.0, so they are in the
+The quick start video in the README uses music and recorded sounds that their authors released under CC0 1.0, so they are in the
 public domain and need no attribution. They are credited here all the same.
 
 | Item | Author | License | Source |

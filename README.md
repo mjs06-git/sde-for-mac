@@ -21,7 +21,7 @@ state.
 </picture>
 
 **[Download the latest release](../../releases/latest)** · [User guide](docs/USER-GUIDE.md) ·
-[Quick start video](docs/video/sde-for-mac-quick-start.mp4) · [What's new in 3.5](docs/WHATS-NEW-3.5.md) ·
+[Quick start video](#quick-start) · [What's new in 3.5](docs/WHATS-NEW-3.5.md) ·
 [Report a problem](../../issues/new/choose)
 
 ## What it does
@@ -72,7 +72,7 @@ An internet connection is needed only for online maps, layers and look-ups. SDE 
 ## Quick start
 A first session takes about 15 minutes. The video shows installing SDE and these seven steps in under two minutes.
 
-[![Watch the quick start video (1 minute 41 seconds)](docs/video/poster.png)](docs/video/sde-for-mac-quick-start.mp4)
+https://github.com/user-attachments/assets/2a0e1517-e7ba-459c-b6ca-86bd8b1a0feb
 
 1. **Practice first.** Choose **Help > Open Sample Database**. It holds made-up buildings and never touches your own
    data.
