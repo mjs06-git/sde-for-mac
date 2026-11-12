@@ -140,7 +140,7 @@ public class MapStylesTableTests
 			int Ink(double zoom)
 			{
 				view.Map.SetView(e.Centre.Y, e.Centre.X, zoom);
-				ui.Pump();
+				MapTestSupport.Settle(ui, view);
 				WriteableBitmap frame = MapTestSupport.Capture(ui);
 				Point p = MapTestSupport.InWindow(ui, view, view.Map.ToScreen(e.Centre.Y, e.Centre.X));
 				int dark = 0;
