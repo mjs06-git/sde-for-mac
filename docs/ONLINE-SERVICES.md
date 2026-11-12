@@ -16,7 +16,7 @@ verified, or that look risky, are named in each result.
 - Confirm the `Public_AR_Current` benchmark still exists (`CensusGeocoder.Benchmark` changes it).
 - Confirm the answer has `result.addressMatches[]`, and that each match has `matchedAddress` and `coordinates.x` (longitude) and `coordinates.y` (latitude).
 - Confirm an address with no hit gives an empty `addressMatches` array (SDE then returns no match) rather than an error.
-- Result (2026-11-11): verified. `1600 Pennsylvania Ave NW, Washington, DC` gave HTTP 200, one match with
+- Result (2026-11-11): verified. the address of a well-known public building in Washington, DC gave HTTP 200, one match with
   `matchedAddress` "1600 PENNSYLVANIA AVE NW, WASHINGTON, DC, 20500" and `coordinates` x -77.035189, y 38.898703.
   Benchmark `Public_AR_Current` exists (id 4, "Public Address Ranges - Current Benchmark"). A nonsense address gave
   HTTP 200 with `addressMatches: []`. A bad benchmark name gave HTTP 400 with `{"errors":["Invalid benchmark in request"]}`.
