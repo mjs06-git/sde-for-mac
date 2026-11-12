@@ -3,8 +3,8 @@
         xmlns:c="using:Sde.App.Controls">
   <!--
     Styles that only ever apply inside the assessment editor, so they are included there rather than in App.axaml.
-    Avalonia tries every app-wide style on every new control, so keeping these out of App.axaml keeps the
-    Structures table and the map quick to draw. Put a style here only when its classes are used nowhere else.
+    Avalonia tries every app-wide style on every new control, so keeping these out of App.axaml keeps the Structures
+    table and the map quick to draw. Put a style here only when its classes are used nowhere else.
   -->
   <!-- From Styles/Editor.axaml -->
   <!-- A group of fields in a step: a white sheet on the paper page, its heading inside in navy semibold -->

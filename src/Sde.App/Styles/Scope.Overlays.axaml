@@ -2,12 +2,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:c="using:Sde.App.Controls">
   <!--
-    Styles that only ever apply inside the drop overlay and the command palette, so they are included there rather than in App.axaml.
-    Avalonia tries every app-wide style on every new control, so keeping these out of App.axaml keeps the
+    Styles that only ever apply inside the drop overlay and the command palette, so they are included there rather than
+    in App.axaml. Avalonia tries every app-wide style on every new control, so keeping these out of App.axaml keeps the
     Structures table and the map quick to draw. Put a style here only when its classes are used nowhere else.
   -->
-  <!-- From Styles/AppLevel.axaml -->
   <!-- ───────────── The drop overlay ───────────── -->
+  <!-- Border.dropOverlay (the dimmed window), Rectangle.dropEdge (an accent dashed edge, quiet when the drop can't be
+       used) and Border.dropPanel (the white card with Border.dropIcon, TextBlock.dropHeading and a line). The icon's
+       size and accent colours come from the Import page's Border.dropIcon styles (DataPages.axaml). -->
   <Style Selector="Border.dropOverlay">
     <Setter Property="Background" Value="{DynamicResource BgOverlay}" />
     <Setter Property="IsHitTestVisible" Value="False" />
@@ -24,6 +26,15 @@
 
   <Style Selector="Border.dropOverlay.refused Rectangle.dropEdge">
     <Setter Property="Stroke" Value="{DynamicResource BorderStrong}" />
+  </Style>
+
+  <!-- A drop that can't be used: the icon goes quiet too. These win over the app-wide Border.dropIcon styles because
+       this file is included by the overlay itself. -->
+  <Style Selector="Border.dropOverlay.refused Border.dropIcon">
+    <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
+  </Style>
+  <Style Selector="Border.dropOverlay.refused Border.dropIcon c|Icon">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
   </Style>
 
   <Style Selector="Border.dropPanel">

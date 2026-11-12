@@ -2,11 +2,18 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:c="using:Sde.App.Controls">
   <!--
-    Styles that only ever apply inside the content of every sheet (the sheet card in MainWindow), so they are included there rather than in App.axaml.
-    Avalonia tries every app-wide style on every new control, so keeping these out of App.axaml keeps the
-    Structures table and the map quick to draw. Put a style here only when its classes are used nowhere else.
+    Styles that only ever apply inside the content of every sheet (the sheet card in MainWindow), so they are included
+    there rather than in App.axaml. Avalonia tries every app-wide style on every new control, so keeping these out of
+    App.axaml keeps the Structures table and the map quick to draw. Put a style here only when its classes are used
+    nowhere else.
   -->
-  <!-- From Styles/AppLevel.axaml -->
+  <!--
+    What's New: c:Icon.whatsNewMark beside TextBlock.whatsNewHeading (display size), then Border.whatsNewCard for each
+      group (DockPanel.cardHead with c:Icon.cardIcon and TextBlock.cardHeading, lines with an Ellipse.whatsNewDot).
+    Check for Updates: Border.statusBadge (a round tinted badge with its icon; .success, .accent or .warning) beside
+      TextBlock.statusHeadline and a secondary line.
+    Spreadsheet chooser: StackPanel.choiceList of RadioButton.choice rows.
+  -->
   <!-- ───────────── What's New ───────────── -->
   <Style Selector="c|Icon.whatsNewMark">
     <Setter Property="Size" Value="56" />
