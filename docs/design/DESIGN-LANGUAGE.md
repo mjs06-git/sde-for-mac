@@ -32,6 +32,16 @@ The tests named below enforce the mechanical rules.
 - **The Mac's accent** replaces SDE's blue only when chosen in Settings › Appearance. `Services/SystemAccent.cs` keeps
   text on and in the accent at 4.5:1.
 
+## Where styles live
+- **App-wide or scoped.** `App.axaml` includes the styles that can apply anywhere. A style whose classes are used in
+  only one area goes in that area's `Styles/Scope.<Area>.axaml`, which the area's views include in their
+  `<UserControl.Styles>` (the sheet card and the sidebar in `Views/MainWindow.axaml` include theirs). Avalonia tries
+  every app-wide style on every new control, so page-only styles kept app-wide slow down the Structures table, the
+  editor and the map. `ScaleTests` and the map's frame-time tests catch a slowdown.
+- **Cheap selectors.** Put a class on the element itself rather than reaching it with a descendant selector
+  (`Border.x TextBlock`). A descendant selector checks every ancestor of every matching control, so it never starts
+  from `:is(Control)`: name the ancestor's real type, as in `Border.onFrame` or `:is(UserControl).dataPage`.
+
 ## Type and shape
 - **Public Sans** on all three surfaces, bundled once in `src/Sde.Reports/Fonts`. Tabular figures for numbers and money
   (the `num` and `money` classes), not for dates.
@@ -49,8 +59,9 @@ within 10 points of it and red at or above it. `IsMini` draws it in a table cell
 names itself for screen readers ("75 percent damaged, at or above the 50 percent line").
 
 ## Motion and accessibility
-- Sheets slide and fade, the backdrop dims, and hovers ease, only under the `.motion` class on the window. Motion is
-  off under the Mac's Reduce Motion setting and in the off-screen tests. There are no page transitions.
+- Sheets slide and fade, the backdrop dims, and hovers ease, only under the `.motion` class on the window (written
+  `:is(Window).motion`, so Avalonia looks for it on the window alone). Motion is off under the Mac's Reduce Motion
+  setting and in the off-screen tests. There are no page transitions.
 - Increase Contrast strengthens borders and secondary text.
 - Every control can be reached with the keyboard and has an accessible name. Icon-only buttons have a tooltip too.
 

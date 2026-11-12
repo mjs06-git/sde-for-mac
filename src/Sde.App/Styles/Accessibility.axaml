@@ -25,7 +25,7 @@
   </Style>
 
   <!-- ───────────── Motion: the switch's knob slides only with motion on ───────────── -->
-  <Style Selector=".motion ToggleSwitch">
+  <Style Selector=":is(Window).motion ToggleSwitch">
     <Setter Property="KnobTransitions">
       <Transitions>
         <DoubleTransition Easing="CubicEaseOut" Property="Canvas.Left" Duration="0:0:0.2" />

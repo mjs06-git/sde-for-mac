@@ -60,7 +60,7 @@
   <Style Selector="DataGridRow:selected TextBlock.cell.secondary">
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
-  <Style Selector=".motion DataGridRow /template/ Rectangle#BackgroundRectangle">
+  <Style Selector=":is(Window).motion DataGridRow /template/ Rectangle#BackgroundRectangle">
     <Setter Property="Transitions">
       <Transitions>
         <DoubleTransition Property="Opacity" Duration="0:0:0.12" />

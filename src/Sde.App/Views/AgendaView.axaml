@@ -5,6 +5,10 @@
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.AgendaView"
              x:DataType="vm:AgendaViewModel">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://SDE/Styles/Scope.Records.axaml" />
+  </UserControl.Styles>
+
 
   <!-- In the window's toolbar: how far ahead, and Add to Calendar -->
   <v:PageChrome.Toolbar>

@@ -7,6 +7,7 @@
              x:Class="Sde.App.Views.AssignmentsView"
              x:DataType="vm:AssignmentsViewModel">
   <UserControl.Styles>
+    <StyleInclude Source="avares://SDE/Styles/Scope.Records.axaml" />
     <!-- The status menu in a selected route row keeps its own text colour on its own fill -->
     <Style Selector="DataGridRow:selected ComboBox TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />

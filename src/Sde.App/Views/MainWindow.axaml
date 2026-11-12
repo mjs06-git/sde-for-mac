@@ -197,6 +197,9 @@
       -->
       <Panel Name="SidebarHost" Classes="sidebarHost">
       <Border Classes="sidebar onFrame" Width="{Binding SidebarWidth}" Name="Sidebar">
+        <Border.Styles>
+          <StyleInclude Source="avares://SDE/Styles/Scope.Frame.axaml" />
+        </Border.Styles>
         <!-- Rows in reading order, so Tab goes down the sidebar and reaches Settings last -->
         <Grid RowDefinitions="Auto,Auto,*,Auto">
           <Panel Classes="sidebarTitleBar" Name="SidebarTitleBar"
@@ -512,6 +515,7 @@
 
         <!-- The bright content panel the frame wraps (its top-left corner rounded while the sidebar shows) -->
         <Border Classes="contentPanel" Classes.flush="{Binding !IsSidebarVisible}" Name="ContentPanel">
+        <Panel>
         <DockPanel>
         <!-- The sample database is practice only: said on every page. -->
         <c:Banner DockPanel.Dock="Top" Tone="Warning" CornerRadius="0" Padding="20,6" IsVisible="{Binding IsSampleDatabase}"
@@ -525,6 +529,10 @@
         </c:Banner>
         <ContentControl Content="{Binding CurrentPage}" Name="PageHost" />
         </DockPanel>
+        <!-- The rounded corner where the panel meets the frame (Styles/Shell.axaml), only while the sidebar shows -->
+        <Path Classes="contentCorner" IsVisible="{Binding IsSidebarVisible}" />
+        <Path Classes="contentCornerLine" IsVisible="{Binding IsSidebarVisible}" />
+        </Panel>
         </Border>
       </DockPanel>
     </Grid>
@@ -536,6 +544,9 @@
               Classes.sheetMedium="{Binding Sheets.CurrentSize, Converter={x:Static v:SheetConverters.IsSize}, ConverterParameter=Medium}"
               Classes.sheetLarge="{Binding Sheets.CurrentSize, Converter={x:Static v:SheetConverters.IsSize}, ConverterParameter=Large}"
               Classes.welcome="{Binding Sheets.Current, Converter={x:Static v:SheetConverters.IsWelcome}}">
+        <Border.Styles>
+          <StyleInclude Source="avares://SDE/Styles/Scope.Sheets.axaml" />
+        </Border.Styles>
         <DockPanel>
           <Grid DockPanel.Dock="Top" Classes="sheetHead" ColumnDefinitions="*,Auto">
             <TextBlock Classes="sheetHeading" Text="{Binding Sheets.CurrentTitle}" />

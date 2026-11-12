@@ -7,6 +7,10 @@
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.MapView"
              x:DataType="vm:MapViewModel">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://SDE/Styles/Scope.Map.axaml" />
+  </UserControl.Styles>
+
   <!-- In the window's toolbar: bookmarks, More (the basemap, offline, print) and the inspector -->
   <v:PageChrome.Toolbar>
     <StackPanel Classes="pageToolbar">

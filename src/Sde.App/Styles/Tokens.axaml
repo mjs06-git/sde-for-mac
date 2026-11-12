@@ -55,8 +55,6 @@
   <CornerRadius x:Key="RadiusSheet">14</CornerRadius>
   <CornerRadius x:Key="RadiusSheetAttached">0,0,14,14</CornerRadius>
   <CornerRadius x:Key="RadiusPill">999</CornerRadius>
-  <!-- The content panel's top-left corner, where the navy frame wraps round the bright content -->
-  <CornerRadius x:Key="RadiusContent">14,0,0,0</CornerRadius>
 
   <!-- Control heights (Comfortable): small 22, regular 28, large 32 (toolbar items). Compact: 19, 22, 28 -->
   <x:Double x:Key="ControlHeightSmall">22</x:Double>

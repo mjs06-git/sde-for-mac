@@ -1,0 +1,206 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Sde.App.Controls">
+  <!--
+    Styles that only ever apply inside the Map page, so they are included there rather than in App.axaml.
+    Avalonia tries every app-wide style on every new control, so keeping these out of App.axaml keeps the
+    Structures table and the map quick to draw. Put a style here only when its classes are used nowhere else.
+  -->
+  <!-- From Styles/Map.axaml -->
+  <!-- A floating card over the map -->
+  <Style Selector="Border.mapFloat">
+    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderCard}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource ShadowCard}" />
+    <Setter Property="Padding" Value="4" />
+  </Style>
+
+  <!-- A floating bar: the mode's options (top centre) and the selection's actions (bottom centre) -->
+  <Style Selector="Border.mapFloat.mapBar">
+    <Setter Property="Padding" Value="12,6" />
+    <Setter Property="MinHeight" Value="44" />
+  </Style>
+
+  <!-- The legend card (lower left) -->
+  <Style Selector="Border.mapFloat.mapLegend">
+    <Setter Property="Padding" Value="14,10,10,12" />
+    <Setter Property="Width" Value="{DynamicResource MapLegendWidth}" />
+  </Style>
+
+  <!-- A tool in the palette: an icon, raised in the accent's soft fill while it is the mode -->
+  <Style Selector="RadioButton.mapTool">
+    <Setter Property="Width" Value="{DynamicResource MapToolSize}" />
+    <Setter Property="Height" Value="{DynamicResource MapToolSize}" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="PART_Tool" Background="Transparent" CornerRadius="{StaticResource RadiusControl}">
+          <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Foreground="{DynamicResource TextSecondary}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="RadioButton.mapTool:pointerover /template/ Border#PART_Tool">
+    <Setter Property="Background" Value="{DynamicResource BgHover}" />
+  </Style>
+
+  <Style Selector="RadioButton.mapTool:checked /template/ Border#PART_Tool">
+    <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
+  </Style>
+
+  <Style Selector="RadioButton.mapTool:checked /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+  </Style>
+
+  <Style Selector="RadioButton.mapTool:focus-visible /template/ Border#PART_Tool">
+    <Setter Property="BorderBrush" Value="{DynamicResource Focus}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+
+  <!-- Zoom in, zoom out and show all: square icon buttons in a floating card -->
+  <Style Selector="Button.mapTool">
+    <Setter Property="Width" Value="{DynamicResource MapToolSize}" />
+    <Setter Property="Height" Value="{DynamicResource MapToolSize}" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <!-- The hairline between groups in a floating card -->
+  <Style Selector="Border.mapRule">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Margin" Value="4,3" />
+    <Setter Property="Background" Value="{DynamicResource BorderSubtle}" />
+  </Style>
+
+  <Style Selector="Border.mapRule.vertical">
+    <Setter Property="Height" Value="NaN" />
+    <Setter Property="Width" Value="1" />
+    <Setter Property="Margin" Value="4,2" />
+  </Style>
+
+  <!-- A segmented control that spans its card, its choices sharing the width (Show as, the heat map's weight) -->
+  <Style Selector="ListBox.segmented.fill">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="ItemsPanel">
+      <ItemsPanelTemplate>
+        <UniformGrid Rows="1" />
+      </ItemsPanelTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="ListBox.segmented.fill ListBoxItem">
+    <Setter Property="Padding" Value="4,1" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+
+  <!-- The selection bar's count ("12 selected") -->
+  <Style Selector="TextBlock.selectionCount">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- The legend: its title, the dots and swatches, and the heat map's ramp -->
+  <Style Selector="TextBlock.legendTitle">
+    <Setter Property="FontSize" Value="{DynamicResource FontSizeFootnote}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+
+  <Style Selector="Ellipse.legendDot">
+    <Setter Property="Width" Value="10" />
+    <Setter Property="Height" Value="10" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Border.legendSwatch">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="10" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Border.legendRamp">
+    <Setter Property="Height" Value="10" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <!-- The attribute drawer: a card along the bottom of the map, with a grip and an edge that drags its height -->
+  <Style Selector="Border.mapFloat.mapDrawer">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+
+  <Style Selector="Border.drawerGrip">
+    <Setter Property="Width" Value="36" />
+    <Setter Property="Height" Value="4" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
+    <Setter Property="Background" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Margin" Value="0,6,0,0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+
+  <Style Selector="c|ResizeHandle.drawerEdge">
+    <Setter Property="Width" Value="NaN" />
+    <Setter Property="Height" Value="12" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Cursor" Value="SizeNorthSouth" />
+  </Style>
+
+  <Style Selector="Border.drawerHeader">
+    <Setter Property="Padding" Value="16,16,10,10" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+
+  <!-- The inspector beside the map: a column of cards on the page background -->
+  <Style Selector="Border.mapPane">
+    <Setter Property="Background" Value="{DynamicResource BgApp}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderThickness" Value="1,0,0,0" />
+  </Style>
+
+  <Style Selector="Border.mapPane Border.sideCard">
+    <Setter Property="Padding" Value="16,14,16,16" />
+  </Style>
+
+  <!-- A card that holds a list (the structures, the layers): the list runs to the card's edges -->
+  <Style Selector="Border.mapPane Border.sideCard.list">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+
+  <!-- The pane's small check boxes (what to show, the layers): Mac-size 14 px, not the 20 px form ones -->
+  <Style Selector="Border.mapPane CheckBox.compact /template/ Border#NormalRectangle">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="14" />
+  </Style>
+
+  <Style Selector="Border.mapPane CheckBox.compact /template/ Viewbox">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="14" />
+  </Style>
+
+  <Style Selector="Border.mapDrawer CheckBox.compact /template/ Border#NormalRectangle">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="14" />
+  </Style>
+
+  <Style Selector="Border.mapDrawer CheckBox.compact /template/ Viewbox">
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="14" />
+  </Style>
+</Styles>

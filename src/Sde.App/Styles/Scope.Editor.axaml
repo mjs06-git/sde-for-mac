@@ -1,0 +1,71 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Sde.App.Controls">
+  <!--
+    Styles that only ever apply inside the assessment editor, so they are included there rather than in App.axaml.
+    Avalonia tries every app-wide style on every new control, so keeping these out of App.axaml keeps the
+    Structures table and the map quick to draw. Put a style here only when its classes are used nowhere else.
+  -->
+  <!-- From Styles/Editor.axaml -->
+  <!-- A group of fields in a step: a white sheet on the paper page, its heading inside in navy semibold -->
+  <Style Selector="Border.formGroup">
+    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderCard}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource ShadowCard}" />
+    <Setter Property="Padding" Value="24,20,24,24" />
+    <Setter Property="Margin" Value="0,0,0,20" />
+  </Style>
+
+  <Style Selector="Border.formGroup TextBlock.h3">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeTitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+
+  <!-- A group inside a group (the Result step's inputs) is part of its sheet: no second box -->
+  <Style Selector="Border.formGroup Border.formGroup">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="BoxShadow" Value="0 0 0 0 #00000000" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0" />
+  </Style>
+
+  <!-- The step's title above its sheets -->
+  <Style Selector="TextBlock.stepHeading">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeDisplay}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="-0.3" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="Margin" Value="2,0,0,20" />
+  </Style>
+
+  <!-- The live result on the right: a column on the page background, the result hero (Controls/ResultHero) at its top
+       and white cards under it -->
+  <Style Selector="Border.resultPanel">
+    <Setter Property="Width" Value="{StaticResource InspectorWidth}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <!-- Rows of the editor's tables (damage by element, cost adjustments) -->
+  <Style Selector="Border.tableRow">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="0,2" />
+    <Setter Property="MinHeight" Value="36" />
+  </Style>
+
+  <Style Selector="Border.tableHead">
+    <Setter Property="Padding" Value="0,0,0,6" />
+  </Style>
+
+  <Style Selector="Border.tableFoot">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="0,10,0,0" />
+  </Style>
+</Styles>

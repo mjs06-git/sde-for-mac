@@ -337,7 +337,7 @@ public sealed partial class MapCanvas
 				d.Y = y;
 				break;
 		}
-		ShowHandles();
+		ShowHandles(redrawNow: false);
 	}
 
 	private void EndEditDrag(Point end)
@@ -550,8 +550,13 @@ public sealed partial class MapCanvas
 
 	// ───────────── Drawing the handles ─────────────
 
-	/// <summary>Draws the picked shape's outline, corners and middle dots, a shape or dot being dragged, and the snapping ring.</summary>
-	private void ShowHandles()
+	/// <summary>
+	/// Draws the picked shape's outline, corners and middle dots, a shape or dot being dragged, and the snapping ring.
+	/// <paramref name="redrawNow"/> redraws the map at once as well. A drag passes false: marking the handles changed
+	/// already makes the engine redraw within a few milliseconds, and redrawing at once too drew the map two or three
+	/// times for every move of the mouse.
+	/// </summary>
+	private void ShowHandles(bool redrawNow = true)
 	{
 		if (_control == null)
 		{
@@ -633,6 +638,9 @@ public sealed partial class MapCanvas
 		}
 		Handles.Features = features;
 		Handles.DataHasChanged();
-		Refresh();
+		if (redrawNow)
+		{
+			Refresh();
+		}
 	}
 }

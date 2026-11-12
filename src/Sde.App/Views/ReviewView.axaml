@@ -6,6 +6,10 @@
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.ReviewView"
              x:DataType="vm:ReviewViewModel">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://SDE/Styles/Scope.Records.axaml" />
+  </UserControl.Styles>
+
   <UserControl.Resources>
     <!-- One quality finding in a check's card: where, and Open / Merge / Set aside (or, set aside, the reason and Bring back) -->
     <DataTemplate x:Key="FindingRow" x:DataType="vm:QaFindingViewModel">

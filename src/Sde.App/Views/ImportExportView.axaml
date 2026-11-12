@@ -6,6 +6,10 @@
              x:Class="Sde.App.Views.ImportExportView"
              x:DataType="vm:ImportExportViewModel"
              Classes="dataPage">
+  <UserControl.Styles>
+    <StyleInclude Source="avares://SDE/Styles/Scope.Data.axaml" />
+  </UserControl.Styles>
+
   <!-- In the window's toolbar: the three tabs -->
   <v:PageChrome.Toolbar>
     <StackPanel Classes="pageToolbar">
