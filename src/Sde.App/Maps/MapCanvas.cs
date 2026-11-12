@@ -343,7 +343,9 @@ public sealed partial class MapCanvas : Panel, IDisposable
 			return;
 		}
 		_control.Map.Navigator.CenterOnAndZoomTo(new MPoint(x, y), resolution, 0);
-		Refresh();
+		// Redraw at once. A change of view already asks the engine for a full redraw (Mapsui's navigator does), so
+		// Refresh's own request would only draw the map a second time.
+		_control.InvalidateVisual();
 	}
 
 	/// <summary>The margin, in pixels in all, that <see cref="FitToMarkers"/> leaves round the dots, clear of the page's floating controls.</summary>
