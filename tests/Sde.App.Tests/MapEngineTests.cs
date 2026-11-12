@@ -247,6 +247,8 @@ public class MapEngineTests
 		MapTestSupport.SetUpPlaces(ui, Basemaps.UsgsTopo);
 		MapView view = MapTestSupport.ShowMap(ui);
 		MapCanvas map = view.Map;
+		// The map takes the engine's redraw requests, so it can skip the ones a draw already answers.
+		Assert.True(map.RedrawLoopShared);
 		Assert.Empty(map.EngineMap.Widgets);
 		Assert.All(map.EngineMap.Layers, l => Assert.False(l.Attribution?.Enabled ?? false, l.Name));
 		Assert.Equal("Map data: U.S. Geological Survey, The National Map", ui.Main.Map.Attribution);
