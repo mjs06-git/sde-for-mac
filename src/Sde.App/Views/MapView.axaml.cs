@@ -19,10 +19,14 @@ public partial class MapView : UserControl
 {
 	private MapViewModel _vm;
 	private bool _fitted;
+	private readonly MapAnalysisRunner _analysis;
 
 	public MapView()
 	{
 		InitializeComponent();
+		_analysis = new MapAnalysisRunner(Surface, key => this.TryFindResource(key, ActualThemeVariant, out object r) ? r : null);
+		_analysis.SurfaceChanged += result => _vm?.ShowSurfaceClasses(result);
+		Surface.ClusterClicked += extent => Surface.FitTo(extent, 18);
 		Surface.MarkerClicked += (id, add) => _vm?.ClickStructure(id, add);
 		Surface.FeatureClicked += (layer, feature, add) => _vm?.ClickFeature(layer, feature, add);
 		Surface.MapClicked += (lat, lon) => _vm?.ClickMap(lat, lon);
@@ -45,7 +49,16 @@ public partial class MapView : UserControl
 		Surface.SizeChanged += OnCanvasSizeChanged;
 		ZoomInButton.Click += (_, _) => Surface.ZoomBy(1);
 		ZoomOutButton.Click += (_, _) => Surface.ZoomBy(-1);
-		ActualThemeVariantChanged += (_, _) => Rebuild();
+		ActualThemeVariantChanged += (_, _) =>
+		{
+			Rebuild();
+			BuildHeatRamp();
+		SelectionBar.SizeChanged += (_, _) => PlaceSelectionBar();
+		LegendCard.SizeChanged += (_, _) => PlaceSelectionBar();
+		MapArea.SizeChanged += (_, _) => PlaceSelectionBar();
+			_analysis.Refresh();
+		};
+		BuildHeatRamp();
 		PointList.DoubleTapped += (_, _) => _vm?.OpenSelectedCommand.Execute(null);
 		TableGrid.SelectionChanged += OnTableSelectionChanged;
 		TableGrid.DoubleTapped += (_, _) => _vm?.ZoomToRowCommand.Execute(TableGrid.SelectedItem as AttributeRowViewModel);
@@ -87,6 +100,9 @@ public partial class MapView : UserControl
 	/// <summary>The map control, for tests that need its screen positions.</summary>
 	public MapCanvas Map => Surface;
 
+	/// <summary>What keeps the analysis layers (clusters, heat map, water surface) up to date, for tests.</summary>
+	public MapAnalysisRunner Analysis => _analysis;
+
 	private void OnCanvasSizeChanged(object sender, SizeChangedEventArgs e)
 	{
 		if (!_fitted && e.NewSize.Width > 20 && e.NewSize.Height > 20)
@@ -102,6 +118,7 @@ public partial class MapView : UserControl
 		if (_vm != null && Surface.Bounds.Width > 0)
 		{
 			_vm.ViewExtent = Surface.Extent;
+			_analysis.ViewChanged();
 		}
 	}
 
@@ -126,7 +143,9 @@ public partial class MapView : UserControl
 		_vm.ShowViewRequested += ShowView;
 		_vm.MoveAnswered += Surface.ClearPendingMove;
 		_vm.PropertyChanged += VmChanged;
+		_vm.AnalysisChanged += UpdateAnalysis;
 		_vm.PrintScene = BuildPrintScene;
+		_vm.WatchMarks();
 		Surface.Tiles = _vm.Tiles;
 		Surface.Basemap = _vm.Basemap;
 		ApplyMode();
@@ -139,7 +158,8 @@ public partial class MapView : UserControl
 	{
 		base.OnDetachedFromVisualTree(e);
 		Detach();
-		// The page closed: stop the map engine (its redraw loop, downloads and layers).
+		// The page closed: stop the analysis work and the map engine (its redraw loop, downloads and layers).
+		_analysis.Stop();
 		Surface.Dispose();
 	}
 
@@ -161,6 +181,7 @@ public partial class MapView : UserControl
 		_vm.ShowViewRequested -= ShowView;
 		_vm.MoveAnswered -= Surface.ClearPendingMove;
 		_vm.PropertyChanged -= VmChanged;
+		_vm.AnalysisChanged -= UpdateAnalysis;
 		if (_vm.PrintScene == BuildPrintScene)
 		{
 			_vm.PrintScene = null;
@@ -282,6 +303,51 @@ public partial class MapView : UserControl
 		Surface.Markers = markers;
 		Surface.Highlighted = _vm.Selected?.Id;
 		ShowSelection();
+		UpdateAnalysis();
+	}
+
+	// ───────────── Analysis: clusters, heat map, water surface ─────────────
+
+	/// <summary>The structures, the way they are shown or the surface changed: the analysis layers follow (nothing runs while all are off).</summary>
+	private void UpdateAnalysis()
+	{
+		if (_vm != null)
+		{
+			_analysis.Update(_vm.AnalysisInputs());
+		}
+	}
+
+	/// <summary>
+	/// The selection bar sits at the bottom centre of the map; where it would run into the legend card (a narrow map,
+	/// many actions) it rises above the legend instead, so nothing is covered or cut off.
+	/// </summary>
+	private void PlaceSelectionBar()
+	{
+		double room = (SelectionBar.Parent as Control)?.Bounds.Width ?? MapArea.Bounds.Width;
+		double barLeft = (room - SelectionBar.Bounds.Width) / 2;
+		double legendRight = LegendCard.Bounds.Right + 8;
+		bool collides = LegendCard.IsVisible && barLeft < legendRight;
+		Thickness wanted = collides ? new Thickness(0, 0, 0, LegendCard.Bounds.Height + 10) : new Thickness(0);
+		if (SelectionBar.Margin != wanted)
+		{
+			SelectionBar.Margin = wanted;
+		}
+	}
+
+	/// <summary>The heat map's ramp in the legend: the theme's stop colours at the positions the map uses, the coolest end faint.</summary>
+	private void BuildHeatRamp()
+	{
+		LinearGradientBrush ramp = new LinearGradientBrush { StartPoint = new RelativePoint(0, 0.5, RelativeUnit.Relative), EndPoint = new RelativePoint(1, 0.5, RelativeUnit.Relative) };
+		for (int i = 0; i < MapAnalysis.HeatStopKeys.Length; i++)
+		{
+			Color c = this.TryFindResource(MapAnalysis.HeatStopKeys[i], ActualThemeVariant, out object r) && r is Color found ? found : Colors.SteelBlue;
+			if (i == 0)
+			{
+				c = Color.FromArgb(60, c.R, c.G, c.B);
+			}
+			ramp.GradientStops.Add(new GradientStop(c, MapAnalysis.HeatStopPositions[i]));
+		}
+		HeatRamp.Background = ramp;
 	}
 
 	/// <summary>
@@ -322,6 +388,13 @@ public partial class MapView : UserControl
 	// ───────────── Printing ─────────────
 
 	/// <summary>The map as it is on screen, in the light theme's colours (paper is white), with its legend.</summary>
+	/// <summary>The analysis pictures for a print: the heat map is drawn again in the light theme's colours, since paper is white.</summary>
+	private List<MapRasterOverlay> PrintRasters()
+	{
+		MapRasterOverlay lightHeat = _analysis.HeatForPrint(key => Application.Current!.TryGetResource(key, ThemeVariant.Light, out object r) ? r : null);
+		return Surface.Rasters.Select(r => r.Key == MapAnalysis.HeatKey && lightHeat != null ? lightHeat : r).ToList();
+	}
+
 	private MapPrintScene BuildPrintScene()
 	{
 		if (_vm == null)
@@ -356,19 +429,62 @@ public partial class MapView : UserControl
 			Layers = layers.OfType<MapFeatureLayer>().Where(l => l.Visible).ToList(),
 			Markers = markers,
 			MarkerLabels = labels == null ? null : _vm.StructuresLayer.Labels,
+			Clusters = PrintClusters(),
+			MarkersHidden = Surface.MarkersHidden,
+			Rasters = PrintRasters(),
 			Legend = PrintLegend(),
 		};
 	}
+
+	/// <summary>The clusters on screen in the light theme's colours, with brushes that belong to no thread (print draws off the UI thread).</summary>
+	private List<MapClusterMark> PrintClusters()
+	{
+		if (Surface.Clusters == null)
+		{
+			return null;
+		}
+		IBrush light = Frozen(ThemeBrushFor("MapClusterInkLight", ThemeVariant.Light));
+		IBrush dark = Frozen(ThemeBrushFor("MapClusterInkDark", ThemeVariant.Light));
+		return Surface.Clusters.Select(c =>
+		{
+			IBrush fill = Frozen(ThemeBrushFor(MapAnalysis.DotKey(c.Worst), ThemeVariant.Light));
+			return c with { Fill = fill, Ink = MapAnalysis.InkFor(fill, light, dark) };
+		}).ToList();
+	}
+
+	private static IBrush Frozen(IBrush brush) =>
+		new Avalonia.Media.Immutable.ImmutableSolidColorBrush(brush is ISolidColorBrush s ? s.Color : Colors.Gray, brush?.Opacity ?? 1);
 
 	/// <summary>The printed legend: the structures (by result, or by the field they are coloured by), then each layer shown, top first.</summary>
 	private List<MapLegendGroup> PrintLegend()
 	{
 		List<MapLegendGroup> groups = new List<MapLegendGroup>();
-		if (_vm.StructuresLayer?.IsVisible ?? true)
+		string dotOutline = Hex(ThemeBrushFor("MapLegendDotOutline", ThemeVariant.Light));
+		if ((_vm.StructuresLayer?.IsVisible ?? true) && _vm.IsClusters)
+		{
+			List<MapLegendItem> items = _vm.Classes.Where(c => c.IsOn && c.Count > 0)
+				.Select(c => new MapLegendItem(c.Label, MapLegendShape.Dot, Hex(ThemeBrushFor(MapAnalysis.DotKey(c.Class), ThemeVariant.Light)), dotOutline)).ToList();
+			groups.Add(new MapLegendGroup("Structures in clusters, by worst result", items));
+		}
+		else if ((_vm.StructuresLayer?.IsVisible ?? true) && _vm.IsHeatmap)
+		{
+			List<MapLegendItem> items = new List<MapLegendItem>();
+			string[] words = { "Fewest", "", "", "Most" };
+			for (int i = 0; i < MapAnalysis.HeatStopKeys.Length; i++)
+			{
+				Color c = this.TryFindResource(MapAnalysis.HeatStopKeys[i], ActualThemeVariant, out object r) && r is Color found ? found : Colors.SteelBlue;
+				if (words[i].Length > 0)
+				{
+					items.Add(new MapLegendItem(words[i], MapLegendShape.Area, $"#{c.R:X2}{c.G:X2}{c.B:X2}{(i == 0 ? 0x50 : 0xCC):X2}", $"#{c.R:X2}{c.G:X2}{c.B:X2}FF"));
+				}
+			}
+			groups.Add(new MapLegendGroup("Heat map of structures, " + _vm.HeatLegendNote.ToLowerInvariant(), items));
+		}
+		else if (_vm.StructuresLayer?.IsVisible ?? true)
 		{
 			List<MapLegendItem> items = _vm.ColoursByResult
-				? _vm.Classes.Where(c => c.IsOn && c.Count > 0).Select(c => new MapLegendItem(c.Label, MapLegendShape.Dot, Hex(ThemeBrushFor(c.ColourKey, ThemeVariant.Light)), "#FFFFFF")).ToList()
-				: _vm.StructureLegend.Select(l => new MapLegendItem(l.Label, MapLegendShape.Dot, Hex(l.Fill), "#FFFFFF")).ToList();
+				? _vm.Classes.Where(c => c.IsOn && c.Count > 0).Select(c => new MapLegendItem(c.Label, MapLegendShape.Dot, Hex(ThemeBrushFor(c.ColourKey, ThemeVariant.Light)), dotOutline)).ToList()
+				: _vm.StructureLegend.Select(l => new MapLegendItem(l.Label, MapLegendShape.Dot, Hex(l.Fill), dotOutline)).ToList();
 			string by = _vm.ColoursByResult ? "result" : (_vm.StructureLegendTitle ?? "").Replace("COLOURED BY ", "", StringComparison.Ordinal).ToLowerInvariant();
 			groups.Add(new MapLegendGroup("Structures, by " + by, items));
 		}
@@ -376,7 +492,11 @@ public partial class MapView : UserControl
 		{
 			if (layer.IsTiles)
 			{
-				groups.Add(new MapLegendGroup(layer.Name, new[] { new MapLegendItem("Flood hazard zones from FEMA's National Flood Hazard Layer", MapLegendShape.Area, "#5B8FD9B3", "#3D6FB8") }));
+				groups.Add(new MapLegendGroup(layer.Name, new[]
+				{
+					new MapLegendItem("Flood hazard zones from FEMA's National Flood Hazard Layer", MapLegendShape.Area,
+						Hex(ThemeBrushFor("MapFloodZoneFill", ThemeVariant.Light)), Hex(ThemeBrushFor("MapFloodZoneStroke", ThemeVariant.Light))),
+				}));
 			}
 			else if (layer.Data != null)
 			{
@@ -388,6 +508,12 @@ public partial class MapView : UserControl
 				};
 				groups.Add(new MapLegendGroup(layer.Name, layer.Legend.Select(l => new MapLegendItem(l.Label, shape, Hex(l.Fill), Hex(l.Stroke))).ToList()));
 			}
+		}
+		// The water surface, as on screen: an elevation in the marks' datum (not a depth), in its classes for the area shown.
+		if (_vm.ShowsSurface && _vm.HasSurfaceLegend)
+		{
+			groups.Add(new MapLegendGroup(_vm.SurfaceLegendTitle, _vm.SurfaceLegend
+				.Select(l => new MapLegendItem(l.Label, MapLegendShape.Area, Hex(ThemeBrushFor(l.ColourKey, ThemeVariant.Light)), Hex(ThemeBrushFor(l.ColourKey, ThemeVariant.Light)))).ToList()));
 		}
 		return groups;
 	}

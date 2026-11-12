@@ -88,7 +88,11 @@ their shortcuts. **View > Search and Commands…** (⌘K) finds structures, page
 
 Map, Summary and Import & Export aren't in the sidebar. Open them from the **View** menu or their shortcuts; Map and
 Summary are also available from the toolbar switch. **Event > Event Summary** opens the summary. Open Settings with
-**SDE > Settings…** (⌘,); **SDE > About Substantial Damage Estimator** opens it too and shows the version.
+**SDE > Settings…** (⌘,); **SDE > About Substantial Damage Estimator** opens **Settings > About**, with the version.
+
+Import & Export has three tabs, switched in the toolbar: **Import** (SDE data, inspections, parcels and settings
+files), **Export** (SDE data, spreadsheets, maps and your setup) and **Field Work** (photos, work packages and
+coordinates). It remembers the tab you used last until you quit.
 
 ![The Structures list](screenshots/01-structures.png)
 
@@ -104,6 +108,28 @@ Changes save as you type. To save immediately, for example before closing the li
 
 **Settings > Backups** shows the database file and the photos folder, with **Show in Finder**. **File > Show Database
 in Finder** does the same from anywhere.
+
+### Dropping files on the window
+You can drop a file anywhere on the window. While you drag, SDE says what it recognised. Then:
+
+- An **SDE export folder** or a FEMA **.mdb** opens the import preview on Import & Export, as in [3.2](#32-from-femas-sde-or-another-sde-for-mac).
+- An **SDE database** (.sqlite) asks before SDE switches to it.
+- A **spreadsheet** (.csv, .xlsx, .xlsm, .xls, .dbf) asks what it holds: inspections or parcels, structures from a
+  parcel spreadsheet, coordinates (a .xlsx), or high-water marks (a .csv, while an assessment is open).
+- **Photos** go into the open assessment's Photos step. With no assessment open, SDE matches them to structures and
+  shows the matches for you to check.
+- A **map layer** (.shp, .geojson, .gpkg) is added on the Map.
+
+Anything else gets a short note that SDE can't import it. Nothing is dropped while a sheet is open. The drop zones on
+Import & Export, Import Inspections or Parcels and the Photos step still work as before.
+
+### What's new and updates
+After an update, SDE shows **What's New** once. **Help > What's New in SDE** and **Settings > About** show it again.
+
+**Help > Check for Updates…** asks GitHub whether a newer version is published. It runs only when you choose it, never
+by itself. It sends a request for the latest release with the app's name and version, and nothing about you or your
+data. If there is a newer version, **Open the Download Page** opens its page in your browser. SDE downloads and installs
+nothing itself.
 
 ---
 
@@ -136,6 +162,9 @@ These are in **Settings > General**.
 
 - **Check coordinates are in the structure's state**: FEMA's *Lat/Long Validation*. Turn it on to catch coordinates
   entered with the wrong sign or in the wrong order.
+- **Appearance** (in **Settings > Appearance**): **Match System**, **Light** or **Dark**; the accent colour, SDE blue
+  or the Mac's own; and **Comfortable** or **Compact** spacing. The theme and the accent change at once; the spacing
+  takes effect the next time SDE opens.
 - **Your fields**: three extra fields on every assessment. Name them for what your office tracks, such as *Permit
   number* or *Inspection team*.
 - **Note snippets**: text you type often (for example a standard note about water lines). Click **Add Snippet**,
@@ -205,8 +234,9 @@ FEMA's SDE 3.0 or by SDE for Mac), a folder from the older **SDE 2.x**, and FEMA
 1. Get the data from the other computer: an export folder, or a copy of `SDEDatabase.mdb` together with the
    `attachments` folder beside it (that's where its photos are).
 2. Choose **File > Import SDE Data…** (⌘I), or **Import SDE Data…** in the toolbar's **New** pull-down. Or open
-   **Import & Export** (⌘8) and, under **FEMA SDE data > Import**, click **SDE Export Folder…** or **SDE Database
-   (.mdb)…**. You can also drag the folder or `.mdb` file onto the Import & Export page.
+   **Import & Export** (⌘8) and, on the **Import** tab, click **SDE Export Folder…** or **SDE Database (.mdb)…**. You
+   can also drop the folder or `.mdb` file on the Import & Export page. A dropped spreadsheet opens **Import
+   Inspections or Parcels** instead.
 3. Under **Ready to import**, SDE lists what it found before anything is added. Untick anything you don't want.
 4. Choose what happens **If a structure is already in your database**:
    - **Keep mine (skip it)**,
@@ -224,7 +254,7 @@ details, see [Importing inspections or parcels](IMPORTING.md).
 1. **Export from the other system.** Save its report or search results as `.xlsx`, `.xls`, `.csv` or a shapefile's
    `.dbf`. Include a **record ID** that never changes (a permit, inspection or parcel number).
 2. Choose **File > Import Inspections or Parcels…** (⇧⌘I) or the same item in the toolbar's **New** pull-down, or
-   **Import & Export > Inspections or parcels > Import Inspections or Parcels…**, and choose the file.
+   **Import & Export > Import > Other systems > Import Inspections or Parcels…**, and choose the file.
 3. **Pick a profile.** A profile remembers how one source's files map to SDE. The first time, click **Start from an
    example** and pick the closest: **Generic inspections**, **County parcels** or **Accela (example)**. Next time, SDE
    picks your saved profile automatically.
@@ -232,6 +262,10 @@ details, see [Importing inspections or parcels](IMPORTING.md).
    - **Source**: the system's name in your words, such as *Permits* or *County assessor*.
    - **Each record becomes** an assessment (inspections) or a structure (parcels).
    - **New records match** existing structures by record ID only, by parcel number, or by address.
+   - **One row is** one building, or several: **A number of buildings in a column** or **A list of buildings in a
+     column** makes one structure per building, told apart in the unit or the lot number (see
+     [A record that covers several buildings](IMPORTING.md#a-record-that-covers-several-buildings)). The preview
+     shows each building under its row of the file.
 5. **Map the columns.** For each SDE field, pick the column it comes from, or type one value for every record (for
    example the cause of damage). Each mapped field shows an example from the file.
 6. **Translate the file's words.** Text that isn't one of FEMA's choices is listed with how many records use it. Pick
@@ -250,8 +284,9 @@ FEMA's SDE has a simpler import that makes one structure per row of a parcel or 
 for compatibility; for anything you will import again, use [3.3](#33-from-a-permit-system-spreadsheet-or-assessor-roll)
 instead.
 
-1. Open **Import & Export** and find **Structures from a parcel spreadsheet** under **Other systems**.
-2. Click **Choose Spreadsheet…** and pick a `.xlsx` or `.csv` file. Choose the **Sheet** and whether the **First row
+1. Open **Import & Export** and, on the **Import** tab, find **Structures from a parcel spreadsheet** under **Other
+   systems**.
+2. Click **Choose Spreadsheet…** and pick a `.xlsx`, `.xlsm`, `.xls` or `.csv` file (a shapefile's `.dbf` or `.shp` table also works). Choose the **Sheet** and whether the **First row
    has the column names**.
 3. Match columns to fields, or pick a **Saved mapping**.
 4. Click **Create Checked Structures**. SDE warns about rows that look like a structure already in the database (same
@@ -264,7 +299,7 @@ Structures need a latitude and longitude to appear on the map and in GIS files. 
 - [Click each one on the map](#the-map) with **Set location**.
 - Use a photo's GPS position ([chapter 5](#5-photos)).
 - Add them in bulk with a spreadsheet:
-  1. **Import & Export > Coordinates > Save Coordinates Spreadsheet…**
+  1. **Import & Export > Field Work > Coordinates > Save Coordinates Spreadsheet…**
   2. Fill in the **Latitude** and **Longitude** columns, by hand or with a geocoder.
   3. Click **Read Coordinates…**. SDE shows each structure's coordinates **Now** and **From spreadsheet**.
   4. Untick anything wrong and click **Save Checked Coordinates**.
@@ -413,7 +448,7 @@ you can't change them.
 ### Matching a whole folder of photos to structures
 When field teams bring back a folder of photos:
 
-1. Open **Import & Export > From the field > Photos** and click **Match a Photo Folder to Structures…**.
+1. Open **Import & Export > Field Work > Photos** and click **Match a Photo Folder to Structures…**.
 2. Choose the folder. SDE matches each photo by a record ID, parcel number or address in its file name, or otherwise
    by its GPS position (within 40 metres).
 3. Check the list (**Photo**, **Structure**, **Why**, **Distance**). Photos that match no structure, or two structures
@@ -462,8 +497,22 @@ sidebar. Its sidebar count is the number of assessments in review (Draft or Revi
   sent assessments are left alone. **Check Again** runs the checks again.
 - The status bar under the list shows how many assessments, open checks and open comments there are.
 
-The Review page doesn't run the flood map zone and high-water mark checks because they need an online look-up or a
-marks file.
+Two checks compare with data from outside SDE: the **flood map zone** check (does the FIRM zone match what FEMA's
+flood map shows at the structure?) and the **high-water mark** check (is the flood elevation near what nearby marks
+suggest?). Checking never goes online by itself. It uses what SDE has kept:
+
+- Every time SDE looks a structure up on FEMA's flood map (**Look up online**, the look-up for checked structures, or
+  **Check Online** here), it keeps what the map said, whether or not you apply the values. The structure's own FIRM
+  fields stay as entered. If the structure has moved more than about 25 m since the look-up, the kept answer is too old
+  to use, and the check says "moved since the flood lookup" until you look it up again.
+- High-water marks loaded in the flood depth tool are kept with their event (see
+  [Flood depth from high-water marks](#flood-depth-from-high-water-marks)).
+
+When there is nothing kept for some structures, the check is listed as **not checked**, for example "Not checked: no
+stored flood lookup" or "Not checked for 3 of 40 structures", so a quiet Review page is never mistaken for a clean
+one. **Check Online** on that line looks the data up, a step you choose. From a terminal, `sde qa` uses the same kept
+data, `sde qa --marks FILE` uses a marks file instead, and `sde qa` ends with a "Not checked" line (this never changes
+its exit code).
 
 ![The Review page](screenshots/110-review.png)
 
@@ -571,7 +620,7 @@ A work package takes assessments to a Mac in the field and brings the work back.
 3. When you're done, click **Send Back to the Office…** in the banner and save the file.
 
 **Back at the office**
-1. On **Import & Export**, under **From the field**, click **Check In a Work Package…** and choose the file. The field's
+1. On **Import & Export > Field Work**, under **Work packages**, click **Check In a Work Package…** and choose the file. The field's
    work replaces the copies here, and History shows each change as the field made it.
 2. An assessment someone changed here meanwhile, or took back early, isn't checked in; SDE lists it.
 
@@ -644,6 +693,13 @@ SDE can estimate flood depth at each structure from the water-surface elevation.
 4. SDE proposes the flood elevation and the depth above the lowest floor for each structure, with a **Confidence** and
    **How** it got there. Structures with no lowest floor elevation, or too far from any mark, say why.
 5. Tick the depths to use and click **Save the Ticked Depths**. The history lists them as the depth tool's.
+
+Marks loaded from a file or from USGS are kept with the event while **Keep these marks with the event** is ticked (it
+is at first). When the structures aren't all in one event, the choice reads **Keep these marks for every event**, and
+the marks are used for any event without marks of its own. Loading new marks replaces the ones kept before. The next
+time the depth tool opens for that event, the kept marks are loaded already, with where they came from and when, and
+**Remove Stored Marks** forgets them. Kept marks are also what the Review page's high-water mark check and the map's
+water surface use. They stay on your Mac and are never exported.
 
 When an event's marks use a different datum from your elevation certificates, set the event's **datum offset** (see
 [Events](#26-events)).
@@ -881,9 +937,9 @@ SDE submission 2026-10-08 1430/
 ![The submission folder panel](screenshots/39-structures-submission.png)
 
 ### Other exports
-- **Excel**: **Export ▾ > Excel…** on Structures, or **Import & Export > Excel > Export to Excel…**: every assessment
+- **Excel**: **Export ▾ > Excel…** on Structures, or **Import & Export > Export > Excel > Export to Excel…**: every assessment
   as one row, with the same 218 columns as FEMA's *Export to Excel*.
-- **Google Earth**: **Import & Export > Google Earth map > Save Map (.kmz)…**: a pin for each assessment, coloured by
+- **Google Earth**: **Import & Export > Export > Google Earth map > Save Map (.kmz)…**: a pin for each assessment, coloured by
   percent damaged.
 - **GIS**: GeoPackage and GeoJSON from the [summary](#the-summary).
 
@@ -1103,11 +1159,11 @@ archive the event when it's over.
 - For inspectors in the field, use the [phone form](#15-the-phone-form).
 
 ### Share your setup
-Use **Import & Export > Your setup** to share your **Saved notes**, **Spreadsheet import mappings** and **Default
+Use **Import & Export > Export > Your setup** to share your **Saved notes**, **Spreadsheet import mappings** and **Default
 values** with colleagues:
 
 1. Tick what to include and click **Save Settings File…**.
-2. Your colleague clicks **Import Settings File…**. Notes and mappings are added to theirs; default values replace
+2. Your colleague clicks **Import Settings File…** on the **Import** tab. Notes and mappings are added to theirs; default values replace
    theirs after they confirm.
 
 The file is FEMA's user-settings format, so it also works with FEMA's SDE.
@@ -1163,3 +1219,18 @@ The menus show each shortcut beside its command, and **Help > Keyboard Shortcuts
 | Return | Open the selected structure |
 | Esc | Close the open panel |
 | ⌘M | Minimise the window |
+| Tab / ⇧Tab | Next / previous control: down the sidebar, across the toolbar, through the page, then its inspector |
+| Space | In a table: check or uncheck the selected row |
+| ↑ / ↓ | In a date field: the next or previous day |
+| ⌥↓ | In a date field: show the calendar |
+
+### Working without a pointer, and other display settings
+- **Full Keyboard Access and VoiceOver.** Every control can be reached with Tab and has a name VoiceOver reads. A sheet
+  keeps Tab inside it while it is open, and puts the cursor back where it was when it closes.
+- **Dates.** Type a date in a date field the way you usually write it: *11/11/2026*, *2026-11-11* or *Nov 11 2026*.
+  It is read when you press Return or leave the field. If SDE can't read it, the field turns red and the date stays as
+  it was. The calendar button picks a day with the mouse; the clear button empties the field.
+- **Increase Contrast.** When **Increase Contrast** is on in System Settings, Accessibility, Display, SDE draws
+  borders, dividers and focus rings more strongly and makes secondary text darker (lighter in dark mode). **Settings >
+  Appearance > Increase contrast** does the same while the Mac's setting is off.
+- **Reduce Motion.** When **Reduce Motion** is on, sheets and the sidebar appear without sliding or fading.

@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.ShortcutsSheetView"
+             x:DataType="sh:ShortcutsSheetViewModel">
+  <StackPanel Spacing="16">
+    <Border Classes="sheetTable">
+      <ItemsControl ItemsSource="{Binding Shortcuts}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate DataType="sh:Shortcut">
+            <Border Classes="sheetTableRow">
+              <Grid ColumnDefinitions="130,*">
+                <TextBlock Classes="semibold" Text="{Binding Keys}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{Binding Action}" TextWrapping="Wrap" VerticalAlignment="Center" />
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Border>
+    <c:SheetFooter IsDone="True" />
+  </StackPanel>
+</UserControl>

@@ -28,14 +28,61 @@ public sealed record TeamDto(Guid TeamId, string Name, string Color);
 /// <summary>A structure on a team's list, in route order.</summary>
 public sealed record AssignmentDto(Guid AssignmentId, string ShortCode, int? RouteOrder, string Status, string DueDate, StructureDto Structure);
 
-/// <summary>An assessment as the phone edits it: only the fields that apply to it now.</summary>
+/// <summary>
+/// One building element on the Damage step, as the engine last worked it out: its id (the element's lookup ID, which the
+/// phone sends back), name, share of the replacement cost in percent, the inspector's percent damaged and the damage
+/// in dollars.
+/// </summary>
+public sealed record ElementDto(int Id, string Name, decimal? Share, decimal Damaged, decimal DamageValue);
+
+/// <summary>A standard cost adjustment line (garage, porch and so on): its lookup ID, name, units, the inspector's quantity and unit cost, and the total.</summary>
+public sealed record CostAdjustmentDto(int Id, string Name, string Units, decimal? Quantity, decimal? UnitCost, decimal? TotalCost);
+
+/// <summary>One of the 7 free-form additional adjustment lines (1 to 7).</summary>
+public sealed record AdditionalAdjustmentDto(int Line, string Name, decimal? Quantity, decimal? UnitCost, decimal? TotalCost);
+
+/// <summary>The cost totals the engine worked out, shown under the adjustments and elements.</summary>
+public sealed record TotalsDto(decimal? TotalAdjustments, decimal? ReplacementCost, decimal? ActualCashValue, decimal? ComputedDamages);
+
+/// <summary>Another assessment of the same structure (a re-inspection), for the switcher.</summary>
+public sealed record SiblingDto(Guid AssessmentId, string Label, string Status, bool Current);
+
+/// <summary>
+/// An assessment as the phone edits it: only the fields that apply to it now. <see cref="PercentDamage"/> and
+/// <see cref="DamageMessage"/> are FEMA's result as stored, for the result card and its gauge; the percentage is null
+/// while data entry is incomplete, so the gauge never shows a 0% that was not worked out. <see cref="Result"/> is the
+/// result as one line of text. <see cref="StatusValue"/> is the status's stored name and <see cref="StatusChoices"/>
+/// the statuses the phone may move it to now (empty when it can't change the status).
+/// </summary>
 public sealed record AssessmentDto(Guid AssessmentId, Guid PropertyId, string Address, string StructureType, string Status, bool Locked,
-	string LockedMessage, string Result, int PhotoCount, IReadOnlyList<StepDto> Steps);
+	string LockedMessage, string Result, decimal? PercentDamage, string DamageMessage, int PhotoCount, IReadOnlyList<StepDto> Steps,
+	string StatusValue, IReadOnlyList<OptionDto> StatusChoices, string StatusNote, bool DamageUndetermined, IReadOnlyList<ElementDto> Elements,
+	IReadOnlyList<CostAdjustmentDto> CostAdjustments, IReadOnlyList<AdditionalAdjustmentDto> AdditionalAdjustments, TotalsDto Totals,
+	IReadOnlyList<SiblingDto> Assessments);
 
 /// <summary>A change sent by the phone: a field key and its new value as text (empty or null clears it).</summary>
 public sealed record ChangeDto(string Key, string Value);
 
 public sealed record ChangesRequest(IReadOnlyList<ChangeDto> Changes);
+
+/// <summary>A new percent damaged (0 to 100) for one element, by its id.</summary>
+public sealed record ElementChangeDto(int Id, decimal? Damaged);
+
+public sealed record ElementsRequest(IReadOnlyList<ElementChangeDto> Elements);
+
+/// <summary>A whole standard cost adjustment line: its lookup ID and new quantity and unit cost (null clears either).</summary>
+public sealed record CostAdjustmentChangeDto(int Id, decimal? Quantity, decimal? UnitCost);
+
+/// <summary>A whole additional adjustment line (1 to 7): its new description, quantity and unit cost (null clears any of them).</summary>
+public sealed record AdditionalAdjustmentChangeDto(int Line, string Name, decimal? Quantity, decimal? UnitCost);
+
+public sealed record CostsRequest(IReadOnlyList<CostAdjustmentChangeDto> Adjustments, IReadOnlyList<AdditionalAdjustmentChangeDto> Additional);
+
+/// <summary>A new status, by its stored name (Draft or Reviewed from the phone).</summary>
+public sealed record StatusRequest(string Status);
+
+/// <summary>Starting an assessment: <see cref="Another"/> must be true when the structure already has one (a re-inspection).</summary>
+public sealed record NewAssessmentRequest(bool Another);
 
 /// <summary>A new structure: 1 residential or 2 non-residential, plus any first values (address, owner…).</summary>
 public sealed record AddStructureRequest(int StructureType, IReadOnlyList<ChangeDto> Changes);
@@ -137,13 +184,148 @@ public static class FieldApi
 				FieldCatalog.Canonical(FieldCatalog.GetValue(file, f)), OptionsOf(f, file, r))).ToList();
 			steps.Add(new StepDto(step.Key, FieldCatalog.Steps[step.Key - 1], fields));
 		}
+		// The Damage step has no single fields, only the element rows; it is listed so the steps stay in the editor's order.
+		if (file.ElementPercentages.Count > 0 && steps.All(st => st.Step != FieldCatalog.DamageStep))
+		{
+			steps.Add(new StepDto(FieldCatalog.DamageStep, FieldCatalog.Steps[FieldCatalog.DamageStep - 1], Array.Empty<FieldDto>()));
+			steps.Sort((x, y) => x.Step.CompareTo(y.Step));
+		}
 		PropertyRecord p = file.Property;
+		AssessmentRecord a = file.Assessment;
 		string address = string.Join(" ", new[] { p.StreetNumber, p.StreetName, r.LookupName(p.StreetSuffixID) }.Where(x => !string.IsNullOrWhiteSpace(x)));
-		string locked = LockedMessage(store, file.Assessment.AssessmentID);
-		return new AssessmentDto(file.Assessment.AssessmentID, p.PropertyID, Blank(address, "(no address)"), TypeName(p.StructureTypeID),
-			AssessmentStatuses.Label(status.Value), locked != null, locked, ResultText(file.Assessment.PercentDamage, file.Assessment.DamageMessage),
-			file.Attachments.Count, steps);
+		string locked = LockedMessage(store, a.AssessmentID);
+		List<ElementDto> elements = file.ElementPercentages.Select(e => new ElementDto(e.CalcID, e.ElementName ?? r.LookupName(e.CalcID), e.ElementPercentage,
+			e.UserDamage, ParseMoney(e.DamageValues))).ToList();
+		List<CostAdjustmentDto> costs = file.CostAdjustments.Select(c => new CostAdjustmentDto(c.CostAdjustmentLookupID, r.LookupName(c.CostAdjustmentLookupID),
+			c.Units, c.Quantity, c.UnitCost, c.TotalCost)).ToList();
+		List<AdditionalAdjustmentDto> extras = file.AdditionalAdjustments.Where(x => x.zOrder is >= 1 and <= AssessmentCalculator.AdditionalAdjustmentRows)
+			.OrderBy(x => x.zOrder).Select(x => new AdditionalAdjustmentDto(x.zOrder.Value, x.AdjustmentName, x.Quantity, x.UnitCost, x.TotalCost)).ToList();
+		TotalsDto totals = new TotalsDto(a.TotalAdjustments, a.TotalReplacementCost, a.ComputedActualCashValue, a.ComputedDamages);
+		IReadOnlyList<OptionDto> choices = locked == null && PhoneStatuses.Contains(status.Value)
+			? PhoneStatuses.Select(s => new OptionDto(s.ToString(), AssessmentStatuses.Label(s))).ToList()
+			: Array.Empty<OptionDto>();
+		string note = locked != null ? null
+			: choices.Count == 0 ? $"This assessment is {AssessmentStatuses.Label(status.Value)}. Its status is changed on the Mac."
+			: "Set Reviewed when someone has checked it. Final is set on the Mac.";
+		return new AssessmentDto(a.AssessmentID, p.PropertyID, Blank(address, "(no address)"), TypeName(p.StructureTypeID),
+			AssessmentStatuses.Label(status.Value), locked != null, locked, ResultText(a.PercentDamage, a.DamageMessage),
+			GaugePercent(a), a.DamageMessage ?? "", file.Attachments.Count, steps, status.Value.ToString(), choices, note, a.PhysicalDamage,
+			elements, costs, extras, totals, Siblings(store, p.PropertyID, a.AssessmentID));
 	}
+
+	/// <summary>
+	/// The statuses the phone can set: Draft and Reviewed. The Mac has no separate inspector and reviewer roles, so these
+	/// are the two statuses before a determination; Final and Letter sent lock an assessment and stay a decision made on
+	/// the Mac, and Appeal goes with the appeal record kept on the Mac. The phone can move an assessment only between these two.
+	/// </summary>
+	public static readonly IReadOnlyList<AssessmentStatus> PhoneStatuses = new[] { AssessmentStatus.Draft, AssessmentStatus.Reviewed };
+
+	/// <summary>
+	/// The status the phone asked for, checked: it must be one of <see cref="PhoneStatuses"/>, by its exact stored name.
+	/// Throws <see cref="FieldInputException"/> otherwise.
+	/// </summary>
+	public static AssessmentStatus ParsePhoneStatus(string text)
+	{
+		foreach (AssessmentStatus s in PhoneStatuses)
+		{
+			if (string.Equals(text, s.ToString(), StringComparison.Ordinal))
+			{
+				return s;
+			}
+		}
+		throw new FieldInputException("The phone can set Draft or Reviewed. Final and other statuses are set on the Mac.");
+	}
+
+	/// <summary>Every active assessment of the structure, newest inspection first, labelled as the Mac's switcher labels them.</summary>
+	private static IReadOnlyList<SiblingDto> Siblings(SdeStore store, Guid propertyId, Guid current)
+	{
+		List<SiblingDto> list = new();
+		foreach (AssessmentRecord a in store.GetAssessmentsForProperty(propertyId))
+		{
+			string label = (a.DateofInspection?.ToString("MMM d, yyyy", CultureInfo.InvariantCulture) ?? "No date")
+				+ (GaugePercent(a) is decimal pd ? ", " + pd.ToString("0.0", CultureInfo.InvariantCulture) + "%" : ", not worked out yet");
+			list.Add(new SiblingDto(a.AssessmentID, label, AssessmentStatuses.Label(store.GetStatus(a.AssessmentID).Value), a.AssessmentID == current));
+		}
+		return list;
+	}
+
+	/// <summary>The longest additional adjustment description the phone accepts.</summary>
+	public const int MaxAdjustmentNameLength = 255;
+
+	/// <summary>
+	/// Sets the percent damaged of the elements the phone sent, as the editor's Damage step does: each id must be an
+	/// element this structure shows (residential, manufactured or non-residential, from <see cref="AssessmentCalculator.VisibleElements"/>),
+	/// each value from 0 to 100, kept to 2 decimals like the editor. Then FEMA's engine recalculates. Throws
+	/// <see cref="FieldInputException"/> for the first problem.
+	/// </summary>
+	public static void ApplyElements(AssessmentFile file, IReadOnlyList<ElementChangeDto> changes, AssessmentCalculator calculator)
+	{
+		calculator.NormalizeRows(file);
+		foreach (ElementChangeDto change in changes ?? Array.Empty<ElementChangeDto>())
+		{
+			ElementPercentageRecord row = file.ElementPercentages.FirstOrDefault(e => e.CalcID == change?.Id)
+				?? throw new FieldInputException("That element doesn't apply to this structure. Reload the page and try again.");
+			if (change.Damaged is not decimal d || d < 0m || d > 100m)
+			{
+				throw new FieldInputException($"{row.ElementName}: type a percentage from 0 to 100.");
+			}
+			row.UserDamage = Math.Round(d, 2, MidpointRounding.AwayFromZero);
+		}
+		calculator.Recalculate(file);
+	}
+
+	/// <summary>
+	/// Sets the cost adjustment lines the phone sent, each line whole, as the editor's Cost step does. A standard line's
+	/// id must be one of the adjustments offered for this structure, its quantity 0 or more; an additional line is 1 to 7,
+	/// with a description of at most <see cref="MaxAdjustmentNameLength"/> characters. Numbers stay within
+	/// <see cref="FieldInput.MaxMagnitude"/>. Then FEMA's engine recalculates. Throws <see cref="FieldInputException"/>
+	/// for the first problem.
+	/// </summary>
+	public static void ApplyCosts(AssessmentFile file, CostsRequest request, AssessmentCalculator calculator, ReferenceData reference)
+	{
+		calculator.NormalizeRows(file);
+		foreach (CostAdjustmentChangeDto change in request?.Adjustments ?? Array.Empty<CostAdjustmentChangeDto>())
+		{
+			CostAdjustmentResultRecord row = file.CostAdjustments.FirstOrDefault(c => c.CostAdjustmentLookupID == change?.Id)
+				?? throw new FieldInputException("That cost adjustment doesn't apply to this structure. Reload the page and try again.");
+			string name = reference.LookupName(row.CostAdjustmentLookupID);
+			row.Quantity = Checked(change.Quantity, name + " quantity", 0m);
+			row.UnitCost = Checked(change.UnitCost, name + " unit cost", -FieldInput.MaxMagnitude);
+		}
+		foreach (AdditionalAdjustmentChangeDto change in request?.Additional ?? Array.Empty<AdditionalAdjustmentChangeDto>())
+		{
+			AdditionalAdjustmentRecord row = file.AdditionalAdjustments.FirstOrDefault(x => change != null && x.zOrder == change.Line)
+				?? throw new FieldInputException($"Additional adjustments are lines 1 to {AssessmentCalculator.AdditionalAdjustmentRows}.");
+			string label = "Additional adjustment " + change.Line.ToString(CultureInfo.InvariantCulture);
+			string text = change.Name?.Trim();
+			if (text != null && text.Length > MaxAdjustmentNameLength)
+			{
+				throw new FieldInputException($"{label}: the description is too long (at most {MaxAdjustmentNameLength} characters).");
+			}
+			if (text != null && text.Any(char.IsControl))
+			{
+				throw new FieldInputException($"{label}: the description can't contain line breaks or other control characters.");
+			}
+			row.AdjustmentName = string.IsNullOrWhiteSpace(text) ? null : text;
+			row.Quantity = Checked(change.Quantity, label + " quantity", -FieldInput.MaxMagnitude);
+			row.UnitCost = Checked(change.UnitCost, label + " unit cost", -FieldInput.MaxMagnitude);
+		}
+		calculator.Recalculate(file);
+	}
+
+	private static decimal? Checked(decimal? value, string label, decimal minimum)
+	{
+		if (value is decimal d && (d < minimum || d > FieldInput.MaxMagnitude))
+		{
+			string from = minimum.ToString("#,0.##", CultureInfo.InvariantCulture);
+			string to = FieldInput.MaxMagnitude.ToString("#,0", CultureInfo.InvariantCulture);
+			throw new FieldInputException($"{char.ToUpperInvariant(label[0])}{label[1..]}: type a number from {from} to {to}.");
+		}
+		return value;
+	}
+
+	private static decimal ParseMoney(string s) =>
+		decimal.TryParse(s?.Replace("$", ""), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal d) ? d : 0m;
 
 	/// <summary>
 	/// Why the phone can't change an assessment (Final or Letter sent, or checked out to another Mac in a work
@@ -190,7 +372,10 @@ public static class FieldApi
 		return file;
 	}
 
-	/// <summary>A new assessment (not saved) for a structure that has none yet.</summary>
+	/// <summary>
+	/// A new assessment (not saved) for a structure, as the Mac's "New assessment for this structure" starts one: the
+	/// structure's fields as they are, the assessment's own fields blank (with the default values when they are turned on).
+	/// </summary>
 	public static AssessmentFile NewAssessment(SdeStore store, Guid propertyId)
 	{
 		PropertyRecord p = store.GetProperty(propertyId);
@@ -213,6 +398,10 @@ public static class FieldApi
 
 	private static string ResultText(decimal? percent, string message) =>
 		percent is decimal pd ? pd.ToString("0.0", CultureInfo.InvariantCulture) + "%" + (string.IsNullOrWhiteSpace(message) ? "" : ", " + message) : (message ?? "");
+
+	/// <summary>The percentage the phone's gauge shows: none while FEMA's calculator says data entry is incomplete.</summary>
+	private static decimal? GaugePercent(AssessmentRecord a) =>
+		string.Equals(a.DamageMessage, "Data Entry Incomplete", StringComparison.OrdinalIgnoreCase) ? null : a.PercentDamage;
 
 	private static string Blank(string s, string fallback) => string.IsNullOrWhiteSpace(s) ? fallback : s.Trim();
 }

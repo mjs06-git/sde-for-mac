@@ -179,6 +179,7 @@ public sealed partial class ImportExportViewModel : ViewModelBase
 			_pendingPhotos = loaded.Photos;
 			_pendingOwner = loaded.Owner;
 			ShowPending(path, loaded.Data);
+			Tab = ImportExportTab.Import; // the preview is on the Import tab (a drop can come from any tab)
 			PendingNotes = loaded.Notes is { Count: > 0 } notes
 				? string.Join("\n", notes.Take(8)) + (notes.Count > 8 ? $"\n…and {notes.Count - 8} more" : "")
 				: null;

@@ -87,8 +87,8 @@
   <ControlTheme x:Key="{x:Type c:Banner}" TargetType="c:Banner">
     <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-    <Setter Property="CornerRadius" Value="6" />
-    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
+    <Setter Property="Padding" Value="14,10" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="Template">
       <ControlTemplate>
@@ -155,13 +155,13 @@
   <!-- Toast: a notification card at the bottom of the window -->
   <ControlTheme x:Key="{x:Type c:Toast}" TargetType="c:Toast">
     <Setter Property="Background" Value="{DynamicResource BgSurface}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderCard}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
-    <Setter Property="Width" Value="380" />
+    <Setter Property="Width" Value="400" />
     <Setter Property="Template">
       <ControlTemplate>
         <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
-                CornerRadius="{StaticResource RadiusCard}" Padding="12,10,8,10" BoxShadow="{DynamicResource ShadowPopup}">
+                CornerRadius="{StaticResource RadiusCard}" Padding="16,12,10,12" BoxShadow="{DynamicResource ShadowSheet}">
           <Grid ColumnDefinitions="Auto,*,Auto,Auto">
             <c:Icon Name="PART_Icon" Kind="CheckCircle" Size="18" VerticalAlignment="Top" Margin="0,0,10,0" />
             <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
@@ -260,11 +260,7 @@
     <Setter Property="HorizontalContentAlignment" Value="Left" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="KnobTransitions">
-      <Transitions>
-        <DoubleTransition Easing="CubicEaseOut" Property="Canvas.Left" Duration="0:0:0.2" />
-      </Transitions>
-    </Setter>
+    <!-- The knob slides only with motion on: Styles/Accessibility.axaml -->
     <Setter Property="Template">
       <ControlTemplate>
         <Grid Background="{TemplateBinding Background}" ColumnDefinitions="*,Auto">
@@ -275,9 +271,9 @@
             <Grid x:Name="SwitchAreaGrid" Background="Transparent" TemplatedControl.IsTemplateFocusTarget="True" />
             <ContentPresenter x:Name="PART_OffContentPresenter" IsVisible="False" Content="{TemplateBinding OffContent}" ContentTemplate="{TemplateBinding OffContentTemplate}" />
             <ContentPresenter x:Name="PART_OnContentPresenter" IsVisible="False" Content="{TemplateBinding OnContent}" ContentTemplate="{TemplateBinding OnContentTemplate}" />
-            <Border x:Name="OuterBorder" Width="36" Height="20" CornerRadius="10" BorderThickness="1"
+            <Border x:Name="OuterBorder" Width="36" Height="20" CornerRadius="{StaticResource RadiusPill}" BorderThickness="1"
                     Background="{DynamicResource ToggleSwitchFillOff}" BorderBrush="{DynamicResource ToggleSwitchStrokeOff}" />
-            <Border x:Name="SwitchKnobBounds" Width="36" Height="20" CornerRadius="10" BorderThickness="1"
+            <Border x:Name="SwitchKnobBounds" Width="36" Height="20" CornerRadius="{StaticResource RadiusPill}" BorderThickness="1"
                     Background="{DynamicResource ToggleSwitchFillOn}" BorderBrush="{DynamicResource ToggleSwitchStrokeOn}" />
             <Canvas x:Name="PART_SwitchKnob" Width="16" Height="20" HorizontalAlignment="Left">
               <Grid x:Name="PART_MovingKnobs" Width="20" Height="20">
@@ -353,6 +349,42 @@
     </Style>
     <Style Selector="^:unchecked /template/ Border#SwitchKnobBounds">
       <Setter Property="Opacity" Value="0" />
+    </Style>
+  </ControlTheme>
+
+  <!-- The result hero (Controls/ResultHero): the one dark card in the content area. The figure very large in white, the
+       determination (the frame's red when substantial), the distance from the line and the gauge drawn for the dark card. -->
+  <ControlTheme x:Key="{x:Type c:ResultHero}" TargetType="c:ResultHero">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="ResultHero" Background="{DynamicResource BgHero}" CornerRadius="{StaticResource RadiusCard}"
+                BoxShadow="{DynamicResource ShadowHero}" Padding="20,18,20,18">
+          <StackPanel>
+            <StackPanel Spacing="2" Margin="0,0,0,14" IsVisible="{TemplateBinding Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <TextBlock Name="HeroTitle" Text="{TemplateBinding Title}" TextWrapping="Wrap"
+                         FontSize="{StaticResource FontSizeSubheadline}" FontWeight="SemiBold" Foreground="{DynamicResource TextOnHero}" />
+              <TextBlock Text="{TemplateBinding Subtitle}" TextWrapping="Wrap" IsVisible="{TemplateBinding Subtitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                         FontSize="{StaticResource FontSizeFootnote}" Foreground="{DynamicResource TextOnHeroSecondary}" />
+            </StackPanel>
+            <TextBlock Text="{TemplateBinding Label}" IsVisible="{TemplateBinding Label, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       FontSize="{StaticResource FontSizeFootnote}" FontWeight="SemiBold" Foreground="{DynamicResource TextOnHeroSecondary}" Margin="0,0,0,2" />
+            <TextBlock Name="HeroFigure" Text="{TemplateBinding PercentText}" IsVisible="{TemplateBinding HasPercent}"
+                       FontSize="{StaticResource FontSizeHero}" FontWeight="Bold" FontFeatures="+tnum" LetterSpacing="-1"
+                       LineHeight="50" Foreground="{DynamicResource TextOnHero}" />
+            <TextBlock Name="HeroVerdict" Text="{TemplateBinding Verdict}" TextWrapping="Wrap" Margin="0,2,0,0"
+                       FontSize="{StaticResource FontSizeSubheadline}" FontWeight="SemiBold" Foreground="{DynamicResource TextOnHero}" />
+            <TextBlock Text="{TemplateBinding LineText}" IsVisible="{TemplateBinding HasPercent}" TextWrapping="Wrap" Margin="0,3,0,0"
+                       FontSize="{StaticResource FontSizeFootnote}" Foreground="{DynamicResource TextOnHeroSecondary}" />
+            <c:StaffGauge Name="HeroGauge" OnDark="True" ShowLabels="True" TrackThickness="10" Margin="0,16,0,0"
+                          Value="{TemplateBinding Value}" IsEmpty="{TemplateBinding HasPercent, Converter={x:Static BoolConverters.Not}}" />
+            <TextBlock Text="{TemplateBinding Hint}" IsVisible="{TemplateBinding ShowHint}" TextWrapping="Wrap" Margin="0,12,0,0"
+                       FontSize="{StaticResource FontSizeFootnote}" Foreground="{DynamicResource TextOnHeroSecondary}" />
+          </StackPanel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:substantial /template/ TextBlock#HeroVerdict">
+      <Setter Property="Foreground" Value="{DynamicResource DangerOnFrame}" />
     </Style>
   </ControlTheme>
 </ResourceDictionary>

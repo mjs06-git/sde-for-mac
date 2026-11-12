@@ -14,6 +14,9 @@ public static class Converters
 	/// <summary>The damaged percentage's colour: red when substantially damaged, otherwise ordinary text (colour is kept for the one result that matters).</summary>
 	public static readonly IValueConverter PercentForegroundKey = new FuncValueConverter<ResultState, string>(s => s == ResultState.Substantial ? "StatusSubstantialFg" : "TextPrimary");
 
+	/// <summary>True for a substantially damaged result (the result hero writes the determination in red).</summary>
+	public static readonly IValueConverter IsSubstantial = new FuncValueConverter<ResultState, bool>(s => s == ResultState.Substantial);
+
 	/// <summary>The result dot's colour: the status hues, brighter than text so a small dot reads.</summary>
 	public static readonly IValueConverter StatusDotKey = new FuncValueConverter<ResultState, string>(s => $"Status{s}Dot");
 
@@ -38,6 +41,9 @@ public static class Converters
 	public static readonly IValueConverter BoldIf = new FuncValueConverter<bool, FontWeight>(b => b ? FontWeight.SemiBold : FontWeight.Normal);
 
 	public static readonly IValueConverter IsPositive = new FuncValueConverter<int, bool>(v => v > 0);
+
+	/// <summary>A margin with only a left side (the page's offset from the window's edge, such as the sidebar's width).</summary>
+	public static readonly IValueConverter LeftInset = new FuncValueConverter<double, Avalonia.Thickness>(v => new Avalonia.Thickness(v, 0, 0, 0));
 
 	public static readonly IValueConverter IsZero = new FuncValueConverter<int, bool>(v => v == 0);
 

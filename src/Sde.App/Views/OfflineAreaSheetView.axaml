@@ -2,33 +2,29 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sh="using:Sde.App.ViewModels.Sheets"
              xmlns:maps="using:Sde.App.Maps"
+             xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.OfflineAreaSheetView"
              x:DataType="sh:OfflineAreaSheetViewModel">
-  <StackPanel Spacing="12">
-    <TextBlock Classes="secondary" TextWrapping="Wrap"
-               Text="Keeps this area's map on this Mac, for use without a connection. Do it before going to the field." />
-    <TextBlock Classes="medium" Text="{Binding AreaName}" TextWrapping="Wrap" />
-    <StackPanel Classes="field">
-      <TextBlock Classes="fieldLabel" Text="Background map" />
+  <!-- Keeps an area's map on this Mac for the field. While the tiles download, the footer shows the progress and Stop. -->
+  <StackPanel Spacing="16">
+    <TextBlock Classes="sheetSection" Text="{Binding AreaName}" TextWrapping="Wrap"
+               ToolTip.Tip="Keeps this area's map on this Mac, for use without a connection. Do it before going to the field." />
+    <StackPanel Spacing="4">
+      <TextBlock Classes="fieldLabel" Text="Background map" ToolTip.Tip="Only USGS maps can be kept (OpenStreetMap doesn't allow it)." />
       <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding Basemap}" IsEnabled="{Binding !IsBusy}" HorizontalAlignment="Stretch"
-                AutomationProperties.Name="Background map to keep">
+                AutomationProperties.Name="Background map to keep" ToolTip.Tip="Only USGS maps can be kept (OpenStreetMap doesn't allow it).">
         <ComboBox.ItemTemplate>
           <DataTemplate x:DataType="maps:Basemap">
             <TextBlock Text="{Binding Name}" />
           </DataTemplate>
         </ComboBox.ItemTemplate>
       </ComboBox>
-      <TextBlock Classes="muted" TextWrapping="Wrap" Text="Only USGS maps can be kept (OpenStreetMap doesn't allow it)." />
     </StackPanel>
     <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" />
-    <StackPanel Spacing="4" IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-      <ProgressBar Value="{Binding Progress}" Maximum="100" Height="6" IsVisible="{Binding IsBusy}" AutomationProperties.Name="Download progress" />
-      <TextBlock Classes="muted" Text="{Binding Status}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-    </StackPanel>
-    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="Stop" Command="{Binding StopCommand}" IsVisible="{Binding IsBusy}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding !IsBusy}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Classes="primary" Content="Keep Offline" IsDefault="True" Command="{Binding KeepCommand}" IsEnabled="{Binding CanKeep}" MinWidth="90" HorizontalContentAlignment="Center" />
-    </StackPanel>
+    <Panel IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+      <TextBlock Classes="secondary" Text="{Binding Status}" TextWrapping="Wrap" IsVisible="{Binding !IsBusy}" AutomationProperties.LiveSetting="Polite" />
+    </Panel>
+    <c:SheetFooter IsBusy="{Binding IsBusy}" BusyText="{Binding Status}" Progress="{Binding Progress}" StopCommand="{Binding StopCommand}"
+                   PrimaryText="Keep Offline" PrimaryCommand="{Binding KeepCommand}" IsPrimaryEnabled="{Binding CanKeep}" />
   </StackPanel>
 </UserControl>

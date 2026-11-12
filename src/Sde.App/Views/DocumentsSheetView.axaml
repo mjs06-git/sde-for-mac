@@ -1,0 +1,91 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.DocumentsSheetView"
+             x:DataType="sh:DocumentsSheetViewModel"
+             DragDrop.AllowDrop="True" Background="Transparent">
+  <StackPanel Spacing="14">
+    <!-- The structure's documents: one white table -->
+    <Border Classes="sheetTable" IsVisible="{Binding HasRows}" Name="DocumentsTable">
+      <StackPanel>
+        <Border Classes="sheetTableHead">
+          <Grid ColumnDefinitions="*,140,92,100,100" ColumnSpacing="10">
+            <TextBlock Classes="colHead" Text="Document" />
+            <TextBlock Grid.Column="1" Classes="colHead" Text="Kind" />
+            <TextBlock Grid.Column="2" Classes="colHead" Text="Added" />
+            <TextBlock Grid.Column="3" Classes="colHead" Text="Added by" />
+          </Grid>
+        </Border>
+        <ScrollViewer MaxHeight="320" HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding Rows}" Name="DocumentRows">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="sh:DocumentRowViewModel">
+                <Border Classes="sheetTableRow documentRow" Background="Transparent" DoubleTapped="OnRowDoubleTapped">
+                  <Grid ColumnDefinitions="*,140,92,100,100" ColumnSpacing="10">
+                    <StackPanel VerticalAlignment="Center" Spacing="1">
+                      <TextBlock Classes="medium" Text="{Binding Title}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}" />
+                      <TextBlock Classes="secondary sm" Text="{Binding FileName}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding FileName}" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" Classes="secondary" Text="{Binding KindText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Classes="secondary num" Text="{Binding AddedText}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="3" Classes="secondary" Text="{Binding AddedBy}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="2" HorizontalAlignment="Right">
+                      <Button Classes="icon" Command="{Binding Sheet.OpenCommand}" CommandParameter="{Binding}"
+                              AutomationProperties.Name="{Binding OpenLabel}" ToolTip.Tip="Open">
+                        <c:Icon Kind="OpenExternal" Size="15" />
+                      </Button>
+                      <Button Classes="icon" Command="{Binding Sheet.RevealCommand}" CommandParameter="{Binding}"
+                              AutomationProperties.Name="{Binding RevealLabel}" ToolTip.Tip="Show in Finder">
+                        <c:Icon Kind="Folder" Size="15" />
+                      </Button>
+                      <Button Classes="icon" Command="{Binding Sheet.RemoveCommand}" CommandParameter="{Binding}"
+                              AutomationProperties.Name="{Binding RemoveLabel}" ToolTip.Tip="Remove…">
+                        <c:Icon Kind="Trash" Size="15" />
+                      </Button>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </StackPanel>
+    </Border>
+
+    <!-- No documents yet: where they can go -->
+    <Border Classes="dropZone" IsVisible="{Binding !HasRows}" Name="DocumentsDropZone">
+      <StackPanel HorizontalAlignment="Center" Spacing="8">
+        <c:Icon Kind="Attachment" Size="26" Classes="tertiary" HorizontalAlignment="Center" />
+        <TextBlock Classes="medium" Text="Drag a document here" HorizontalAlignment="Center" />
+        <TextBlock Classes="muted" Text="PDFs, pictures and office files" HorizontalAlignment="Center" />
+      </StackPanel>
+    </Border>
+
+    <!-- A file chosen or dropped: its kind and title, then Keep -->
+    <Border Classes="pendingDocument" IsVisible="{Binding IsAdding}" Name="PendingDocument">
+      <StackPanel Spacing="12">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <c:Icon Kind="Attachment" Size="16" VerticalAlignment="Center" />
+          <TextBlock Classes="semibold" Text="{Binding PendingName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+        <Grid ColumnDefinitions="200,*" ColumnSpacing="12" RowDefinitions="Auto,Auto" RowSpacing="4">
+          <TextBlock Classes="fieldLabel" Text="Kind" />
+          <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Title" />
+          <ComboBox Grid.Row="1" ItemsSource="{x:Static sh:DocumentsSheetViewModel.Kinds}" SelectedItem="{Binding PendingKind}" HorizontalAlignment="Stretch"
+                    AutomationProperties.Name="Kind of document" Name="PendingKindBox" />
+          <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding PendingTitle}" AutomationProperties.Name="Title of the document" MaxLength="120" Name="PendingTitleBox" />
+        </Grid>
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+          <Button Content="Don't Add" Command="{Binding DiscardCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
+          <Button Classes="primary" Content="Keep with the Structure" Command="{Binding KeepCommand}" HorizontalContentAlignment="Center" Name="KeepDocumentButton" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <TextBlock Classes="danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding HasError}" Name="DocumentsError" AutomationProperties.LiveSetting="Polite" />
+
+    <c:SheetFooter IsDone="True" DoneCommand="{Binding DoneCommand}" IsPrimaryDefault="{Binding !IsAdding}"
+                   LeadingText="Add Document…" LeadingCommand="{Binding AddCommand}" IsLeadingVisible="{Binding !IsAdding}" />
+  </StackPanel>
+</UserControl>

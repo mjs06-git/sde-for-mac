@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.MoveOrCopySheetView"
+             x:DataType="sh:MoveOrCopySheetViewModel">
+  <StackPanel Spacing="16">
+    <TextBlock Text="{Binding Intro}" TextWrapping="Wrap" />
+    <Border Classes="card">
+      <StackPanel Spacing="10">
+        <RadioButton GroupName="moveOrCopy" IsChecked="{Binding IsMove}" Content="Move it" AutomationProperties.Name="Move it"
+                     ToolTip.Tip="To another folder or a shared drive." />
+        <RadioButton GroupName="moveOrCopy" IsChecked="{Binding IsCopy}" Content="Copy it and open the copy" AutomationProperties.Name="Copy it and open the copy"
+                     ToolTip.Tip="The original stays where it is, unchanged." />
+        <RadioButton GroupName="moveOrCopy" IsChecked="{Binding IsBackup}" Content="Save a backup copy" AutomationProperties.Name="Save a backup copy"
+                     ToolTip.Tip="In a new folder, and keep working in this database." />
+      </StackPanel>
+    </Border>
+    <c:SheetFooter PrimaryText="Continue…" PrimaryCommand="{Binding ContinueCommand}" />
+  </StackPanel>
+</UserControl>

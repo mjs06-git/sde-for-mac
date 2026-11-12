@@ -46,6 +46,11 @@ public class CompatibilityTests
 			INSERT INTO Document (DocumentID, PropertyID, AssessmentID, Kind, FileName) VALUES ('d1', @pid, @aid, 'ElevationCertificate', 'ec.pdf');
 			INSERT INTO MapLayer (LayerID, Name, SourceKind) VALUES ('l1', 'Parcels', 'File');
 			INSERT INTO MapBookmark (BookmarkID, Name, MinX, MinY, MaxX, MaxY) VALUES ('b1', 'Downtown', -84.2, 39.6, -84.1, 39.7);
+			INSERT INTO Tag (Name, Colour, SortOrder) VALUES ('Revisit', 'Amber', 1);
+			INSERT INTO PropertyTag (PropertyID, TagID) VALUES (@pid, (SELECT TagID FROM Tag WHERE Name = 'Revisit'));
+			INSERT INTO FloodLookup (PropertyID, Zone, Source, Latitude, Longitude, RetrievedOn) VALUES (@pid, 'AE', 'FEMA NFHL', 39.7, -84.2, '2026-09-20 14:00:00');
+			INSERT INTO HighWaterMarkSet (SetID, EventID, Source, MarkCount) VALUES ('hs1', 'e1', 'File: marks.csv', 1);
+			INSERT INTO HighWaterMarkRow (SetID, Seq, Latitude, Longitude, ElevationFt) VALUES ('hs1', 1, 39.7, -84.2, 742.5);
 			""", new { aid, pid });
 	}
 
@@ -82,10 +87,24 @@ public class CompatibilityTests
 			DELETE FROM Property WHERE PropertyID = @pid;
 			""", args);
 		foreach (string table in new[] { "AssessmentStatus", "EditHistory", "PhotoInfo", "DamageSuggestion", "ContractorBid", "Appeal", "LetterLog", "ImprovementProject", "SIDetermination", "StructureLink", "ExternalLink",
-			"EventAssessment", "Assignment", "ReviewComment", "ComplianceCase", "ComplianceEntry", "CheckOut", "Document" })
+			"EventAssessment", "Assignment", "ReviewComment", "ComplianceCase", "ComplianceEntry", "CheckOut", "Document", "PropertyTag", "FloodLookup" })
 		{
 			Assert.Equal(0, c.ExecuteScalar<int>($"SELECT COUNT(*) FROM {table}"));
 		}
+	}
+
+	[Fact]
+	public void AnOlderVersion_CanStillDeleteAnEvent_WithMarksKeptWithIt()
+	{
+		using TempDatabase t = new TempDatabase();
+		AssessmentFile f = SampleCases.RanchFlood(t.Store);
+		FillMacTables(t, f);
+		// v3.0 deletes an event from its own tables only; the marks kept with it must go too, not block it.
+		using SqliteConnection c = t.Database.Connect();
+		c.Execute("DELETE FROM Assignment WHERE EventID = 'e1'; DELETE FROM EventAssessment WHERE EventID = 'e1'; DELETE FROM Event WHERE EventID = 'e1';");
+		Assert.Equal(0, c.ExecuteScalar<int>("SELECT COUNT(*) FROM HighWaterMarkSet"));
+		Assert.Equal(0, c.ExecuteScalar<int>("SELECT COUNT(*) FROM HighWaterMarkRow"));
+		Assert.Equal(1, c.ExecuteScalar<int>("SELECT COUNT(*) FROM FloodLookup"));
 	}
 
 	[Fact]

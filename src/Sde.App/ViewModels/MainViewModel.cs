@@ -32,11 +32,15 @@ public enum Page
 	Compliance,
 	/// <summary>Teams and the structures assigned to them.</summary>
 	Assignments,
+	/// <summary>One structure across every event (its case file): a sub-page of the page it was opened from.</summary>
+	CaseFile,
+	/// <summary>What is coming up and what is overdue: deadlines, inspections, appeals, letters and event dates.</summary>
+	Agenda,
 }
 
 /// <summary>
-/// The window: the sidebar (pages grouped as Work, Data and Manage, with the event and database switchers), the title
-/// band (page title, ⌘K search, New), and the current page.
+/// The window: the sidebar (Library, Pinned, Saved Views, Events, Workflow and Data, with Settings at its foot), the
+/// title band (back, page title, the page's toolbar, the view switch, New and search), and the current page.
 /// </summary>
 public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 {
@@ -55,22 +59,32 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		Settings = new SettingsViewModel(app);
 		Trash = new TrashViewModel(app);
 		Map = new MapViewModel(app, this);
-		Dashboard = new DashboardViewModel(app);
+		Dashboard = new DashboardViewModel(app, this);
 		Review = new ReviewViewModel(app, this);
 		Compliance = new ComplianceViewModel(app, this);
 		Assignments = new AssignmentsViewModel(app, this);
+		Agenda = new AgendaViewModel(app, this);
 		SidebarItems = BuildPages();
 		Events = new EventSwitcherViewModel { NewEventCommand = NewEventCommand, ManageEventsCommand = ManageEventsCommand };
 		Events.SelectionChanged += choice => _app.Scope.Set(_app.Store, choice.Id);
+		LoadPins();
 		SourceSections = BuildSourceList();
 		Structures.PropertyChanged += (_, e) =>
 		{
 			if (e.PropertyName is nameof(StructuresViewModel.Filter) or nameof(StructuresViewModel.SubstantialCount) or nameof(StructuresViewModel.CloseCount)
-				or nameof(StructuresViewModel.BelowCount) or nameof(StructuresViewModel.IncompleteCount))
+				or nameof(StructuresViewModel.BelowCount) or nameof(StructuresViewModel.IncompleteCount) or nameof(StructuresViewModel.AppliedView)
+				or nameof(StructuresViewModel.TagFilter))
 			{
 				UpdateSidebar();
 			}
+			if (e.PropertyName == nameof(StructuresViewModel.IsInspectorVisible))
+			{
+				LayoutChanged();
+			}
 		};
+		Structures.Reloaded += RebuildPinnedRows;
+		Structures.Reloaded += RebuildTagRows;
+		Structures.SavedViews.CollectionChanged += (_, _) => RebuildSavedViewRows();
 		app.Scope.Changed += OnScopeChanged;
 		DatabaseSwitcher = new DatabaseSwitcherViewModel(app, this);
 		Palette = new CommandPaletteViewModel(app, this);
@@ -87,6 +101,8 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		app.DatabaseChanged += () =>
 		{
 			Editor = null;
+			CaseFilePage = null;
+			LoadPins();
 			Structures.DatabaseChanged();
 			Settings = new SettingsViewModel(app);
 			Structures.ShowOnly(null, null);
@@ -103,6 +119,10 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		CurrentPage = Structures;
 		RefreshEvents();
 		RefreshStatus();
+		RebuildPinnedRows();
+		RebuildSavedViewRows();
+		RebuildTagRows();
+		RestoreLayout(_app.Settings.Layout);
 		UpdateSidebar();
 	}
 
@@ -149,6 +169,10 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		{
 			Assignments.Reload();
 		}
+		if (Agenda.IsActive)
+		{
+			Agenda.Reload();
+		}
 	}
 
 	/// <summary>Adds an event and chooses it in the sidebar.</summary>
@@ -173,16 +197,20 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	}
 
 	/// <summary>
-	/// Every page, in the View menu's order (⌘1 to ⌘8; Settings is ⌘,). The sidebar's source list shows some of them
-	/// (Library's All Structures, Workflow, Recently Deleted); the rest are reached from the menus and the toolbar.
+	/// Every page, in the View menu's order (⌘1 to ⌘8; Settings is ⌘,, and Agenda has no number). The sidebar's source list shows the office pages
+	/// (Workflow), Import &amp; Export and Recently Deleted (Data), and Settings at its foot; Structures is Library's All
+	/// Structures, and the map and summary are reached from the toolbar's view switch.
 	/// </summary>
 	public IReadOnlyList<NavItemViewModel> SidebarItems { get; }
 
-	/// <summary>The sidebar's source list: Library (with its smart groups), Events, Workflow.</summary>
+	/// <summary>
+	/// The sidebar's source list, in order: Library (with its smart groups), Pinned, Saved Views, Tags, Events, Workflow
+	/// and Data. A section with no rows (no pins, no saved views, no tags, no events) is hidden.
+	/// </summary>
 	public IReadOnlyList<SourceSectionViewModel> SourceSections { get; }
 
-	/// <summary>Recently Deleted, at the foot of the sidebar.</summary>
-	public NavItemViewModel TrashItem => SidebarItems.Single(i => i.Page == Page.Trash);
+	/// <summary>Settings, at the foot of the sidebar.</summary>
+	public NavItemViewModel SettingsItem => SidebarItems.Single(i => i.Page == Page.Settings);
 
 	private SourceRowViewModel _allStructures;
 	private readonly List<SourceRowViewModel> _smartGroups = new();
@@ -190,7 +218,10 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 
 	/// <summary>True while the sidebar shows (View › Hide Sidebar, ⌃⌘S).</summary>
 	[ObservableProperty]
+	[NotifyPropertyChangedFor(nameof(SidebarInset))]
 	public partial bool IsSidebarVisible { get; set; } = true;
+
+	partial void OnIsSidebarVisibleChanged(bool value) => LayoutChanged();
 
 	[RelayCommand]
 	private void ToggleSidebar() => IsSidebarVisible = !IsSidebarVisible;
@@ -217,6 +248,9 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	/// <summary>Teams, their structures in route order, and the field kit.</summary>
 	public AssignmentsViewModel Assignments { get; }
 
+	/// <summary>What is coming up and overdue, by week and month.</summary>
+	public AgendaViewModel Agenda { get; }
+
 	private IReadOnlyList<NavItemViewModel> BuildPages()
 	{
 		int n = 0;
@@ -228,6 +262,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 			Item(Page.Dashboard, "Summary", "Dashboard"),
 			Item(Page.Review, "Review", "Review"),
 			Item(Page.Compliance, "Compliance", "Compliance"),
+			Item(Page.Agenda, "Agenda", "Agenda", numbered: false),
 			Item(Page.Assignments, "Assignments", "Assignments"),
 			Item(Page.Trash, "Recently Deleted", "Trash"),
 			Item(Page.ImportExport, "Import & Export", "ImportExport"),
@@ -252,8 +287,12 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		return new[]
 		{
 			new SourceSectionViewModel("Library", new(new object[] { _allStructures }.Concat(_smartGroups))),
+			new SourceSectionViewModel("Pinned", _pinnedRows),
+			new SourceSectionViewModel("Saved Views", _savedViewRows),
+			new SourceSectionViewModel("Tags", _tagRows),
 			new SourceSectionViewModel("Events", _eventRows),
-			new SourceSectionViewModel("Workflow", new(new object[] { Page_(Page.Review), Page_(Page.Compliance), Page_(Page.Assignments) })),
+			new SourceSectionViewModel("Workflow", new(new object[] { Page_(Page.Review), Page_(Page.Compliance), Page_(Page.Agenda), Page_(Page.Assignments) })),
+			new SourceSectionViewModel("Data", new(new object[] { Page_(Page.ImportExport), Page_(Page.Trash) })),
 		};
 	}
 
@@ -270,6 +309,11 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	/// <summary>A Library row or an event was chosen: the structure list, filtered to it (and scoped to the event).</summary>
 	private void ShowLibrary(StructureFilter filter, EventChoice scope)
 	{
+		if (_tagRows.OfType<TagRowViewModel>().Any(r => r.IsActive))
+		{
+			// Leaving a tag's row for a Library row or an event: the list stops being limited to the tag.
+			Structures.RemoveFilter(StructuresViewModel.TagsFilterKey);
+		}
 		if (scope != null)
 		{
 			Events.ChooseCommand.Execute(scope);
@@ -287,12 +331,13 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	{
 		Page.Editor => Page.Structures,
 		Page.SourceImport => Page.ImportExport,
+		Page.CaseFile => Page.Structures,
 		_ => page,
 	};
 
 	private void UpdateSidebar()
 	{
-		Page active = ActivePage == Page.Editor ? _editorParent : SidebarPage(ActivePage);
+		Page active = ActivePage == Page.Editor ? EditorSidebarPage : ActivePage == Page.CaseFile ? _caseFileRoot : SidebarPage(ActivePage);
 		foreach (NavItemViewModel item in SidebarItems ?? Array.Empty<NavItemViewModel>())
 		{
 			item.IsActive = item.Page == active;
@@ -303,6 +348,19 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 			// assessments, or its map or summary) is showing.
 			bool library = active is Page.Structures or Page.Map or Page.Dashboard;
 			Guid? scope = Events?.Selected?.Id;
+			// A saved view is a row of its own: while one is showing, Library's rows aren't chosen.
+			string view = Structures.AppliedView;
+			foreach (SavedViewRowViewModel row in _savedViewRows.OfType<SavedViewRowViewModel>())
+			{
+				row.IsActive = library && string.Equals(view, row.Title, StringComparison.OrdinalIgnoreCase);
+			}
+			library &= view == null;
+			// So is a tag: while the list shows one tag's structures, its row is the one chosen.
+			foreach (TagRowViewModel row in _tagRows.OfType<TagRowViewModel>())
+			{
+				row.IsActive = library && Structures.IsShowingOnlyTag(row.Id);
+			}
+			library &= !_tagRows.OfType<TagRowViewModel>().Any(r => r.IsActive);
 			_allStructures.IsActive = library && Structures.Filter == StructureFilter.All && scope == null;
 			_allStructures.Count = Structures.TotalCount;
 			foreach (SourceRowViewModel group in _smartGroups)
@@ -389,6 +447,8 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	{
 		Page.Editor when Editor != null => Editor.Title,
 		Page.SourceImport => "Import Inspections or Parcels",
+		Page.CaseFile when CaseFilePage != null => CaseFilePage.Address,
+		Page.Structures when Structures.AppliedView != null => Structures.AppliedView,
 		Page.Structures when _smartGroups.FirstOrDefault(g => g.Filter == Structures.Filter && Structures.Filter != StructureFilter.All) is SourceRowViewModel g => g.Title,
 		Page.Structures when Events?.Selected?.Id != null => Events.Label,
 		_ => SidebarItems.FirstOrDefault(i => i.Page == SidebarPage(ActivePage))?.Title ?? "Structures",
@@ -400,8 +460,10 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 	/// </summary>
 	public string PageParent => ActivePage switch
 	{
+		Page.Editor when Editor != null && _editorParent == Page.CaseFile => "Case File",
 		Page.Editor when Editor != null => SidebarItems.FirstOrDefault(i => i.Page == _editorParent)?.Title ?? "Structures",
 		Page.SourceImport => "Import & Export",
+		Page.CaseFile => CaseFileParentTitle,
 		_ => null,
 	};
 
@@ -418,6 +480,10 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		else if (ActivePage == Page.SourceImport)
 		{
 			Show(Page.ImportExport);
+		}
+		else if (ActivePage == Page.CaseFile)
+		{
+			CloseCaseFile();
 		}
 	}
 
@@ -531,6 +597,16 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		// Review counts the assessments waiting (Draft and Reviewed); Compliance, the open cases past their deadline.
 		int waiting = Count("Couldn't count the assessments waiting for review", () => ReviewViewModel.CountWaiting(_app));
 		int overdue = Count("Couldn't count the overdue compliance cases", () => ComplianceViewModel.CountOverdue(_app));
+		// Agenda counts the overdue cases and those due in the next 14 days (red while any are overdue).
+		(int Overdue, int DueSoon) agenda = (0, 0);
+		try
+		{
+			agenda = AgendaViewModel.CountBadge(_app);
+		}
+		catch (Exception ex) when (ex is not OutOfMemoryException)
+		{
+			AppLog.Write("Couldn't count the agenda", ex);
+		}
 		foreach (NavItemViewModel item in SidebarItems)
 		{
 			item.Count = item.Page switch
@@ -539,12 +615,14 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 				Page.Trash => deleted,
 				Page.Review => waiting,
 				Page.Compliance => overdue,
+				Page.Agenda => agenda.Overdue + agenda.DueSoon,
 				_ => 0,
 			};
 			item.CountTone = item.Page switch
 			{
 				Page.Review => Tone.Accent,
 				Page.Compliance => Tone.Danger,
+				Page.Agenda => agenda.Overdue > 0 ? Tone.Danger : Tone.Accent,
 				_ => Tone.Neutral,
 			};
 		}
@@ -589,6 +667,8 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 			Page.Review => Review,
 			Page.Compliance => Compliance,
 			Page.Assignments => Assignments,
+			Page.CaseFile => (ViewModelBase)CaseFilePage ?? Structures,
+			Page.Agenda => Agenda,
 			_ => Structures,
 		};
 		Map.IsActive = page == Page.Map;
@@ -596,6 +676,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		Review.IsActive = page == Page.Review;
 		Compliance.IsActive = page == Page.Compliance;
 		Assignments.IsActive = page == Page.Assignments;
+		Agenda.IsActive = page == Page.Agenda;
 		RefreshStatus();
 		if (page == Page.Map)
 		{
@@ -622,9 +703,17 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		{
 			Assignments.Reload();
 		}
+		if (page == Page.Agenda)
+		{
+			Agenda.Reload();
+		}
 		if (page == Page.Structures)
 		{
 			Structures.Reload();
+		}
+		if (page == Page.CaseFile)
+		{
+			CaseFilePage?.Reload();
 		}
 	}
 
@@ -775,6 +864,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 			return;
 		}
 		_editorParent = parent;
+		RememberRecent(file.Property.PropertyID);
 		Editor = new AssessmentEditorViewModel(_app, this, file, stamp: stamp);
 		ActivePage = Page.Editor;
 		CurrentPage = Editor;
@@ -793,6 +883,10 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		Guid propertyId = draft.Property.PropertyID;
 		VersionStamp stamp = propertyId == Guid.Empty ? null
 			: new VersionStamp(0, _app.Store.GetVersion(propertyId), null, draft.Property.LastUpdate);
+		if (propertyId != Guid.Empty && _app.Store.GetProperty(propertyId) != null)
+		{
+			RememberRecent(propertyId);
+		}
 		Editor = new AssessmentEditorViewModel(_app, this, draft, isDraft: true, stamp: stamp);
 		ActivePage = Page.Editor;
 		CurrentPage = Editor;

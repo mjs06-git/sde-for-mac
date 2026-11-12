@@ -63,10 +63,75 @@ public sealed class AppSettings
 	/// <summary>The first-run walkthrough has been shown (Help, then Show the Walkthrough, shows it again).</summary>
 	public bool SeenWalkthrough { get; set; }
 
+	/// <summary>
+	/// The version whose What's New was last shown or recorded (such as "3.5.0"). When the running version differs, What's
+	/// New opens once at launch; a brand-new install records its version without showing it (the walkthrough shows instead).
+	/// </summary>
+	public string LastSeenVersion { get; set; }
+
 	/// <summary>USGS's high-water mark service (STN), when it moves; null uses <see cref="Sde.Interop.Online.StnClient.DefaultBaseUrl"/>.</summary>
 	public string UsgsStnUrl { get; set; }
 
+	/// <summary>Settings, Appearance: "Light", "Dark", or null to match the Mac.</summary>
+	public string Theme { get; set; }
+
+	/// <summary>Settings, Appearance: buttons, selection and links take the Mac's accent colour instead of SDE's water blue.</summary>
+	public bool UseMacAccent { get; set; }
+
+	/// <summary>Settings, Appearance: the tighter sizes (22 px controls, 24 px rows) instead of the roomier default. Read at launch.</summary>
+	public bool CompactDensity { get; set; }
+
+	/// <summary>Settings, Appearance: stronger borders and text even while the Mac's own Increase Contrast is off.</summary>
+	public bool IncreaseContrast { get; set; }
+
+	/// <summary>The window's layout: the sidebar's and inspector's widths and whether they show, and tables' column widths (null = the defaults).</summary>
+	public LayoutState Layout { get; set; }
+
+	/// <summary>
+	/// The structures opened most recently, newest first, for each database (keyed by the database's path): the ⌘K
+	/// palette's Recent group. At most <see cref="MaxRecentStructures"/> for each and <see cref="MaxRecentStructureDatabases"/> databases.
+	/// </summary>
+	public Dictionary<string, List<Guid>> RecentStructures { get; set; } = new();
+
 	public const int MaxRecent = 8;
+
+	public const int MaxRecentStructures = 10;
+
+	public const int MaxRecentStructureDatabases = 20;
+
+	/// <summary>The structures opened most recently in the database at <paramref name="databasePath"/>, newest first.</summary>
+	public IReadOnlyList<Guid> RecentStructuresIn(string databasePath) =>
+		databasePath != null && RecentStructures != null && RecentStructures.TryGetValue(databasePath, out List<Guid> ids) && ids != null ? ids : Array.Empty<Guid>();
+
+	/// <summary>
+	/// Puts a structure first in its database's recent list, keeping at most <see cref="MaxRecentStructures"/>. When more
+	/// than <see cref="MaxRecentStructureDatabases"/> databases have lists, those not in File, then Open Recent go first.
+	/// </summary>
+	public void AddRecentStructure(string databasePath, Guid propertyId)
+	{
+		if (string.IsNullOrEmpty(databasePath) || propertyId == Guid.Empty)
+		{
+			return;
+		}
+		RecentStructures ??= new Dictionary<string, List<Guid>>();
+		List<Guid> ids = RecentStructures.TryGetValue(databasePath, out List<Guid> found) && found != null ? found : new List<Guid>();
+		ids.Remove(propertyId);
+		ids.Insert(0, propertyId);
+		if (ids.Count > MaxRecentStructures)
+		{
+			ids.RemoveRange(MaxRecentStructures, ids.Count - MaxRecentStructures);
+		}
+		RecentStructures[databasePath] = ids;
+		while (RecentStructures.Count > MaxRecentStructureDatabases)
+		{
+			string drop = RecentStructures.Keys.Where(k => k != databasePath)
+				.OrderBy(k => RecentDatabases?.Contains(k) == true ? 1 : 0).First();
+			RecentStructures.Remove(drop);
+		}
+	}
+
+	/// <summary>The file these settings were read from (and are saved back to), so a save never lands in another session's folder.</summary>
+	private string _path;
 
 	/// <summary>
 	/// ~/Library/Application Support/SDE/app-settings.json, or, when SDE_DATABASE chose the database (tests, training),
@@ -86,7 +151,12 @@ public sealed class AppSettings
 	/// Reads the settings at <paramref name="path"/>. When that file is missing, cut short or can't be read, the copy
 	/// kept by the last save (the same name with ".bak" added) is read instead, and failing that the defaults are used.
 	/// </summary>
-	public static AppSettings Load(string path) => Read(path) ?? Read(path + ".bak") ?? new AppSettings();
+	public static AppSettings Load(string path)
+	{
+		AppSettings settings = Read(path) ?? Read(path + ".bak") ?? new AppSettings();
+		settings._path = path;
+		return settings;
+	}
 
 	/// <summary>The settings in one file, or null when it is missing, cut short or can't be read.</summary>
 	private static AppSettings Read(string path)
@@ -101,8 +171,8 @@ public sealed class AppSettings
 		}
 	}
 
-	/// <summary>Remembers the settings (see <see cref="Save(string)"/>).</summary>
-	public void Save() => Save(FilePath);
+	/// <summary>Remembers the settings in the file they were read from (see <see cref="Save(string)"/>).</summary>
+	public void Save() => Save(_path ?? FilePath);
 
 	/// <summary>
 	/// Writes the settings to a temporary file in the same folder, then moves it over <paramref name="path"/> in one
@@ -141,6 +211,24 @@ public sealed class AppSettings
 	}
 }
 
+/// <summary>
+/// How the window was laid out: the sidebar and the inspector (shown or hidden, and their widths; 0 means the default
+/// width) and the column widths of each table that keeps them, by the table's name and then the column's key ("Owner")
+/// in DataGridLength form ("140" pixels, "1.5*" a share of the rest).
+/// </summary>
+public sealed class LayoutState
+{
+	public bool SidebarVisible { get; set; } = true;
+
+	public double SidebarWidth { get; set; }
+
+	public bool InspectorVisible { get; set; } = true;
+
+	public double InspectorWidth { get; set; }
+
+	public Dictionary<string, Dictionary<string, string>> ColumnWidths { get; set; } = new();
+}
+
 /// <summary>Where the main window was.</summary>
 public sealed class WindowPlacement
 {
@@ -169,6 +257,14 @@ public sealed class AppServices
 		PhoneForm = new PhoneFormService(this);
 		Manual = new ManualService(dialogs);
 		Settings = AppSettings.Load();
+		// Marks kept with the chosen event (in the Depth tool) are offered on the map once it is chosen.
+		Scope.Changed += () =>
+		{
+			if (Store != null)
+			{
+				HighWaterMarks.LoadStored(Store, Scope.EventId);
+			}
+		};
 		// SDE_DATABASE=/path/x.sqlite opens a specific database without changing the remembered one (testing, training).
 		string forced = Environment.GetEnvironmentVariable("SDE_DATABASE");
 		if (!string.IsNullOrEmpty(forced))
@@ -179,6 +275,7 @@ public sealed class AppServices
 			Tidy(Store);
 			Store.UserName = UserName;
 			Scope.Restore(Store);
+			HighWaterMarks.LoadStored(Store, Scope.EventId);
 			// Keep everything a test or training session writes next to its database.
 			ImportProfiles = new ImportProfiles(Path.Combine(Path.GetDirectoryName(Store.Database.FilePath)!, ImportProfiles.FolderName));
 			DepthTables = new DepthTables(Path.Combine(Path.GetDirectoryName(Store.Database.FilePath)!, DepthTables.FolderName));
@@ -214,6 +311,9 @@ public sealed class AppServices
 
 	/// <summary>The event chosen in the sidebar, which scopes the pages to its assessments.</summary>
 	public EventScope Scope { get; } = new EventScope();
+
+	/// <summary>The high-water marks loaded in the Depth tool this session, which the Map page can draw as a water surface.</summary>
+	public SessionHighWaterMarks HighWaterMarks { get; } = new SessionHighWaterMarks();
 
 	/// <summary>
 	/// This app's lease on the open database: shared while it is open, to itself during a restore or a move, which are
@@ -276,6 +376,12 @@ public sealed class AppServices
 	/// </summary>
 	public Func<HttpClient> HttpClientFactory { get; set; } = () => OnlineLookup.SharedClient.Value;
 
+	/// <summary>
+	/// The online look-up every part of the app uses (the editor's auto-fill, the bulk look-up, Check Online): it keeps
+	/// each flood map answer as the structure's stored flood lookup, whether or not the values are applied.
+	/// </summary>
+	public OnlineLookup CreateOnlineLookup() => new OnlineLookup(HttpClientFactory(), Store);
+
 	/// <summary>Raised after a different database was opened.</summary>
 	public event Action DatabaseChanged;
 
@@ -324,6 +430,8 @@ public sealed class AppServices
 			Settings.Save();
 		}
 		Undo.Clear();
+		HighWaterMarks.Clear();
+		HighWaterMarks.LoadStored(store, Scope.EventId);
 		DatabaseChanged?.Invoke();
 	}
 

@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.ReopenSheetView"
+             x:DataType="sh:ReopenSheetViewModel">
+  <StackPanel Spacing="16">
+    <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+    <TextBox Text="{Binding Reason}" PlaceholderText="For example: the owner sent a contractor's estimate" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64"
+             AutomationProperties.Name="Why it is being reopened" />
+    <c:SheetFooter PrimaryText="Reopen" PrimaryCommand="{Binding ReopenCommand}" IsPrimaryDefault="False" />
+  </StackPanel>
+</UserControl>

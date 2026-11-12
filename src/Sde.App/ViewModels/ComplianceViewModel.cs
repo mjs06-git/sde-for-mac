@@ -8,6 +8,7 @@ using Sde.App.ViewModels.Sheets;
 using Sde.Core.Assessments;
 using Sde.Data;
 using Sde.Reports;
+using Sde.Reports.Letters;
 
 namespace Sde.App.ViewModels;
 
@@ -43,6 +44,9 @@ public sealed class ComplianceRowViewModel(ComplianceRow row)
 	/// <summary>"12 days overdue".</summary>
 	public string OverdueText => !IsOverdue ? null : Row.DaysOverdue == 1 ? "1 day overdue" : $"{Row.DaysOverdue:N0} days overdue";
 
+	/// <summary>"12 days late", short enough for the table's deadline cell (the inspector says "overdue").</summary>
+	public string LateText => !IsOverdue ? null : Row.DaysOverdue == 1 ? "1 day late" : $"{Row.DaysOverdue:N0} days late";
+
 	/// <summary>"Paid · $30,000".</summary>
 	public string IccText => IccStatuses.Label(Case.IccStatus) + (Case.IccAmount is decimal m ? " · " + m.ToString("C0", Us) : "");
 
@@ -61,6 +65,24 @@ public sealed class ComplianceRowViewModel(ComplianceRow row)
 	public Tone StatusTone => IsOpen ? Tone.Accent : Tone.Neutral;
 
 	public string AccessibleOpen => "Open the case for " + Address;
+
+	/// <summary>"Substantial damage", for the inspector.</summary>
+	public string KindText => KindTip;
+
+	/// <summary>"Oct 30, 2026", or "None set".</summary>
+	public string DeadlineOrNone => Case.Deadline == null ? "None set" : DeadlineText;
+
+	/// <summary>"Nov 8, 2026", or "Not received".</summary>
+	public string EcOrNone => Case.EcReceivedOn == null ? "Not received" : EcText;
+
+	/// <summary>"Nov 8, 2026", or "Not done".</summary>
+	public string FinalOrNone => Case.FinalInspectionOn == null ? "Not done" : FinalText;
+
+	public bool HasAssessment => Case.AssessmentID != null;
+
+	/// <summary>True for an open case due from <paramref name="today"/> to <paramref name="days"/> days later (the Due soon filter).</summary>
+	public bool IsDueSoon(DateTime today, int days) =>
+		Case.IsOpen && Case.Deadline is DateTime d && d.Date >= today.Date && d.Date <= today.Date.AddDays(days);
 }
 
 /// <summary>
@@ -99,8 +121,56 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 	public ObservableCollection<ComplianceRowViewModel> Rows { get; } = new();
 
 	[ObservableProperty]
-	[NotifyCanExecuteChangedFor(nameof(OpenSelectedCommand))]
+	[NotifyCanExecuteChangedFor(nameof(OpenSelectedCommand), nameof(OpenSelectedAssessmentCommand))]
+	[NotifyPropertyChangedFor(nameof(HasSelection))]
 	public partial ComplianceRowViewModel Selected { get; set; }
+
+	partial void OnSelectedChanged(ComplianceRowViewModel value) => LoadTimeline();
+
+	public bool HasSelection => Selected != null;
+
+	/// <summary>The selected case's timeline, newest first, for the inspector.</summary>
+	public ObservableCollection<ComplianceEntryViewModel> SelectedTimeline { get; } = new();
+
+	public bool HasTimeline => SelectedTimeline.Count > 0;
+
+	/// <summary>The three compliance letters, written for the selected case from the inspector.</summary>
+	public IReadOnlyList<ComplianceLetterChoice> Letters => _letters ??= LetterKinds.Compliance
+		.Select(k => new ComplianceLetterChoice(k, LetterLabel(k), WriteLetterCommand)).ToList();
+
+	/// <summary>The letters' names, as the case sheet shows them.</summary>
+	private static string LetterLabel(string kind) => kind switch
+	{
+		LetterKinds.ComplianceOptions => "Options and Deadline",
+		LetterKinds.IccSupport => "ICC Support",
+		_ => "Deadline Reminder",
+	};
+
+	private IReadOnlyList<ComplianceLetterChoice> _letters;
+
+	/// <summary>The page's shell, for the shared inspector width and the inspector switch.</summary>
+	public MainViewModel Shell => _main;
+
+	/// <summary>How many days ahead Due soon looks (both ends included, as the sidebar's Agenda count does).</summary>
+	public int DueSoonDays { get; set; } = 14;
+
+	/// <summary>Only open cases due within <see cref="DueSoonDays"/> days (and not overdue yet).</summary>
+	[ObservableProperty]
+	public partial bool DueSoonOnly { get; set; }
+
+	/// <summary>Open cases due soon in scope, counted by the store as the Agenda and the sidebar count them.</summary>
+	[ObservableProperty]
+	[NotifyPropertyChangedFor(nameof(DueSoonChipText), nameof(OverdueChipText))]
+	public partial int DueSoonCount { get; private set; }
+
+	/// <summary>"Overdue 1", on the filter chip.</summary>
+	public string OverdueChipText => $"Overdue {OverdueCount:N0}";
+
+	/// <summary>"Due soon 2", on the filter chip.</summary>
+	public string DueSoonChipText => $"Due soon {DueSoonCount:N0}";
+
+	/// <summary>Today, for overdue and due soon: the store's clock, which tests can set.</summary>
+	private DateTime Today => _app.Store.Clock().Date;
 
 	/// <summary>Open, closed or every case (an index into <see cref="ShowChoices"/>).</summary>
 	[ObservableProperty]
@@ -121,7 +191,23 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 
 	partial void OnIccFilterChanged(int value) => Fill();
 
-	partial void OnOverdueOnlyChanged(bool value) => Fill();
+	partial void OnOverdueOnlyChanged(bool value)
+	{
+		if (value)
+		{
+			DueSoonOnly = false;
+		}
+		Fill();
+	}
+
+	partial void OnDueSoonOnlyChanged(bool value)
+	{
+		if (value)
+		{
+			OverdueOnly = false;
+		}
+		Fill();
+	}
 
 	// ───────────── Headline numbers ─────────────
 
@@ -132,6 +218,7 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 	public partial string ClosedCaption { get; private set; }
 
 	[ObservableProperty]
+	[NotifyPropertyChangedFor(nameof(OverdueChipText))]
 	public partial int OverdueCount { get; private set; }
 
 	[ObservableProperty]
@@ -191,6 +278,10 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 			{
 				on.Add("Overdue");
 			}
+			if (DueSoonOnly)
+			{
+				on.Add("Due soon");
+			}
 			if (PathFilter == 1)
 			{
 				on.Add("No path chosen");
@@ -238,21 +329,22 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 	}
 
 	/// <summary>The sidebar's badge: open cases in scope past their deadline.</summary>
-	public static int CountOverdue(AppServices app) => CasesInScope(app).Count(c => c.IsOverdue(DateTime.Today));
+	public static int CountOverdue(AppServices app) => CasesInScope(app).Count(c => c.IsOverdue(app.Store.Clock().Date));
 
 	/// <summary>Reads the cases again, and which substantially damaged structures have none.</summary>
 	public void Reload()
 	{
 		Guid? selected = Selected?.Case.CaseID;
 		List<ComplianceCaseRecord> cases = CasesInScope(_app);
-		_all = ComplianceReport.Rows(_app.Store, DateTime.Today, cases).Select(r => new ComplianceRowViewModel(r)).ToList();
+		_all = ComplianceReport.Rows(_app.Store, Today, cases).Select(r => new ComplianceRowViewModel(r)).ToList();
+		DueSoonCount = CountDueSoon(_app, DueSoonDays);
 		_missing = MissingCases(_app.Store.GetComplianceCases());
 
 		List<ComplianceCaseRecord> open = cases.Where(c => c.IsOpen).ToList();
 		OpenCount = open.Count;
 		int closed = cases.Count - open.Count;
 		ClosedCaption = closed == 1 ? "1 closed" : $"{closed:N0} closed";
-		OverdueCount = open.Count(c => c.IsOverdue(DateTime.Today));
+		OverdueCount = open.Count(c => c.IsOverdue(Today));
 		IccInProgressCount = cases.Count(c => c.IccStatus is IccStatuses.Filed or IccStatuses.Approved);
 		List<ComplianceCaseRecord> paid = cases.Where(c => c.IccStatus == IccStatuses.Paid).ToList();
 		_iccPaidCount = paid.Count;
@@ -322,7 +414,79 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 			IccInProgress => icc is IccStatuses.Filed or IccStatuses.Approved,
 			_ => icc == IccStatuses.All[IccFilter - 2],
 		};
-		return show && path && iccMatches && (!OverdueOnly || r.IsOverdue);
+		return show && path && iccMatches && (!OverdueOnly || r.IsOverdue) && (!DueSoonOnly || r.IsDueSoon(Today, DueSoonDays));
+	}
+
+	/// <summary>Open cases in scope due within <paramref name="days"/> days, as the store counts them for the Agenda and the sidebar.</summary>
+	public static int CountDueSoon(AppServices app, int days) => app.Store.GetDueSoonCount(days, app.Store.Clock().Date, app.Scope.EventId);
+
+	/// <summary>The selected case's timeline, newest first.</summary>
+	private void LoadTimeline()
+	{
+		SelectedTimeline.Clear();
+		if (Selected != null)
+		{
+			try
+			{
+				foreach (ComplianceEntryRecord e in _app.Store.GetComplianceEntries(Selected.Case.CaseID).AsEnumerable().Reverse())
+				{
+					SelectedTimeline.Add(new ComplianceEntryViewModel(e));
+				}
+			}
+			catch (Exception ex) when (ex is not OutOfMemoryException)
+			{
+				AppLog.Write("Couldn't read a compliance case's timeline", ex);
+			}
+		}
+		OnPropertyChanged(nameof(HasTimeline));
+	}
+
+	/// <summary>The Due soon chip: open cases due within two weeks (again to show every open case).</summary>
+	[RelayCommand]
+	private void ToggleDueSoon()
+	{
+		bool on = !DueSoonOnly;
+		ClearFilters();
+		DueSoonOnly = on;
+	}
+
+	/// <summary>Opens the selected case's assessment; closing it comes back here.</summary>
+	[RelayCommand(CanExecute = nameof(CanOpenSelectedAssessment))]
+	private void OpenSelectedAssessment()
+	{
+		if (Selected?.Case.AssessmentID is Guid id)
+		{
+			_main.OpenAssessmentFrom(id, Page.Compliance);
+		}
+	}
+
+	private bool CanOpenSelectedAssessment() => Selected?.HasAssessment == true;
+
+	/// <summary>Writes one of the compliance letters for the selected case, as the case sheet does, and adds it to the timeline.</summary>
+	[RelayCommand]
+	private async Task WriteLetter(string kind)
+	{
+		if (Selected == null || kind == null)
+		{
+			return;
+		}
+		ComplianceCaseSheetViewModel letters;
+		try
+		{
+			letters = new ComplianceCaseSheetViewModel(_app, Selected.Case.CaseID, id => _main.OpenAssessmentFrom(id, Page.Compliance));
+		}
+		catch (ArgumentException ex)
+		{
+			_app.Dialogs.Notify("Not found", ex.Message, isError: true);
+			Reload();
+			return;
+		}
+		await letters.WriteLetterCommand.ExecuteAsync(kind);
+		if (letters.LetterText != null)
+		{
+			LastResult = letters.LetterText;
+		}
+		LoadTimeline();
 	}
 
 	// ───────────── Filters and the headline tiles ─────────────
@@ -369,6 +533,7 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 		PathFilter = 0;
 		IccFilter = 0;
 		OverdueOnly = false;
+		DueSoonOnly = false;
 	}
 
 	// ───────────── Cases ─────────────

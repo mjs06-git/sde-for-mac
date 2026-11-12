@@ -81,6 +81,13 @@ public sealed class StnClient
 	/// <summary>How long to wait before asking again.</summary>
 	public TimeSpan RetryDelay { get; set; } = TimeSpan.FromSeconds(2);
 
+	/// <summary>
+	/// The live service sends only numeric ids for an event's type and status. A purely numeric value is an id, not a
+	/// name, so it reads as null (unknown) instead of showing "1" as if it were a name.
+	/// </summary>
+	private static string NameOrNull(string value) =>
+		value != null && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double _) ? null : value;
+
 	/// <summary>Every STN event, newest first.</summary>
 	public async Task<IReadOnlyList<StnEvent>> GetEventsAsync(CancellationToken ct)
 	{
@@ -100,8 +107,8 @@ public sealed class StnClient
 				name,
 				Date(OnlineHttp.Text(e, "event_start_date") ?? OnlineHttp.Text(e, "start_date")),
 				Date(OnlineHttp.Text(e, "event_end_date") ?? OnlineHttp.Text(e, "end_date")),
-				OnlineHttp.Text(e, "event_type_name") ?? OnlineHttp.Text(e, "event_type"),
-				OnlineHttp.Text(e, "event_status_name") ?? OnlineHttp.Text(e, "event_status")));
+				NameOrNull(OnlineHttp.Text(e, "event_type_name") ?? OnlineHttp.Text(e, "event_type")),
+				NameOrNull(OnlineHttp.Text(e, "event_status_name") ?? OnlineHttp.Text(e, "event_status"))));
 		}
 		return events.OrderByDescending(e => e.StartDate ?? DateTime.MinValue).ThenByDescending(e => e.Id).ToList();
 	}

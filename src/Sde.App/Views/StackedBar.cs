@@ -27,13 +27,15 @@ public sealed class StackedBar : Control
 	public override void Render(DrawingContext context)
 	{
 		Rect all = new Rect(Bounds.Size);
-		IBrush track = Brush("SubtleBg", Brushes.LightGray);
-		context.DrawRectangle(track, null, new RoundedRect(all, 4));
+		// The same dry staff as the staff gauge, fully rounded
+		double radius = all.Height / 2;
+		IBrush track = Brush("GaugeTrack", Brushes.LightGray);
+		context.DrawRectangle(track, null, new RoundedRect(all, radius));
 		if (Segments == null || all.Width < 1)
 		{
 			return;
 		}
-		using (context.PushClip(new RoundedRect(all, 4)))
+		using (context.PushClip(new RoundedRect(all, radius)))
 		{
 			double x = 0;
 			foreach (BarSegment s in Segments)

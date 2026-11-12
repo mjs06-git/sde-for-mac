@@ -1,64 +1,66 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.WebMapSheetView"
              x:DataType="sh:WebMapSheetViewModel">
-  <StackPanel Spacing="14">
-    <TextBlock Classes="secondary" TextWrapping="Wrap"
-               Text="A folder with a web page of these structures on a map. Works offline except the background." />
+  <!-- A folder with a web page of these structures on a map: who it is for decides what it shows -->
+  <StackPanel Spacing="16">
     <StackPanel Spacing="4">
-      <TextBlock Classes="fieldLabel" Text="Title" />
+      <TextBlock Classes="fieldLabel" Text="Title"
+                 ToolTip.Tip="A folder with a web page of these structures on a map. Works offline except the background." />
       <TextBox Text="{Binding MapTitle}" AutomationProperties.Name="Title of the web map" />
     </StackPanel>
 
-    <StackPanel Spacing="4">
-      <TextBlock Classes="fieldLabel" Text="Who it is for" />
-      <RadioButton GroupName="WebMapPrivacy" IsChecked="{Binding IsInternal}" AutomationProperties.Name="For the office and partners: a dot for each structure with its address">
-        <TextBlock TextWrapping="Wrap" Text="Office and partners: a dot per structure, with address and result." />
-      </RadioButton>
-      <RadioButton GroupName="WebMapPrivacy" IsChecked="{Binding IsPublic}" AutomationProperties.Name="For the public: counts in grid squares, no owners or exact locations">
-        <TextBlock TextWrapping="Wrap" Text="Public: counts in grid squares, no owners or exact locations." />
-      </RadioButton>
-    </StackPanel>
+    <Border Classes="card">
+      <StackPanel Spacing="10">
+        <TextBlock Classes="sheetSection" Text="Who it is for" />
+        <RadioButton GroupName="WebMapPrivacy" IsChecked="{Binding IsInternal}" AutomationProperties.Name="For the office and partners: a dot for each structure with its address">
+          <TextBlock TextWrapping="Wrap" Text="Office and partners: a dot per structure, with address and result." />
+        </RadioButton>
+        <RadioButton GroupName="WebMapPrivacy" IsChecked="{Binding IsPublic}" AutomationProperties.Name="For the public: counts in grid squares, no owners or exact locations">
+          <TextBlock TextWrapping="Wrap" Text="Public: counts in grid squares, no owners or exact locations." />
+        </RadioButton>
 
-    <!-- Internal: popup fields -->
-    <StackPanel Spacing="6" IsVisible="{Binding IsInternal}">
-      <TextBlock Classes="fieldLabel" Text="Also show in each structure's popup" />
-      <ItemsControl ItemsSource="{Binding PopupFields}">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate><WrapPanel ItemSpacing="16" LineSpacing="4" /></ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="sh:PopupFieldOption">
-            <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked}" />
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-      <TextBlock Classes="muted" TextWrapping="Wrap" Text="Address, result and percent damaged always show." />
-    </StackPanel>
+        <!-- Internal: popup fields -->
+        <StackPanel Spacing="6" IsVisible="{Binding IsInternal}" Margin="0,6,0,0">
+          <TextBlock Classes="fieldLabel" Text="Also show in each structure's popup" ToolTip.Tip="Address, result and percent damaged always show." />
+          <ItemsControl ItemsSource="{Binding PopupFields}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel ItemSpacing="16" LineSpacing="4" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="sh:PopupFieldOption">
+                <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
 
-    <!-- Public: addresses and grid -->
-    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" IsVisible="{Binding IsPublic}">
-      <StackPanel Spacing="4">
-        <TextBlock Classes="fieldLabel" Text="Addresses" />
-        <RadioButton GroupName="WebMapAddresses" IsChecked="{Binding ShowBlocks}" Content="Cut to the block (100 block of River St)" />
-        <RadioButton GroupName="WebMapAddresses" IsChecked="{Binding !ShowBlocks}" Content="Hidden" />
+        <!-- Public: addresses and grid -->
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" IsVisible="{Binding IsPublic}" Margin="0,6,0,0">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="fieldLabel" Text="Addresses" />
+            <RadioButton GroupName="WebMapAddresses" IsChecked="{Binding ShowBlocks}" Content="Cut to the block (100 block of River St)" />
+            <RadioButton GroupName="WebMapAddresses" IsChecked="{Binding !ShowBlocks}" Content="Hidden" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="4">
+            <TextBlock Classes="fieldLabel" Text="Grid squares" />
+            <ListBox Classes="segmented" ItemsSource="{x:Static sh:WebMapSheetViewModel.CellSizeNames}" SelectedIndex="{Binding CellSizeIndex}"
+                     AutomationProperties.Name="Size of the grid squares" />
+          </StackPanel>
+        </Grid>
       </StackPanel>
-      <StackPanel Grid.Column="1" Spacing="4">
-        <TextBlock Classes="fieldLabel" Text="Grid squares" />
-        <ListBox Classes="segmented" ItemsSource="{x:Static sh:WebMapSheetViewModel.CellSizeNames}" SelectedIndex="{Binding CellSizeIndex}"
-                 AutomationProperties.Name="Size of the grid squares" />
-      </StackPanel>
-    </Grid>
+    </Border>
 
     <StackPanel Spacing="4">
-      <TextBlock Classes="fieldLabel" Text="Background map" />
-      <ListBox Classes="segmented" SelectedIndex="{Binding BasemapIndex}" AutomationProperties.Name="Background map" HorizontalAlignment="Left">
+      <TextBlock Classes="fieldLabel" Text="Background map" ToolTip.Tip="The background needs the internet; None needs nothing." />
+      <ListBox Classes="segmented" SelectedIndex="{Binding BasemapIndex}" AutomationProperties.Name="Background map" HorizontalAlignment="Left"
+               ToolTip.Tip="The background needs the internet; None needs nothing.">
         <ListBoxItem Content="USGS topographic" />
         <ListBoxItem Content="OpenStreetMap" />
         <ListBoxItem Content="None" />
       </ListBox>
-      <TextBlock Classes="muted" TextWrapping="Wrap" Text="The background needs the internet; None needs nothing." />
     </StackPanel>
 
     <CheckBox Content="{Binding SummaryLabel}" IsChecked="{Binding IncludeSummary}" />
@@ -66,9 +68,6 @@
     <Border Classes="subtle" IsVisible="{Binding HasProblem}">
       <TextBlock Classes="issue required" Text="{Binding Problem}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive" />
     </Border>
-    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="Cancel" Command="{Binding CancelCommand}" IsEnabled="{Binding !IsBusy}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Classes="primary" Content="Make Web Map…" Command="{Binding CreateCommand}" IsEnabled="{Binding !IsBusy}" MinWidth="90" HorizontalContentAlignment="Center" />
-    </StackPanel>
+    <c:SheetFooter IsBusy="{Binding IsBusy}" PrimaryText="Make Web Map…" PrimaryCommand="{Binding CreateCommand}" IsPrimaryDefault="False" />
   </StackPanel>
 </UserControl>

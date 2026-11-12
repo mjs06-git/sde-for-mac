@@ -1,0 +1,366 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Sde.App.Controls">
+  <!--
+    The data pages: Import & Export (its Import, Export and Field Work tabs), Import inspections or parcels, and Settings
+    (with its panels). A page sets Classes="dataPage" on its root so the shared grey Border.card becomes the approved
+    white card there, and its parts use:
+      TextBlock.pageHeading (the page's or category's title, display size);
+      Border.dataCard (a white card) with a DockPanel.cardHead (c:Icon.cardIcon and TextBlock.cardHeading);
+      StackPanel.actionRows of Border.actionRow (one line: TextBlock.rowLabel and a quiet TextBlock.rowDetail on the left,
+      the buttons on the right, hairlines between rows);
+      Border.dropCard (Import's drop zone: a dashed outline, Border.dropIcon, accent tint while a file is dragged over);
+      Border.previewCard (a preview inside a card: Border.previewHead, Border.previewRow, Border.previewFoot), with
+      Border.groupHead and Border.groupRow for the buildings of a split row;
+      Border.settingsRail (Settings' categories: a white card list on the left of the content);
+      ListBox.themeTiles (Appearance: three large preview tiles, each a Border.miniFrame drawn from tokens).
+  -->
+
+  <!-- ───────────── Page and cards ───────────── -->
+  <Style Selector="TextBlock.pageHeading">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeDisplay}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="-0.3" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="Margin" Value="2,0,0,4" />
+  </Style>
+  <Style Selector="Border.dataCard, :is(Control).dataPage Border.card">
+    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderCard}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource ShadowCard}" />
+    <Setter Property="Padding" Value="24,18,24,20" />
+  </Style>
+  <!-- A card of settings rows has no padding of its own: the rows carry it, so their hairlines run edge to edge -->
+  <Style Selector=":is(Control).dataPage Border.card.settings, :is(Control).dataPage Border.card.flush">
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector=":is(Control).dataPage StackPanel.settingsGroup > Border.settingsRow">
+    <Setter Property="Padding" Value="24,12" />
+    <Setter Property="MinHeight" Value="52" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+  </Style>
+  <!-- A card's heading inside a data page card: semibold at title size, as on the Summary's cards -->
+  <Style Selector=":is(Control).dataPage Border.card TextBlock.h3, TextBlock.cardHeading">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeTitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector="TextBlock.cardHeading">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="DockPanel.cardHead">
+    <Setter Property="Margin" Value="0,0,0,8" />
+    <Setter Property="LastChildFill" Value="True" />
+  </Style>
+  <Style Selector="c|Icon.cardIcon">
+    <Setter Property="Size" Value="{StaticResource IconSizeLarge}" />
+    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="0,0,10,0" />
+  </Style>
+  <Style Selector="TextBlock.cardNote">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="12,0,0,0" />
+  </Style>
+
+  <!-- ───────────── One-line rows with their action at the right ───────────── -->
+  <!-- The last row's own padding stands in for most of the card's, so the card looks even top and bottom -->
+  <Style Selector="StackPanel.actionRows">
+    <Setter Property="Margin" Value="0,0,0,-8" />
+  </Style>
+  <Style Selector="StackPanel.actionRows > Border.actionRow">
+    <Setter Property="Padding" Value="0,10" />
+    <Setter Property="MinHeight" Value="52" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+  </Style>
+  <Style Selector="StackPanel.actionRows > Border.actionRow:nth-child(1)">
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="TextBlock.rowLabel">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <Style Selector="TextBlock.rowDetail">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="StackPanel.rowButtons">
+    <Setter Property="Orientation" Value="Horizontal" />
+    <Setter Property="Spacing" Value="8" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- ───────────── Import's drop zone ───────────── -->
+  <Style Selector="Border.dropCard">
+    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource ShadowCard}" />
+    <Setter Property="MinHeight" Value="168" />
+  </Style>
+  <Style Selector="Border.dropCard Rectangle.dropOutline">
+    <Setter Property="Stroke" Value="{DynamicResource BorderStrong}" />
+    <Setter Property="StrokeThickness" Value="1.5" />
+    <Setter Property="StrokeDashArray" Value="5,4" />
+    <Setter Property="RadiusX" Value="12" />
+    <Setter Property="RadiusY" Value="12" />
+  </Style>
+  <Style Selector="Border.dropCard.dragOver">
+    <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
+  </Style>
+  <Style Selector="Border.dropCard.dragOver Rectangle.dropOutline">
+    <Setter Property="Stroke" Value="{DynamicResource AccentFill}" />
+    <Setter Property="StrokeThickness" Value="2" />
+  </Style>
+  <Style Selector="Border.dropIcon">
+    <Setter Property="Width" Value="52" />
+    <Setter Property="Height" Value="52" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
+    <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.dropIcon c|Icon">
+    <Setter Property="Size" Value="26" />
+    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.dropTitle">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeTitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <!-- ───────────── A preview inside a card (a nested table) ───────────── -->
+  <Style Selector="Border.previewCard">
+    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderCard}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.previewHead">
+    <Setter Property="Background" Value="{DynamicResource BgTableHeader}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="MinHeight" Value="{DynamicResource TableHeaderHeight}" />
+  </Style>
+  <Style Selector="Border.previewHead TextBlock">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.previewRow, Border.groupRow">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="12,6" />
+    <Setter Property="MinHeight" Value="{DynamicResource TableRowHeight}" />
+  </Style>
+  <Style Selector="Border.previewRow TextBlock, Border.groupRow TextBlock, Border.groupHead TextBlock">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- The buildings of one row of the file: a quiet heading row, the buildings indented under it on a 2 px rule -->
+  <Style Selector="Border.groupHead">
+    <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeightLarge}" />
+  </Style>
+  <Style Selector="Border.groupRail">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentFill}" />
+    <Setter Property="BorderThickness" Value="2,0,0,0" />
+    <Setter Property="Margin" Value="22,0,0,0" />
+  </Style>
+  <!-- A building of a split row: its name stands in from the record column, under the row's heading -->
+  <Style Selector="Border.previewRow.split TextBlock.recordCell">
+    <Setter Property="Margin" Value="22,0,0,0" />
+  </Style>
+  <!-- A section of the column mapping: a full-width quiet row that opens and closes its fields -->
+  <Style Selector="ToggleButton.groupToggle">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeightLarge}" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
+  </Style>
+  <Style Selector="ToggleButton.groupToggle /template/ ContentPresenter#PART_ContentPresenter, ToggleButton.groupToggle:checked /template/ ContentPresenter#PART_ContentPresenter, ToggleButton.groupToggle:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector="ToggleButton.groupToggle:pointerover /template/ ContentPresenter#PART_ContentPresenter, ToggleButton.groupToggle:pressed /template/ ContentPresenter#PART_ContentPresenter, ToggleButton.groupToggle:checked:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtle}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector="ToggleButton.groupToggle c|Icon">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.previewFoot">
+    <Setter Property="Padding" Value="12,10" />
+  </Style>
+  <Style Selector="Border.previewCard ScrollViewer.previewScroll">
+    <Setter Property="MaxHeight" Value="360" />
+  </Style>
+
+  <!-- ───────────── Settings' categories: a white card list on the left of the content ───────────── -->
+  <Style Selector="Border.settingsRail">
+    <Setter Property="Width" Value="220" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Margin" Value="24,20,0,24" />
+    <Setter Property="Padding" Value="8" />
+    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderCard}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource ShadowCard}" />
+  </Style>
+  <Style Selector="Border.settingsRail ListBox.steps">
+    <Setter Property="Margin" Value="0" />
+  </Style>
+  <Style Selector="Border.settingsRail ListBox.steps ListBoxItem">
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeightLarge}" />
+    <Setter Property="Padding" Value="8,0,10,0" />
+  </Style>
+  <Style Selector="Border.settingsRail ListBox.steps ListBoxItem:selected TextBlock.stepTitle">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+  </Style>
+  <Style Selector="Border.settingsRail ListBox.steps ListBoxItem:not(:selected) Border.stepIcon c|Icon">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+  </Style>
+
+  <!-- ───────────── Settings, Appearance: three preview tiles ───────────── -->
+  <Style Selector="ListBox.themeTiles">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+    <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
+    <Setter Property="ItemsPanel">
+      <ItemsPanelTemplate>
+        <UniformGrid Rows="1" />
+      </ItemsPanelTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ListBox.themeTiles ListBoxItem">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0,0,16,0" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="ListBox.themeTiles ListBoxItem:nth-last-child(1)">
+    <Setter Property="Margin" Value="0" />
+  </Style>
+  <Style Selector="ListBox.themeTiles ListBoxItem /template/ ContentPresenter#PART_ContentPresenter, ListBox.themeTiles ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBox.themeTiles ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, ListBox.themeTiles ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBox.themeTiles ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <!-- The preview's outline: a hairline, a strong accent ring round the chosen one -->
+  <Style Selector="ListBox.themeTiles Border.tilePreview">
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+    <Setter Property="Padding" Value="3" />
+    <Setter Property="Height" Value="104" />
+  </Style>
+  <Style Selector="ListBox.themeTiles ListBoxItem:pointerover Border.tilePreview">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongHover}" />
+  </Style>
+  <Style Selector="ListBox.themeTiles ListBoxItem:selected Border.tilePreview">
+    <Setter Property="BorderThickness" Value="3" />
+    <Setter Property="Padding" Value="1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentFill}" />
+  </Style>
+  <Style Selector="ListBox.themeTiles TextBlock.tileLabel">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="0,10,0,0" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector="ListBox.themeTiles ListBoxItem:selected TextBlock.tileLabel">
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <!-- The miniature app: the navy frame (sidebar and title band) round bright content with a white card and an accent
+       button. Drawn inside a ThemeVariantScope, so each tile shows its own theme whatever the app is showing. -->
+  <Style Selector="Border.miniFrame">
+    <Setter Property="Background" Value="{DynamicResource BgFrame}" />
+    <Setter Property="CornerRadius" Value="7" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.miniContent">
+    <Setter Property="Background" Value="{DynamicResource BgApp}" />
+    <Setter Property="CornerRadius" Value="6,0,0,0" />
+    <Setter Property="Padding" Value="8" />
+  </Style>
+  <Style Selector="Border.miniCard">
+    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderCard}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Padding" Value="6" />
+  </Style>
+  <Style Selector="Border.miniCard.hero">
+    <Setter Property="Background" Value="{DynamicResource BgHero}" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector="Border.miniLine">
+    <Setter Property="Height" Value="4" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="Background" Value="{DynamicResource BorderStrong}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+  </Style>
+  <Style Selector="Border.miniLine.onFrame">
+    <Setter Property="Background" Value="{DynamicResource TextOnFrameTertiary}" />
+  </Style>
+  <Style Selector="Border.miniLine.selected">
+    <Setter Property="Background" Value="{DynamicResource AccentFill}" />
+  </Style>
+  <Style Selector="Border.miniButton">
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Background" Value="{DynamicResource AccentFill}" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+  </Style>
+  <!-- A choice that can't be made here (the Mac's accent on another system): greyed, its swatch faded -->
+  <Style Selector=":is(Control).dataPage ListBox.segmented ListBoxItem:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource TextDisabled}" />
+  </Style>
+  <Style Selector=":is(Control).dataPage ListBox.segmented ListBoxItem:disabled Ellipse.swatch">
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
+  <!-- A colour choice: a round swatch beside its name -->
+  <Style Selector="Ellipse.swatch">
+    <Setter Property="Width" Value="12" />
+    <Setter Property="Height" Value="12" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- ───────────── Settings, About ───────────── -->
+  <Style Selector="c|Icon.aboutMark">
+    <Setter Property="Size" Value="72" />
+    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+  </Style>
+  <Style Selector="TextBlock.aboutName">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeLargeTitle}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+</Styles>

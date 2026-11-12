@@ -391,6 +391,25 @@ public class FieldServerTests
 	}
 
 	[Fact]
+	public async Task Assessment_CarriesThePercentDamaged_ForTheGauge()
+	{
+		await using PhoneSession s = new PhoneSession();
+		await s.PairAsync();
+		// Nothing entered yet: no percentage for the gauge, only the result line.
+		JsonElement fresh = await PhoneSession.Json(await s.Client.GetAsync($"/api/assessments/{s.AssessmentId}", Ct));
+		Assert.Equal("Data Entry Incomplete", fresh.GetProperty("damageMessage").GetString());
+		Assert.Equal(JsonValueKind.Null, fresh.GetProperty("percentDamage").ValueKind);
+		Assert.Contains("Data Entry Incomplete", fresh.GetProperty("result").GetString());
+
+		AssessmentFile worked = SampleCases.RanchFlood(s.Store);
+		decimal percent = Assert.IsType<decimal>(worked.Assessment.PercentDamage);
+		JsonElement view = await PhoneSession.Json(await s.Client.GetAsync($"/api/assessments/{worked.Assessment.AssessmentID}", Ct));
+		Assert.Equal(percent, view.GetProperty("percentDamage").GetDecimal());
+		Assert.Equal(worked.Assessment.DamageMessage, view.GetProperty("damageMessage").GetString());
+		Assert.StartsWith(percent.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "%", view.GetProperty("result").GetString());
+	}
+
+	[Fact]
 	public async Task Search_AndAddStructure()
 	{
 		await using PhoneSession s = new PhoneSession();
@@ -466,6 +485,246 @@ public class FieldServerTests
 		string reason = await stopped.Task.WaitAsync(TimeSpan.FromSeconds(15), Ct);
 		Assert.Contains("12 hours", reason);
 		Assert.False(s.Server.IsRunning);
+	}
+
+	// ───────────────────────── Damage by element ─────────────────────────
+
+	[Fact]
+	public async Task ElementDamage_RoundTrips_AndTheResultIsTheEnginesWithHistory()
+	{
+		await using PhoneSession s = new PhoneSession();
+		await s.PairAsync("Test Inspector");
+		AssessmentFile ranch = SampleCases.RanchFlood(s.Store);
+		Guid id = ranch.Assessment.AssessmentID;
+		ElementPercentageRecord foundation = s.Store.LoadAssessment(id).ElementPercentages.First();
+		decimal before = s.Store.LoadAssessment(id).Assessment.PercentDamage.Value;
+
+		HttpResponseMessage res = await s.Post($"/api/assessments/{id}/elements", new { elements = new[] { new { id = foundation.CalcID, damaged = 85.5m } } });
+		Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+		JsonElement view = await PhoneSession.Json(res);
+
+		// What the Mac's engine says for the same edit.
+		AssessmentFile expected = s.Store.LoadAssessment(id);
+		expected.ElementPercentages.Single(e => e.CalcID == foundation.CalcID).UserDamage = 85.5m;
+		s.Store.Calculator.Recalculate(expected);
+
+		AssessmentFile saved = s.Store.LoadAssessment(id);
+		Assert.Equal(85.5m, saved.ElementPercentages.Single(e => e.CalcID == foundation.CalcID).UserDamage);
+		Assert.Equal(expected.Assessment.PercentDamage, saved.Assessment.PercentDamage);
+		Assert.Equal(expected.Assessment.ComputedDamages, saved.Assessment.ComputedDamages);
+		Assert.NotEqual(before, saved.Assessment.PercentDamage);
+		Assert.Equal(saved.Assessment.PercentDamage, view.GetProperty("percentDamage").GetDecimal());
+		JsonElement row = view.GetProperty("elements").EnumerateArray().Single(e => e.GetProperty("id").GetInt32() == foundation.CalcID);
+		Assert.Equal(85.5m, row.GetProperty("damaged").GetDecimal());
+		Assert.Equal(decimal.Parse(expected.ElementPercentages.Single(e => e.CalcID == foundation.CalcID).DamageValues, System.Globalization.CultureInfo.InvariantCulture),
+			row.GetProperty("damageValue").GetDecimal());
+		Assert.Equal(expected.Assessment.ComputedDamages, view.GetProperty("totals").GetProperty("computedDamages").GetDecimal());
+
+		EditHistoryRecord h = Assert.Single(s.Store.GetHistory(id), x => x.Field == FieldCatalog.ElementKey(foundation.ElementName) && x.Via == SaveVia.Phone);
+		Assert.Equal(SaveVia.Phone, h.Via);
+		Assert.Equal("Test Inspector", h.ChangedBy);
+		Assert.Equal("85.5", h.NewValue);
+	}
+
+	[Fact]
+	public async Task Elements_AreTheOnesTheStructureTypeShows()
+	{
+		await using PhoneSession s = new PhoneSession();
+		await s.PairAsync();
+		JsonElement view = await PhoneSession.Json(await s.Client.GetAsync($"/api/assessments/{s.AssessmentId}", Ct));
+		Assert.Equal(AssessmentCalculator.ResidentialElements, view.GetProperty("elements").EnumerateArray().Select(e => e.GetProperty("id").GetInt32()).ToArray());
+		Assert.Contains(view.GetProperty("steps").EnumerateArray(), st => st.GetProperty("step").GetInt32() == FieldCatalog.DamageStep);
+
+		JsonElement nonRes = await PhoneSession.Json(await s.Change("Property.StructureTypeID", "2"));
+		Assert.Equal(AssessmentCalculator.NonResidentialElements, nonRes.GetProperty("elements").EnumerateArray().Select(e => e.GetProperty("id").GetInt32()).ToArray());
+		Assert.Equal(s.Store.Reference.LookupName(AssessmentCalculator.NonResidentialElements[0]),
+			nonRes.GetProperty("elements")[0].GetProperty("name").GetString());
+
+		// An element only residential structures have is refused now.
+		int residentialOnly = AssessmentCalculator.ResidentialElements.Except(AssessmentCalculator.NonResidentialElements).First();
+		HttpResponseMessage res = await s.Post($"/api/assessments/{s.AssessmentId}/elements", new { elements = new[] { new { id = residentialOnly, damaged = 50 } } });
+		Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+		Assert.DoesNotContain(s.Store.LoadAssessment(s.AssessmentId).ElementPercentages, e => e.CalcID == residentialOnly);
+	}
+
+	// ───────────────────────── Cost adjustments ─────────────────────────
+
+	[Fact]
+	public async Task CostAdjustments_RoundTrip_AndTheResultIsTheEnginesWithHistory()
+	{
+		await using PhoneSession s = new PhoneSession();
+		await s.PairAsync("Test Inspector");
+		AssessmentFile ranch = SampleCases.RanchFlood(s.Store);
+		Guid id = ranch.Assessment.AssessmentID;
+		int garage = ranch.CostAdjustments.Single(c => s.Store.Reference.LookupName(c.CostAdjustmentLookupID) == "Garage").CostAdjustmentLookupID;
+
+		JsonElement offered = await PhoneSession.Json(await s.Client.GetAsync($"/api/assessments/{id}", Ct));
+		Assert.Equal(s.Store.Reference.CostAdjustmentsFor(ranch.Property.StructureTypeID, ranch.Property.ResidenceTypeID).Select(l => l.LookupID),
+			offered.GetProperty("costAdjustments").EnumerateArray().Select(c => c.GetProperty("id").GetInt32()));
+		Assert.Equal(AssessmentCalculator.AdditionalAdjustmentRows, offered.GetProperty("additionalAdjustments").GetArrayLength());
+		Assert.Equal("Shed", offered.GetProperty("additionalAdjustments")[0].GetProperty("name").GetString());
+
+		HttpResponseMessage res = await s.Post($"/api/assessments/{id}/costs", new
+		{
+			adjustments = new[] { new { id = garage, quantity = (decimal?)400m, unitCost = (decimal?)40m } },
+			additional = new[] { new { line = 2, name = "  Deck ", quantity = (decimal?)1m, unitCost = (decimal?)-500m } },
+		});
+		Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+		JsonElement view = await PhoneSession.Json(res);
+
+		AssessmentFile expected = s.Store.LoadAssessment(id);
+		CostAdjustmentResultRecord g = expected.CostAdjustments.Single(c => c.CostAdjustmentLookupID == garage);
+		g.Quantity = 400m;
+		g.UnitCost = 40m;
+		AdditionalAdjustmentRecord deck = expected.AdditionalAdjustments.Single(x => x.zOrder == 2);
+		deck.AdjustmentName = "Deck";
+		deck.Quantity = 1m;
+		deck.UnitCost = -500m;
+		s.Store.Calculator.Recalculate(expected);
+
+		AssessmentFile saved = s.Store.LoadAssessment(id);
+		Assert.Equal(400m, saved.CostAdjustments.Single(c => c.CostAdjustmentLookupID == garage).Quantity);
+		Assert.Equal("Deck", saved.AdditionalAdjustments.Single(x => x.zOrder == 2).AdjustmentName);
+		Assert.Equal(expected.Assessment.TotalAdjustments, saved.Assessment.TotalAdjustments);
+		Assert.Equal(expected.Assessment.TotalReplacementCost, saved.Assessment.TotalReplacementCost);
+		Assert.Equal(expected.Assessment.PercentDamage, saved.Assessment.PercentDamage);
+		Assert.NotEqual(ranch.Assessment.TotalAdjustments, saved.Assessment.TotalAdjustments);
+		Assert.Equal(expected.Assessment.TotalAdjustments, view.GetProperty("totals").GetProperty("totalAdjustments").GetDecimal());
+		Assert.Equal(expected.CostAdjustments.Single(c => c.CostAdjustmentLookupID == garage).TotalCost,
+			view.GetProperty("costAdjustments").EnumerateArray().Single(c => c.GetProperty("id").GetInt32() == garage).GetProperty("totalCost").GetDecimal());
+
+		List<EditHistoryRecord> history = s.Store.GetHistory(id).Where(h => !h.IsEvent).ToList();
+		Assert.Contains(history, h => h.Field == $"CostAdjustment.{garage}.Quantity" && h.NewValue == "400" && h.Via == SaveVia.Phone && h.ChangedBy == "Test Inspector");
+		Assert.Contains(history, h => h.Field == "Additional.2.Name" && h.NewValue == "Deck" && h.ChangedBy == "Test Inspector");
+
+		// Clearing a line: nulls are kept as empty, as an empty box on the Mac.
+		Assert.Equal(HttpStatusCode.OK, (await s.Post($"/api/assessments/{id}/costs", new
+		{
+			additional = new[] { new { line = 2, name = "", quantity = (decimal?)null, unitCost = (decimal?)null } },
+		})).StatusCode);
+		AdditionalAdjustmentRecord cleared = s.Store.LoadAssessment(id).AdditionalAdjustments.Single(x => x.zOrder == 2);
+		Assert.Null(cleared.AdjustmentName);
+		Assert.Null(cleared.Quantity);
+	}
+
+	// ───────────────────────── Status ─────────────────────────
+
+	[Fact]
+	public async Task Status_MovesBetweenDraftAndReviewed_WithTheInspectorInHistory()
+	{
+		await using PhoneSession s = new PhoneSession();
+		await s.PairAsync("Test Inspector");
+		JsonElement draft = await PhoneSession.Json(await s.Client.GetAsync($"/api/assessments/{s.AssessmentId}", Ct));
+		Assert.Equal("Draft", draft.GetProperty("statusValue").GetString());
+		Assert.Equal(new[] { "Draft", "Reviewed" }, draft.GetProperty("statusChoices").EnumerateArray().Select(c => c.GetProperty("id").GetString()).ToArray());
+
+		HttpResponseMessage res = await s.Post($"/api/assessments/{s.AssessmentId}/status", new { status = "Reviewed" });
+		Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+		Assert.Equal("Reviewed", (await PhoneSession.Json(res)).GetProperty("statusValue").GetString());
+		AssessmentStatusRecord status = s.Store.GetStatus(s.AssessmentId);
+		Assert.Equal(AssessmentStatus.Reviewed, status.Value);
+		Assert.Equal("Test Inspector", status.ChangedBy);
+		EditHistoryRecord h = Assert.Single(s.Store.GetHistory(s.AssessmentId), x => x.Field == "Status");
+		Assert.Equal(SaveVia.Phone, h.Via);
+		Assert.Equal("Test Inspector", h.ChangedBy);
+		Assert.Equal("Reviewed", h.NewValue);
+
+		Assert.Equal(HttpStatusCode.OK, (await s.Post($"/api/assessments/{s.AssessmentId}/status", new { status = "Draft" })).StatusCode);
+		Assert.Equal(AssessmentStatus.Draft, s.Store.GetStatus(s.AssessmentId).Value);
+	}
+
+	[Fact]
+	public async Task Status_ThroughAWriterWithoutItsOwnStatusMethod_StillSavesAndCatchesTheEditorUp()
+	{
+		await using PhoneSession s = new PhoneSession();
+		PlainWriter writer = new PlainWriter(new DirectFieldWriter(() => s.Store));
+		FieldServer server = new FieldServer(() => s.Store, writer);
+		await server.StartAsync(new FieldServerOptions { BindAddress = IPAddress.Loopback, TempFolder = Path.Combine(s.Db.Folder, "phone-temp3") });
+		try
+		{
+			using HttpClient phone = new HttpClient(new HttpClientHandler { CookieContainer = new CookieContainer() }) { BaseAddress = server.BaseAddress };
+			HttpRequestMessage pair = new HttpRequestMessage(HttpMethod.Post, "/api/pair") { Content = JsonContent.Create(new { token = server.Pairing.Current.Token, name = "Test Inspector" }) };
+			pair.Headers.Add(FieldServer.CsrfHeader, "1");
+			Assert.Equal(HttpStatusCode.OK, (await phone.SendAsync(pair, Ct)).StatusCode);
+			HttpRequestMessage set = new HttpRequestMessage(HttpMethod.Post, $"/api/assessments/{s.AssessmentId}/status") { Content = JsonContent.Create(new { status = "Reviewed" }) };
+			set.Headers.Add(FieldServer.CsrfHeader, "1");
+			Assert.Equal(HttpStatusCode.OK, (await phone.SendAsync(set, Ct)).StatusCode);
+			Assert.Equal(AssessmentStatus.Reviewed, s.Store.GetStatus(s.AssessmentId).Value);
+			// Once before (to save an open editor) and once after (to catch it up), neither writing anything.
+			Assert.Equal(2, writer.Applied);
+			Assert.DoesNotContain(s.Store.GetHistory(s.AssessmentId), x => !x.IsEvent && x.Field != "Status");
+		}
+		finally
+		{
+			await server.StopAsync();
+		}
+	}
+
+	/// <summary>A writer with only the two required methods, so the interface's own status method runs.</summary>
+	private sealed class PlainWriter(IFieldWriter inner) : IFieldWriter
+	{
+		public int Applied { get; private set; }
+
+		public Task<AssessmentFile> ApplyAsync(Guid assessmentId, Action<AssessmentFile> change, SaveContext context)
+		{
+			Applied++;
+			return inner.ApplyAsync(assessmentId, change, context);
+		}
+
+		public Task<AssessmentFile> AddAsync(AssessmentFile file, SaveContext context) => inner.AddAsync(file, context);
+	}
+
+	[Fact]
+	public async Task Status_OutsideDraftAndReviewed_IsShownButNotOffered()
+	{
+		await using PhoneSession s = new PhoneSession();
+		await s.PairAsync();
+		s.Store.SetStatus(s.AssessmentId, AssessmentStatus.Appeal);
+		JsonElement view = await PhoneSession.Json(await s.Client.GetAsync($"/api/assessments/{s.AssessmentId}", Ct));
+		Assert.Equal("Appeal", view.GetProperty("status").GetString());
+		Assert.Equal(0, view.GetProperty("statusChoices").GetArrayLength());
+		Assert.Contains("changed on the Mac", view.GetProperty("statusNote").GetString());
+		s.Store.SetStatus(s.AssessmentId, AssessmentStatus.Final);
+		JsonElement final = await PhoneSession.Json(await s.Client.GetAsync($"/api/assessments/{s.AssessmentId}", Ct));
+		Assert.Equal(0, final.GetProperty("statusChoices").GetArrayLength());
+	}
+
+	// ───────────────────────── A second assessment ─────────────────────────
+
+	[Fact]
+	public async Task AnotherAssessment_IsStarted_ForAReinspection_WithHistory()
+	{
+		await using PhoneSession s = new PhoneSession();
+		await s.PairAsync("Test Inspector");
+		Guid propertyId = s.Assessment.Property.PropertyID;
+		Assert.Equal(HttpStatusCode.OK, (await s.Change("Assessment.InspectorName", "First Inspector")).StatusCode);
+		// The first one is Final: a re-inspection is how the structure is looked at again, as on the Mac.
+		s.Store.SetStatus(s.AssessmentId, AssessmentStatus.Final);
+
+		HttpResponseMessage res = await s.Post($"/api/properties/{propertyId}/assessments", new { another = true });
+		Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+		JsonElement view = await PhoneSession.Json(res);
+		Guid second = Guid.Parse(view.GetProperty("assessmentId").GetString());
+		Assert.NotEqual(s.AssessmentId, second);
+		Assert.False(view.GetProperty("locked").GetBoolean());
+		Assert.Equal("Draft", view.GetProperty("statusValue").GetString());
+		Assert.Equal(2, view.GetProperty("assessments").GetArrayLength());
+		Assert.True(view.GetProperty("assessments").EnumerateArray().Single(a => a.GetProperty("assessmentId").GetString() == second.ToString()).GetProperty("current").GetBoolean());
+
+		List<AssessmentRecord> all = s.Store.GetAssessmentsForProperty(propertyId);
+		Assert.Equal(2, all.Count);
+		AssessmentFile added = s.Store.LoadAssessment(second);
+		Assert.Equal(propertyId, added.Property.PropertyID);
+		Assert.Null(added.Assessment.InspectorName);     // its own fields start blank
+		Assert.Equal("Sample Road", added.Property.StreetName);   // the structure's are shared
+		EditHistoryRecord created = Assert.Single(s.Store.GetHistory(second), h => h.IsEvent && h.AssessmentID == second);
+		Assert.Equal(SdeStore.CreatedEvent, created.Label);
+		Assert.Equal(SaveVia.Phone, created.Via);
+		Assert.Equal("Test Inspector", created.ChangedBy);
+		// The Final one is untouched, and the new one's own fields can be filled in.
+		Assert.Equal(AssessmentStatus.Final, s.Store.GetStatus(s.AssessmentId).Value);
+		Assert.Equal(HttpStatusCode.OK, (await s.Change(second, "Assessment.InspectorName", "Second Inspector")).StatusCode);
+		Assert.Equal("First Inspector", s.Store.LoadAssessment(s.AssessmentId).Assessment.InspectorName);
 	}
 
 	[Fact]

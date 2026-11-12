@@ -47,10 +47,12 @@ public class ShellTests
 	public void Sidebar_IsASourceList_WithCountsOnStructuresAndRecentlyDeleted()
 	{
 		using UiSession ui = WithSamples();
-		Assert.Equal(new[] { "Library", "Events", "Workflow" }, ui.Main.SourceSections.Select(s => s.Title));
+		// 3.5: Pinned, Saved Views and Tags (hidden while empty) follow Library, and Data holds Import & Export and Recently Deleted.
+		Assert.Equal(new[] { "Library", "Pinned", "Saved Views", "Tags", "Events", "Workflow", "Data" }, ui.Main.SourceSections.Select(s => s.Title));
 		Assert.Equal(new[] { "All Structures", "Substantially Damaged", "Near Threshold", "Not Substantial", "Incomplete" },
 			ui.Main.SourceSections[0].Rows.OfType<SourceRowViewModel>().Select(r => r.Title));
-		Assert.Equal(new[] { "Review", "Compliance", "Assignments" }, ui.Main.SourceSections[2].Rows.OfType<NavItemViewModel>().Select(r => r.Title));
+		Assert.Equal(new[] { "Review", "Compliance", "Agenda", "Assignments" }, ui.Main.SourceSections.Single(s => s.Title == "Workflow").Rows.OfType<NavItemViewModel>().Select(r => r.Title));
+		Assert.Equal(new[] { "Import & Export", "Recently Deleted" }, ui.Main.SourceSections.Single(s => s.Title == "Data").Rows.OfType<NavItemViewModel>().Select(r => r.Title));
 		NavItemViewModel structures = ui.Main.SidebarItems.Single(i => i.Page == Page.Structures);
 		NavItemViewModel trash = ui.Main.SidebarItems.Single(i => i.Page == Page.Trash);
 		Assert.Equal(ui.Store.Counts().Properties, structures.Count);

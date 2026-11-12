@@ -11,15 +11,30 @@ public partial class ImportExportView : UserControl
 	{
 		InitializeComponent();
 		DragDrop.SetAllowDrop(this, true);
-		AddHandler(DragDrop.DragOverEvent, (_, e) => e.DragEffects = e.DataTransfer.TryGetFiles() is { Length: 1 } ? DragDropEffects.Copy : DragDropEffects.None);
+		AddHandler(DragDrop.DragOverEvent, OnDragOver);
+		AddHandler(DragDrop.DragLeaveEvent, (_, _) => ShowDragOver(false));
 		AddHandler(DragDrop.DropEvent, OnDrop);
 	}
 
+	/// <summary>One file over the page: this page takes it (handled, so the window's drop overlay stays away).</summary>
+	private void OnDragOver(object sender, DragEventArgs e)
+	{
+		bool one = e.DataTransfer.TryGetFiles() is { Length: 1 };
+		e.DragEffects = one ? DragDropEffects.Copy : DragDropEffects.None;
+		e.Handled = one;
+		ShowDragOver(one);
+	}
+
+	/// <summary>Tints the drop zone while a file is held over the page.</summary>
+	private void ShowDragOver(bool over) => DropZone.Classes.Set("dragOver", over);
+
 	private async void OnDrop(object sender, DragEventArgs e)
 	{
+		ShowDragOver(false);
 		if (e.DataTransfer.TryGetFiles() is { Length: 1 } files && files[0].TryGetLocalPath() is string path && DataContext is ImportExportViewModel vm)
 		{
-			await vm.LoadPendingAsync(path);
+			e.Handled = true;
+			await vm.DropAsync(path);
 		}
 	}
 }

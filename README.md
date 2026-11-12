@@ -20,7 +20,7 @@ with permissions you control, edit history and automatic backups.
 </picture>
 
 **[Download the latest release](../../releases/latest)** · [User guide](docs/USER-GUIDE.md) ·
-[What's new in 3.0](docs/WHATS-NEW-3.0.md) · [Report a problem](../../issues/new/choose)
+[What's new in 3.5](docs/WHATS-NEW-3.5.md) · [Report a problem](../../issues/new/choose)
 
 ## Contents
 - [Who it's for](#who-its-for)
@@ -69,19 +69,22 @@ both directions.
   daily backups.
 
 ## Finding your way around
-SDE 3.0 is laid out like other Mac apps. [What's new in 3.0](docs/WHATS-NEW-3.0.md) lists where everything from 2.5
-moved.
+SDE 3.5 sits in a navy frame: the sidebar and the toolbar around a bright working area. [What's new in
+3.5](docs/WHATS-NEW-3.5.md) lists what is new and where everything from 3.0 moved.
 
 - **The sidebar** lists your structures: **All Structures**, then smart groups (Substantially Damaged, Near
-  Threshold, Not Substantial, Incomplete) with counts, each **event** in the database, the **Review**, **Compliance**
-  and **Assignments** queues, and **Recently Deleted**.
+  Threshold, Not Substantial, Incomplete) with counts, then your **pinned** structures, **saved views**, **tags** and
+  **events**, the **Review**, **Compliance**, **Agenda** and **Assignments** pages, **Import & Export** and **Recently
+  Deleted**, with **Settings** at the foot. Drag its edge to make it wider.
 - **The toolbar** switches Structures between **List**, **Map** and **Summary** (⌘1, ⌘2, ⌘3), holds the open page's
   actions, makes new structures with the **New** pull-down, and searches the list.
-- **The inspector** at the right of Structures and Review shows the selected row (⌥⌘I hides it). While an assessment
-  is open, the sidebar lists its eight sections.
+- **The inspector** at the right of a page shows the selected row, led by its percent damaged on a staff gauge
+  (⌥⌘I hides it). While an assessment is open, the sidebar lists its eight sections. Each structure also has a
+  **Case File** with everything that happened to it.
 - **The menus** hold everything else: databases and imports in **File**, the pages in **View** (⌘1 to ⌘8), events
   and the event summary in **Event**, and **Settings** in the SDE menu (⌘,).
-- **The look follows your Mac**: light or dark, and the accent colour set in System Settings › Appearance.
+- **Settings › Appearance** chooses light, dark or matching your Mac, SDE's blue or your Mac's accent colour, and
+  Comfortable or Compact sizes.
 
 ## Install
 
@@ -90,6 +93,8 @@ moved.
 - About 200 MB of disk space for the app, plus room for your photos.
 - An internet connection for online maps and layers, optional online look-ups and USGS high-water marks. See
   [SECURITY.md](SECURITY.md#what-sde-sends-over-the-internet) for what these services receive.
+- SDE never checks for updates by itself. Only when you choose **Help > Check for Updates** does it ask GitHub for the
+  latest release, sending the app's name and version and nothing about your data. It downloads and installs nothing.
 
 ### Step by step
 1. **Check which kind of Mac you have.** Open the Apple menu (top-left corner) and choose **About This Mac**. If it says **Chip: Apple M1** (or
@@ -227,7 +232,7 @@ unedited as the tests' answer key. Those folders are ignored by git and must nev
 - [Importing inspections or parcels](docs/IMPORTING.md): profiles, matching, updates and the submission folder in detail.
 - [Owner letters](docs/LETTERS.md): templates and every placeholder.
 - [Phone form](docs/PHONE-FORM.md): setup, pairing, and what it does and doesn't protect against.
-- What's new in [3.0](docs/WHATS-NEW-3.0.md), [2.5](docs/WHATS-NEW-2.5.md) and [2.0](docs/WHATS-NEW-2.0.md).
+- What's new in [3.5](docs/WHATS-NEW-3.5.md), [3.0](docs/WHATS-NEW-3.0.md), [2.5](docs/WHATS-NEW-2.5.md) and [2.0](docs/WHATS-NEW-2.0.md).
 - [AI assistants (MCP)](docs/MCP.md): connecting Claude Desktop or Claude Code, and every tool.
 
 **For developers and reviewers**
@@ -238,6 +243,7 @@ unedited as the tests' answer key. Those folders are ignored by git and must nev
 - [Windows cross-check kit](docs/windows-crosscheck/README.md): about an hour to compare results with FEMA's SDE on
   Windows.
 - [Releasing](docs/RELEASING.md): how releases are built, signed and published.
+- [Design language](docs/design/DESIGN-LANGUAGE.md): the rules behind the 3.5 look, and the tests that enforce them.
 
 ## Contributing, security and license
 Contributions are welcome; read [CONTRIBUTING.md](CONTRIBUTING.md) first, because results must stay identical to

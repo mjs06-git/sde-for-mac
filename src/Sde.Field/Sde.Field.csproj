@@ -18,6 +18,9 @@
 
   <ItemGroup>
     <EmbeddedResource Include="wwwroot/*" LogicalName="Sde.Field.wwwroot.%(Filename)%(Extension)" />
+    <!-- Public Sans for the page, served at /fonts/. Linked from the reports' copy (SIL OFL 1.1, see its OFL.txt). -->
+    <EmbeddedResource Include="../Sde.Reports/Fonts/PublicSans-Regular.ttf;../Sde.Reports/Fonts/PublicSans-SemiBold.ttf"
+                      Link="wwwroot/fonts/%(Filename)%(Extension)" LogicalName="Sde.Field.wwwroot.fonts.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

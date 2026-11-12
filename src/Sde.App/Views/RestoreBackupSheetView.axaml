@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.RestoreBackupSheetView"
+             x:DataType="sh:RestoreBackupSheetViewModel">
+  <StackPanel Spacing="16">
+    <TextBlock Text="{Binding Intro}" TextWrapping="Wrap" />
+    <ListBox Classes="sheetList" ItemsSource="{Binding Backups}" SelectedItem="{Binding Selected}" MaxHeight="320" IsVisible="{Binding HasBackups}"
+             AutomationProperties.Name="Backups">
+      <ListBox.ItemTemplate>
+        <DataTemplate DataType="sh:BackupRowViewModel">
+          <StackPanel>
+            <TextBlock Classes="medium" Text="{Binding When}" />
+            <TextBlock Classes="muted" Text="{Binding Detail}" />
+          </StackPanel>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+    <TextBlock Classes="secondary" Text="There are no backups yet." IsVisible="{Binding !HasBackups}" />
+    <c:SheetFooter PrimaryText="Restore…" PrimaryCommand="{Binding RestoreCommand}" IsPrimaryDestructive="True">
+      <Button Classes="link" Content="Show the Backups Folder" Command="{Binding ShowFolderCommand}" />
+    </c:SheetFooter>
+  </StackPanel>
+</UserControl>

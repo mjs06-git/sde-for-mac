@@ -79,6 +79,10 @@ public sealed partial class MapCanvas : Panel, IDisposable
 	private IReadOnlyList<MapMarker> _markers = Array.Empty<MapMarker>();
 	private IReadOnlyList<object> _layers = Array.Empty<object>();
 	private IReadOnlyCollection<Guid> _selectedMarkers = Array.Empty<Guid>();
+	private IReadOnlyList<MapClusterMark> _clusters;
+	private bool _markersHidden;
+	private IReadOnlyList<MapRasterOverlay> _rasters = Array.Empty<MapRasterOverlay>();
+	private readonly Dictionary<MapRasterOverlay, MemoryLayer> _rasterLayers = new Dictionary<MapRasterOverlay, MemoryLayer>(ReferenceEqualityComparer.Instance);
 	private Point? _pressedAt;
 	private bool _boxing;
 	private bool _moved;
@@ -87,6 +91,7 @@ public sealed partial class MapCanvas : Panel, IDisposable
 	static MapCanvas()
 	{
 		MapLabelRenderer.Register();
+		MapClusterRenderer.Register();
 		FocusableProperty.OverrideDefaultValue<MapCanvas>(true);
 		ClipToBoundsProperty.OverrideDefaultValue<MapCanvas>(true);
 		Mapsui.Logging.Logger.LogDelegate = (level, message, ex) =>
@@ -190,6 +195,50 @@ public sealed partial class MapCanvas : Panel, IDisposable
 		}
 	}
 
+	/// <summary>
+	/// The structures as clusters (the Map page's "Show as Clusters"), or null to draw a dot for each marker. Clicking a
+	/// cluster of more than one raises <see cref="ClusterClicked"/>; a cluster of one is its structure's own dot.
+	/// </summary>
+	public IReadOnlyList<MapClusterMark> Clusters
+	{
+		get => _clusters;
+		set
+		{
+			_clusters = value;
+			ShowMarkers();
+		}
+	}
+
+	/// <summary>True to leave the structure dots out (under a heat map); clicks then don't hit them, boxes still select them.</summary>
+	public bool MarkersHidden
+	{
+		get => _markersHidden;
+		set
+		{
+			if (_markersHidden != value)
+			{
+				_markersHidden = value;
+				ShowMarkers();
+			}
+		}
+	}
+
+	/// <summary>Pictures drawn over the page's layers and under the structures (the water surface, the heat map), bottom first.</summary>
+	public IReadOnlyList<MapRasterOverlay> Rasters
+	{
+		get => _rasters;
+		set
+		{
+			_rasters = value ?? Array.Empty<MapRasterOverlay>();
+			foreach (MapRasterOverlay gone in _rasterLayers.Keys.Where(k => !_rasters.Contains(k)).ToList())
+			{
+				_rasterLayers[gone].Dispose();
+				_rasterLayers.Remove(gone);
+			}
+			Arrange();
+		}
+	}
+
 	/// <summary>How structure labels look (their text is each marker's Label); null for no labels.</summary>
 	public Sde.Gis.Styles.LabelStyle MarkerLabels
 	{
@@ -268,6 +317,9 @@ public sealed partial class MapCanvas : Panel, IDisposable
 	/// <summary>The map moved or zoomed.</summary>
 	public event Action ViewChanged;
 
+	/// <summary>A cluster of structures was clicked: the area its members cover.</summary>
+	public event Action<MapExtent> ClusterClicked;
+
 	// ───────────── View ─────────────
 
 	public void SetView(double latitude, double longitude, double zoom)
@@ -294,6 +346,9 @@ public sealed partial class MapCanvas : Panel, IDisposable
 		Refresh();
 	}
 
+	/// <summary>The margin, in pixels in all, that <see cref="FitToMarkers"/> leaves round the dots, clear of the page's floating controls.</summary>
+	public const double FitMargin = 170;
+
 	/// <summary>Shows every dot (or the whole country when there are none).</summary>
 	public void FitToMarkers()
 	{
@@ -302,7 +357,8 @@ public sealed partial class MapCanvas : Panel, IDisposable
 			SetView(38.5, -96.0, 4);
 			return;
 		}
-		FitTo(new MapExtent(_markers.Min(m => m.Longitude), _markers.Min(m => m.Latitude), _markers.Max(m => m.Longitude), _markers.Max(m => m.Latitude)), 17);
+		// A wide margin: the page's floating controls sit in the corners and along the edges.
+		FitTo(new MapExtent(_markers.Min(m => m.Longitude), _markers.Min(m => m.Latitude), _markers.Max(m => m.Longitude), _markers.Max(m => m.Latitude)), 17, FitMargin);
 	}
 
 	/// <summary>Shows an area (with a margin of <paramref name="margin"/> pixels in all), no closer than <paramref name="maxZoom"/>.</summary>
@@ -351,7 +407,7 @@ public sealed partial class MapCanvas : Panel, IDisposable
 	public Guid? MarkerAt(Point p)
 	{
 		double resolution = Viewport.Resolution;
-		if (_markers.Count == 0 || !(resolution > 0))
+		if (_markers.Count == 0 || _markersHidden || !(resolution > 0))
 		{
 			return null;
 		}
@@ -371,6 +427,32 @@ public sealed partial class MapCanvas : Panel, IDisposable
 			}
 		}
 		return best < 0 ? null : _markers[best].Id;
+	}
+
+	/// <summary>The cluster of more than one structure under a point (the nearest when circles touch), or null.</summary>
+	public MapClusterMark ClusterAt(Point p)
+	{
+		if (_clusters == null || _markersHidden)
+		{
+			return null;
+		}
+		MapClusterMark best = null;
+		double bestDistance = double.MaxValue;
+		foreach (MapClusterMark c in _clusters)
+		{
+			if (c.Count < 2)
+			{
+				continue;
+			}
+			(double sx, double sy) = Viewport.WorldToScreenXY(c.X, c.Y);
+			double d = Math.Sqrt((sx - p.X) * (sx - p.X) + (sy - p.Y) * (sy - p.Y));
+			if (d <= MapClusterStyle.DiameterFor(c.Count) / 2 + 3 && d < bestDistance)
+			{
+				best = c;
+				bestDistance = d;
+			}
+		}
+		return best;
 	}
 
 	/// <summary>The dots inside a rectangle of the control.</summary>
@@ -515,6 +597,15 @@ public sealed partial class MapCanvas : Panel, IDisposable
 				order.Add(o.Layer);
 			}
 		}
+		foreach (MapRasterOverlay raster in _rasters)
+		{
+			if (!_rasterLayers.TryGetValue(raster, out MemoryLayer drawn))
+			{
+				drawn = AnalysisLayers.Raster(raster);
+				_rasterLayers[raster] = drawn;
+			}
+			order.Add(drawn);
+		}
 		foreach (object layer in _layers)
 		{
 			if (layer is MapFeatureLayer spec && _built.TryGetValue(spec.Key, out BuiltFeatureLayer built))
@@ -629,8 +720,11 @@ public sealed partial class MapCanvas : Panel, IDisposable
 			metres[i] = (x, y);
 			index.Insert(new Envelope(x, x, y, y), i);
 		}
-		List<IFeature> features = StructureDots.Dots(_markers, _theme);
-		List<IFeature> labels = StructureDots.LabelPoints(_markers);
+		// A dot each, clusters, or nothing under a heat map; labels only beside plain dots.
+		List<IFeature> features = _markersHidden ? new List<IFeature>()
+			: _clusters != null ? AnalysisLayers.Clusters(_clusters, _markers, _theme)
+			: StructureDots.Dots(_markers, _theme);
+		List<IFeature> labels = _markersHidden || _clusters != null ? new List<IFeature>() : StructureDots.LabelPoints(_markers);
 		index.Build();
 		_markerIndex = index;
 		_markerMetres = metres;
@@ -639,7 +733,7 @@ public sealed partial class MapCanvas : Panel, IDisposable
 		_structures.Features = features;
 		_structures.DataHasChanged();
 		_structureLabels?.Dispose();
-		_structureLabels = _markerLabels == null ? null : StructureDots.LabelLayer(labels, _markerLabels, _theme);
+		_structureLabels = _markerLabels == null || labels.Count == 0 ? null : StructureDots.LabelLayer(labels, _markerLabels, _theme);
 		ShowRings();
 		Arrange();
 	}
@@ -807,6 +901,12 @@ public sealed partial class MapCanvas : Panel, IDisposable
 	/// <summary>True when a feature layer is drawn as raster tiles (for tests).</summary>
 	internal bool IsRasterized(string key) => _built.TryGetValue(key, out BuiltFeatureLayer b) && b.IsRasterized;
 
+	/// <summary>True when a picture with this key is among the engine's layers now (for tests).</summary>
+	internal bool HasRaster(string key) => _control != null && _rasters.Any(r => r.Key == key && _rasterLayers.TryGetValue(r, out MemoryLayer l) && _control.Map.Layers.Contains(l));
+
+	/// <summary>How many cluster circles (of more than one structure) the engine draws now (for tests).</summary>
+	internal int DrawnClusterCount => _structures?.Features.Count(f => f.Styles.Any(st => st is MapClusterStyle)) ?? 0;
+
 	/// <summary>The engine's map, for the performance test.</summary>
 	internal Map EngineMap => _control?.Map;
 
@@ -848,6 +948,11 @@ public sealed partial class MapCanvas : Panel, IDisposable
 			source.Dispose();
 		}
 		_overlays.Clear();
+		foreach (MemoryLayer raster in _rasterLayers.Values)
+		{
+			raster.Dispose();
+		}
+		_rasterLayers.Clear();
 		_basemapSource?.Dispose();
 		_basemapLayer?.Dispose();
 		_basemapLayer = null;
@@ -1024,6 +1129,12 @@ public sealed partial class MapCanvas : Panel, IDisposable
 			_sketch.Add(new LatLon(lat, lon));
 			DrawSketch();
 			SketchChanged?.Invoke(_sketch.ToList(), false);
+			return;
+		}
+		if (ClusterAt(at) is MapClusterMark cluster)
+		{
+			// A cluster opens up: the map zooms to its members.
+			ClusterClicked?.Invoke(cluster.Members);
 			return;
 		}
 		if (Drag == MapDrag.Box && SelectLayer != null && FeatureAt(at, SelectLayer) is (string target, Feature picked))

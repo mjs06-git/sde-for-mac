@@ -1,5 +1,8 @@
 # Unslop checklist (v3.0)
 
+> For 3.5 and later, the rulebook is [DESIGN-LANGUAGE.md](DESIGN-LANGUAGE.md). This page records how 3.0 got there;
+> its copy rules still apply.
+
 The v3.0 goal was for SDE to look and behave like a native Mac tool rather than a generic web or SaaS template. The
 tables pair patterns found in the 2.5 UI with proposed Mac-native replacements. The outcome below records where the
 finished design differed; `tests/Sde.App.Tests/StyleGuardTests.cs` enforces the mechanical checks listed there.

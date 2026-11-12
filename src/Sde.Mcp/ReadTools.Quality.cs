@@ -85,12 +85,22 @@ public sealed partial class ReadTools
 					Describe.Shorten(f.Dismissal?.Reason), f.Dismissal?.DismissedBy, Describe.Date(f.Dismissal?.DismissedOn))).ToList());
 		}).ToList();
 		string next = page < pages ? $"Showing page {page} of {pages}. For more, call qa_check again with page = {page + 1} and the same arguments." : null;
-		string note = "The flood map zone and high-water mark checks need a flood map lookup or a marks file, so they run only in SDE's Review page.";
+		List<QaNotCheckedItem> notChecked = QaRules.NotChecked(input)
+			.Where(n => onlyRule == null || n.RuleId == onlyRule.Id)
+			.Select(n => new QaNotCheckedItem(n.RuleId, n.Title, n.Reason.ToString(), n.Message, n.CanCheckOnline, n.Count)).ToList();
+		string note = notChecked.Count == 0 ? "" : "Not everything was checked, and nothing was looked up online: "
+			+ string.Join("; ", notChecked.Select(n => n.Reason switch
+			{
+				nameof(QaNotCheckedReason.NoStoredFloodLookup) => "the flood map zone check has no stored flood lookup" + (n.Count > 0 ? $" for {n.Count} structures" : ""),
+				nameof(QaNotCheckedReason.NoHighWaterMarks) => "the high-water mark check has no stored marks" + (n.Count > 0 ? $" for {n.Count} assessments" : ""),
+				nameof(QaNotCheckedReason.StaleFloodLookup) => "the flood map zone check found that " + (n.Count > 0 ? $"{n.Count} structures have" : "the structures have") + " moved since their stored flood lookup",
+				_ => n.Title + " was not checked",
+			})) + ". SDE's Review page can look them up online.";
 		if (dismissed > 0 && !includeDismissed)
 		{
-			note += $" {dismissed} finding{(dismissed == 1 ? " was" : "s were")} set aside in SDE and {(dismissed == 1 ? "isn't" : "aren't")} listed (includeDismissed lists them).";
+			note += $"{(note.Length > 0 ? " " : "")}{dismissed} finding{(dismissed == 1 ? " was" : "s were")} set aside in SDE and {(dismissed == 1 ? "isn't" : "aren't")} listed (includeDismissed lists them).";
 		}
-		return new QaCheckResult(sde.DatabasePath, scope, input.Assessments.Count, listed.Count, dismissed, includeDismissed, page, pageSize, pages, rules, groups, next, note);
+		return new QaCheckResult(sde.DatabasePath, scope, input.Assessments.Count, listed.Count, dismissed, includeDismissed, page, pageSize, pages, rules, groups, next, note, notChecked);
 	}
 
 	/// <summary>What a finding is about: the structure's address, or the event's name.</summary>
@@ -175,17 +185,20 @@ public sealed partial class ReadTools
 				&& (inEvent == null || (c.AssessmentID is Guid a && inEvent.Contains(a)));
 		}).ToList();
 		int pages = Math.Max(1, (rows.Count + pageSize - 1) / pageSize);
-		List<ComplianceItem> items = rows.Skip((page - 1) * pageSize).Take(pageSize).Select(r =>
-		{
-			ComplianceCaseRecord c = r.Case;
-			return new ComplianceItem(c.CaseID.ToString(), c.Kind, c.AssessmentID?.ToString(), c.PropertyID.ToString(), Blank(r.Address) ?? "(no address)", Blank(r.City),
-				Blank(r.ParcelNumber), Blank(Describe.Shorten(r.Owner, 120)), CompliancePaths.Label(c.Path), Blank(c.PermitNumber), Describe.Date(c.PermitIssuedOn),
-				Describe.Date(c.Deadline), r.IsOverdue, r.DaysOverdue, Blank(c.IccClaimNumber), IccStatuses.Label(c.IccStatus), c.IccAmount,
-				Describe.Date(c.EcReceivedOn), Describe.Date(c.FinalInspectionOn), Describe.Date(c.ComplianceCertOn), c.Status ?? ComplianceStatuses.Open,
-				Describe.Date(c.ClosedOn), Describe.Shorten(Blank(c.ClosedReason)), Describe.Shorten(Blank(c.Notes)));
-		}).ToList();
+		List<ComplianceItem> items = rows.Skip((page - 1) * pageSize).Take(pageSize).Select(CaseItem).ToList();
 		string next = page < pages ? $"Showing page {page} of {pages}. For more, call list_compliance_cases again with page = {page + 1} and the same filters." : null;
 		return new CompliancePage(sde.DatabasePath, rows.Count, rows.Count(r => r.Case.IsOpen), rows.Count(r => r.IsOverdue), rows.Count(r => !r.Case.IsOpen),
 			page, pageSize, pages, items, next);
+	}
+
+	/// <summary>A compliance case as list_compliance_cases and get_compliance_case show it.</summary>
+	private static ComplianceItem CaseItem(ComplianceRow r)
+	{
+		ComplianceCaseRecord c = r.Case;
+		return new ComplianceItem(c.CaseID.ToString(), c.Kind, c.AssessmentID?.ToString(), c.PropertyID.ToString(), Blank(r.Address) ?? "(no address)", Blank(r.City),
+			Blank(r.ParcelNumber), Blank(Describe.Shorten(r.Owner, 120)), CompliancePaths.Label(c.Path), Blank(c.PermitNumber), Describe.Date(c.PermitIssuedOn),
+			Describe.Date(c.Deadline), r.IsOverdue, r.DaysOverdue, Blank(c.IccClaimNumber), IccStatuses.Label(c.IccStatus), c.IccAmount,
+			Describe.Date(c.EcReceivedOn), Describe.Date(c.FinalInspectionOn), Describe.Date(c.ComplianceCertOn), c.Status ?? ComplianceStatuses.Open,
+			Describe.Date(c.ClosedOn), Describe.Shorten(Blank(c.ClosedReason)), Describe.Shorten(Blank(c.Notes)));
 	}
 }

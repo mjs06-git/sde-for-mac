@@ -4,23 +4,31 @@
     Design tokens: the only place colours, type sizes, spacing, radii and control heights are set. Views use these
     names (or the classes in Styles/), never literal values; StyleGuardTests checks that. Text colours keep at least
     4.5:1 contrast on the backgrounds they are used on, in both themes (ContrastTests).
+
+    The 3.5 look ("High-Water") comes from the app icon. A deep navy frame (the sidebar and the title band, in both
+    themes) surrounds bright content; a strong water blue is the accent; the staff gauge's red is kept for substantial
+    damage, errors and destructive actions. The frame has its own text colours (TextOnFrame and so on). The sizes here
+    are the Comfortable density; Styles/Density.Compact.axaml overrides them when Compact is chosen in Settings.
+    docs/design/DESIGN-LANGUAGE.md has the rules.
   -->
 
-  <!-- The accent when the Mac doesn't report one (tests, other platforms): the Mac's default blue, darkened for 4.5:1.
-       On a Mac, Services/SystemAccent recolours every accent brush from the System Settings accent. -->
-  <Color x:Key="AccentFallbackColor">#0A64D6</Color>
+  <!-- The brand accent: a strong water blue, at 5.5:1 under white text. Services/SystemAccent recolours
+       every accent brush from the Mac's own accent instead when "Use the Mac's accent colour" is on in Settings. -->
+  <Color x:Key="AccentFallbackColor">#1769C2</Color>
 
   <!-- Behind the phone form's QR code: always white, in both themes, so a phone camera can read it -->
   <SolidColorBrush x:Key="QrBackground" Color="#FFFFFF" />
 
-  <!-- Type ramp (the Mac system font, SF Pro): caption 11, footnote 12, body 13, subheadline 15, title 17, large title 22, display 26 -->
+  <!-- Type ramp (Public Sans): caption 11, footnote 12, body 13, subheadline 15, title 18, large title 24, display 30 -->
   <x:Double x:Key="FontSizeCaption">11</x:Double>
   <x:Double x:Key="FontSizeFootnote">12</x:Double>
   <x:Double x:Key="FontSizeBody">13</x:Double>
   <x:Double x:Key="FontSizeSubheadline">15</x:Double>
-  <x:Double x:Key="FontSizeTitle">17</x:Double>
-  <x:Double x:Key="FontSizeLargeTitle">22</x:Double>
-  <x:Double x:Key="FontSizeDisplay">26</x:Double>
+  <x:Double x:Key="FontSizeTitle">18</x:Double>
+  <x:Double x:Key="FontSizeLargeTitle">24</x:Double>
+  <x:Double x:Key="FontSizeDisplay">30</x:Double>
+  <!-- The hero figure: the percent damaged on the dark result card, and the Summary's headline -->
+  <x:Double x:Key="FontSizeHero">44</x:Double>
   <!-- Weights, for the rare place a class can't go (a Run inside a TextBlock); elsewhere use the medium, semibold and bold classes -->
   <FontWeight x:Key="FontWeightRegular">Normal</FontWeight>
   <FontWeight x:Key="FontWeightMedium">Medium</FontWeight>
@@ -40,53 +48,77 @@
   <Thickness x:Key="CardPaddingCompact">12,10</Thickness>
   <Thickness x:Key="SheetPadding">24,20</Thickness>
 
-  <!-- Corner radii (macOS): controls 5, grouped boxes and sheets 8, pills fully round (being retired) -->
-  <CornerRadius x:Key="RadiusControl">5</CornerRadius>
-  <CornerRadius x:Key="RadiusCard">8</CornerRadius>
+  <!-- Corner radii: small parts inside a control 5, controls 7, grouped boxes 12, sheets 14, counts and switches fully round -->
+  <CornerRadius x:Key="RadiusSmall">5</CornerRadius>
+  <CornerRadius x:Key="RadiusControl">7</CornerRadius>
+  <CornerRadius x:Key="RadiusCard">12</CornerRadius>
+  <CornerRadius x:Key="RadiusSheet">14</CornerRadius>
+  <CornerRadius x:Key="RadiusSheetAttached">0,0,14,14</CornerRadius>
   <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+  <!-- The content panel's top-left corner, where the navy frame wraps round the bright content -->
+  <CornerRadius x:Key="RadiusContent">14,0,0,0</CornerRadius>
 
-  <!-- Control heights (macOS): small 19, regular 22, large 28 (toolbar items) -->
-  <x:Double x:Key="ControlHeightSmall">19</x:Double>
-  <x:Double x:Key="ControlHeight">22</x:Double>
-  <x:Double x:Key="ControlHeightLarge">28</x:Double>
+  <!-- Control heights (Comfortable): small 22, regular 28, large 32 (toolbar items). Compact: 19, 22, 28 -->
+  <x:Double x:Key="ControlHeightSmall">22</x:Double>
+  <x:Double x:Key="ControlHeight">28</x:Double>
+  <x:Double x:Key="ControlHeightLarge">32</x:Double>
   <x:Double x:Key="IconSize">16</x:Double>
   <x:Double x:Key="IconSizeSmall">14</x:Double>
   <x:Double x:Key="IconSizeLarge">20</x:Double>
 
-  <!-- Shell -->
-  <x:Double x:Key="SidebarWidth">220</x:Double>
-  <x:Double x:Key="TitleBandHeight">52</x:Double>
-  <x:Double x:Key="TableRowHeight">24</x:Double>
+  <!-- Shell. The sidebar and the inspectors are resizable between their min and max (a double-click on the edge goes
+       back to the default width); MainViewModel.Layout reads these. -->
+  <x:Double x:Key="SidebarWidth">232</x:Double>
+  <x:Double x:Key="SidebarMinWidth">184</x:Double>
+  <x:Double x:Key="SidebarMaxWidth">380</x:Double>
+  <x:Double x:Key="InspectorWidth">288</x:Double>
+  <x:Double x:Key="InspectorMinWidth">240</x:Double>
+  <x:Double x:Key="InspectorMaxWidth">460</x:Double>
+  <x:Double x:Key="ResizeHandleWidth">5</x:Double> <!-- the invisible strip on a sidebar's or inspector's edge that drags it -->
+  <x:Double x:Key="TitleBandHeight">56</x:Double> <!-- the toolbar across the top; the sidebar's title strip matches it -->
+  <!-- Room for the window's close, minimise and zoom buttons, before the show-sidebar button while the sidebar is hidden -->
+  <Thickness x:Key="TrafficLightInset">68,0,0,0</Thickness>
+  <!-- A sheet hangs from the title band's lower edge (its top is TitleBandHeight) -->
+  <Thickness x:Key="SheetMargin">40,56,40,40</Thickness>
+  <!-- Toasts sit this far above the window's bottom edge, centred over the page (not the sidebar) -->
+  <Thickness x:Key="ToastMargin">0,0,0,20</Thickness>
+  <x:Double x:Key="TableRowHeight">36</x:Double>
+  <x:Double x:Key="TableHeaderHeight">36</x:Double>
+  <x:Double x:Key="ScopeBarHeight">40</x:Double> <!-- the filter strip above a table (small controls, 9 px above and below) -->
+  <x:Double x:Key="StatusBarHeight">28</x:Double> <!-- the count and sort line under a table -->
+  <x:Double x:Key="StepBadgeSize">22</x:Double> <!-- the round step number in the editor's outline -->
+  <x:Double x:Key="GaugeMiniWidth">56</x:Double> <!-- the staff gauge in a table cell -->
+  <x:Double x:Key="ChartHeight">184</x:Double> <!-- the Summary's damage distribution and progress charts -->
   <x:Double x:Key="SheetWidthSmall">440</x:Double>
   <x:Double x:Key="SheetWidthMedium">600</x:Double>
   <x:Double x:Key="SheetWidthLarge">800</x:Double>
 
-  <!-- Fluent's sizes, brought to the Mac's 13 pt, 22 px scale (DensityStyle="Compact" alone gives 14 pt and 24 px inputs) -->
-  <FontFamily x:Key="ContentControlThemeFontFamily">.AppleSystemUIFont, fonts:Inter#Inter</FontFamily>
+  <!-- Fluent's sizes, brought to the app's 13 pt, 28 px scale (DensityStyle="Compact" alone gives 14 pt and 24 px inputs) -->
+  <FontFamily x:Key="ContentControlThemeFontFamily">fonts:PublicSans#Public Sans, fonts:Inter#Inter</FontFamily>
   <x:Double x:Key="ControlContentThemeFontSize">13</x:Double>
   <x:Double x:Key="ToolTipContentThemeFontSize">12</x:Double>
-  <x:Double x:Key="TextControlThemeMinHeight">22</x:Double>
-  <Thickness x:Key="TextControlThemePadding">6,2,6,2</Thickness>
+  <x:Double x:Key="TextControlThemeMinHeight">28</x:Double>
+  <Thickness x:Key="TextControlThemePadding">8,4,8,4</Thickness>
   <Thickness x:Key="TextControlBorderThemeThicknessFocused">1</Thickness>
-  <x:Double x:Key="ComboBoxMinHeight">22</x:Double>
-  <Thickness x:Key="ComboBoxPadding">9,1,0,1</Thickness>
-  <Thickness x:Key="ComboBoxItemThemePadding">10,3,10,3</Thickness>
-  <x:Double x:Key="DropDownButtonMinHeight">22</x:Double>
-  <Thickness x:Key="ButtonPadding">12,1,12,1</Thickness>
-  <x:Double x:Key="CheckBoxMinHeight">20</x:Double>
-  <x:Double x:Key="RadioButtonMinHeight">20</x:Double>
-  <CornerRadius x:Key="ControlCornerRadius">5</CornerRadius>
-  <CornerRadius x:Key="OverlayCornerRadius">7</CornerRadius>
+  <x:Double x:Key="ComboBoxMinHeight">28</x:Double>
+  <Thickness x:Key="ComboBoxPadding">10,4,0,4</Thickness>
+  <Thickness x:Key="ComboBoxItemThemePadding">10,5,10,5</Thickness>
+  <x:Double x:Key="DropDownButtonMinHeight">28</x:Double>
+  <Thickness x:Key="ButtonPadding">14,4,14,4</Thickness>
+  <x:Double x:Key="CheckBoxMinHeight">24</x:Double>
+  <x:Double x:Key="RadioButtonMinHeight">24</x:Double>
+  <CornerRadius x:Key="ControlCornerRadius">7</CornerRadius>
+  <CornerRadius x:Key="OverlayCornerRadius">10</CornerRadius>
   <Thickness x:Key="MenuFlyoutPresenterThemePadding">5,5</Thickness>
-  <Thickness x:Key="MenuFlyoutItemThemePadding">9,3,9,3</Thickness>
-  <Thickness x:Key="MenuFlyoutItemThemePaddingNarrow">9,3,9,3</Thickness>
+  <Thickness x:Key="MenuFlyoutItemThemePadding">10,5,10,5</Thickness>
+  <Thickness x:Key="MenuFlyoutItemThemePaddingNarrow">10,5,10,5</Thickness>
   <Thickness x:Key="FlyoutContentThemePadding">12</Thickness>
   <Thickness x:Key="ToolTipBorderThemePadding">8,5,8,6</Thickness>
   <x:Double x:Key="DataGridSortIconMinWidth">0</x:Double>
   <!-- Sliders: Fluent's are 50 high (15 above and below the track); these keep a slider to its control's height -->
   <GridLength x:Key="SliderPreContentMargin">2</GridLength>
   <GridLength x:Key="SliderPostContentMargin">2</GridLength>
-  <x:Double x:Key="SliderHorizontalHeight">24</x:Double>
+  <x:Double x:Key="SliderHorizontalHeight">28</x:Double>
   <x:Double x:Key="SliderTrackThemeHeight">4</x:Double>
   <x:Double x:Key="SliderHorizontalThumbWidth">15</x:Double>
   <x:Double x:Key="SliderHorizontalThumbHeight">15</x:Double>
@@ -95,54 +127,110 @@
   <x:Double x:Key="DataGridRowSelectedHoveredBackgroundOpacity">1</x:Double>
   <x:Double x:Key="DataGridRowSelectedUnfocusedBackgroundOpacity">1</x:Double>
   <x:Double x:Key="DataGridRowSelectedHoveredUnfocusedBackgroundOpacity">1</x:Double>
+  <!-- Data pages (Settings, Appearance): the swatches beside the accent choices. SDE's blue, whatever accent is showing,
+       and the Mac's multicolour mark for "the Mac's accent colour". Decoration only (no text sits on them). -->
+  <SolidColorBrush x:Key="SwatchBrandAccent" Color="#1769C2" />
+  <ConicGradientBrush x:Key="SwatchMacAccent">
+    <GradientStop Offset="0" Color="#FF3B30" />
+    <GradientStop Offset="0.17" Color="#FF9500" />
+    <GradientStop Offset="0.33" Color="#FFCC00" />
+    <GradientStop Offset="0.5" Color="#34C759" />
+    <GradientStop Offset="0.67" Color="#007AFF" />
+    <GradientStop Offset="0.83" Color="#AF52DE" />
+    <GradientStop Offset="1" Color="#FF3B30" />
+  </ConicGradientBrush>
+
+  <!-- Map page (Styles/Map.axaml): the floating controls over the map, the attribute drawer, and the analysis layers -->
+  <x:Double x:Key="MapToolSize">34</x:Double> <!-- a tool button in the floating palette, and a zoom button -->
+  <x:Double x:Key="MapDrawerHeight">260</x:Double> <!-- the attribute drawer's default height (dragged between the min and max) -->
+  <x:Double x:Key="MapDrawerMinHeight">140</x:Double>
+  <x:Double x:Key="MapDrawerMaxHeight">620</x:Double>
+  <x:Double x:Key="MapLegendWidth">232</x:Double> <!-- the legend card in the map's lower left corner -->
+  <x:Double x:Key="MapSurfaceOpacity">0.62</x:Double> <!-- the water-surface picture over the basemap -->
+  <x:Double x:Key="MapHeatMaxAlpha">205</x:Double> <!-- the hottest heat-map pixel's alpha, 0 to 255 -->
+
+  <!-- Sheets (Styles/Sheets.axaml): the footer is a band across the card's foot, so it reaches out over SheetPadding;
+       its corners follow the card's (RadiusSheet less the card's 1 px border). Sheet buttons are at least 90 wide. -->
+  <Thickness x:Key="SheetFooterMargin">-24,8,-24,-20</Thickness>
+  <Thickness x:Key="SheetFooterPadding">24,14</Thickness>
+  <CornerRadius x:Key="RadiusSheetFooter">0,0,13,13</CornerRadius>
+  <x:Double x:Key="SheetButtonMinWidth">90</x:Double>
+  <!-- Sidebar (3.5): a faint ring round the colour dots of pinned structures and tags, so a slate or grey dot still
+       shows on the navy frame. Decorative, so no contrast pair. -->
+  <SolidColorBrush x:Key="FrameDotRing" Color="#59FFFFFF" />
+
+  <!-- Accessibility (Styles/Accessibility.axaml): the keyboard focus ring's strength (solid with Increase Contrast,
+       Styles/Contrast.High.axaml), and the date field (Controls/DateField): wide enough for "Sep 30, 2026" and its
+       clear and calendar buttons; Compact narrows it. -->
+  <x:Double x:Key="FocusRingOpacity">0.5</x:Double>
+  <x:Double x:Key="DateFieldWidth">172</x:Double>
+  <x:Double x:Key="CalendarFontSize">13</x:Double>
+  <x:Double x:Key="CalendarDayButtonFontSize">13</x:Double>
 
   <ResourceDictionary.ThemeDictionaries>
     <ResourceDictionary x:Key="Light">
       <!-- Colours (the brushes below use these) -->
-      <Color x:Key="BgAppColor">#FFFFFF</Color>
-      <Color x:Key="BgSidebarColor">#EBEBEA</Color>
+      <Color x:Key="BgAppColor">#F3F6FA</Color>
+      <Color x:Key="BgSidebarColor">#EDF1F6</Color>
       <Color x:Key="BgSurfaceColor">#FFFFFF</Color>
-      <Color x:Key="BgSubtleColor">#F4F5F5</Color>
-      <Color x:Key="BgInspectorColor">#FBFBFB</Color>
-      <Color x:Key="BgHoverColor">#EFEFEF</Color>
-      <Color x:Key="BgPressedColor">#E3E3E3</Color>
-      <Color x:Key="BgOverlayColor">#00000000</Color> <!-- clear: a Mac sheet does not dim the window; the layer still takes the clicks -->
-      <Color x:Key="BgTooltipColor">#F2F2F2</Color>
-      <Color x:Key="BorderDefaultColor">#E0E0E0</Color>
-      <Color x:Key="BorderStrongColor">#C8C8C8</Color>
-      <Color x:Key="BorderStrongHoverColor">#B4B4B4</Color>
-      <Color x:Key="BorderSubtleColor">#EBEBEB</Color>
-      <Color x:Key="TextPrimaryColor">#1D1D1F</Color>
-      <Color x:Key="TextSecondaryColor">#5E5E62</Color>
-      <Color x:Key="TextTertiaryColor">#68686D</Color>
-      <Color x:Key="TextDisabledColor">#A8A8AD</Color>
-      <Color x:Key="TextOnTooltipColor">#1D1D1F</Color>
-      <Color x:Key="AccentColor">#0058C2</Color>
-      <Color x:Key="AccentHoverColor">#004EAD</Color>
-      <Color x:Key="AccentPressedColor">#004497</Color>
-      <Color x:Key="AccentFillColor">#0A64D6</Color>
-      <Color x:Key="AccentFillHoverColor">#0958BE</Color>
-      <Color x:Key="AccentFillPressedColor">#084FA9</Color>
-      <Color x:Key="AccentSoftColor">#E3EDFB</Color>
-      <Color x:Key="AccentSoftHoverColor">#D6E5FA</Color>
+      <Color x:Key="BgSubtleColor">#F1F4F8</Color>
+      <Color x:Key="BgInspectorColor">#FAFBFD</Color>
+      <Color x:Key="BgHoverColor">#E9EEF4</Color>
+      <Color x:Key="BgPressedColor">#DDE4EC</Color>
+      <Color x:Key="BgOverlayColor">#52081321</Color> <!-- a sheet dims the window behind it -->
+      <Color x:Key="BgTooltipColor">#0E2540</Color>
+      <Color x:Key="BorderDefaultColor">#DCE3EB</Color>
+      <Color x:Key="BorderStrongColor">#BCC7D4</Color>
+      <Color x:Key="BorderStrongHoverColor">#A3B0C0</Color>
+      <Color x:Key="BorderSubtleColor">#E8EDF3</Color>
+      <Color x:Key="TextPrimaryColor">#0E1B2C</Color>
+      <Color x:Key="TextSecondaryColor">#45556A</Color>
+      <Color x:Key="TextTertiaryColor">#56667B</Color>
+      <Color x:Key="TextDisabledColor">#A6B0BD</Color>
+      <Color x:Key="TextOnTooltipColor">#FFFFFF</Color>
+      <Color x:Key="AccentColor">#1259A8</Color>
+      <Color x:Key="AccentHoverColor">#0F4D92</Color>
+      <Color x:Key="AccentPressedColor">#0C417C</Color>
+      <Color x:Key="AccentFillColor">#1769C2</Color>
+      <Color x:Key="AccentFillHoverColor">#145DAD</Color>
+      <Color x:Key="AccentFillPressedColor">#115199</Color>
+      <Color x:Key="AccentSoftColor">#DDEBFA</Color>
+      <Color x:Key="AccentSoftHoverColor">#CFE2F8</Color>
       <Color x:Key="OnAccentColor">#FFFFFF</Color>
-      <Color x:Key="FocusColor">#0A64D6</Color>
-      <Color x:Key="DangerFgColor">#C4001A</Color>
-      <Color x:Key="DangerBgColor">#FDE8EA</Color>
-      <Color x:Key="DangerFillColor">#C4001A</Color>
-      <Color x:Key="DangerFillHoverColor">#A80016</Color>
-      <Color x:Key="DangerFillPressedColor">#8F0013</Color>
-      <Color x:Key="WarningFgColor">#A34400</Color>
-      <Color x:Key="WarningBgColor">#FFF1E0</Color>
-      <Color x:Key="SuccessFgColor">#187A34</Color>
-      <Color x:Key="SuccessBgColor">#E5F5EA</Color>
-      <Color x:Key="InfoFgColor">#0058C2</Color>
-      <Color x:Key="InfoBgColor">#E5EFFC</Color>
-      <Color x:Key="VioletFgColor">#6A45B8</Color>
-      <Color x:Key="VioletBgColor">#F0EBFA</Color>
-      <Color x:Key="NeutralFgColor">#5E5E62</Color>
-      <Color x:Key="NeutralBgColor">#EEEEEF</Color>
-      <Color x:Key="ScrollThumbColor">#C1C1C1</Color>
+      <Color x:Key="FocusColor">#1769C2</Color>
+      <Color x:Key="DangerFgColor">#B50E28</Color>
+      <Color x:Key="DangerBgColor">#FCE8EB</Color>
+      <Color x:Key="DangerFillColor">#C8102E</Color>
+      <Color x:Key="DangerFillHoverColor">#AE0E28</Color>
+      <Color x:Key="DangerFillPressedColor">#950C22</Color>
+      <Color x:Key="WarningFgColor">#8A4700</Color>
+      <Color x:Key="WarningBgColor">#FDEFD9</Color>
+      <Color x:Key="SuccessFgColor">#17693A</Color>
+      <Color x:Key="SuccessBgColor">#E1F3E7</Color>
+      <Color x:Key="InfoFgColor">#1259A8</Color>
+      <Color x:Key="InfoBgColor">#E1EDFB</Color>
+      <Color x:Key="VioletFgColor">#5F3FA3</Color>
+      <Color x:Key="VioletBgColor">#EFEAFA</Color>
+      <Color x:Key="NeutralFgColor">#45556A</Color>
+      <Color x:Key="NeutralBgColor">#E9EDF2</Color>
+      <Color x:Key="ScrollThumbColor">#B9C3CF</Color>
+      <!-- The frame (3.5): the sidebar and title band are navy in both themes, with their own text colours -->
+      <Color x:Key="BgFrameColor">#0E2540</Color>
+      <Color x:Key="BgFrameHoverColor">#193656</Color>
+      <Color x:Key="BgFramePressedColor">#1F416A</Color>
+      <Color x:Key="BgFrameFieldColor">#1B3A5E</Color>
+      <Color x:Key="BorderFrameColor">#234469</Color>
+      <Color x:Key="TextOnFrameColor">#FFFFFF</Color>
+      <Color x:Key="TextOnFrameSecondaryColor">#BCCADB</Color>
+      <Color x:Key="TextOnFrameTertiaryColor">#9DAFC5</Color>
+      <Color x:Key="AccentOnFrameColor">#7FBDF7</Color>
+      <Color x:Key="DangerOnFrameColor">#FF8F99</Color>
+      <Color x:Key="BgHeroColor">#0F2A4A</Color>
+      <Color x:Key="TextOnHeroColor">#FFFFFF</Color>
+      <Color x:Key="TextOnHeroSecondaryColor">#BCCADB</Color>
+      <Color x:Key="BgFrameSelectedColor">#2C5788</Color>
+      <Color x:Key="BorderCardColor">#E1E7EE</Color>
+      <Color x:Key="BgTableHeaderColor">#F4F6F9</Color>
       <!-- Backgrounds -->
       <SolidColorBrush x:Key="BgApp" Color="{StaticResource BgAppColor}" /> <!-- the content area behind cards -->
       <SolidColorBrush x:Key="BgSidebar" Color="{StaticResource BgSidebarColor}" /> <!-- the sidebar and side panels -->
@@ -192,6 +280,22 @@
       <SolidColorBrush x:Key="NeutralFg" Color="{StaticResource NeutralFgColor}" /> <!-- neutral badges -->
       <SolidColorBrush x:Key="NeutralBg" Color="{StaticResource NeutralBgColor}" />
       <SolidColorBrush x:Key="ScrollThumb" Color="{StaticResource ScrollThumbColor}" /> <!-- scroll bar thumbs -->
+      <SolidColorBrush x:Key="BgFrame" Color="{StaticResource BgFrameColor}" /> <!-- the navy frame: the sidebar and the title band -->
+      <SolidColorBrush x:Key="BgFrameHover" Color="{StaticResource BgFrameHoverColor}" /> <!-- a row or button on the frame under the pointer -->
+      <SolidColorBrush x:Key="BgFramePressed" Color="{StaticResource BgFramePressedColor}" /> <!-- a row or button on the frame being pressed -->
+      <SolidColorBrush x:Key="BgFrameField" Color="{StaticResource BgFrameFieldColor}" /> <!-- the search field and other inputs on the frame -->
+      <SolidColorBrush x:Key="BorderFrame" Color="{StaticResource BorderFrameColor}" /> <!-- dividers and input borders on the frame -->
+      <SolidColorBrush x:Key="TextOnFrame" Color="{StaticResource TextOnFrameColor}" /> <!-- titles and selected rows on the frame -->
+      <SolidColorBrush x:Key="TextOnFrameSecondary" Color="{StaticResource TextOnFrameSecondaryColor}" /> <!-- rows and labels on the frame -->
+      <SolidColorBrush x:Key="TextOnFrameTertiary" Color="{StaticResource TextOnFrameTertiaryColor}" /> <!-- section labels, counts and placeholders on the frame -->
+      <SolidColorBrush x:Key="AccentOnFrame" Color="{StaticResource AccentOnFrameColor}" /> <!-- the brand mark and links on the frame -->
+      <SolidColorBrush x:Key="DangerOnFrame" Color="{StaticResource DangerOnFrameColor}" /> <!-- required-problem counts on the frame -->
+      <SolidColorBrush x:Key="BgHero" Color="{StaticResource BgHeroColor}" /> <!-- the result panel, the one dark card inside the content area -->
+      <SolidColorBrush x:Key="TextOnHero" Color="{StaticResource TextOnHeroColor}" /> <!-- the figure on the result panel -->
+      <SolidColorBrush x:Key="TextOnHeroSecondary" Color="{StaticResource TextOnHeroSecondaryColor}" /> <!-- supporting text on the result panel -->
+      <SolidColorBrush x:Key="BgFrameSelected" Color="{StaticResource BgFrameSelectedColor}" /> <!-- the chosen segment of a switch on the frame -->
+      <SolidColorBrush x:Key="BorderCard" Color="{StaticResource BorderCardColor}" /> <!-- the hairline round a white card (with ShadowCard under it) -->
+      <SolidColorBrush x:Key="BgTableHeader" Color="{StaticResource BgTableHeaderColor}" /> <!-- a table's header row -->
       <!-- Older names, kept because code and views look them up by name -->
       <SolidColorBrush x:Key="WindowBg" Color="{StaticResource BgAppColor}" />
       <SolidColorBrush x:Key="SidebarBg" Color="{StaticResource BgSidebarColor}" />
@@ -211,26 +315,64 @@
       <SolidColorBrush x:Key="StatusUndeterminedFg" Color="{StaticResource VioletFgColor}" />
       <SolidColorBrush x:Key="StatusUndeterminedBg" Color="{StaticResource VioletBgColor}" />
       <!-- The result dots in tables (Mac system hues; a dot needs no text contrast, it sits beside the result's name) -->
-      <SolidColorBrush x:Key="StatusSubstantialDot" Color="#FF3B30" />
-      <SolidColorBrush x:Key="StatusCloseDot" Color="#FF9500" />
-      <SolidColorBrush x:Key="StatusNotSubstantialDot" Color="#34C759" />
-      <SolidColorBrush x:Key="StatusIncompleteDot" Color="#8E8E93" />
-      <SolidColorBrush x:Key="StatusUndeterminedDot" Color="#AF52DE" />
+      <SolidColorBrush x:Key="StatusSubstantialDot" Color="#C8102E" />
+      <SolidColorBrush x:Key="StatusCloseDot" Color="#DE8A1B" />
+      <SolidColorBrush x:Key="StatusNotSubstantialDot" Color="#2E9E57" />
+      <SolidColorBrush x:Key="StatusIncompleteDot" Color="#8D99A8" />
+      <SolidColorBrush x:Key="StatusUndeterminedDot" Color="#7D55C0" /> <!-- dark enough for a white count on a map cluster (5.3:1) -->
       <SolidColorBrush x:Key="RequiredFg" Color="{StaticResource DangerFgColor}" />
       <SolidColorBrush x:Key="RecommendedFg" Color="{StaticResource WarningFgColor}" />
       <SolidColorBrush x:Key="SuggestedFg" Color="{StaticResource SuccessFgColor}" />
       <!-- Focus halo around inputs and the focused-control ring -->
-      <BoxShadows x:Key="FocusHalo">0 0 0 3 #730A64D6</BoxShadows>
+      <BoxShadows x:Key="FocusHalo">0 0 0 3 #731769C2</BoxShadows>
       <BoxShadows x:Key="ShadowPopup">0 6 20 0 #29000000</BoxShadows>
       <BoxShadows x:Key="ShadowSheet">0 10 30 0 #40000000</BoxShadows>
-      <BoxShadows x:Key="ShadowCard">0 0 0 0 #00000000</BoxShadows>
+      <BoxShadows x:Key="ShadowCard">0 1 2 0 #0F0E2540, 0 8 24 -6 #240E2540</BoxShadows>
+      <BoxShadows x:Key="ShadowHero">0 2 4 0 #1F0E2540, 0 14 32 -10 #590E2540</BoxShadows>
       <!-- The bezel under a push button, a pop-up button and the selected segment (Mac controls sit slightly raised) -->
       <BoxShadows x:Key="ShadowControl">0 0.5 1.5 0 #24000000</BoxShadows>
+      <!-- The staff gauge (Controls/StaffGauge): the dry staff, its graduations, the water, and the high-water mark.
+           The water turns to the warning amber within ten points of the line and to the gauge red at or above it. -->
+      <SolidColorBrush x:Key="GaugeTrack" Color="#E3E9F0" />
+      <SolidColorBrush x:Key="GaugeTick" Color="#8D99A8" />
+      <SolidColorBrush x:Key="GaugeWater" Color="#1F7AD6" />
+      <SolidColorBrush x:Key="GaugeNear" Color="#D9871A" />
+      <SolidColorBrush x:Key="GaugeDanger" Color="#C8102E" />
+      <SolidColorBrush x:Key="GaugeMark" Color="#C8102E" />
+      <SolidColorBrush x:Key="GaugeMarkHalo" Color="#FFFFFF" /> <!-- a thin gap either side of the mark where it crosses the water -->
+      <!-- The same gauge drawn on the dark result card (StaffGauge.OnDark): a lighter staff and brighter water and red -->
+      <SolidColorBrush x:Key="GaugeTrackOnDark" Color="#2A4A70" />
+      <SolidColorBrush x:Key="GaugeTickOnDark" Color="#7E95B2" />
+      <SolidColorBrush x:Key="GaugeWaterOnDark" Color="#4DA6FF" />
+      <SolidColorBrush x:Key="GaugeNearOnDark" Color="#F5B04A" />
+      <SolidColorBrush x:Key="GaugeDangerOnDark" Color="#FF5468" />
+      <SolidColorBrush x:Key="GaugeMarkOnDark" Color="#FF5468" />
+      <SolidColorBrush x:Key="GaugeMarkHaloOnDark" Color="{StaticResource BgHeroColor}" />
+      <!-- The Summary's charts: light gridlines, the progress line and the soft area under it -->
+      <SolidColorBrush x:Key="ChartGrid" Color="#E6EBF1" />
+      <SolidColorBrush x:Key="ChartLine" Color="#1769C2" />
+      <LinearGradientBrush x:Key="ChartArea" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#4D1769C2" />
+        <GradientStop Offset="1" Color="#051769C2" />
+      </LinearGradientBrush>
+      <!-- The selected table row: the soft accent with a 3 px accent edge at its leading side -->
+      <LinearGradientBrush x:Key="RowSelectedFill" StartPoint="0,0" EndPoint="4,0">
+        <GradientStop Offset="0" Color="{StaticResource AccentFillColor}" />
+        <GradientStop Offset="0.75" Color="{StaticResource AccentFillColor}" />
+        <GradientStop Offset="0.75" Color="{StaticResource AccentSoftColor}" />
+        <GradientStop Offset="1" Color="{StaticResource AccentSoftColor}" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="RowSelectedHoverFill" StartPoint="0,0" EndPoint="4,0">
+        <GradientStop Offset="0" Color="{StaticResource AccentFillColor}" />
+        <GradientStop Offset="0.75" Color="{StaticResource AccentFillColor}" />
+        <GradientStop Offset="0.75" Color="{StaticResource AccentSoftHoverColor}" />
+        <GradientStop Offset="1" Color="{StaticResource AccentSoftHoverColor}" />
+      </LinearGradientBrush>
       <!-- Mac surfaces with no WCAG text pair: the selected source-list row and a segmented control's track -->
-      <SolidColorBrush x:Key="SidebarSelection" Color="#D9D9D9" />
-      <SolidColorBrush x:Key="SegmentedTrack" Color="#E6E6E7" />
+      <SolidColorBrush x:Key="SidebarSelection" Color="#D5DEE9" />
+      <SolidColorBrush x:Key="SegmentedTrack" Color="#E3E9F0" />
       <SolidColorBrush x:Key="ControlFill" Color="#FFFFFF" />
-      <SolidColorBrush x:Key="ControlFillPressed" Color="#EBEBEB" />
+      <SolidColorBrush x:Key="ControlFillPressed" Color="#E9EEF4" />
       <!-- Fluent's resource keys, pointed at the tokens -->
       <SolidColorBrush x:Key="ButtonBackground" Color="{StaticResource BgSurfaceColor}" />
       <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{StaticResource BgHoverColor}" />
@@ -452,8 +594,8 @@
       <SolidColorBrush x:Key="SliderTrackValueFillPressed" Color="{StaticResource AccentFillPressedColor}" />
       <SolidColorBrush x:Key="SliderTrackValueFillDisabled" Color="{StaticResource TextDisabledColor}" />
       <SolidColorBrush x:Key="SliderThumbBackground" Color="#FFFFFF" />
-      <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#FAFAFA" />
-      <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="#EDEDED" />
+      <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#F7F9FB" />
+      <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="#E9EEF4" />
       <SolidColorBrush x:Key="SliderThumbBackgroundDisabled" Color="{StaticResource TextDisabledColor}" />
       <SolidColorBrush x:Key="SliderTickBarFill" Color="{StaticResource BorderStrongColor}" />
       <SolidColorBrush x:Key="SliderInlineTickBarFill" Color="{StaticResource BgSurfaceColor}" />
@@ -538,53 +680,121 @@
       <SolidColorBrush x:Key="DataGridCellFocusVisualSecondaryBrush" Color="Transparent" />
       <SolidColorBrush x:Key="MenuFlyoutItemBackground" Color="Transparent" />
       <SolidColorBrush x:Key="ComboBoxItemBackground" Color="Transparent" />
+      <!-- Map page analysis layers (Maps/MapAnalysis.cs). The heat-map ramp, from the coolest (water blue, drawn almost
+           clear because a pixel's alpha follows its density) through amber to the gauge's red; the positions of the stops
+           are MapAnalysis.HeatStopPositions. Then the water surface's five classes, lowest to highest. -->
+      <Color x:Key="MapHeatStop0Color">#1F7AD6</Color>
+      <Color x:Key="MapHeatStop1Color">#4FA3E3</Color>
+      <Color x:Key="MapHeatStop2Color">#F0A23A</Color>
+      <Color x:Key="MapHeatStop3Color">#C8102E</Color>
+      <Color x:Key="MapSurfaceClass0Color">#CDE5F7</Color>
+      <Color x:Key="MapSurfaceClass1Color">#96C7EC</Color>
+      <Color x:Key="MapSurfaceClass2Color">#589FDB</Color>
+      <Color x:Key="MapSurfaceClass3Color">#2B75C0</Color>
+      <Color x:Key="MapSurfaceClass4Color">#114A8A</Color>
+      <SolidColorBrush x:Key="MapSurfaceClass0" Color="{StaticResource MapSurfaceClass0Color}" />
+      <SolidColorBrush x:Key="MapSurfaceClass1" Color="{StaticResource MapSurfaceClass1Color}" />
+      <SolidColorBrush x:Key="MapSurfaceClass2" Color="{StaticResource MapSurfaceClass2Color}" />
+      <SolidColorBrush x:Key="MapSurfaceClass3" Color="{StaticResource MapSurfaceClass3Color}" />
+      <SolidColorBrush x:Key="MapSurfaceClass4" Color="{StaticResource MapSurfaceClass4Color}" />
+      <!-- The count inside a cluster circle: whichever of these two reads better on the circle's colour -->
+      <SolidColorBrush x:Key="MapClusterInkLight" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="MapClusterInkDark" Color="#0E2540" />
+      <!-- The printed legend (always on white paper): a dot's outline, and FEMA's flood zones -->
+      <SolidColorBrush x:Key="MapLegendDotOutline" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="MapFloodZoneFill" Color="#B35B8FD9" />
+      <SolidColorBrush x:Key="MapFloodZoneStroke" Color="#3D6FB8" />
+      <!-- Structures page (3.5): the tag colours. Only a tag's dot is coloured (its name is ordinary text on a
+           neutral chip), so these need no text contrast pair. Red is a rose, not the gauge red. -->
+      <SolidColorBrush x:Key="TagBlueDot" Color="#1F7AD6" />
+      <SolidColorBrush x:Key="TagGreenDot" Color="#2E9E57" />
+      <SolidColorBrush x:Key="TagAmberDot" Color="#DE8A1B" />
+      <SolidColorBrush x:Key="TagRedDot" Color="#D9485F" />
+      <SolidColorBrush x:Key="TagVioletDot" Color="#8A63C9" />
+      <SolidColorBrush x:Key="TagSlateDot" Color="#6B7A8F" />
+      <!-- Accessibility (Controls/DateField): the month in the date field's calendar, on the white card in the tokens'
+           colours (Fluent's grey cells and outlines would look foreign); the chosen day is outlined in the accent -->
+      <SolidColorBrush x:Key="CalendarViewBackground" Color="{StaticResource BgSurfaceColor}" />
+      <SolidColorBrush x:Key="CalendarViewForeground" Color="{StaticResource TextPrimaryColor}" />
+      <SolidColorBrush x:Key="CalendarViewBorderBrush" Color="Transparent" />
+      <SolidColorBrush x:Key="CalendarViewCalendarItemForeground" Color="{StaticResource TextPrimaryColor}" />
+      <SolidColorBrush x:Key="CalendarViewCalendarItemRevealBackground" Color="{StaticResource BgSurfaceColor}" />
+      <SolidColorBrush x:Key="CalendarViewCalendarItemRevealBorderBrush" Color="Transparent" />
+      <SolidColorBrush x:Key="CalendarViewOutOfScopeBackground" Color="{StaticResource BgSurfaceColor}" />
+      <SolidColorBrush x:Key="CalendarViewOutOfScopeForeground" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="CalendarViewHoverBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="CalendarViewPressedBorderBrush" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="CalendarViewSelectedBorderBrush" Color="{StaticResource AccentFillColor}" />
+      <SolidColorBrush x:Key="CalendarViewSelectedHoverBorderBrush" Color="{StaticResource AccentFillHoverColor}" />
+      <SolidColorBrush x:Key="CalendarViewSelectedPressedBorderBrush" Color="{StaticResource AccentFillPressedColor}" />
+      <SolidColorBrush x:Key="CalendarViewNavigationButtonBackground" Color="Transparent" />
+      <SolidColorBrush x:Key="CalendarViewNavigationButtonBorderBrush" Color="Transparent" />
+      <SolidColorBrush x:Key="CalendarViewNavigationButtonForegroundPointerOver" Color="{StaticResource AccentColor}" />
+      <SolidColorBrush x:Key="CalendarViewNavigationButtonForegroundPressed" Color="{StaticResource AccentPressedColor}" />
     </ResourceDictionary>
     <ResourceDictionary x:Key="Dark">
       <!-- Colours (the brushes below use these) -->
-      <Color x:Key="BgAppColor">#1E1E1E</Color>
-      <Color x:Key="BgSidebarColor">#2B2B2D</Color>
-      <Color x:Key="BgSurfaceColor">#252527</Color>
-      <Color x:Key="BgSubtleColor">#262627</Color>
-      <Color x:Key="BgInspectorColor">#232324</Color>
-      <Color x:Key="BgHoverColor">#2E2E30</Color>
-      <Color x:Key="BgPressedColor">#3A3A3C</Color>
-      <Color x:Key="BgOverlayColor">#00000000</Color>
-      <Color x:Key="BgTooltipColor">#3A3A3C</Color>
-      <Color x:Key="BorderDefaultColor">#3A3A3C</Color>
-      <Color x:Key="BorderStrongColor">#545458</Color>
-      <Color x:Key="BorderStrongHoverColor">#636366</Color>
-      <Color x:Key="BorderSubtleColor">#303032</Color>
-      <Color x:Key="TextPrimaryColor">#E8E8EA</Color>
-      <Color x:Key="TextSecondaryColor">#A1A1A6</Color>
-      <Color x:Key="TextTertiaryColor">#98989D</Color>
-      <Color x:Key="TextDisabledColor">#5C5C60</Color>
+      <Color x:Key="BgAppColor">#0F1A29</Color>
+      <Color x:Key="BgSidebarColor">#132030</Color>
+      <Color x:Key="BgSurfaceColor">#172536</Color>
+      <Color x:Key="BgSubtleColor">#1A2A3D</Color>
+      <Color x:Key="BgInspectorColor">#142131</Color>
+      <Color x:Key="BgHoverColor">#203247</Color>
+      <Color x:Key="BgPressedColor">#2A3F58</Color>
+      <Color x:Key="BgOverlayColor">#99000000</Color>
+      <Color x:Key="BgTooltipColor">#33475F</Color>
+      <Color x:Key="BorderDefaultColor">#26374B</Color>
+      <Color x:Key="BorderStrongColor">#41546C</Color>
+      <Color x:Key="BorderStrongHoverColor">#53687F</Color>
+      <Color x:Key="BorderSubtleColor">#1E2D3F</Color>
+      <Color x:Key="TextPrimaryColor">#EAF0F6</Color>
+      <Color x:Key="TextSecondaryColor">#A9B6C6</Color>
+      <Color x:Key="TextTertiaryColor">#98A6B8</Color>
+      <Color x:Key="TextDisabledColor">#56667B</Color>
       <Color x:Key="TextOnTooltipColor">#FFFFFF</Color>
-      <Color x:Key="AccentColor">#4EA2FF</Color>
-      <Color x:Key="AccentHoverColor">#6DB2FF</Color>
-      <Color x:Key="AccentPressedColor">#3A92F5</Color>
-      <Color x:Key="AccentFillColor">#0A6BE0</Color>
-      <Color x:Key="AccentFillHoverColor">#0B63D0</Color>
-      <Color x:Key="AccentFillPressedColor">#0958BE</Color>
-      <Color x:Key="AccentSoftColor">#1F3352</Color>
-      <Color x:Key="AccentSoftHoverColor">#263D60</Color>
+      <Color x:Key="AccentColor">#6DB5F5</Color>
+      <Color x:Key="AccentHoverColor">#8CC6F8</Color>
+      <Color x:Key="AccentPressedColor">#58A5E8</Color>
+      <Color x:Key="AccentFillColor">#1B6CC2</Color>
+      <Color x:Key="AccentFillHoverColor">#185FAC</Color>
+      <Color x:Key="AccentFillPressedColor">#155397</Color>
+      <Color x:Key="AccentSoftColor">#173556</Color>
+      <Color x:Key="AccentSoftHoverColor">#1D4168</Color>
       <Color x:Key="OnAccentColor">#FFFFFF</Color>
-      <Color x:Key="FocusColor">#4EA2FF</Color>
-      <Color x:Key="DangerFgColor">#FF6B61</Color>
-      <Color x:Key="DangerBgColor">#3D2222</Color>
-      <Color x:Key="DangerFillColor">#C4001A</Color>
-      <Color x:Key="DangerFillHoverColor">#A80016</Color>
-      <Color x:Key="DangerFillPressedColor">#8F0013</Color>
-      <Color x:Key="WarningFgColor">#FFB54A</Color>
+      <Color x:Key="FocusColor">#6DB5F5</Color>
+      <Color x:Key="DangerFgColor">#FF7C88</Color>
+      <Color x:Key="DangerBgColor">#40202A</Color>
+      <Color x:Key="DangerFillColor">#C8102E</Color>
+      <Color x:Key="DangerFillHoverColor">#AE0E28</Color>
+      <Color x:Key="DangerFillPressedColor">#950C22</Color>
+      <Color x:Key="WarningFgColor">#F5B45C</Color>
       <Color x:Key="WarningBgColor">#3A2E1C</Color>
-      <Color x:Key="SuccessFgColor">#63D47F</Color>
-      <Color x:Key="SuccessBgColor">#1D3324</Color>
-      <Color x:Key="InfoFgColor">#64AEFF</Color>
-      <Color x:Key="InfoBgColor">#1C2E47</Color>
-      <Color x:Key="VioletFgColor">#C3B2FF</Color>
-      <Color x:Key="VioletBgColor">#2F2A45</Color>
-      <Color x:Key="NeutralFgColor">#A1A1A6</Color>
-      <Color x:Key="NeutralBgColor">#333336</Color>
-      <Color x:Key="ScrollThumbColor">#5A5A5E</Color>
+      <Color x:Key="SuccessFgColor">#6BD08A</Color>
+      <Color x:Key="SuccessBgColor">#1A3326</Color>
+      <Color x:Key="InfoFgColor">#7DBBF0</Color>
+      <Color x:Key="InfoBgColor">#1A2F47</Color>
+      <Color x:Key="VioletFgColor">#C6B5FF</Color>
+      <Color x:Key="VioletBgColor">#2E2A48</Color>
+      <Color x:Key="NeutralFgColor">#A9B6C6</Color>
+      <Color x:Key="NeutralBgColor">#2A3A4E</Color>
+      <Color x:Key="ScrollThumbColor">#4B5D73</Color>
+      <!-- The frame (3.5): the sidebar and title band are navy in both themes, with their own text colours -->
+      <Color x:Key="BgFrameColor">#0A1A2E</Color>
+      <Color x:Key="BgFrameHoverColor">#152943</Color>
+      <Color x:Key="BgFramePressedColor">#1D3555</Color>
+      <Color x:Key="BgFrameFieldColor">#14273F</Color>
+      <Color x:Key="BorderFrameColor">#22395A</Color>
+      <Color x:Key="TextOnFrameColor">#FFFFFF</Color>
+      <Color x:Key="TextOnFrameSecondaryColor">#BCCADB</Color>
+      <Color x:Key="TextOnFrameTertiaryColor">#9DAFC5</Color>
+      <Color x:Key="AccentOnFrameColor">#7FBDF7</Color>
+      <Color x:Key="DangerOnFrameColor">#FF8F99</Color>
+      <Color x:Key="BgHeroColor">#15365C</Color>
+      <Color x:Key="TextOnHeroColor">#FFFFFF</Color>
+      <Color x:Key="TextOnHeroSecondaryColor">#C3D1E2</Color>
+      <Color x:Key="BgFrameSelectedColor">#25466C</Color>
+      <Color x:Key="BorderCardColor">#24354A</Color>
+      <Color x:Key="BgTableHeaderColor">#1B2A3C</Color>
       <!-- Backgrounds -->
       <SolidColorBrush x:Key="BgApp" Color="{StaticResource BgAppColor}" /> <!-- the content area behind cards -->
       <SolidColorBrush x:Key="BgSidebar" Color="{StaticResource BgSidebarColor}" /> <!-- the sidebar and side panels -->
@@ -634,6 +844,22 @@
       <SolidColorBrush x:Key="NeutralFg" Color="{StaticResource NeutralFgColor}" /> <!-- neutral badges -->
       <SolidColorBrush x:Key="NeutralBg" Color="{StaticResource NeutralBgColor}" />
       <SolidColorBrush x:Key="ScrollThumb" Color="{StaticResource ScrollThumbColor}" /> <!-- scroll bar thumbs -->
+      <SolidColorBrush x:Key="BgFrame" Color="{StaticResource BgFrameColor}" /> <!-- the navy frame: the sidebar and the title band -->
+      <SolidColorBrush x:Key="BgFrameHover" Color="{StaticResource BgFrameHoverColor}" /> <!-- a row or button on the frame under the pointer -->
+      <SolidColorBrush x:Key="BgFramePressed" Color="{StaticResource BgFramePressedColor}" /> <!-- a row or button on the frame being pressed -->
+      <SolidColorBrush x:Key="BgFrameField" Color="{StaticResource BgFrameFieldColor}" /> <!-- the search field and other inputs on the frame -->
+      <SolidColorBrush x:Key="BorderFrame" Color="{StaticResource BorderFrameColor}" /> <!-- dividers and input borders on the frame -->
+      <SolidColorBrush x:Key="TextOnFrame" Color="{StaticResource TextOnFrameColor}" /> <!-- titles and selected rows on the frame -->
+      <SolidColorBrush x:Key="TextOnFrameSecondary" Color="{StaticResource TextOnFrameSecondaryColor}" /> <!-- rows and labels on the frame -->
+      <SolidColorBrush x:Key="TextOnFrameTertiary" Color="{StaticResource TextOnFrameTertiaryColor}" /> <!-- section labels, counts and placeholders on the frame -->
+      <SolidColorBrush x:Key="AccentOnFrame" Color="{StaticResource AccentOnFrameColor}" /> <!-- the brand mark and links on the frame -->
+      <SolidColorBrush x:Key="DangerOnFrame" Color="{StaticResource DangerOnFrameColor}" /> <!-- required-problem counts on the frame -->
+      <SolidColorBrush x:Key="BgHero" Color="{StaticResource BgHeroColor}" /> <!-- the result panel, the one dark card inside the content area -->
+      <SolidColorBrush x:Key="TextOnHero" Color="{StaticResource TextOnHeroColor}" /> <!-- the figure on the result panel -->
+      <SolidColorBrush x:Key="TextOnHeroSecondary" Color="{StaticResource TextOnHeroSecondaryColor}" /> <!-- supporting text on the result panel -->
+      <SolidColorBrush x:Key="BgFrameSelected" Color="{StaticResource BgFrameSelectedColor}" /> <!-- the chosen segment of a switch on the frame -->
+      <SolidColorBrush x:Key="BorderCard" Color="{StaticResource BorderCardColor}" /> <!-- the hairline round a white card (with ShadowCard under it) -->
+      <SolidColorBrush x:Key="BgTableHeader" Color="{StaticResource BgTableHeaderColor}" /> <!-- a table's header row -->
       <!-- Older names, kept because code and views look them up by name -->
       <SolidColorBrush x:Key="WindowBg" Color="{StaticResource BgAppColor}" />
       <SolidColorBrush x:Key="SidebarBg" Color="{StaticResource BgSidebarColor}" />
@@ -652,36 +878,69 @@
       <SolidColorBrush x:Key="StatusIncompleteBg" Color="{StaticResource NeutralBgColor}" />
       <SolidColorBrush x:Key="StatusUndeterminedFg" Color="{StaticResource VioletFgColor}" />
       <SolidColorBrush x:Key="StatusUndeterminedBg" Color="{StaticResource VioletBgColor}" />
-      <SolidColorBrush x:Key="StatusSubstantialDot" Color="#FF453A" />
-      <SolidColorBrush x:Key="StatusCloseDot" Color="#FF9F0A" />
-      <SolidColorBrush x:Key="StatusNotSubstantialDot" Color="#30D158" />
-      <SolidColorBrush x:Key="StatusIncompleteDot" Color="#98989D" />
-      <SolidColorBrush x:Key="StatusUndeterminedDot" Color="#BF5AF2" />
+      <SolidColorBrush x:Key="StatusSubstantialDot" Color="#FF5A6B" />
+      <SolidColorBrush x:Key="StatusCloseDot" Color="#F5A53B" />
+      <SolidColorBrush x:Key="StatusNotSubstantialDot" Color="#45C877" />
+      <SolidColorBrush x:Key="StatusIncompleteDot" Color="#8C99AA" />
+      <SolidColorBrush x:Key="StatusUndeterminedDot" Color="#B592F5" />
       <SolidColorBrush x:Key="RequiredFg" Color="{StaticResource DangerFgColor}" />
       <SolidColorBrush x:Key="RecommendedFg" Color="{StaticResource WarningFgColor}" />
       <SolidColorBrush x:Key="SuggestedFg" Color="{StaticResource SuccessFgColor}" />
       <!-- Focus halo around inputs and the focused-control ring -->
-      <BoxShadows x:Key="FocusHalo">0 0 0 3 #804EA2FF</BoxShadows>
+      <BoxShadows x:Key="FocusHalo">0 0 0 3 #806DB5F5</BoxShadows>
       <BoxShadows x:Key="ShadowPopup">0 6 20 0 #66000000</BoxShadows>
       <BoxShadows x:Key="ShadowSheet">0 10 30 0 #8C000000</BoxShadows>
-      <BoxShadows x:Key="ShadowCard">0 0 0 0 #00000000</BoxShadows>
+      <BoxShadows x:Key="ShadowCard">0 1 2 0 #33000000, 0 8 22 -8 #59000000</BoxShadows>
+      <BoxShadows x:Key="ShadowHero">0 2 4 0 #40000000, 0 14 32 -10 #80000000</BoxShadows>
       <BoxShadows x:Key="ShadowControl">0 0.5 1 0 #59000000</BoxShadows>
-      <SolidColorBrush x:Key="SidebarSelection" Color="#3E3E41" />
-      <SolidColorBrush x:Key="SegmentedTrack" Color="#333335" />
-      <SolidColorBrush x:Key="ControlFill" Color="#5A5A5E" />
-      <SolidColorBrush x:Key="ControlFillPressed" Color="#6A6A6E" />
+      <SolidColorBrush x:Key="GaugeTrack" Color="#26374B" />
+      <SolidColorBrush x:Key="GaugeTick" Color="#61728A" />
+      <SolidColorBrush x:Key="GaugeWater" Color="#4A93D6" />
+      <SolidColorBrush x:Key="GaugeNear" Color="#F0A23A" />
+      <SolidColorBrush x:Key="GaugeDanger" Color="#FF5A6B" />
+      <SolidColorBrush x:Key="GaugeMark" Color="#FF5A6B" />
+      <SolidColorBrush x:Key="GaugeMarkHalo" Color="#172536" />
+      <SolidColorBrush x:Key="GaugeTrackOnDark" Color="#30557F" />
+      <SolidColorBrush x:Key="GaugeTickOnDark" Color="#8AA0BC" />
+      <SolidColorBrush x:Key="GaugeWaterOnDark" Color="#5AAEFF" />
+      <SolidColorBrush x:Key="GaugeNearOnDark" Color="#F5B04A" />
+      <SolidColorBrush x:Key="GaugeDangerOnDark" Color="#FF5A6E" />
+      <SolidColorBrush x:Key="GaugeMarkOnDark" Color="#FF5A6E" />
+      <SolidColorBrush x:Key="GaugeMarkHaloOnDark" Color="{StaticResource BgHeroColor}" />
+      <SolidColorBrush x:Key="ChartGrid" Color="#24354A" />
+      <SolidColorBrush x:Key="ChartLine" Color="#5AAEFF" />
+      <LinearGradientBrush x:Key="ChartArea" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#665AAEFF" />
+        <GradientStop Offset="1" Color="#085AAEFF" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="RowSelectedFill" StartPoint="0,0" EndPoint="4,0">
+        <GradientStop Offset="0" Color="{StaticResource AccentColor}" />
+        <GradientStop Offset="0.75" Color="{StaticResource AccentColor}" />
+        <GradientStop Offset="0.75" Color="{StaticResource AccentSoftColor}" />
+        <GradientStop Offset="1" Color="{StaticResource AccentSoftColor}" />
+      </LinearGradientBrush>
+      <LinearGradientBrush x:Key="RowSelectedHoverFill" StartPoint="0,0" EndPoint="4,0">
+        <GradientStop Offset="0" Color="{StaticResource AccentColor}" />
+        <GradientStop Offset="0.75" Color="{StaticResource AccentColor}" />
+        <GradientStop Offset="0.75" Color="{StaticResource AccentSoftHoverColor}" />
+        <GradientStop Offset="1" Color="{StaticResource AccentSoftHoverColor}" />
+      </LinearGradientBrush>
+      <SolidColorBrush x:Key="SidebarSelection" Color="#2A3F58" />
+      <SolidColorBrush x:Key="SegmentedTrack" Color="#1E2F44" />
+      <SolidColorBrush x:Key="ControlFill" Color="#55667D" />
+      <SolidColorBrush x:Key="ControlFillPressed" Color="#647790" />
       <!-- Fluent's resource keys, pointed at the tokens -->
-      <SolidColorBrush x:Key="ButtonBackground" Color="#48484B" />
-      <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#525255" />
-      <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#5C5C5F" />
+      <SolidColorBrush x:Key="ButtonBackground" Color="#2B3A50" />
+      <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#34465F" />
+      <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#3E526E" />
       <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="{StaticResource BgSubtleColor}" />
       <SolidColorBrush x:Key="ButtonForeground" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="ButtonForegroundPressed" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="{StaticResource TextDisabledColor}" />
-      <SolidColorBrush x:Key="ButtonBorderBrush" Color="#48484B" />
-      <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#525255" />
-      <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#5C5C5F" />
+      <SolidColorBrush x:Key="ButtonBorderBrush" Color="#2B3A50" />
+      <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#34465F" />
+      <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#3E526E" />
       <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
       <SolidColorBrush x:Key="AccentButtonBackground" Color="{StaticResource AccentFillColor}" />
       <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="{StaticResource AccentFillHoverColor}" />
@@ -695,21 +954,21 @@
       <SolidColorBrush x:Key="AccentButtonBorderBrushPointerOver" Color="{StaticResource AccentFillHoverColor}" />
       <SolidColorBrush x:Key="AccentButtonBorderBrushPressed" Color="{StaticResource AccentFillPressedColor}" />
       <SolidColorBrush x:Key="AccentButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
-      <SolidColorBrush x:Key="RepeatButtonBackground" Color="#48484B" />
-      <SolidColorBrush x:Key="RepeatButtonBackgroundPointerOver" Color="#525255" />
-      <SolidColorBrush x:Key="RepeatButtonBackgroundPressed" Color="#5C5C5F" />
+      <SolidColorBrush x:Key="RepeatButtonBackground" Color="#2B3A50" />
+      <SolidColorBrush x:Key="RepeatButtonBackgroundPointerOver" Color="#34465F" />
+      <SolidColorBrush x:Key="RepeatButtonBackgroundPressed" Color="#3E526E" />
       <SolidColorBrush x:Key="RepeatButtonBackgroundDisabled" Color="{StaticResource BgSubtleColor}" />
       <SolidColorBrush x:Key="RepeatButtonForeground" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="RepeatButtonForegroundPointerOver" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="RepeatButtonForegroundPressed" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="RepeatButtonForegroundDisabled" Color="{StaticResource TextDisabledColor}" />
-      <SolidColorBrush x:Key="RepeatButtonBorderBrush" Color="#48484B" />
-      <SolidColorBrush x:Key="RepeatButtonBorderBrushPointerOver" Color="#525255" />
-      <SolidColorBrush x:Key="RepeatButtonBorderBrushPressed" Color="#5C5C5F" />
+      <SolidColorBrush x:Key="RepeatButtonBorderBrush" Color="#2B3A50" />
+      <SolidColorBrush x:Key="RepeatButtonBorderBrushPointerOver" Color="#34465F" />
+      <SolidColorBrush x:Key="RepeatButtonBorderBrushPressed" Color="#3E526E" />
       <SolidColorBrush x:Key="RepeatButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
-      <SolidColorBrush x:Key="ToggleButtonBackground" Color="#48484B" />
-      <SolidColorBrush x:Key="ToggleButtonBackgroundPointerOver" Color="#525255" />
-      <SolidColorBrush x:Key="ToggleButtonBackgroundPressed" Color="#5C5C5F" />
+      <SolidColorBrush x:Key="ToggleButtonBackground" Color="#2B3A50" />
+      <SolidColorBrush x:Key="ToggleButtonBackgroundPointerOver" Color="#34465F" />
+      <SolidColorBrush x:Key="ToggleButtonBackgroundPressed" Color="#3E526E" />
       <SolidColorBrush x:Key="ToggleButtonBackgroundDisabled" Color="{StaticResource BgSubtleColor}" />
       <SolidColorBrush x:Key="ToggleButtonBackgroundChecked" Color="{StaticResource AccentSoftColor}" />
       <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver" Color="{StaticResource AccentSoftHoverColor}" />
@@ -723,25 +982,25 @@
       <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPointerOver" Color="{StaticResource AccentColor}" />
       <SolidColorBrush x:Key="ToggleButtonForegroundCheckedPressed" Color="{StaticResource AccentColor}" />
       <SolidColorBrush x:Key="ToggleButtonForegroundCheckedDisabled" Color="{StaticResource TextDisabledColor}" />
-      <SolidColorBrush x:Key="ToggleButtonBorderBrush" Color="#48484B" />
-      <SolidColorBrush x:Key="ToggleButtonBorderBrushPointerOver" Color="#525255" />
-      <SolidColorBrush x:Key="ToggleButtonBorderBrushPressed" Color="#5C5C5F" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrush" Color="#2B3A50" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrushPointerOver" Color="#34465F" />
+      <SolidColorBrush x:Key="ToggleButtonBorderBrushPressed" Color="#3E526E" />
       <SolidColorBrush x:Key="ToggleButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
       <SolidColorBrush x:Key="ToggleButtonBorderBrushChecked" Color="{StaticResource AccentColor}" />
       <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPointerOver" Color="{StaticResource AccentColor}" />
       <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedPressed" Color="{StaticResource AccentColor}" />
       <SolidColorBrush x:Key="ToggleButtonBorderBrushCheckedDisabled" Color="{StaticResource BorderDefaultColor}" />
-      <SolidColorBrush x:Key="SplitButtonBackground" Color="#48484B" />
-      <SolidColorBrush x:Key="SplitButtonBackgroundPointerOver" Color="#525255" />
-      <SolidColorBrush x:Key="SplitButtonBackgroundPressed" Color="#5C5C5F" />
+      <SolidColorBrush x:Key="SplitButtonBackground" Color="#2B3A50" />
+      <SolidColorBrush x:Key="SplitButtonBackgroundPointerOver" Color="#34465F" />
+      <SolidColorBrush x:Key="SplitButtonBackgroundPressed" Color="#3E526E" />
       <SolidColorBrush x:Key="SplitButtonBackgroundDisabled" Color="{StaticResource BgSubtleColor}" />
       <SolidColorBrush x:Key="SplitButtonForeground" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="SplitButtonForegroundPointerOver" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="SplitButtonForegroundPressed" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="SplitButtonForegroundDisabled" Color="{StaticResource TextDisabledColor}" />
-      <SolidColorBrush x:Key="SplitButtonBorderBrush" Color="#48484B" />
-      <SolidColorBrush x:Key="SplitButtonBorderBrushPointerOver" Color="#525255" />
-      <SolidColorBrush x:Key="SplitButtonBorderBrushPressed" Color="#5C5C5F" />
+      <SolidColorBrush x:Key="SplitButtonBorderBrush" Color="#2B3A50" />
+      <SolidColorBrush x:Key="SplitButtonBorderBrushPointerOver" Color="#34465F" />
+      <SolidColorBrush x:Key="SplitButtonBorderBrushPressed" Color="#3E526E" />
       <SolidColorBrush x:Key="SplitButtonBorderBrushDisabled" Color="{StaticResource BorderDefaultColor}" />
       <SolidColorBrush x:Key="TextControlForeground" Color="{StaticResource TextPrimaryColor}" />
       <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="{StaticResource TextPrimaryColor}" />
@@ -890,9 +1149,9 @@
       <SolidColorBrush x:Key="SliderTrackValueFillPointerOver" Color="{StaticResource AccentFillHoverColor}" />
       <SolidColorBrush x:Key="SliderTrackValueFillPressed" Color="{StaticResource AccentFillPressedColor}" />
       <SolidColorBrush x:Key="SliderTrackValueFillDisabled" Color="{StaticResource TextDisabledColor}" />
-      <SolidColorBrush x:Key="SliderThumbBackground" Color="#E6E6E6" />
-      <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#F0F0F0" />
-      <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="#D4D4D4" />
+      <SolidColorBrush x:Key="SliderThumbBackground" Color="#E6EBF1" />
+      <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#F2F5F9" />
+      <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="#D0D8E2" />
       <SolidColorBrush x:Key="SliderThumbBackgroundDisabled" Color="{StaticResource TextDisabledColor}" />
       <SolidColorBrush x:Key="SliderTickBarFill" Color="{StaticResource BorderStrongColor}" />
       <SolidColorBrush x:Key="SliderInlineTickBarFill" Color="{StaticResource BgSurfaceColor}" />
@@ -977,6 +1236,52 @@
       <SolidColorBrush x:Key="DataGridCellFocusVisualSecondaryBrush" Color="Transparent" />
       <SolidColorBrush x:Key="MenuFlyoutItemBackground" Color="Transparent" />
       <SolidColorBrush x:Key="ComboBoxItemBackground" Color="Transparent" />
+      <!-- Map page analysis layers (see the light theme) -->
+      <Color x:Key="MapHeatStop0Color">#4A93D6</Color>
+      <Color x:Key="MapHeatStop1Color">#6CB8F0</Color>
+      <Color x:Key="MapHeatStop2Color">#F5B04A</Color>
+      <Color x:Key="MapHeatStop3Color">#FF5A6B</Color>
+      <Color x:Key="MapSurfaceClass0Color">#B9DDFB</Color>
+      <Color x:Key="MapSurfaceClass1Color">#84C0F2</Color>
+      <Color x:Key="MapSurfaceClass2Color">#4F9DE2</Color>
+      <Color x:Key="MapSurfaceClass3Color">#2E78C8</Color>
+      <Color x:Key="MapSurfaceClass4Color">#1A549E</Color>
+      <SolidColorBrush x:Key="MapSurfaceClass0" Color="{StaticResource MapSurfaceClass0Color}" />
+      <SolidColorBrush x:Key="MapSurfaceClass1" Color="{StaticResource MapSurfaceClass1Color}" />
+      <SolidColorBrush x:Key="MapSurfaceClass2" Color="{StaticResource MapSurfaceClass2Color}" />
+      <SolidColorBrush x:Key="MapSurfaceClass3" Color="{StaticResource MapSurfaceClass3Color}" />
+      <SolidColorBrush x:Key="MapSurfaceClass4" Color="{StaticResource MapSurfaceClass4Color}" />
+      <SolidColorBrush x:Key="MapClusterInkLight" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="MapClusterInkDark" Color="#0E2540" />
+      <SolidColorBrush x:Key="MapLegendDotOutline" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="MapFloodZoneFill" Color="#B35B8FD9" />
+      <SolidColorBrush x:Key="MapFloodZoneStroke" Color="#3D6FB8" />
+      <!-- Structures page (3.5): the tag colours (dots only, see the light theme) -->
+      <SolidColorBrush x:Key="TagBlueDot" Color="#4DA6FF" />
+      <SolidColorBrush x:Key="TagGreenDot" Color="#5CC983" />
+      <SolidColorBrush x:Key="TagAmberDot" Color="#F5B04A" />
+      <SolidColorBrush x:Key="TagRedDot" Color="#FF7A8C" />
+      <SolidColorBrush x:Key="TagVioletDot" Color="#B39DFF" />
+      <SolidColorBrush x:Key="TagSlateDot" Color="#9AA9BB" />
+      <!-- Accessibility (Controls/DateField): the month in the date field's calendar, on the card in the tokens'
+           colours (Fluent's grey cells and outlines would look foreign); the chosen day is outlined in the accent -->
+      <SolidColorBrush x:Key="CalendarViewBackground" Color="{StaticResource BgSurfaceColor}" />
+      <SolidColorBrush x:Key="CalendarViewForeground" Color="{StaticResource TextPrimaryColor}" />
+      <SolidColorBrush x:Key="CalendarViewBorderBrush" Color="Transparent" />
+      <SolidColorBrush x:Key="CalendarViewCalendarItemForeground" Color="{StaticResource TextPrimaryColor}" />
+      <SolidColorBrush x:Key="CalendarViewCalendarItemRevealBackground" Color="{StaticResource BgSurfaceColor}" />
+      <SolidColorBrush x:Key="CalendarViewCalendarItemRevealBorderBrush" Color="Transparent" />
+      <SolidColorBrush x:Key="CalendarViewOutOfScopeBackground" Color="{StaticResource BgSurfaceColor}" />
+      <SolidColorBrush x:Key="CalendarViewOutOfScopeForeground" Color="{StaticResource TextTertiaryColor}" />
+      <SolidColorBrush x:Key="CalendarViewHoverBorderBrush" Color="{StaticResource BorderStrongColor}" />
+      <SolidColorBrush x:Key="CalendarViewPressedBorderBrush" Color="{StaticResource BorderStrongHoverColor}" />
+      <SolidColorBrush x:Key="CalendarViewSelectedBorderBrush" Color="{StaticResource AccentFillColor}" />
+      <SolidColorBrush x:Key="CalendarViewSelectedHoverBorderBrush" Color="{StaticResource AccentFillHoverColor}" />
+      <SolidColorBrush x:Key="CalendarViewSelectedPressedBorderBrush" Color="{StaticResource AccentFillPressedColor}" />
+      <SolidColorBrush x:Key="CalendarViewNavigationButtonBackground" Color="Transparent" />
+      <SolidColorBrush x:Key="CalendarViewNavigationButtonBorderBrush" Color="Transparent" />
+      <SolidColorBrush x:Key="CalendarViewNavigationButtonForegroundPointerOver" Color="{StaticResource AccentColor}" />
+      <SolidColorBrush x:Key="CalendarViewNavigationButtonForegroundPressed" Color="{StaticResource AccentPressedColor}" />
     </ResourceDictionary>
   </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>

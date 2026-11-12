@@ -28,15 +28,12 @@
     <!-- Step 5: cost -->
     <DataTemplate DataType="ed:CostSectionViewModel">
       <StackPanel>
-        <TextBlock Classes="h2" Text="{Binding Title}" Margin="0,0,0,14" />
+        <TextBlock Classes="stepHeading" Text="{Binding Title}" />
 
         <Border Classes="formGroup">
           <StackPanel Spacing="12">
             <Grid ColumnDefinitions="*,Auto">
-              <StackPanel Spacing="2">
-                <TextBlock Classes="h3" Text="Square footage" />
-                <TextBlock Classes="muted" Text="Rectangles (length × width × stories), or a total." TextWrapping="Wrap" />
-              </StackPanel>
+              <TextBlock Classes="h3" Text="Square footage" VerticalAlignment="Center" ToolTip.Tip="Rectangles (length × width × stories), or a total." />
               <TextBlock Classes="xl semibold num" Grid.Column="1" Text="{Binding Editor.SquareFootage, Converter={x:Static app:Converters.SquareFeet}}" VerticalAlignment="Center" Margin="12,0,0,0" />
             </Grid>
             <ItemsControl ItemsSource="{Binding Editor.Shapes}">
@@ -113,10 +110,7 @@
 
         <Border Classes="formGroup" IsVisible="{Binding Editor.CostAdjustments.Count, Converter={x:Static app:Converters.IsPositive}}">
           <StackPanel>
-            <StackPanel Spacing="2" Margin="0,0,0,10">
-              <TextBlock Classes="h3" Text="Cost adjustments" />
-              <TextBlock Classes="muted" Text="Features that add to the replacement cost." TextWrapping="Wrap" />
-            </StackPanel>
+            <TextBlock Classes="h3" Text="Cost adjustments" Margin="0,0,0,12" ToolTip.Tip="Features that add to the replacement cost." />
             <Border Classes="tableHead">
               <Grid ColumnDefinitions="*,52,104,128,104">
                 <TextBlock Classes="colHead" Text="Item" />
@@ -148,10 +142,7 @@
 
         <Border Classes="formGroup">
           <StackPanel>
-            <StackPanel Spacing="2" Margin="0,0,0,10">
-              <TextBlock Classes="h3" Text="Additional adjustments" />
-              <TextBlock Classes="muted" Text="Up to 7 lines." TextWrapping="Wrap" />
-            </StackPanel>
+            <TextBlock Classes="h3" Text="Additional adjustments" Margin="0,0,0,12" ToolTip.Tip="Up to 7 lines." />
             <Border Classes="tableHead">
               <Grid ColumnDefinitions="*,104,128,104">
                 <TextBlock Classes="colHead" Text="Description" />
@@ -202,8 +193,8 @@
     <!-- Step 6: damage by element -->
     <DataTemplate DataType="ed:DamageSectionViewModel">
       <StackPanel>
-        <TextBlock Classes="h2" Text="{Binding Title}" Margin="0,0,0,14" />
-        <c:Banner Tone="Violet" Icon="Info" Margin="0,0,0,14" IsVisible="{Binding Editor.IsUndetermined}"
+        <TextBlock Classes="stepHeading" Text="{Binding Title}" />
+        <c:Banner Tone="Violet" Icon="Info" Margin="0,0,0,16" IsVisible="{Binding Editor.IsUndetermined}"
                   Text="Damage is undetermined (Inspection step), so these values don't affect the result." />
         <Border Classes="formGroup" IsVisible="{Binding Editor.HasDepthTables}">
           <StackPanel Spacing="10">
@@ -227,7 +218,7 @@
             </Grid>
           </StackPanel>
         </Border>
-        <Border Margin="0,0,0,14">
+        <Border Classes="formGroup">
           <StackPanel>
             <Border Classes="tableHead">
               <Grid>
@@ -298,12 +289,13 @@
     <!-- Step 7: result -->
     <DataTemplate DataType="ed:ResultSectionViewModel">
       <StackPanel>
-        <TextBlock Classes="h2" Text="{Binding Title}" Margin="0,0,0,14" ToolTip.Tip="Percent damaged = cost of repairs ÷ value of the building before the damage" />
+        <TextBlock Classes="stepHeading" Text="{Binding Title}" ToolTip.Tip="Percent damaged = cost of repairs ÷ value of the building before the damage" />
 
         <Border Classes="formGroup">
           <StackPanel Spacing="10">
             <TextBlock Classes="h3" Text="Value of the building (before damage)" />
-            <RadioButton GroupName="value" IsChecked="{Binding Editor.IsValueAcv, Mode=OneWay}" Command="{Binding Editor.SetValueBasisCommand}" CommandParameter="390">
+            <RadioButton GroupName="value" IsChecked="{Binding Editor.IsValueAcv, Mode=OneWay}" Command="{Binding Editor.SetValueBasisCommand}" CommandParameter="390"
+                         AutomationProperties.Name="Computed actual cash value">
               <StackPanel Spacing="1">
                 <TextBlock Classes="medium" Text="Computed actual cash value" />
                 <TextBlock Classes="muted" Text="{Binding Editor.Assessment.ComputedActualCashValue, Converter={x:Static app:Converters.Money}, StringFormat='Replacement cost less depreciation: {0}'}" />
@@ -312,7 +304,8 @@
             <RadioButton GroupName="value" IsChecked="{Binding Editor.IsValueAppraisal, Mode=OneWay}" Command="{Binding Editor.SetValueBasisCommand}" CommandParameter="391">
               <TextBlock Classes="medium" Text="Professional market appraisal" ToolTip.Tip="Value of the structure only, from a licensed appraiser" />
             </RadioButton>
-            <RadioButton GroupName="value" IsChecked="{Binding Editor.IsValueTax, Mode=OneWay}" Command="{Binding Editor.SetValueBasisCommand}" CommandParameter="392">
+            <RadioButton GroupName="value" IsChecked="{Binding Editor.IsValueTax, Mode=OneWay}" Command="{Binding Editor.SetValueBasisCommand}" CommandParameter="392"
+                         AutomationProperties.Name="Adjusted tax assessed value">
               <StackPanel Spacing="1">
                 <TextBlock Classes="medium" Text="Adjusted tax assessed value" />
                 <TextBlock Classes="muted" Text="{Binding Editor.AdjustedTaxValue, Converter={x:Static app:Converters.Money}, StringFormat='Tax assessed value × factor adjustment: {0}'}" />
@@ -325,7 +318,8 @@
         <Border Classes="formGroup">
           <StackPanel Spacing="10">
             <TextBlock Classes="h3" Text="Cost of repairs" />
-            <RadioButton GroupName="repair" IsChecked="{Binding Editor.IsRepairComputed, Mode=OneWay}" Command="{Binding Editor.SetRepairBasisCommand}" CommandParameter="393">
+            <RadioButton GroupName="repair" IsChecked="{Binding Editor.IsRepairComputed, Mode=OneWay}" Command="{Binding Editor.SetRepairBasisCommand}" CommandParameter="393"
+                         AutomationProperties.Name="Computed damages">
               <StackPanel Spacing="1">
                 <TextBlock Classes="medium" Text="Computed damages" />
                 <TextBlock Classes="muted" Text="{Binding Editor.Assessment.ComputedDamages, Converter={x:Static app:Converters.Money}, StringFormat='From the damage step: {0}'}" />
@@ -346,7 +340,7 @@
     <!-- Step 8: photos & notes -->
     <DataTemplate DataType="ed:PhotosSectionViewModel">
       <StackPanel>
-        <TextBlock Classes="h2" Text="{Binding Title}" Margin="0,0,0,14" />
+        <TextBlock Classes="stepHeading" Text="{Binding Title}" />
         <Border Classes="formGroup">
           <StackPanel Spacing="14">
             <Border Name="DropZone" Classes="dropZone" DragDrop.AllowDrop="True">
@@ -390,7 +384,17 @@
                           <c:Icon Kind="CaretRight" Size="14" />
                         </Button>
                       </Grid>
-                      <Button Padding="0" Background="Transparent" Command="{Binding OpenCommand}" ToolTip.Tip="Open" AutomationProperties.Name="{Binding FileName, StringFormat='Open {0}'}">
+                      <Button Padding="0" Background="Transparent" Classes="photoThumb" ToolTip.Tip="Quick Look (Space)"
+                              Command="{Binding $parent[ItemsControl].((ed:PhotosSectionViewModel)DataContext).Editor.QuickLookCommand}" CommandParameter="{Binding}"
+                              AutomationProperties.Name="{Binding FileName, StringFormat='Quick Look {0}'}">
+                        <Button.ContextMenu>
+                          <ContextMenu>
+                            <MenuItem Header="Quick Look" InputGesture="Space" CommandParameter="{Binding}"
+                                      Command="{ReflectionBinding DataContext.QuickLookCommand, RelativeSource={RelativeSource AncestorType=UserControl, Tree=Logical}}" />
+                            <MenuItem Header="Open in Preview" Command="{Binding OpenCommand}" />
+                            <MenuItem Header="Mark Up…" Command="{Binding MarkUpCommand}" />
+                          </ContextMenu>
+                        </Button.ContextMenu>
                         <Border CornerRadius="6" ClipToBounds="True" Height="150" Width="218" Background="{DynamicResource BgSubtle}">
                           <Panel>
                             <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" IsVisible="{Binding HasThumbnail}" />
@@ -419,10 +423,7 @@
         </Border>
         <Border Classes="formGroup">
           <StackPanel Spacing="12">
-            <StackPanel Spacing="2">
-              <TextBlock Classes="h3" Text="Your fields" />
-              <TextBlock Classes="muted" Text="Rename these in Settings (for example “Permit number”)." />
-            </StackPanel>
+            <TextBlock Classes="h3" Text="Your fields" ToolTip.Tip="Rename these in Settings (for example “Permit number”)." />
             <ItemsControl Classes="fields" ItemsSource="{Binding Editor.CustomFields}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><c:FieldGrid Columns="3" MinColumnWidth="160" /></ItemsPanelTemplate>
@@ -446,8 +447,8 @@
     <!-- Steps 1-4: plain forms -->
     <DataTemplate DataType="ed:SectionViewModel">
       <StackPanel>
-        <Grid Margin="0,0,0,14" ColumnDefinitions="*,Auto">
-          <TextBlock Classes="h2" Text="{Binding Title}" VerticalAlignment="Center" />
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Classes="stepHeading" Text="{Binding Title}" VerticalAlignment="Top" />
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
             <Button Command="{Binding ElevationCertificateCommand}" IsVisible="{Binding HasElevationCertificate}" AutomationProperties.Name="Elevation certificate"
                     ToolTip.Tip="Read FEMA's elevation certificate (or type its values) and keep the PDF with the structure. You choose what to use.">
@@ -476,25 +477,25 @@
     <Grid Name="EditorGrid" ColumnDefinitions="*,Auto">
       <!-- Current step -->
       <ScrollViewer Name="StepScroller" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="24,20,24,28" MaxWidth="900" HorizontalAlignment="Stretch">
-          <c:Banner Classes="stacked" Tone="Accent" Icon="Lock" Margin="0,0,0,14" IsVisible="{Binding IsLocked}" Text="{Binding LockText}"
+        <StackPanel Margin="28,24,28,32" MaxWidth="900" HorizontalAlignment="Stretch">
+          <c:Banner Classes="stacked" Tone="Accent" Icon="Lock" Margin="0,0,0,16" IsVisible="{Binding IsLocked}" Text="{Binding LockText}"
                     AutomationProperties.Name="Locked">
             <TextBlock Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding ChangedInOlderVersion}"
                        Text="Changed in an older SDE after it was locked. Check it, then reopen and lock it again." />
           </c:Banner>
-          <c:Banner Classes="stacked" Tone="Accent" Icon="Lock" Margin="0,0,0,14" IsVisible="{Binding IsCheckedOut}" Text="{Binding CheckOutText}"
+          <c:Banner Classes="stacked" Tone="Accent" Icon="Lock" Margin="0,0,0,16" IsVisible="{Binding IsCheckedOut}" Text="{Binding CheckOutText}"
                     AutomationProperties.Name="Checked out">
             <Button Content="Take It Back…" Command="{Binding TakeBackCommand}" HorizontalAlignment="Left"
                     AutomationProperties.Name="Take it back from the work package early" />
           </c:Banner>
-          <c:Banner Classes="stacked" Tone="Warning" Margin="0,0,0,14" IsVisible="{Binding HasConflict}" Text="{Binding ConflictText}"
+          <c:Banner Classes="stacked" Tone="Warning" Margin="0,0,0,16" IsVisible="{Binding HasConflict}" Text="{Binding ConflictText}"
                     AutomationProperties.Name="Changed elsewhere">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Button Content="Use Theirs" Command="{Binding UseTheirsCommand}" AutomationProperties.Name="Use their values" />
               <Button Content="Keep Mine" Command="{Binding KeepMineCommand}" AutomationProperties.Name="Keep my values" />
             </StackPanel>
           </c:Banner>
-          <c:Banner Classes="stacked" Tone="Info" Icon="Event" Margin="0,0,0,14" IsVisible="{Binding HasEventSuggestion}" Text="{Binding EventSuggestionText}"
+          <c:Banner Classes="stacked" Tone="Info" Icon="Event" Margin="0,0,0,16" IsVisible="{Binding HasEventSuggestion}" Text="{Binding EventSuggestionText}"
                     AutomationProperties.Name="Event suggestion">
             <StackPanel Orientation="Horizontal" Spacing="8">
               <Button Classes="primary" Content="Add to Event" Command="{Binding AddToSuggestedEventCommand}" />
@@ -506,38 +507,19 @@
       </ScrollViewer>
 
       <!-- Live result -->
-      <Border Grid.Column="1" Classes="resultPanel">
+      <Border Grid.Column="1" Classes="resultPanel" Width="{Binding Shell.InspectorWidth}" Name="ResultPanel">
         <ScrollViewer>
-          <StackPanel Margin="16,16" Spacing="14">
-            <Border Classes="resultCard">
-              <StackPanel Spacing="1">
-                <TextBlock Classes="eyebrow" Text="Percent Damaged" />
-                <TextBlock Classes="display" Text="{Binding PercentText}" app:ThemeBrush.Foreground="{Binding State, Converter={x:Static app:Converters.PercentForegroundKey}}" />
-                <TextBlock Text="{Binding Determination}" TextWrapping="Wrap" ToolTip.Tip="{Binding StateHint}" />
-                <!-- Where the result sits against FEMA's 50% threshold -->
-                <StackPanel IsVisible="{Binding HasPercent}" Margin="0,12,0,0" Spacing="4">
-                  <Panel>
-                    <ProgressBar Classes="threshold" Minimum="0" Maximum="100" Value="{Binding PercentValue}"
-                                 app:ThemeBrush.Foreground="{Binding State, Converter={x:Static app:Converters.StatusDotKey}}"
-                                 AutomationProperties.Name="Percent damaged against the 50% threshold" />
-                    <Grid ColumnDefinitions="*,Auto,*">
-                      <Border Grid.Column="1" Classes="thresholdTick" />
-                    </Grid>
-                  </Panel>
-                  <Grid ColumnDefinitions="*,Auto,*">
-                    <TextBlock Classes="xs secondary num" Text="0%" />
-                    <TextBlock Grid.Column="1" Classes="xs secondary semibold num" Text="50%" />
-                    <TextBlock Grid.Column="2" Classes="xs secondary num" Text="100%" HorizontalAlignment="Right" />
-                  </Grid>
-                </StackPanel>
-                <TextBlock Text="{Binding StateHint}" TextWrapping="Wrap" Classes="secondary sm" Margin="0,6,0,0" IsVisible="{Binding ShowStateHint}" />
-              </StackPanel>
-            </Border>
+          <StackPanel Margin="0,24,20,24" Spacing="14">
+            <!-- The result: the percent large in white on the dark card, the determination, and the staff gauge -->
+            <c:ResultHero Name="EditorHero" Label="Percent damaged" PercentText="{Binding PercentText}" HasPercent="{Binding HasPercent}"
+                          Verdict="{Binding Determination}" IsSubstantial="{Binding State, Converter={x:Static app:Converters.IsSubstantial}}"
+                          LineText="{Binding LineText}" Value="{Binding PercentValue}" Hint="{Binding StateHint}" ShowHint="{Binding ShowStateHint}"
+                          ToolTip.Tip="{Binding StateHint}" />
 
             <!-- Cumulative damage (Settings; off by default). A separate finding: FEMA's result above never changes. -->
-            <Border Classes="resultCard rule" IsVisible="{Binding ShowCumulative}" Name="CumulativeCard">
+            <Border Classes="sideCard" IsVisible="{Binding ShowCumulative}" Name="CumulativeCard">
               <StackPanel Spacing="4">
-                <TextBlock Classes="eyebrow" Text="Cumulative Damage" />
+                <TextBlock Classes="cardTitle" Text="Cumulative damage" />
                 <TextBlock Classes="semibold" Text="{Binding CumulativeTitle}" TextWrapping="Wrap"
                            app:ThemeBrush.Foreground="{Binding CumulativeState, Converter={x:Static app:Converters.PercentForegroundKey}}"
                            ToolTip.Tip="Damage from the events in the look-back period added together, as set in Settings. FEMA's reports and exports keep FEMA's own result." />
@@ -555,8 +537,9 @@
               </StackPanel>
             </Border>
 
-            <Border Classes="resultCard rule">
-              <StackPanel Spacing="6">
+            <Border Classes="sideCard">
+              <StackPanel Spacing="8">
+                <TextBlock Classes="cardTitle" Text="Costs" />
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Classes="secondary" Text="Replacement cost" />
                   <TextBlock Grid.Column="1" Classes="money" Text="{Binding Assessment.TotalReplacementCost, Converter={x:Static app:Converters.MoneyWhole}}" />
@@ -571,7 +554,7 @@
                 </Grid>
                 <Grid ColumnDefinitions="*,Auto">
                   <TextBlock Classes="secondary" Text="Damages" />
-                  <TextBlock Grid.Column="1" Classes="money" Text="{Binding Assessment.ComputedDamages, Converter={x:Static app:Converters.MoneyWhole}}" />
+                  <TextBlock Grid.Column="1" Classes="money semibold" Text="{Binding Assessment.ComputedDamages, Converter={x:Static app:Converters.MoneyWhole}}" />
                 </Grid>
                 <!-- Which figures the percentage uses, said only when they aren't FEMA's computed ones above -->
                 <StackPanel Spacing="1" Margin="0,4,0,0" IsVisible="{Binding !IsRepairComputed}">
@@ -591,11 +574,11 @@
               </StackPanel>
             </Border>
 
-            <Border Classes="resultCard rule">
+            <Border Classes="sideCard">
               <StackPanel Spacing="6">
                 <Grid ColumnDefinitions="*,Auto">
-                  <TextBlock Classes="eyebrow" Text="To Check" />
-                  <TextBlock Grid.Column="1" Classes="danger xs" Text="{Binding RequiredIssueCount, StringFormat='{}{0} required'}"
+                  <TextBlock Classes="cardTitle" Text="To check" />
+                  <TextBlock Grid.Column="1" Classes="danger sm semibold" VerticalAlignment="Center" Text="{Binding RequiredIssueCount, StringFormat='{}{0} required'}"
                              IsVisible="{Binding RequiredIssueCount, Converter={x:Static app:Converters.IsPositive}}" />
                 </Grid>
                 <TextBlock Classes="sm secondary" Text="Nothing missing" IsVisible="{Binding Issues.Count, Converter={x:Static app:Converters.IsZero}}" />
@@ -614,6 +597,9 @@
           </StackPanel>
         </ScrollViewer>
       </Border>
+      <!-- The result panel's leading edge drags its width (the same width as Structures' inspector) -->
+      <c:ResizeHandle Grid.Column="1" Classes="inspectorEdge" Name="ResultResizer"
+                      Value="{Binding Shell.InspectorWidth}" ResetCommand="{Binding Shell.ResetInspectorWidthCommand}" GrowsRight="False" />
     </Grid>
   </DockPanel>
 </UserControl>

@@ -1,0 +1,94 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Sde.App.ViewModels"
+             xmlns:v="using:Sde.App.Views"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.AgendaView"
+             x:DataType="vm:AgendaViewModel">
+
+  <!-- In the window's toolbar: how far ahead, and Add to Calendar -->
+  <v:PageChrome.Toolbar>
+    <StackPanel Classes="pageToolbar">
+      <ListBox Classes="segmented" SelectedIndex="{Binding RangeIndex}" AutomationProperties.Name="How far ahead">
+        <ListBoxItem Content="30 Days" AutomationProperties.Name="The next 30 days" />
+        <ListBoxItem Content="90 Days" AutomationProperties.Name="The next 90 days" />
+        <ListBoxItem Content="All" AutomationProperties.Name="Everything ahead" />
+      </ListBox>
+      <Button Classes="primary" Content="Add to Calendar…" Command="{Binding AddToCalendarCommand}"
+              ToolTip.Tip="Save these dates as a calendar file for Calendar" AutomationProperties.Name="Add these dates to Calendar" />
+    </StackPanel>
+  </v:PageChrome.Toolbar>
+
+  <!-- The hero (how many overdue and due soon), then the dates by week and month as cards of rows -->
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Classes="statusBar onPaper">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="12,0">
+        <TextBlock Text="{Binding StatusText}" />
+        <TextBlock Text="{Binding LastResult, StringFormat=' · {0}'}" IsVisible="{Binding HasResult}" TextTrimming="CharacterEllipsis" MaxWidth="520"
+                   ToolTip.Tip="{Binding LastResult}" AutomationProperties.LiveSetting="Polite" />
+      </StackPanel>
+    </Border>
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="16">
+        <Border Classes="heroBand agendaHero" Name="AgendaHero">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="28">
+            <TextBlock Classes="heroHeadline" Text="{Binding Headline}" VerticalAlignment="Center" />
+            <Border Grid.Column="1" Classes="heroFigures">
+              <StackPanel Orientation="Horizontal" Spacing="32" VerticalAlignment="Center">
+                <StackPanel Spacing="2">
+                  <TextBlock Classes="heroLabel" Text="{Binding OverdueLabel}" />
+                  <TextBlock Classes="heroFigure" Classes.danger="{Binding HasOverdue}" Text="{Binding OverdueCount}" Name="OverdueFigure" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <TextBlock Classes="heroLabel" Text="{Binding DueSoonLabel}" />
+                  <TextBlock Classes="heroFigure" Text="{Binding DueSoonCount}" Name="DueSoonFigure" />
+                </StackPanel>
+              </StackPanel>
+            </Border>
+          </Grid>
+        </Border>
+
+        <StackPanel Classes="cardColumn">
+          <TextBlock Classes="muted" Text="{Binding EmptyTitle}" IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" Margin="0,24,0,0" />
+          <ItemsControl ItemsSource="{Binding Groups}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Spacing="16" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:AgendaGroupViewModel">
+                <Border Classes="groupCard">
+                  <StackPanel>
+                    <Grid Classes="groupHead" ColumnDefinitions="*,Auto">
+                      <TextBlock Classes="groupTitle" Classes.danger="{Binding IsOverdue}" Text="{Binding Title}" />
+                      <TextBlock Grid.Column="1" Classes="groupCount" Text="{Binding CountText}" />
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Entries}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:AgendaEntryViewModel">
+                          <Button Classes="cardRow" Command="{Binding Open}" CommandParameter="{Binding}" IsEnabled="{Binding CanOpen}"
+                                  AutomationProperties.Name="{Binding AccessibleName}" ToolTip.Tip="{Binding Entry.Title}">
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="14">
+                              <c:Icon Kind="{Binding Icon}" Size="16" Classes="secondary" Classes.danger="{Binding IsOverdue}" VerticalAlignment="Center" />
+                              <TextBlock Grid.Column="1" Classes="rowDate" Text="{Binding DateText}" />
+                              <StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Heading}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Classes="rowDetail" Text="{Binding Where}" IsVisible="{Binding HasWhere}" />
+                              </StackPanel>
+                              <TextBlock Grid.Column="3" Classes="sm danger" Text="{Binding LateText}" IsVisible="{Binding IsOverdue}" VerticalAlignment="Center" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

@@ -3,8 +3,9 @@
         xmlns:c="using:Sde.App.Controls"
         xmlns:app="using:Sde.App">
   <!--
-    The window's frame: sidebar, switchers and their menus, the title band and its search field, sheets (scrim and
-    chrome, with small, medium and large widths), the command palette, and keyboard-key labels (Border.kbd).
+    The window's frame: the sidebar (its sections, rows, foot and resizable edge), the title band and its search
+    field, inspector edges and keyboard-key labels (Border.kbd); sheets and the command palette are in Sheets.axaml.
+    Every colour is a token, so the shell's look changes here and in Tokens.axaml.
   -->
 
   <!-- Icons in a colour role -->
@@ -27,45 +28,85 @@
     <Setter Property="Foreground" Value="{DynamicResource DangerFg}" />
   </Style>
 
-  <!-- The source list: section headers, plain grey counts -->
+  <!--
+    The frame (3.5): the sidebar and the title band are one deep navy frame (BgFrame, in both themes) round the bright
+    content panel, whose top-left corner is rounded where the frame wraps it. Everything drawn on the frame takes the
+    frame's own colours. Controls hosted by the frame (the toolbar's buttons, pull-downs, view switch, New and search,
+    and a page's own toolbar items) get their on-frame look from the "onFrame" class on the sidebar and the title band,
+    so the same controls keep their normal look everywhere else. Menus and flyouts opened from the frame stay in the
+    light or dark theme (the reset at the end of this section).
+  -->
+
+  <!-- The source list: section labels small and semibold, a little open; counts as quiet numbers -->
   <Style Selector="TextBlock.sourceHeader">
     <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
     <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
-    <Setter Property="Margin" Value="8,6,8,4" />
+    <Setter Property="LetterSpacing" Value="0.4" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameTertiary}" />
+    <Setter Property="Margin" Value="10,10,8,6" />
+  </Style>
+  <!-- The sidebar's header under the window's title strip: the mark, "SDE" and the open database -->
+  <Style Selector="Grid.brandHeader">
+    <Setter Property="Margin" Value="20,0,12,18" />
+  </Style>
+  <Style Selector="Grid.brandHeader c|Icon">
+    <Setter Property="Foreground" Value="{DynamicResource AccentOnFrame}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="0,0,12,0" />
+  </Style>
+  <Style Selector="TextBlock.brandName">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeTitle}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="1" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+  <Style Selector="TextBlock.brandDetail">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
   <Style Selector="TextBlock.sourceCount">
-    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameTertiary}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
     <Setter Property="FontFeatures" Value="+tnum" />
     <Setter Property="VerticalAlignment" Value="Center" />
-    <Setter Property="Margin" Value="6,0,0,0" />
+    <Setter Property="Margin" Value="6,0,2,0" />
+  </Style>
+  <Style Selector="TextBlock.sourceCount.required">
+    <Setter Property="Foreground" Value="{DynamicResource DangerOnFrame}" />
   </Style>
 
-  <!-- The toolbar: title and subtitle, 28 px borderless items, the view switch and the search field -->
+  <!-- Show Sidebar, while it is hidden: after the window's close, minimise and zoom buttons -->
+  <Style Selector="Button.showSidebar">
+    <Setter Property="Margin" Value="{StaticResource TrafficLightInset}" />
+  </Style>
+
+  <!-- The toolbar: a large white title and a quiet subtitle, 32 px items, the view switch, New and the search field -->
   <Style Selector="TextBlock.toolbarTitle">
-    <Setter Property="FontSize" Value="{StaticResource FontSizeSubheadline}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeLargeTitle}" />
+    <Setter Property="LetterSpacing" Value="-0.3" />
     <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
   </Style>
   <Style Selector="TextBlock.toolbarSubtitle">
-    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
-    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
   </Style>
   <Style Selector="Button.icon.toolbar, DropDownButton.toolbar">
-    <Setter Property="Height" Value="{StaticResource ControlHeightLarge}" />
-    <Setter Property="MinHeight" Value="{StaticResource ControlHeightLarge}" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Height" Value="{DynamicResource ControlHeightLarge}" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeightLarge}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
   </Style>
   <Style Selector="Button.icon.toolbar">
-    <Setter Property="Width" Value="32" />
+    <Setter Property="Width" Value="{DynamicResource ControlHeightLarge}" />
   </Style>
   <Style Selector="DropDownButton.toolbar">
-    <Setter Property="Padding" Value="7,0,0,0" />
+    <Setter Property="Padding" Value="8,0,0,0" />
   </Style>
   <Style Selector="DropDownButton.toolbar /template/ PathIcon#DropDownGlyph">
     <Setter Property="Width" Value="8" />
     <Setter Property="Height" Value="8" />
-    <Setter Property="Margin" Value="3,0,6,0" />
+    <Setter Property="Margin" Value="4,0,8,0" />
   </Style>
   <Style Selector="DropDownButton.toolbar /template/ Border#RootBorder">
     <Setter Property="Background" Value="Transparent" />
@@ -75,145 +116,418 @@
   <Style Selector="DropDownButton.toolbar:pointerover /template/ Border#RootBorder">
     <Setter Property="Background" Value="{DynamicResource BgHover}" />
   </Style>
-  <!-- Two toolbar buttons that belong together (previous and next step) -->
-  <!-- Paired toolbar buttons (Previous / Next step): one segmented control, as the Mac draws them -->
+  <!-- Paired toolbar buttons (Previous / Next step): one segmented control -->
   <Style Selector="Border.toolbarGroup">
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
     <Setter Property="Background" Value="{DynamicResource SegmentedTrack}" />
     <Setter Property="Padding" Value="2" />
   </Style>
   <Style Selector="Border.toolbarGroup Button.icon.toolbar">
-    <Setter Property="Width" Value="28" />
-    <Setter Property="Height" Value="22" />
-    <Setter Property="MinHeight" Value="22" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Width" Value="{DynamicResource ControlHeight}" />
+    <Setter Property="Height" Value="{DynamicResource ControlHeight}" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeight}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
   </Style>
   <Style Selector="ListBox.segmented.toolbar">
     <Setter Property="Padding" Value="2" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
   </Style>
   <Style Selector="ListBox.segmented.toolbar ListBoxItem">
-    <Setter Property="MinHeight" Value="24" />
-    <Setter Property="MinWidth" Value="34" />
-    <Setter Property="Padding" Value="9,0" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeight}" />
+    <Setter Property="MinWidth" Value="36" />
+    <Setter Property="Padding" Value="10,0" />
   </Style>
   <Style Selector="TextBox.toolbarSearch">
-    <Setter Property="Width" Value="200" />
-    <Setter Property="MinHeight" Value="{StaticResource ControlHeightLarge}" />
-    <Setter Property="CornerRadius" Value="6" />
-    <Setter Property="Padding" Value="5,0,8,0" />
-    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
-  </Style>
-
-  <!-- Sidebar -->
-  <Style Selector="Border.sidebar">
-    <Setter Property="Background" Value="{DynamicResource SidebarBg}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
-    <Setter Property="BorderThickness" Value="0,0,1,0" />
-  </Style>
-
-  <!-- The event and database switchers: a full-width row with an icon tile and an up-down caret -->
-  <Style Selector="Button.switcher">
-    <Setter Property="HorizontalAlignment" Value="Stretch" />
-    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    <Setter Property="Padding" Value="6" />
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="FontWeight" Value="Normal" />
-  </Style>
-  <Style Selector="Button.switcher:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource BgHover}" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-  </Style>
-  <Style Selector="Button.switcher:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource BgPressed}" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-  </Style>
-  <Style Selector="Border.switcherIcon">
-    <Setter Property="Width" Value="28" />
-    <Setter Property="Height" Value="28" />
+    <Setter Property="Width" Value="220" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeightLarge}" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
+    <Setter Property="Padding" Value="6,0,8,0" />
     <Setter Property="Background" Value="{DynamicResource BgSurface}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="TextElement.Foreground" Value="{DynamicResource Accent}" />
   </Style>
-  <Style Selector="Border.switcherIcon c|Icon">
-    <Setter Property="HorizontalAlignment" Value="Center" />
+  <!-- New: the one solid accent button on the frame, its icon and its name -->
+  <Style Selector="DropDownButton.newButton">
+    <Setter Property="Padding" Value="10,0,0,0" />
+  </Style>
+  <Style Selector="DropDownButton.newButton TextBlock">
+    <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
-  <!-- A menu made of buttons (inside a switcher's flyout) -->
-  <Style Selector="StackPanel.menu">
-    <Setter Property="Spacing" Value="1" />
+  <!-- Sidebar: its width is the view model's (dragged by its edge). The host clips it while it slides in or out. -->
+  <Style Selector="Panel.sidebarHost">
+    <Setter Property="ClipToBounds" Value="True" />
   </Style>
-  <Style Selector="Button.menuItem">
-    <Setter Property="HorizontalAlignment" Value="Stretch" />
-    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    <Setter Property="Padding" Value="8,4" />
-    <Setter Property="CornerRadius" Value="4" />
+  <Style Selector="Border.sidebar">
+    <Setter Property="Background" Value="{DynamicResource BgFrame}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+  </Style>
+  <!-- The strip under the window's own title bar (the traffic lights), as tall as the title band, with Hide Sidebar -->
+  <Style Selector="Panel.sidebarTitleBar">
+    <Setter Property="Height" Value="{StaticResource TitleBandHeight}" />
     <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="FontWeight" Value="Normal" />
   </Style>
-  <Style Selector="Button.menuItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource BgHover}" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-  </Style>
-  <Style Selector="Button.menuItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource BgPressed}" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-  </Style>
-  <Style Selector="Button.menuItem c|Icon">
-    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+  <Style Selector="Button.sidebarToggle">
+    <Setter Property="HorizontalAlignment" Value="Right" />
     <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="0,0,12,0" />
+  </Style>
+  <!-- The rows: 12 px from the sidebar's edges, sections 16 px apart -->
+  <Style Selector=":is(Control).sidebarList">
+    <Setter Property="Margin" Value="12,0" />
+  </Style>
+  <Style Selector="StackPanel.sourceSection">
+    <Setter Property="Spacing" Value="2" />
+    <Setter Property="Margin" Value="0,0,0,14" />
+  </Style>
+  <Style Selector="Button.nav c|Icon.navIcon">
+    <Setter Property="Margin" Value="0,0,10,0" />
+  </Style>
+  <!-- A pinned structure's result dot, in the icon's place -->
+  <Style Selector="Panel.navDot">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Margin" Value="0,0,10,0" />
+  </Style>
+  <Style Selector="Panel.navDot Ellipse.dot">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+  <!-- Settings at the foot, on a hairline of the frame -->
+  <Style Selector="Border.sidebarFoot">
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="12,10,12,12" />
   </Style>
 
-  <!-- The title band across the top of the content -->
+  <!-- The sidebar's rows on the frame: quiet light text and icons; white on hover; the page showing is a solid accent
+       row with white text and icon -->
+  <!-- The colour dots of pinned structures and tags: a faint ring keeps the darker colours visible on the navy frame -->
+  <Style Selector="Border.sidebar Panel.navDot Ellipse.dot">
+    <Setter Property="Stroke" Value="{DynamicResource FrameDotRing}" />
+    <Setter Property="StrokeThickness" Value="1" />
+  </Style>
+  <Style Selector="Border.sidebar Button.nav">
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeightLarge}" />
+    <Setter Property="Padding" Value="10,0" />
+  </Style>
+  <Style Selector="Border.sidebar Button.nav /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Border.sidebar Button.nav c|Icon">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameTertiary}" />
+  </Style>
+  <Style Selector="Border.sidebar Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgFrameHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+  <Style Selector="Border.sidebar Button.nav:pointerover c|Icon">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+  <Style Selector="Border.sidebar Button.nav:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgFramePressed}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+  <Style Selector="Border.sidebar Button.nav.active /template/ ContentPresenter#PART_ContentPresenter, Border.sidebar Button.nav.active:pointerover /template/ ContentPresenter#PART_ContentPresenter, Border.sidebar Button.nav.active:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AccentFill}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+  </Style>
+  <Style Selector="Border.sidebar Button.nav.active">
+    <Setter Property="TextElement.FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Border.sidebar Button.nav.active c|Icon">
+    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+  </Style>
+  <Style Selector="Border.sidebar Button.nav.active TextBlock.sourceCount">
+    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+  </Style>
+  <!-- The solid row says which page is showing; the leading mark of the light sidebar is not needed on the frame -->
+  <Style Selector="Border.sidebar Button.nav.active Border.navMark">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+
+  <!-- The edge that drags a sidebar or an inspector: invisible, ResizeHandleWidth wide, with the resize cursor -->
+  <Style Selector="c|ResizeHandle">
+    <Setter Property="Width" Value="{StaticResource ResizeHandleWidth}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Cursor" Value="SizeWestEast" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="ZIndex" Value="1" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}" />
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <!-- On the sidebar's trailing edge, where the frame meets the content panel -->
+  <Style Selector="c|ResizeHandle.sidebarEdge">
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="Margin" Value="0,0,-3,0" />
+  </Style>
+  <Style Selector="c|ResizeHandle.sidebarEdge:pointerover">
+    <Setter Property="Background" Value="{DynamicResource BgFrameHover}" />
+  </Style>
+  <!-- On an inspector's leading edge -->
+  <Style Selector="c|ResizeHandle.inspectorEdge">
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="Margin" Value="-2,0,0,0" />
+  </Style>
+
+  <!-- The title band across the top of the content: the frame's navy, no rule (the content panel's edge is the line) -->
   <Style Selector="Border.titleBand">
     <Setter Property="Height" Value="{StaticResource TitleBandHeight}" />
-    <Setter Property="Background" Value="{DynamicResource WindowBg}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
-    <Setter Property="BorderThickness" Value="0,0,0,1" />
-    <Setter Property="Padding" Value="12,0,14,0" />
-  </Style>
-  <!-- The breadcrumb's parent page ("Structures ›"): the title's size, quieter, a button -->
-  <Style Selector="Button.crumb">
-    <Setter Property="FontSize" Value="{StaticResource FontSizeSubheadline}" />
-    <Setter Property="FontWeight" Value="Medium" />
-    <Setter Property="Padding" Value="6,2" />
-    <Setter Property="MinHeight" Value="0" />
-    <Setter Property="Margin" Value="-6,0,0,0" />
+    <Setter Property="Background" Value="{DynamicResource BgFrame}" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Padding" Value="16,0,16,0" />
   </Style>
-  <Style Selector="Button.crumb /template/ ContentPresenter#PART_ContentPresenter">
+  <!-- The bright panel the frame wraps: the page background, its top-left corner rounded where it meets the frame -->
+  <Style Selector="Border.contentPanel">
+    <Setter Property="Background" Value="{DynamicResource BgApp}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
+    <Setter Property="BorderThickness" Value="1,1,0,0" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusContent}" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <!-- With the sidebar hidden the panel runs to the window's edge: a square corner -->
+  <Style Selector="Border.contentPanel.flush">
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+  </Style>
+
+  <!-- ───────────── Controls on the frame (scoped by the "onFrame" class) ───────────── -->
+
+  <!-- Icon buttons: light icons, the frame's hover and press -->
+  <Style Selector=":is(Control).onFrame Button.icon /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame Button.icon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgFrameHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame Button.icon:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgFramePressed}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame Button.icon:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameTertiary}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame Button.icon:disabled">
+    <Setter Property="Opacity" Value="0.6" />
+  </Style>
+
+  <!-- Text buttons (a page's own toolbar items): a field on the frame with white text -->
+  <Style Selector=":is(Control).onFrame Button:not(.icon):not(.primary):not(.link):not(.nav) /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgFrameField}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+    <Setter Property="BoxShadow" Value="0 0 0 0 #00000000" />
+  </Style>
+  <Style Selector=":is(Control).onFrame Button:not(.icon):not(.primary):not(.link):not(.nav):pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgFrameHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame Button:not(.icon):not(.primary):not(.link):not(.nav):pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgFramePressed}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame Button:not(.icon):not(.primary):not(.link):not(.nav):disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameTertiary}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame Button.link /template/ ContentPresenter#PART_ContentPresenter, :is(Control).onFrame Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource AccentOnFrame}" />
+  </Style>
+
+  <!-- Pull-downs: ghost on the navy, white text and chevron, the frame's hover -->
+  <Style Selector=":is(Control).onFrame DropDownButton /template/ Border#RootBorder">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BoxShadow" Value="0 0 0 0 #00000000" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame DropDownButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame DropDownButton /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame DropDownButton:pointerover /template/ Border#RootBorder">
+    <Setter Property="Background" Value="{DynamicResource BgFrameHover}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame DropDownButton:pointerover /template/ ContentPresenter#PART_ContentPresenter, :is(Control).onFrame DropDownButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame DropDownButton:pointerover /template/ PathIcon#DropDownGlyph, :is(Control).onFrame DropDownButton:pressed /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame DropDownButton:pressed /template/ Border#RootBorder">
+    <Setter Property="Background" Value="{DynamicResource BgFramePressed}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector=":is(Control).onFrame DropDownButton:disabled /template/ Border#RootBorder">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextOnFrameTertiary}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame DropDownButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameTertiary}" />
+  </Style>
+  <!-- A small pull-down that shows a value (the assessment's status): a field on the frame -->
+  <Style Selector=":is(Control).onFrame DropDownButton.sm /template/ Border#RootBorder">
+    <Setter Property="Background" Value="{DynamicResource BgFrameField}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame DropDownButton.sm:pointerover /template/ Border#RootBorder">
+    <Setter Property="Background" Value="{DynamicResource BgFrameHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
+  </Style>
+  <!-- New: solid accent, white icon, name and chevron -->
+  <Style Selector=":is(Control).onFrame DropDownButton.newButton /template/ Border#RootBorder">
+    <Setter Property="Background" Value="{DynamicResource AccentFill}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentFill}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource OnAccent}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame DropDownButton.newButton:pointerover /template/ Border#RootBorder">
+    <Setter Property="Background" Value="{DynamicResource AccentFillHover}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentFillHover}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame DropDownButton.newButton:pressed /template/ Border#RootBorder">
+    <Setter Property="Background" Value="{DynamicResource AccentFillPressed}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentFillPressed}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame DropDownButton.newButton /template/ PathIcon#DropDownGlyph, :is(Control).onFrame DropDownButton.newButton:pointerover /template/ PathIcon#DropDownGlyph, :is(Control).onFrame DropDownButton.newButton:pressed /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame DropDownButton.newButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+  </Style>
+
+  <!-- Segmented controls on the frame (the List / Map / Summary switch, a page's own): a darker track, the chosen
+       segment raised in a lighter navy with a white icon -->
+  <Style Selector=":is(Control).onFrame ListBox.segmented">
+    <Setter Property="Background" Value="{DynamicResource BgFrameField}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame Border.segmentedGroup, :is(Control).onFrame Border.toolbarGroup">
+    <Setter Property="Background" Value="{DynamicResource BgFrameField}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame ListBox.segmented ListBoxItem /template/ ContentPresenter#PART_ContentPresenter, :is(Control).onFrame ListBox.segmented ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame ListBox.segmented ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame ListBox.segmented ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, :is(Control).onFrame ListBox.segmented ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, :is(Control).onFrame ListBox.segmented ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource BgFrameSelected}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+    <Setter Property="BoxShadow" Value="0 1 2 0 #40000000" />
+  </Style>
+  <Style Selector=":is(Control).onFrame RadioButton.segment /template/ ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame RadioButton.segment:checked /template/ Border#PART_Segment">
+    <Setter Property="Background" Value="{DynamicResource BgFrameSelected}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame RadioButton.segment:checked /template/ ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+
+  <!-- Text boxes on the frame (the search field): a darker field, a frame border, white text, quiet placeholder -->
+  <Style Selector=":is(Control).onFrame TextBox">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+    <Setter Property="CaretBrush" Value="{DynamicResource TextOnFrame}" />
+    <Setter Property="PlaceholderForeground" Value="{DynamicResource TextOnFrameTertiary}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame TextBox /template/ Border#PART_BorderElement, :is(Control).onFrame TextBox:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{DynamicResource BgFrameField}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame TextBox:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{DynamicResource BgFrameField}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentOnFrame}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame TextBox /template/ TextPresenter#PART_TextPresenter, :is(Control).onFrame TextBox:pointerover /template/ TextPresenter#PART_TextPresenter, :is(Control).onFrame TextBox:focus /template/ TextPresenter#PART_TextPresenter">
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame TextBox c|Icon">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameTertiary}" />
+  </Style>
+
+  <!-- Pop-up menus on the frame: a field, white text and chevrons -->
+  <Style Selector=":is(Control).onFrame ComboBox /template/ Border#Background, :is(Control).onFrame ComboBox:pointerover /template/ Border#Background, :is(Control).onFrame ComboBox:pressed /template/ Border#Background">
+    <Setter Property="Background" Value="{DynamicResource BgFrameField}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderFrame}" />
+    <Setter Property="BoxShadow" Value="0 0 0 0 #00000000" />
+  </Style>
+  <Style Selector=":is(Control).onFrame ComboBox /template/ ContentControl#ContentPresenter, :is(Control).onFrame ComboBox:pointerover /template/ ContentControl#ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrame}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame ComboBox /template/ PathIcon#DropDownGlyph, :is(Control).onFrame ComboBox:pointerover /template/ PathIcon#DropDownGlyph">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
+  </Style>
+
+  <!-- Labels a page puts in its toolbar -->
+  <Style Selector=":is(Control).onFrame StackPanel.pageToolbar TextBlock.fieldLabel, :is(Control).onFrame StackPanel.pageToolbar TextBlock.secondary">
+    <Setter Property="Foreground" Value="{DynamicResource TextOnFrameSecondary}" />
+  </Style>
+
+  <!-- The step outline on the frame (the sidebar while an assessment is open): see Editor.axaml -->
+
+  <!-- What a flyout opened from the frame holds keeps the light or dark theme: the on-frame looks above stop at its edge -->
+  <Style Selector=":is(Control).onFrame FlyoutPresenter Button.icon /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
   </Style>
-  <Style Selector="Button.crumb:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector=":is(Control).onFrame FlyoutPresenter Button.icon:pointerover /template/ ContentPresenter#PART_ContentPresenter, :is(Control).onFrame FlyoutPresenter Button:not(.icon):not(.primary):not(.link):not(.nav):pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource BgHover}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
-  <Style Selector="Button.crumb:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource BgPressed}" />
+  <Style Selector=":is(Control).onFrame FlyoutPresenter Button:not(.icon):not(.primary):not(.link):not(.nav) /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonBackground}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
   </Style>
-
-  <!-- The ⌘K field: looks like a search box, opens the palette -->
-  <Style Selector="Button.searchField">
-    <Setter Property="Width" Value="380" />
-    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    <Setter Property="Padding" Value="10,0,6,0" />
-    <Setter Property="FontWeight" Value="Normal" />
-    <Setter Property="Cursor" Value="IBeam" />
+  <Style Selector=":is(Control).onFrame FlyoutPresenter Button.subtle /template/ ContentPresenter#PART_ContentPresenter, :is(Control).onFrame FlyoutPresenter Button.ghost /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
-  <Style Selector="Button.searchField /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Foreground" Value="{DynamicResource TextTertiary}" />
+  <Style Selector=":is(Control).onFrame FlyoutPresenter Button.link /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
   </Style>
-  <Style Selector="Button.searchField:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+  <Style Selector=":is(Control).onFrame FlyoutPresenter TextBox">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="CaretBrush" Value="{DynamicResource TextPrimary}" />
+    <Setter Property="PlaceholderForeground" Value="{DynamicResource TextTertiary}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame FlyoutPresenter TextBox /template/ Border#PART_BorderElement, :is(Control).onFrame FlyoutPresenter TextBox:pointerover /template/ Border#PART_BorderElement">
     <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame FlyoutPresenter TextBox:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Focus}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame FlyoutPresenter TextBox /template/ TextPresenter#PART_TextPresenter, :is(Control).onFrame FlyoutPresenter TextBox:focus /template/ TextPresenter#PART_TextPresenter">
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame FlyoutPresenter ComboBox /template/ Border#Background, :is(Control).onFrame FlyoutPresenter ComboBox:pointerover /template/ Border#Background">
+    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderStrong}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame FlyoutPresenter ComboBox /template/ ContentControl#ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame FlyoutPresenter DropDownButton /template/ Border#RootBorder">
+    <Setter Property="Background" Value="{DynamicResource ButtonBackground}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrush}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame FlyoutPresenter DropDownButton /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+  </Style>
+  <Style Selector=":is(Control).onFrame FlyoutPresenter c|Icon">
     <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
   </Style>
 
@@ -222,7 +536,7 @@
     <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
     <Setter Property="Padding" Value="5,0,5,1" />
     <Setter Property="MinWidth" Value="20" />
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -240,78 +554,7 @@
     <Setter Property="Text" Value="{Binding $parent[MenuItem].InputGesture, Converter={x:Static app:Converters.MacKeyGesture}}" />
   </Style>
 
-  <!-- Sheets, as on the Mac: the sheet hangs from the toolbar's lower edge; the window behind is not dimmed but can't be clicked -->
-  <Style Selector="Border.scrim">
-    <Setter Property="Background" Value="{DynamicResource BgOverlay}" />
-  </Style>
-  <Style Selector="Border.sheet">
-    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
-    <Setter Property="BorderThickness" Value="1,0,1,1" />
-    <Setter Property="CornerRadius" Value="0,0,10,10" />
-    <Setter Property="Padding" Value="{StaticResource SheetPadding}" />
-    <Setter Property="BoxShadow" Value="{DynamicResource ShadowSheet}" />
-    <Setter Property="HorizontalAlignment" Value="Center" />
-    <Setter Property="VerticalAlignment" Value="Top" />
-    <Setter Property="Margin" Value="40,52,40,40" />
-    <Setter Property="MinWidth" Value="{StaticResource SheetWidthSmall}" />
-    <Setter Property="MaxWidth" Value="760" />
-  </Style>
-  <Style Selector="Border.sheet.sheetSmall">
-    <Setter Property="Width" Value="{StaticResource SheetWidthSmall}" />
-  </Style>
-  <Style Selector="Border.sheet.sheetMedium">
-    <Setter Property="Width" Value="{StaticResource SheetWidthMedium}" />
-  </Style>
-  <Style Selector="Border.sheet.sheetLarge">
-    <Setter Property="Width" Value="{StaticResource SheetWidthLarge}" />
-    <Setter Property="MaxWidth" Value="{StaticResource SheetWidthLarge}" />
-  </Style>
-
-  <!-- The command palette -->
-  <Style Selector="Border.palette">
-    <Setter Property="Background" Value="{DynamicResource BgSurface}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="12" />
-    <Setter Property="BoxShadow" Value="{DynamicResource ShadowSheet}" />
-    <Setter Property="ClipToBounds" Value="True" />
-  </Style>
-  <Style Selector="Border.paletteFooter">
-    <Setter Property="Background" Value="{DynamicResource BgSubtle}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource BorderDefault}" />
-    <Setter Property="BorderThickness" Value="0,1,0,0" />
-    <Setter Property="Padding" Value="16,8" />
-  </Style>
-  <Style Selector="ListBox.palette">
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Padding" Value="6,4,6,6" />
-  </Style>
-  <Style Selector="ListBox.palette ListBoxItem">
-    <Setter Property="Padding" Value="0" />
-    <Setter Property="Margin" Value="0" />
-    <Setter Property="Background" Value="Transparent" />
-  </Style>
-  <Style Selector="ListBox.palette ListBoxItem /template/ ContentPresenter#PART_ContentPresenter, ListBox.palette ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBox.palette ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter, ListBox.palette ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter, ListBox.palette ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter, ListBox.palette ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="Transparent" />
-  </Style>
-  <Style Selector="Border.paletteRow">
-    <Setter Property="Padding" Value="10,7" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
-    <Setter Property="Background" Value="Transparent" />
-  </Style>
-  <Style Selector="Border.paletteRow c|Icon">
-    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
-  </Style>
-  <Style Selector="ListBox.palette ListBoxItem:pointerover Border.paletteRow">
-    <Setter Property="Background" Value="{DynamicResource BgHover}" />
-  </Style>
-  <Style Selector="ListBox.palette ListBoxItem:selected Border.paletteRow">
-    <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
-  </Style>
-  <Style Selector="ListBox.palette ListBoxItem:selected Border.paletteRow c|Icon">
-    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
-  </Style>
+  <!-- Sheets, their scrim and the command palette are styled in Styles/Sheets.axaml -->
 
   <!-- A text box with no box (the palette's search) -->
   <Style Selector="TextBox.bare">

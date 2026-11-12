@@ -367,6 +367,9 @@ public class ReviewUiTests
 		ui.Main.Sheets.CancelCurrentCommand.Execute(null);
 		await writing;
 		Assert.Empty(Directory.GetFileSystemEntries(submissions));
+		// 3.5: the submission folder is a sheet, still showing its choices after the question is cancelled; close it.
+		Assert.IsType<Sde.App.ViewModels.Sheets.SubmissionSheetViewModel>(ui.Main.Sheets.Current);
+		ui.Main.Structures.Submission.CancelCommand.Execute(null);
 
 		// Once fixed, nothing is asked.
 		ui.Store.Apply(river, f => f.Assessment.DateofInspection = new DateTime(2026, 9, 20));

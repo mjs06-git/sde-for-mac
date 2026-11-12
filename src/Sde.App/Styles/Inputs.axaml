@@ -1,7 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <!--
-    Inputs, in the Mac's look: text boxes, number boxes, date pickers and pop-up menus are 22 px high (ControlHeight) with a 1 px border;
+    Inputs: text boxes, number boxes, date pickers and pop-up menus are ControlHeight high (28 Comfortable, 22 Compact) with a 1 px border and RadiusControl corners;
     with the keyboard in them they get a Focus border and a soft halo (FocusHalo). Check boxes, radio buttons, switches
     and sliders take the accent from the tokens (Fluent's palette follows the Mac's accent, Services/SystemAccent).
   -->
@@ -9,6 +9,7 @@
   <Style Selector="TextBox">
     <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
   </Style>
   <Style Selector="TextBox[AcceptsReturn=True]">
     <Setter Property="VerticalContentAlignment" Value="Top" />
@@ -18,17 +19,26 @@
   </Style>
   <!-- The text box inside a number box or date picker draws no border of its own; the outer one shows the focus. -->
   <Style Selector="NumericUpDown, CalendarDatePicker, ComboBox, AutoCompleteBox">
-    <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeight}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
+  </Style>
+  <!-- Borders fade to their hover and focus colours (only with motion on) -->
+  <Style Selector=".motion TextBox /template/ Border#PART_BorderElement">
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.12" />
+      </Transitions>
+    </Setter>
   </Style>
 
   <Style Selector="ComboBox">
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
-  <!-- A small pop-up button (scope bars): 19 px, 12 pt -->
+  <!-- A small pop-up button (scope bars): ControlHeightSmall, 12 pt -->
   <Style Selector="ComboBox.sm">
-    <Setter Property="MinHeight" Value="{StaticResource ControlHeightSmall}" />
-    <Setter Property="Height" Value="{StaticResource ControlHeightSmall}" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeightSmall}" />
+    <Setter Property="Height" Value="{DynamicResource ControlHeightSmall}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeFootnote}" />
     <Setter Property="Padding" Value="8,0,0,0" />
   </Style>
@@ -47,8 +57,8 @@
     <Setter Property="BoxShadow" Value="{DynamicResource FocusHalo}" />
   </Style>
   <Style Selector="ComboBoxItem">
-    <Setter Property="MinHeight" Value="{StaticResource ControlHeight}" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="MinHeight" Value="{DynamicResource ControlHeight}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
     <Setter Property="Margin" Value="5,0" />
   </Style>
 
@@ -57,7 +67,7 @@
   </Style>
 
   <Style Selector="CheckBox">
-    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
   </Style>
   <!-- A slider's knob: white with a soft shadow, as on the Mac (the tokens make it 15 px and white) -->
@@ -75,10 +85,26 @@
   <!-- Menus and flyouts: the surface colour and a hairline border (Fluent's presenters, with the tokens' colours) -->
   <Style Selector="MenuItem">
     <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
-    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
   </Style>
   <Style Selector="MenuFlyoutPresenter MenuItem, ContextMenu MenuItem">
     <Setter Property="Margin" Value="0" />
+  </Style>
+  <!-- A label over a group of menu items ("This Assessment"): small, grey, not a command -->
+  <Style Selector="MenuItem.menuGroup">
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource TextTertiary}" />
+    <Setter Property="MinHeight" Value="0" />
+  </Style>
+  <!-- A menu item that deletes (Move to Recently Deleted): the danger red -->
+  <Style Selector="MenuItem.destructive">
+    <Setter Property="Foreground" Value="{DynamicResource DangerFg}" />
+  </Style>
+  <Style Selector="MenuItem.destructive:pointerover /template/ ContentPresenter#PART_HeaderPresenter">
+    <Setter Property="Foreground" Value="{DynamicResource DangerFg}" />
   </Style>
   <Style Selector="ToolTip">
     <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
@@ -97,7 +123,7 @@
   <Style Selector="ProgressBar">
     <Setter Property="Foreground" Value="{DynamicResource AccentFill}" />
     <Setter Property="Background" Value="{DynamicResource BgPressed}" />
-    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusPill}" />
     <Setter Property="MinHeight" Value="6" />
   </Style>
 </Styles>

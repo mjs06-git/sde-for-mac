@@ -1,0 +1,80 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.CompareAssessmentsSheetView"
+             x:DataType="sh:CompareAssessmentsSheetViewModel">
+  <StackPanel Spacing="14">
+    <!-- The two to compare, and their results with the difference between them -->
+    <Grid ColumnDefinitions="*,112,*" RowDefinitions="Auto,Auto" RowSpacing="10">
+      <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding Left}" HorizontalAlignment="Stretch" Name="LeftChoice"
+                AutomationProperties.Name="First assessment" />
+      <ComboBox Grid.Column="2" ItemsSource="{Binding Choices}" SelectedItem="{Binding Right}" HorizontalAlignment="Stretch" Name="RightChoice"
+                AutomationProperties.Name="Second assessment" />
+      <c:ResultHero Grid.Row="1" Name="LeftResult" DataContext="{Binding LeftSide}" x:DataType="sh:CompareSideViewModel"
+                    Label="{Binding Label}" PercentText="{Binding PercentText}" HasPercent="{Binding HasPercent}" Verdict="{Binding Verdict}"
+                    IsSubstantial="{Binding IsSubstantial}" LineText="{Binding LineText}" Value="{Binding Value}" />
+      <StackPanel Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" Spacing="2" Name="Difference"
+                  AutomationProperties.Name="{Binding DifferenceNote, StringFormat='Difference: {0}'}">
+        <TextBlock Classes="differenceFigure" Text="{Binding DifferenceText}" Name="DifferenceFigure" />
+        <TextBlock Classes="secondary sm" Text="{Binding DifferenceNote}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+      </StackPanel>
+      <c:ResultHero Grid.Row="1" Grid.Column="2" Name="RightResult" DataContext="{Binding RightSide}" x:DataType="sh:CompareSideViewModel"
+                    Label="{Binding Label}" PercentText="{Binding PercentText}" HasPercent="{Binding HasPercent}" Verdict="{Binding Verdict}"
+                    IsSubstantial="{Binding IsSubstantial}" LineText="{Binding LineText}" Value="{Binding Value}" />
+    </Grid>
+
+    <Grid ColumnDefinitions="*,Auto">
+      <TextBlock Classes="semibold" Text="{Binding CountText}" VerticalAlignment="Center" Name="CompareCount" />
+      <ToggleSwitch Grid.Column="1" Content="Show unchanged" OnContent="" OffContent="" IsChecked="{Binding ShowUnchanged}" Name="ShowUnchangedSwitch"
+                    AutomationProperties.Name="Show unchanged fields" />
+    </Grid>
+
+    <!-- Every field that differs, by the editor's steps -->
+    <Border Classes="sheetTable" IsVisible="{Binding HasRows}" Name="CompareTable">
+      <StackPanel>
+        <Border Classes="sheetTableHead">
+          <Grid ColumnDefinitions="1.3*,*,*" ColumnSpacing="12">
+            <TextBlock Classes="colHead" Text="Field" />
+            <TextBlock Grid.Column="1" Classes="colHead" Text="{Binding LeftSide.Label}" />
+            <TextBlock Grid.Column="2" Classes="colHead" Text="{Binding RightSide.Label}" />
+          </Grid>
+        </Border>
+        <ScrollViewer MaxHeight="360" HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding Groups}" Name="CompareGroups">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="sh:CompareGroupViewModel">
+                <StackPanel>
+                  <Border Classes="sheetTableGroup">
+                    <TextBlock Text="{Binding Title}" />
+                  </Border>
+                  <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="sh:CompareRowViewModel">
+                        <Border Classes="sheetTableRow" AutomationProperties.Name="{Binding AccessibleName}">
+                          <Grid ColumnDefinitions="1.3*,*,*" ColumnSpacing="12">
+                            <TextBlock Classes="secondary" Text="{Binding Label}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            <Grid Grid.Column="1" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                              <TextBlock Classes.unchanged="{Binding !Differs}" Text="{Binding Left}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                              <c:StaffGauge Grid.Column="1" Classes="cellGauge" Value="{Binding LeftPercent}" IsVisible="{Binding HasGauges}" ShowMark="False" />
+                            </Grid>
+                            <Grid Grid.Column="2" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                              <TextBlock Classes.changed="{Binding Differs}" Classes.unchanged="{Binding !Differs}" Text="{Binding Right}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                              <c:StaffGauge Grid.Column="1" Classes="cellGauge" Value="{Binding RightPercent}" IsVisible="{Binding HasGauges}" ShowMark="False" />
+                            </Grid>
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </StackPanel>
+    </Border>
+
+    <c:SheetFooter IsDone="True" />
+  </StackPanel>
+</UserControl>

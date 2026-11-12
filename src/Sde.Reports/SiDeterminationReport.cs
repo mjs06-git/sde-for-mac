@@ -160,7 +160,7 @@ public static class SiDeterminationReport
 		return doc;
 	}
 
-	/// <summary>The address on the left; the percentage and determination in a colored panel on the right.</summary>
+	/// <summary>The address on the left; the percentage, determination and staff gauge in a colored panel on the right.</summary>
 	private static void Hero(Section sec, AssessmentView v, SiResult r, ImprovementProjectRecord project)
 	{
 		Table t = Kit.NewTable(sec, new[] { 3.6, 0.15, 3.55 });
@@ -198,6 +198,11 @@ public static class SiDeterminationReport
 		msg.Format.Font.Size = 9;
 		msg.Format.Font.Bold = true;
 		msg.Format.Font.Color = ink;
+		if (r.CanDetermine && r.Percent is decimal gauge)
+		{
+			// The high-water mark is the threshold this determination used.
+			StaffGauge.Add(d, gauge, r.ThresholdPercent, 190, 5);
+		}
 		foreach (Paragraph para in d.Elements.OfType<Paragraph>())
 		{
 			para.Format.LeftIndent = Unit.FromPoint(10);

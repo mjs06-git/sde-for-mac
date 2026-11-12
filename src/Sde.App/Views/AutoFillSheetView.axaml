@@ -1,55 +1,60 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.AutoFillSheetView"
              x:DataType="sh:AutoFillSheetViewModel">
-  <StackPanel Spacing="12">
-    <TextBlock Classes="secondary" TextWrapping="Wrap">
-      <Run Text="Coordinates from the U.S. Census Bureau geocoder and flood data from FEMA's National Flood Hazard Layer, for " /><Run Text="{Binding Address}" FontWeight="{StaticResource FontWeightMedium}" /><Run Text="." />
-    </TextBlock>
+  <!-- Fill In Online: what the Census geocoder and FEMA's flood layer found for the structure, as a small table to tick.
+       Cancel stays on while it looks up (closing stops the look-up), so the progress is here rather than in the footer. -->
+  <StackPanel Spacing="16">
+    <TextBlock Classes="sheetSection" Text="{Binding Address}" TextWrapping="Wrap"
+               ToolTip.Tip="Coordinates from the U.S. Census Bureau geocoder and flood data from FEMA's National Flood Hazard Layer." />
     <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsBusy}">
-      <ProgressBar IsIndeterminate="True" Width="120" AutomationProperties.Name="Looking up" />
+      <ProgressBar Classes="sheetBusy" IsIndeterminate="True" AutomationProperties.Name="Looking up" />
       <TextBlock Classes="muted" Text="{Binding StatusText}" VerticalAlignment="Center" />
     </StackPanel>
     <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" IsVisible="{Binding !IsBusy}" />
-    <Border Classes="subtle" Padding="12,8" IsVisible="{Binding HasError}">
+    <Border Classes="subtle" IsVisible="{Binding HasError}">
       <TextBlock Classes="issue required" Text="{Binding ErrorText}" TextWrapping="Wrap" />
     </Border>
 
-    <StackPanel Spacing="6" IsVisible="{Binding HasRows}">
-      <Grid ColumnDefinitions="30,1.3*,1.3*,1.6*,1.1*">
-        <TextBlock Grid.Column="1" Classes="eyebrow" Text="Field" />
-        <TextBlock Grid.Column="2" Classes="eyebrow" Text="Now" />
-        <TextBlock Grid.Column="3" Classes="eyebrow" Text="Found Online" />
-        <TextBlock Grid.Column="4" Classes="eyebrow" Text="From" />
-      </Grid>
-      <ScrollViewer MaxHeight="400">
-        <ItemsControl ItemsSource="{Binding Rows}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="sh:ProposalRowViewModel">
-              <Grid ColumnDefinitions="30,1.3*,1.3*,1.6*,1.1*" Margin="0,3">
-                <CheckBox IsChecked="{Binding IsChecked}" IsEnabled="{Binding CanCheck}" AutomationProperties.Name="{Binding CheckLabel}" VerticalAlignment="Top" />
-                <TextBlock Classes="medium" Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,8,0" />
-                <TextBlock Grid.Column="2" Text="{Binding CurrentText}" Classes="secondary" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,8,0" />
-                <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="0,0,8,0">
-                  <TextBlock Text="{Binding ProposedText}" TextWrapping="Wrap" />
-                  <TextBlock Classes="issue recommended" Text="{Binding Note}" IsVisible="{Binding HasNote}" />
-                </StackPanel>
-                <TextBlock Grid.Column="4" Text="{Binding SourceText}" Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap" />
-              </Grid>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </ScrollViewer>
-      <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding Caution}" />
+    <StackPanel Spacing="12" IsVisible="{Binding HasRows}">
+      <Border Classes="sheetTable">
+        <DockPanel>
+          <Border DockPanel.Dock="Top" Classes="sheetTableHead">
+            <Grid ColumnDefinitions="30,1.3*,1.3*,1.6*,1.1*">
+              <TextBlock Grid.Column="1" Text="Field" />
+              <TextBlock Grid.Column="2" Text="Now" />
+              <TextBlock Grid.Column="3" Text="Found Online" />
+              <TextBlock Grid.Column="4" Text="From" />
+            </Grid>
+          </Border>
+          <ScrollViewer MaxHeight="400" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Rows}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="sh:ProposalRowViewModel">
+                  <Border Classes="sheetTableRow">
+                    <Grid ColumnDefinitions="30,1.3*,1.3*,1.6*,1.1*">
+                      <CheckBox IsChecked="{Binding IsChecked}" IsEnabled="{Binding CanCheck}" AutomationProperties.Name="{Binding CheckLabel}" VerticalAlignment="Top" />
+                      <TextBlock Classes="medium" Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <TextBlock Grid.Column="2" Text="{Binding CurrentText}" Classes="secondary" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,8,0" />
+                      <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="0,0,8,0">
+                        <TextBlock Text="{Binding ProposedText}" TextWrapping="Wrap" />
+                        <TextBlock Classes="issue recommended" Text="{Binding Note}" IsVisible="{Binding HasNote}" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="4" Text="{Binding SourceText}" Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+      <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{Binding Caution}" />
     </StackPanel>
 
-    <DockPanel>
-      <Button DockPanel.Dock="Left" Content="Try Again" Command="{Binding RetryCommand}" IsVisible="{Binding HasError}" />
-      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-        <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-        <Button Classes="primary" Content="Apply Ticked Values" Command="{Binding ApplyCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      </StackPanel>
-    </DockPanel>
+    <c:SheetFooter LeadingText="Try Again" LeadingCommand="{Binding RetryCommand}" IsLeadingVisible="{Binding HasError}"
+                   PrimaryText="Apply Ticked Values" PrimaryCommand="{Binding ApplyCommand}" IsPrimaryDefault="False" />
   </StackPanel>
 </UserControl>

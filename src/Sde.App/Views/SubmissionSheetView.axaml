@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.SubmissionSheetView"
+             x:DataType="sh:SubmissionSheetViewModel">
+  <!-- Export, then Submission Folder: what goes in the folder, then progress, then any warnings -->
+  <StackPanel Spacing="16">
+    <TextBlock Classes="semibold" Text="{Binding Submission.Count}"
+               ToolTip.Tip="A PDF report per assessment, the percent damaged list, the community report, the FEMA package (SDE_1) and results.csv" />
+
+    <StackPanel Classes="sheetGroup" IsEnabled="{Binding !Submission.IsWriting}">
+      <TextBlock Classes="fieldLabel" Text="Report for each assessment" />
+      <ComboBox SelectedIndex="{Binding Submission.ReportIndex}" Width="240" AutomationProperties.Name="Report for each assessment">
+        <ComboBoxItem Content="Summary (one page)" />
+        <ComboBoxItem Content="Detailed report" />
+      </ComboBox>
+      <CheckBox Content="With photos" IsChecked="{Binding Submission.IncludePhotos}" />
+      <CheckBox Content="Include incomplete assessments" IsChecked="{Binding Submission.IncludeIncomplete}" />
+      <CheckBox Content="Add marked-up copies of photos" IsChecked="{Binding Submission.IncludeMarkedUpCopies}"
+                ToolTip.Tip="A Marked-up photos folder with the marks drawn on. FEMA's package keeps the original photos either way." />
+    </StackPanel>
+
+    <StackPanel Classes="sheetGroup" IsEnabled="{Binding !Submission.IsWriting}" Name="AlsoInclude">
+      <TextBlock Classes="fieldLabel" Text="Also include" />
+      <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="16">
+        <CheckBox Content="Owner letters" IsChecked="{Binding Submission.IncludeLetters}" ToolTip.Tip="The letters written for these assessments, in Letters" />
+        <CheckBox Grid.Column="1" Content="Documents" IsChecked="{Binding Submission.IncludeDocuments}" ToolTip.Tip="The documents kept with these structures, in Documents" />
+        <CheckBox Grid.Row="1" Content="Compliance report" IsChecked="{Binding Submission.IncludeComplianceReport}" ToolTip.Tip="The compliance report of these structures' cases" />
+        <CheckBox Grid.Row="1" Grid.Column="1" Content="Event summary" IsChecked="{Binding Submission.IncludeEventSummary}" ToolTip.Tip="The event summary of these assessments" />
+        <CheckBox Grid.Row="2" Content="Case files" IsChecked="{Binding Submission.IncludeCaseFiles}" ToolTip.Tip="Each structure's case file, in Case files" />
+      </Grid>
+    </StackPanel>
+
+    <StackPanel Spacing="4" IsVisible="{Binding Submission.ProgressText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+      <ProgressBar Value="{Binding Submission.ProgressValue}" Maximum="100" Height="6" IsVisible="{Binding Submission.IsWriting}" AutomationProperties.Name="Progress" />
+      <TextBlock Classes="muted" Text="{Binding Submission.ProgressText}" TextTrimming="CharacterEllipsis" />
+    </StackPanel>
+
+    <Border Classes="warningList" IsVisible="{Binding Submission.HasWarnings}" Name="SubmissionWarnings">
+      <DockPanel>
+        <c:Icon DockPanel.Dock="Left" Kind="Warning" Size="16" VerticalAlignment="Top" Margin="0,1,10,0" />
+        <ItemsControl ItemsSource="{Binding Submission.Warnings}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <TextBlock Text="{Binding}" Margin="0,0,0,4" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </DockPanel>
+    </Border>
+
+    <c:SheetFooter CancelText="{Binding Submission.CancelText}" CancelCommand="{Binding Submission.CancelCommand}"
+                   PrimaryText="Write to a Folder…" PrimaryCommand="{Binding Submission.WriteCommand}"
+                   IsPrimaryEnabled="{Binding Submission.CanWrite}" IsPrimaryDefault="False" />
+  </StackPanel>
+</UserControl>

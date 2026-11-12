@@ -91,7 +91,7 @@ public partial class AssessmentEditorView : UserControl
 				return;
 			}
 			Control input = holder.GetVisualDescendants().OfType<Control>()
-				.FirstOrDefault(c => c.Focusable && c.IsEffectivelyEnabled && c is TextBox or ComboBox or CheckBox or CalendarDatePicker or NumericUpDown);
+				.FirstOrDefault(c => c.Focusable && c.IsEffectivelyEnabled && c is TextBox or ComboBox or CheckBox or NumericUpDown);
 			holder.BringIntoView();
 			(input ?? holder).Focus(NavigationMethod.Tab);
 		}, DispatcherPriority.Background);
@@ -125,20 +125,33 @@ public partial class AssessmentEditorView : UserControl
 		}
 	}
 
+	/// <summary>The photos among the files being dragged (other files are left to the window's drop handling).</summary>
+	private static string[] DraggedImages(DragEventArgs e) => (e.DataTransfer.TryGetFiles() ?? Array.Empty<IStorageItem>())
+		.Select(f => f.TryGetLocalPath())
+		.Where(p => p != null && AssessmentEditorViewModel.PhotoPatterns.Any(pat => p.EndsWith(pat[1..], StringComparison.OrdinalIgnoreCase)))
+		.ToArray();
+
 	private void OnDragOver(object sender, DragEventArgs e)
 	{
 		if (e.DataTransfer.Contains(PhotoFormat))
 		{
 			e.DragEffects = PhotoUnder(e) != null ? DragDropEffects.Move : DragDropEffects.None;
+			e.Handled = true;
 			return;
 		}
-		e.DragEffects = e.DataTransfer.TryGetFiles() is { Length: > 0 } ? DragDropEffects.Copy : DragDropEffects.None;
+		// Photos are this view's (handled, so the window's overlay stays away); anything else goes on to the window.
+		if (DraggedImages(e).Length > 0)
+		{
+			e.DragEffects = DragDropEffects.Copy;
+			e.Handled = true;
+		}
 	}
 
 	private async void OnDrop(object sender, DragEventArgs e)
 	{
 		if (e.DataTransfer.TryGetValue(PhotoFormat) is PhotoViewModel dragged)
 		{
+			e.Handled = true;
 			// Dropped on another photo: it takes that photo's place.
 			if (PhotoUnder(e) is PhotoViewModel target && !ReferenceEquals(target, dragged) && Vm != null)
 			{
@@ -146,14 +159,12 @@ public partial class AssessmentEditorView : UserControl
 			}
 			return;
 		}
-		IStorageItem[] files = e.DataTransfer.TryGetFiles();
-		if (files == null || Vm == null)
+		string[] images = DraggedImages(e);
+		if (images.Length == 0 || Vm == null)
 		{
 			return;
 		}
-		string[] images = files.Select(f => f.TryGetLocalPath())
-			.Where(p => p != null && AssessmentEditorViewModel.PhotoPatterns.Any(pat => p.EndsWith(pat[1..], StringComparison.OrdinalIgnoreCase)))
-			.ToArray();
+		e.Handled = true;
 		AssessmentEditorViewModel vm = Vm;
 		if (images.Length > 0 && vm.Sections.OfType<PhotosSectionViewModel>().FirstOrDefault() is PhotosSectionViewModel photos)
 		{

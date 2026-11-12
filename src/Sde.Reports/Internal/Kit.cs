@@ -23,6 +23,9 @@ internal static class Kit
 	public const double LandscapeWidth = 10.0;   // Letter landscape, 0.5in side margins
 	public const double Gutter = 0.3;
 
+	/// <summary>The staff gauge's width in a result panel, in points.</summary>
+	public const double HeroGaugeWidth = 138;
+
 	private const double CellPadX = 3;           // points
 	private const double CellPadY = 1.5;
 
@@ -377,7 +380,8 @@ internal static class Kit
 	/// <summary>
 	/// Top of the summary/detail page: the structure address in large type, and the determination panel —
 	/// percent damaged (Assessment.PercentDamage, already a percentage) and Assessment.DamageMessage, with the
-	/// value and repair cost it was computed from (the RDLC's "Percent Damaged" box).
+	/// staff gauge once there is a determination, and the value and repair cost it was computed from (the RDLC's
+	/// "Percent Damaged" box).
 	/// </summary>
 	public static Table Hero(Section sec, AssessmentView v, bool showAmounts)
 	{
@@ -418,6 +422,10 @@ internal static class Kit
 		msg.Format.Font.Size = 9;
 		msg.Format.Font.Bold = true;
 		msg.Format.Font.Color = ink;
+		if (v.Determination != Determination.Other && v.A.PercentDamage is decimal percent)
+		{
+			StaffGauge.Add(d, percent, 50m, HeroGaugeWidth, 5);
+		}
 		Pad(d, 10, 8);
 
 		Cell b = row.Cells[3];

@@ -62,7 +62,7 @@ public class RestyleTests
 		using UiSession ui = WithSamples();
 		ui.Main.ShowCommand.Execute(Page.Settings);
 		SettingsViewModel settings = ui.Main.Settings;
-		Assert.Equal(new[] { "General", "Defaults", "Reports & letters", "Online services", "Phone form", "AI assistants", "Map & GIS", "Depth tables", "Backups" },
+		Assert.Equal(new[] { "General", "Appearance", "Defaults", "Reports & letters", "Online services", "Phone form", "AI assistants", "Map & GIS", "Depth tables", "Backups", "About" },
 			settings.Categories.Select(c => c.Title));
 		Assert.True(settings.IsGeneral);
 		Assert.False(settings.IsPhoneForm);
@@ -93,8 +93,13 @@ public class RestyleTests
 		AssessmentEditorViewModel editor = ui.Main.Editor;
 		Assert.True(editor.HasPercent);
 		Assert.Equal(75.0, editor.PercentValue, 1);
-		ProgressBar bar = ui.Window.GetVisualDescendants().OfType<ProgressBar>().Single(p => p.Classes.Contains("threshold"));
-		Assert.Equal(75.0, bar.Value, 1);
+		// The staff gauge replaced 3.0's threshold progress bar: it shows the value, is red at or above the line, and says so
+		StaffGauge gauge = ui.Window.GetVisualDescendants().OfType<StaffGauge>().Single(g => g.IsEffectivelyVisible && g.FindAncestorOfType<Border>()?.Name == "ResultHero");
+		Assert.Equal(75.0, gauge.Value, 1);
+		Assert.False(gauge.IsEmpty);
+		Assert.Equal("GaugeDanger", gauge.FillKey);
+		Assert.Equal("75 percent damaged, at or above the 50 percent line", AutomationProperties.GetName(gauge));
+		Assert.DoesNotContain(ui.Window.GetVisualDescendants().OfType<ProgressBar>(), p => p.Classes.Contains("threshold"));
 
 		// The sections are the sidebar's outline while the editor is open: numbered, with no icons
 		ListBox steps = ui.Window.GetVisualDescendants().OfType<ListBox>().Single(l => l.Classes.Contains("steps"));

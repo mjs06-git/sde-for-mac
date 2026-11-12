@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:vm="using:Sde.App.ViewModels"
+             xmlns:app="using:Sde.App"
+             xmlns:c="using:Sde.App.Controls"
+             x:Class="Sde.App.Views.ManageTagsSheetView"
+             x:DataType="sh:ManageTagsSheetViewModel">
+  <!-- Every tag: its colour (click to change), its name (renamed as you type), how many structures have it, move and delete -->
+  <StackPanel Spacing="12">
+    <c:EmptyState IsVisible="{Binding IsEmpty}" Title="No tags yet" Text="Add one from a structure's Tags." />
+    <Border Classes="card flush" IsVisible="{Binding !IsEmpty}">
+      <ScrollViewer MaxHeight="380" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl ItemsSource="{Binding Rows}" Name="TagRows">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="sh:ManageTagRowViewModel">
+              <Border Classes="tagRow">
+                <Grid ColumnDefinitions="Auto,*,92,Auto" ColumnSpacing="10">
+                  <Button Classes="dotButton" AutomationProperties.Name="{Binding ColourLabel}" ToolTip.Tip="Change Colour" VerticalAlignment="Top">
+                    <Ellipse app:ThemeBrush.Fill="{Binding DotKey}" />
+                    <Button.Flyout>
+                      <Flyout Placement="BottomEdgeAlignedLeft">
+                        <ItemsControl ItemsSource="{Binding Colours}">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                              <StackPanel Orientation="Horizontal" Spacing="2" />
+                            </ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TagColourChoice">
+                              <Button Classes="swatch" AutomationProperties.Name="{Binding Name}" ToolTip.Tip="{Binding Name}"
+                                      Command="{Binding $parent[ItemsControl;1].((sh:ManageTagRowViewModel)DataContext).ChooseColourCommand}" CommandParameter="{Binding}">
+                                <Border Classes="swatchRing" Classes.chosen="{Binding IsChosen}">
+                                  <Ellipse app:ThemeBrush.Fill="{Binding DotKey}" />
+                                </Border>
+                              </Button>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </Flyout>
+                    </Button.Flyout>
+                  </Button>
+                  <StackPanel Grid.Column="1" Spacing="2">
+                    <TextBox Text="{Binding Name}" AutomationProperties.Name="{Binding NameLabel}" MaxLength="40" />
+                    <TextBlock Classes="danger" Text="{Binding Problem}" IsVisible="{Binding HasProblem}" TextWrapping="Wrap" />
+                  </StackPanel>
+                  <TextBlock Grid.Column="2" Classes="muted num" Text="{Binding CountText}" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,6,0,0" />
+                  <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="2" VerticalAlignment="Top">
+                    <Button Classes="icon" Command="{Binding MoveUpCommand}" AutomationProperties.Name="{Binding UpLabel}" ToolTip.Tip="Move Up">
+                      <c:Icon Kind="ArrowUp" Size="14" />
+                    </Button>
+                    <Button Classes="icon" Command="{Binding MoveDownCommand}" AutomationProperties.Name="{Binding DownLabel}" ToolTip.Tip="Move Down">
+                      <c:Icon Kind="ArrowDown" Size="14" />
+                    </Button>
+                    <Button Classes="icon" Command="{Binding DeleteCommand}" AutomationProperties.Name="{Binding DeleteLabel}" ToolTip.Tip="Delete Tag">
+                      <c:Icon Kind="Trash" Size="14" />
+                    </Button>
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Border>
+    <c:SheetFooter IsDone="True" DoneCommand="{Binding DoneCommand}" />
+  </StackPanel>
+</UserControl>

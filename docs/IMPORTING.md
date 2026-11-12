@@ -115,6 +115,34 @@ ticked; ZIP codes count when both sides have one.
 | **Ambiguous** | Several structures match. Nothing is imported for that record: SDE never guesses. The structures are listed so you can fix or delete the duplicates, or match by something else. |
 | **Can't import** | No record ID, the same record (and inspection) twice in the file, or a calculation SDE can't do. |
 
+### A record that covers several buildings
+
+Some records stand for more than one building: a parcel with four sheds, a permit for a row of units. A profile can
+turn one row into several structures. It is off unless the profile turns it on (the *split* settings), so existing
+profiles behave as before. Two ways to say how many buildings a row has:
+
+- **A number of buildings column.** A row with 3 becomes 3 structures. Blank, 0 and 1 mean one structure.
+- **A list column.** The cell lists the buildings or units, such as `Unit A; Unit B; Unit C`, and each item becomes a
+  structure. The profile sets the separator (a semicolon if blank). Items listed twice make one structure.
+
+Each structure gets the row's shared values (address, owner, parcel, community, dates and so on) and a name that tells
+it apart, added to the *unit* field (after the street number, as SDE does for a unit) or, if the profile says so, to the
+*lot number*. A count gives "Bldg 1", "Bldg 2" and so on (the word is set in the profile); a list uses the item's text.
+If the row already has a unit, the building's name is added after it.
+
+The preview shows one row per structure, grouped under the row of the file they came from. A row with more than 200
+buildings can't be imported, and a count that isn't a whole number is a problem for that row; nothing else is affected.
+
+**Importing the file again.** Each structure is remembered by the record ID plus a tag: the first building of a count
+keeps the plain record ID, the others get `#2`, `#3`, and a list item gets `#` and its text (`P-7#Unit B`). The same
+file therefore updates the same structures and never makes duplicates, and a list in a different order changes
+nothing. If the count goes up, the new buildings are added. If it goes down, or an item leaves the list, the structure
+made earlier stays as it is and the preview lists it as no longer in the file; SDE never deletes it for you.
+
+A building made this way is always a new structure: it is not matched to a structure already in SDE by parcel or
+address, because several buildings would match the same one. The exception is matching by address with *The unit must
+match too* ticked.
+
 ### Importing an updated file
 
 Each assessment or structure remembers its record and the values last imported. When you import a newer file of the
@@ -191,16 +219,16 @@ SDE submission 2026-10-08 1430/
 | Reading, filter, checklist pivot | `SourceTable` (`src/Sde.Interop/SourceTable.cs` + `SourceImport/SourceTable.Shape.cs`); `.xls` and `.dbf` via `Internal/SheetReader.cs`, `Internal/DbfReader.cs` |
 | Source text → SDE values | `SourceValues.cs` |
 | Matching | `AddressMatcher.cs` (`AddressMatcher`, `AddressIndex<T>`, `ParcelNumbers`) |
-| Preview, matching, import | `SourceImport.cs`, `SourceRowBuilder.cs`; address/owner parsing shared with Enterprise Import (`Internal/PropertyRowParser.cs`) |
+| Preview, matching, import | `SourceImport.cs`, `SourceSplit.cs` (one row to several structures), `SourceRowBuilder.cs`; address/owner parsing shared with Enterprise Import (`Internal/PropertyRowParser.cs`) |
 | Submission folder | `src/Sde.Reports/SubmissionFolder.cs`, `Internal/ResultsCsv.cs` |
 | App | `SourceImportViewModel` / `SourceImportView` (`Page.SourceImport`), `SubmissionViewModel`, Structures chip and source filter |
-| Tests | `ExternalLinkTests`, `SourceTableTests`, `SourceImportTests`, `SourceImportModesTests`, `SourceMatchingTests`, `SubmissionFolderTests`, `SourceImportUiTests`, `SubmissionUiTests` |
+| Tests | `ExternalLinkTests`, `SourceTableTests`, `SourceImportTests`, `SourceImportModesTests`, `SourceSplitTests`, `SourceMatchingTests`, `SubmissionFolderTests`, `SourceImportUiTests`, `SubmissionUiTests` |
 
 All the types live in the `Sde.Interop` namespace (a namespace called `SourceImport` would clash with the
 `SourceImport` class).
 
 **Compatibility.** Profiles saved by v1.5 (`Accela Profiles/`) are copied once into `Import Profiles/`; the old folder
-is left for v1.5. A v1.5 profile has no `SourceName`, so it reads as an Inspections profile from "Accela", matching by
+is left as it was, so v1.5 can still use it. A v1.5 profile has no `SourceName`, so it reads as an Inspections profile from "Accela", matching by
 record ID: its existing links (`ExternalLink.Source = 'Accela'`) keep matching, and nothing in the database needs to
 change. The app setting `LastAccelaProfile` is read as `LastImportProfile`. Both link tables are added to older
 databases when they're opened (`SdeDatabase.EnsureSchema`) and use `ON DELETE CASCADE`, so older versions can still
@@ -220,4 +248,4 @@ assessments and returns their IDs; `SourceImportResult.LockedIds` reports them w
 (same parcel or address) using the same matcher. It still creates every row as a new structure, as FEMA's does.
 
 **Still to do with real files:** tune the header guesses (`SourceFields.Synonyms`) and the examples against real
-(anonymised) exports. Records covering several buildings aren't handled.
+(anonymised) exports.

@@ -208,6 +208,14 @@
     });
   }
 
+  function openAssessment(id) {
+    message("");
+    api("GET", "/api/assessments/" + id).then(function (r) {
+      if (!r.ok) { message(r.data.error || "Couldn't open that assessment."); return; }
+      renderAssessment(r.data, true);
+    });
+  }
+
   $("back").addEventListener("click", function () {
     state.assessment = null;
     show("find");
@@ -218,15 +226,22 @@
 
   function fieldId(key) { return "f-" + key.replace(/\./g, "-"); }
 
+  // What the page is built from: when it is the same after a save, only values are refreshed (nothing is rebuilt
+  // under the person's finger).
   function keysOf(a) {
-    return a.steps.map(function (s) { return s.fields.map(function (f) { return f.key + ":" + f.options.length; }).join(","); }).join("|");
+    return a.assessmentId + "#" + a.steps.map(function (s) {
+      return s.step + ":" + s.fields.map(function (f) { return f.key + ":" + f.options.length; }).join(",");
+    }).join("|") + "#E" + a.elements.map(function (e) { return e.id; }).join(",") +
+      "#C" + a.costAdjustments.map(function (c) { return c.id; }).join(",");
   }
 
   function renderAssessment(a, fresh) {
     var previous = state.assessment;
     state.assessment = a;
     $("edit-heading").textContent = a.address;
-    $("edit-summary").textContent = [a.structureType, a.status, a.result].filter(function (x) { return x; }).join(" · ");
+    var hasPercent = typeof a.percentDamage === "number";
+    $("edit-summary").textContent = [a.structureType, a.status, hasPercent ? null : a.result].filter(function (x) { return x; }).join(" · ");
+    showResult(a);
     $("locked").hidden = !a.locked;
     $("locked").textContent = a.locked ? a.lockedMessage : "";
     $("photo-count").textContent = a.photoCount === 1 ? "1 photo" : a.photoCount + " photos";
@@ -236,19 +251,349 @@
     if (!fresh && previous && keysOf(previous) === keysOf(a)) {
       // Same fields: only refresh values the person isn't typing in.
       a.steps.forEach(function (s) { s.fields.forEach(function (f) { setValue(f); }); });
+      refreshCosts(a);
+      refreshElements(a);
     } else {
       var open = {};
-      Array.prototype.forEach.call($("steps").querySelectorAll("details"), function (d) { open[d.getAttribute("data-step")] = d.open; });
+      if (!fresh) {
+        Array.prototype.forEach.call($("steps").querySelectorAll("details"), function (d) { open[d.getAttribute("data-step")] = d.open; });
+      }
       var steps = $("steps");
       steps.textContent = "";
       a.steps.forEach(function (s, i) {
         var d = el("details", { "data-step": String(s.step) }, [el("summary", { text: s.step + ". " + s.name })]);
         d.open = open[String(s.step)] !== undefined ? open[String(s.step)] : (fresh && i === 0);
         s.fields.forEach(function (f) { d.appendChild(control(f, a.locked)); });
+        if (s.step === costStep) { costControls(a).forEach(function (c) { d.appendChild(c); }); }
+        if (s.step === damageStep) { elementControls(a).forEach(function (c) { d.appendChild(c); }); }
         steps.appendChild(d);
       });
+      refreshCosts(a);
+      refreshElements(a);
     }
+    renderStatus(a);
+    renderOthers(a, fresh);
     show("edit");
+  }
+
+  // ───────── Numbers and money ─────────
+
+  var costStep = 5, damageStep = 6;
+
+  function money(v) {
+    if (typeof v !== "number") { return "$0.00"; }
+    var s = Math.abs(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return (v < 0 ? "-$" : "$") + s;
+  }
+
+  function plain(v) { return typeof v === "number" ? String(v) : ""; }
+
+  // Reads a number as typed (commas, a dollar sign and spaces are fine). Empty is null; anything else is NaN.
+  function readNumber(text) {
+    var t = (text || "").replace(/[,$\s]/g, "");
+    if (t === "") { return null; }
+    return /^-?(\d+\.?\d*|\.\d+)$/.test(t) ? parseFloat(t) : NaN;
+  }
+
+  function setText(id, text) { var e = $(id); if (e) { e.textContent = text; } }
+
+  function setInput(id, value, locked) {
+    var input = $(id);
+    if (!input) { return; }
+    input.disabled = locked;
+    if (input !== document.activeElement) { input.value = value; }
+  }
+
+  function numberInput(id, label, describedBy) {
+    var input = el("input", { id: id, type: "text", inputmode: "decimal", autocomplete: "off", "aria-describedby": describedBy });
+    return [el("label", { "for": id, text: label }), input];
+  }
+
+  // ───────── Damage by element ─────────
+
+  var quickValues = [0, 25, 50, 75, 100];
+
+  function elementControls(a) {
+    var parts = [];
+    if (a.damageUndetermined) {
+      parts.push(el("p", { className: "hint", text: "Damage is undetermined (Inspection step), so these values don't affect the result." }));
+    }
+    parts.push(el("p", { className: "hint", text: "0% is untouched, 100% must be fully replaced. Tap a value or type an exact one." }));
+    a.elements.forEach(function (e) {
+      var base = "el-" + e.id;
+      var name = el("p", { className: "element-name", id: base + "-name", text: e.name });
+      var share = el("span", { className: "element-share", id: base + "-share" });
+      var segments = el("div", { className: "segments", role: "group", "aria-labelledby": base + "-name" });
+      quickValues.forEach(function (v) {
+        var b = el("button", { type: "button", "data-value": String(v), "aria-pressed": "false", "aria-label": e.name + " " + v + " percent", text: String(v) });
+        b.addEventListener("click", function () { saveElement(e.id, v); });
+        segments.appendChild(b);
+      });
+      var input = el("input", { id: base, type: "text", inputmode: "decimal", autocomplete: "off", "aria-describedby": base + "-error" });
+      input.addEventListener("change", function () {
+        var v = readNumber(input.value);
+        if (v === null || isNaN(v) || v < 0 || v > 100) { fieldError(base, e.name + ": type a percentage from 0 to 100."); return; }
+        saveElement(e.id, v);
+      });
+      var title = el("div", { className: "element-title" }, [
+        name,
+        el("p", { className: "element-meta" }, [share, el("span", { className: "element-dollars", id: base + "-dollars" })])
+      ]);
+      var entry = el("div", { className: "with-unit" }, [
+        el("label", { "for": base, className: "sr-only", text: e.name + ", percent damaged" }),
+        input,
+        el("span", { className: "suffix", "aria-hidden": "true", text: "%" })
+      ]);
+      parts.push(el("div", { className: "element", id: base + "-row" }, [
+        el("div", { className: "element-head" }, [title, entry]),
+        segments,
+        el("p", { className: "field-error", id: base + "-error", hidden: true })
+      ]));
+    });
+    parts.push(el("dl", { className: "totals" }, [
+      el("dt", { text: "Total damage" }), el("dd", { id: "total-damage" }),
+      el("dt", { text: "Replacement cost" }), el("dd", { id: "total-replacement-2" })
+    ]));
+    return parts;
+  }
+
+  function refreshElements(a) {
+    a.elements.forEach(function (e) {
+      var base = "el-" + e.id;
+      setText(base + "-share", typeof e.share === "number" ? e.share.toFixed(1).replace(/\.0$/, "") + "% of cost" : "");
+      setText(base + "-dollars", money(e.damageValue) + " damage");
+      setInput(base, plain(e.damaged), a.locked);
+      var row = $(base + "-row");
+      if (!row) { return; }
+      Array.prototype.forEach.call(row.querySelectorAll(".segments button"), function (b) {
+        b.setAttribute("aria-pressed", Number(b.getAttribute("data-value")) === e.damaged ? "true" : "false");
+        b.disabled = a.locked;
+      });
+    });
+    setText("total-damage", money(a.totals.computedDamages));
+    setText("total-replacement-2", money(a.totals.replacementCost));
+  }
+
+  function saveElement(id, value) {
+    send("elements", { elements: [{ id: id, damaged: value }] }, "el-" + id);
+  }
+
+  // ───────── Cost adjustments ─────────
+
+  function costControls(a) {
+    var parts = [];
+    if (a.costAdjustments.length > 0) {
+      parts.push(el("h4", { text: "Cost adjustments" }));
+      parts.push(el("p", { className: "hint", text: "Features that add to the replacement cost." }));
+      a.costAdjustments.forEach(function (c) {
+        var base = "ca-" + c.id;
+        var title = el("div", { className: "line-head" }, [
+          el("p", { className: "line-name", id: base + "-name", text: c.name + (c.units ? " (" + c.units + ")" : "") }),
+          el("p", { className: "line-total", id: base + "-total" })
+        ]);
+        var q = numberInput(base + "-q", "Quantity", base + "-error");
+        var u = numberInput(base + "-u", "Unit cost ($)", base + "-error");
+        var line = el("div", { className: "line", role: "group", "aria-labelledby": base + "-name" }, [
+          title,
+          el("div", { className: "pair" }, [el("div", null, q), el("div", null, u)]),
+          el("p", { className: "field-error", id: base + "-error", hidden: true })
+        ]);
+        [q[1], u[1]].forEach(function (i) { i.addEventListener("change", function () { saveCost(c, base); }); });
+        parts.push(line);
+      });
+    }
+    parts.push(el("h4", { text: "Additional adjustments" }));
+    parts.push(el("p", { className: "hint", text: "Up to 7 lines of your own." }));
+    var shown = 0;
+    a.additionalAdjustments.forEach(function (x) {
+      var base = "aa-" + x.line;
+      var used = !!(x.name || typeof x.quantity === "number" || typeof x.unitCost === "number");
+      var n = el("label", { "for": base + "-n", text: "Description" });
+      var name = el("input", { id: base + "-n", type: "text", autocomplete: "off", maxlength: "255", "aria-describedby": base + "-error" });
+      var q = numberInput(base + "-q", "Quantity", base + "-error");
+      var u = numberInput(base + "-u", "Unit cost ($)", base + "-error");
+      var line = el("div", { className: "line", id: base, role: "group", "aria-labelledby": base + "-title", hidden: !used && shown > 0 ? true : false }, [
+        el("div", { className: "line-head" }, [
+          el("p", { className: "line-name", id: base + "-title", text: "Line " + x.line }),
+          el("p", { className: "line-total", id: base + "-total" })
+        ]),
+        n, name,
+        el("div", { className: "pair" }, [el("div", null, q), el("div", null, u)]),
+        el("p", { className: "field-error", id: base + "-error", hidden: true })
+      ]);
+      if (used || shown === 0) { shown++; }
+      [name, q[1], u[1]].forEach(function (i) { i.addEventListener("change", function () { saveAdditional(x.line, base); }); });
+      parts.push(line);
+    });
+    var more = el("button", { type: "button", id: "add-line", className: "secondary", text: "Add a line" });
+    more.addEventListener("click", function () {
+      var next = $("steps").querySelector(".line[id^='aa-'][hidden]");
+      if (next) { next.hidden = false; $(next.id + "-n").focus(); }
+      more.hidden = !$("steps").querySelector(".line[id^='aa-'][hidden]");
+    });
+    parts.push(more);
+    parts.push(el("dl", { className: "totals" }, [
+      el("dt", { text: "Adjustments" }), el("dd", { id: "total-adjustments" }),
+      el("dt", { text: "Replacement cost" }), el("dd", { id: "total-replacement" }),
+      el("dt", { text: "Actual cash value" }), el("dd", { id: "total-acv" })
+    ]));
+    return parts;
+  }
+
+  function refreshCosts(a) {
+    a.costAdjustments.forEach(function (c) {
+      var base = "ca-" + c.id;
+      setInput(base + "-q", plain(c.quantity), a.locked);
+      setInput(base + "-u", plain(c.unitCost), a.locked);
+      setText(base + "-total", money(c.totalCost));
+    });
+    a.additionalAdjustments.forEach(function (x) {
+      var base = "aa-" + x.line;
+      setInput(base + "-n", x.name || "", a.locked);
+      setInput(base + "-q", plain(x.quantity), a.locked);
+      setInput(base + "-u", plain(x.unitCost), a.locked);
+      setText(base + "-total", money(x.totalCost));
+    });
+    var more = $("add-line");
+    if (more) { more.hidden = a.locked || !$("steps").querySelector(".line[id^='aa-'][hidden]"); }
+    setText("total-adjustments", money(a.totals.totalAdjustments));
+    setText("total-replacement", money(a.totals.replacementCost));
+    setText("total-acv", money(a.totals.actualCashValue));
+  }
+
+  function numbersOf(base, label) {
+    var q = readNumber($(base + "-q").value), u = readNumber($(base + "-u").value);
+    if (isNaN(q)) { fieldError(base, label + " quantity: type a number."); return null; }
+    if (isNaN(u)) { fieldError(base, label + " unit cost: type a number."); return null; }
+    return { quantity: q, unitCost: u };
+  }
+
+  function saveCost(c, base) {
+    var n = numbersOf(base, c.name);
+    if (n) { send("costs", { adjustments: [{ id: c.id, quantity: n.quantity, unitCost: n.unitCost }] }, base); }
+  }
+
+  function saveAdditional(lineNumber, base) {
+    var n = numbersOf(base, "Line " + lineNumber);
+    if (n) { send("costs", { additional: [{ line: lineNumber, name: $(base + "-n").value, quantity: n.quantity, unitCost: n.unitCost }] }, base); }
+  }
+
+  // ───────── Status ─────────
+
+  function renderStatus(a) {
+    var box = $("status-choices");
+    var built = Array.prototype.map.call(box.querySelectorAll("button"), function (b) { return b.getAttribute("data-value"); }).join(",");
+    var wanted = a.statusChoices.map(function (c) { return c.id; }).join(",");
+    if (built !== wanted) {
+      box.textContent = "";
+      a.statusChoices.forEach(function (c) {
+        var b = el("button", { type: "button", "data-value": c.id, "aria-pressed": "false", text: c.name });
+        b.addEventListener("click", function () {
+          if (b.getAttribute("aria-pressed") === "true") { return; }
+          send("status", { status: c.id }, null);
+        });
+        box.appendChild(b);
+      });
+    }
+    Array.prototype.forEach.call(box.querySelectorAll("button"), function (b) {
+      b.setAttribute("aria-pressed", b.getAttribute("data-value") === a.statusValue ? "true" : "false");
+    });
+    box.hidden = a.statusChoices.length === 0;
+    $("status-note").textContent = a.statusNote || "";
+    $("status-card").hidden = a.locked;
+  }
+
+  // ───────── The structure's other assessments ─────────
+
+  function renderOthers(a, fresh) {
+    var list = $("others-list");
+    list.textContent = "";
+    if (a.assessments.length > 1) {
+      a.assessments.forEach(function (o) {
+        var b = el("button", { type: "button", "aria-current": o.current ? "true" : null }, [
+          el("span", { className: "addr", text: o.label }),
+          el("span", { className: "meta", text: o.status + (o.current ? " · Open now" : "") })
+        ]);
+        b.addEventListener("click", function () { if (!o.current) { openAssessment(o.assessmentId); } });
+        list.appendChild(el("li", null, [b]));
+      });
+    }
+    if (fresh) {
+      $("another-confirm").hidden = true;
+      $("another").hidden = false;
+    }
+  }
+
+  $("another").addEventListener("click", function () {
+    $("another").hidden = true;
+    $("another-confirm").hidden = false;
+    $("another-yes").focus();
+  });
+
+  $("another-no").addEventListener("click", function () {
+    $("another-confirm").hidden = true;
+    $("another").hidden = false;
+    $("another").focus();
+  });
+
+  $("another-yes").addEventListener("click", function () {
+    var a = state.assessment;
+    $("another-yes").disabled = true;
+    api("POST", "/api/properties/" + a.propertyId + "/assessments", { another: true }).then(function (r) {
+      $("another-yes").disabled = false;
+      if (!r.ok) { message(r.data.error || "Couldn't start another assessment."); return; }
+      renderAssessment(r.data, true);
+      $("save-status").textContent = "Started a new assessment on the Mac.";
+    });
+  });
+
+  // ───────── The result and its staff gauge ─────────
+
+  var svgNs = "http://www.w3.org/2000/svg";
+  var line = 50;   // FEMA's substantial damage line, in percent
+
+  function svg(tag, attrs, text) {
+    var e = document.createElementNS(svgNs, tag);
+    Object.keys(attrs || {}).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+    if (text) { e.textContent = text; }
+    return e;
+  }
+
+  function percentText(p) { return p.toFixed(1) + "%"; }
+
+  // Water blue below the line, amber within 10 points of it, red at or above it.
+  function toneOf(p) { return p >= line ? "substantial" : p >= line - 10 ? "close" : "not-substantial"; }
+
+  function showResult(a) {
+    var box = $("result");
+    if (typeof a.percentDamage !== "number") { box.hidden = true; return; }
+    var p = a.percentDamage;
+    var message = (a.damageMessage || "").trim();
+    box.className = "result " + toneOf(p);
+    $("result-value").textContent = percentText(p);
+    $("result-text").textContent = message;
+    $("result-text").hidden = !message;
+
+    var fill = Math.max(0, Math.min(100, p));
+    var drawing = svg("svg", { "aria-hidden": "true", focusable: "false" });
+    drawing.appendChild(svg("rect", { "class": "track", x: "0", y: "8", width: "100%", height: "14", rx: "3" }));
+    if (fill > 0) { drawing.appendChild(svg("rect", { "class": "water", x: "0", y: "8", width: fill + "%", height: "14", rx: "3" })); }
+    for (var i = 0; i <= 100; i += 10) {
+      drawing.appendChild(svg("line", { "class": "tick", x1: i + "%", x2: i + "%", y1: "22", y2: i % 50 === 0 ? "31" : "27" }));
+    }
+    // The high-water mark: a red line at 50 percent that stands above and below the track.
+    drawing.appendChild(svg("line", { "class": "halo", x1: line + "%", x2: line + "%", y1: "1", y2: "29" }));
+    drawing.appendChild(svg("line", { "class": "mark", x1: line + "%", x2: line + "%", y1: "1", y2: "29" }));
+    drawing.appendChild(svg("text", { x: "0", y: "45", "text-anchor": "middle" }, "0"));
+    drawing.appendChild(svg("text", { "class": "line", x: line + "%", y: "45", "text-anchor": "middle" }, line + "%"));
+    drawing.appendChild(svg("text", { x: "100%", y: "45", "text-anchor": "middle" }, "100%"));
+
+    var gauge = $("gauge");
+    gauge.setAttribute("aria-label", "Gauge: " + percentText(p) + " damaged, " + (p >= line ? "at or above" : "below") +
+      " the " + line + "% substantial damage line.");
+    gauge.textContent = "";
+    gauge.appendChild(drawing);
+    box.hidden = false;
   }
 
   function control(f, locked) {
@@ -303,31 +648,40 @@
     input.disabled = state.assessment.locked;
   }
 
-  function fieldError(key, text) {
-    var e = $(fieldId(key) + "-error");
+  // Shows (or clears) the error under a control; idBase is the control's id.
+  function fieldError(idBase, text) {
+    var e = $(idBase + "-error");
     if (!e) { message(text); return; }
     e.textContent = text || "";
     e.hidden = !text;
   }
 
-  // Saves run one after another, in the order they were made.
   function save(key, value) {
+    send("changes", { changes: [{ key: key, value: value }] }, fieldId(key));
+  }
+
+  // Saves run one after another, in the order they were made. errorId is where a refusal is shown (null: the page's message).
+  function send(what, body, errorId) {
     var id = state.assessment.assessmentId;
     $("save-status").textContent = "Saving…";
     state.saving = state.saving.then(function () {
-      return api("POST", "/api/assessments/" + id + "/changes", { changes: [{ key: key, value: value }] }).then(function (r) {
+      return api("POST", "/api/assessments/" + id + "/" + what, body).then(function (r) {
         if (!state.assessment || state.assessment.assessmentId !== id) { return; }
         if (!r.ok) {
           $("save-status").textContent = "";
-          fieldError(key, r.data.error || "Not saved.");
+          showError(errorId, r.data.error || "Not saved.");
           if (r.status === 409) { reload(id); }
           return;
         }
-        fieldError(key, "");
+        showError(errorId, "");
         renderAssessment(r.data, false);
         $("save-status").textContent = "Saved on the Mac.";
       });
     });
+  }
+
+  function showError(errorId, text) {
+    if (errorId) { fieldError(errorId, text); } else { message(text); }
   }
 
   function reload(id) {

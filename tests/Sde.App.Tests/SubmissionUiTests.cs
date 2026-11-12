@@ -1,5 +1,6 @@
 using Avalonia.Headless.XUnit;
 using Sde.App.ViewModels;
+using Sde.App.ViewModels.Sheets;
 
 namespace Sde.App.Tests;
 
@@ -23,6 +24,8 @@ public class SubmissionUiTests
 		s.OpenSubmissionCommand.Execute(null);
 		SubmissionViewModel sub = s.Submission;
 		Assert.True(sub.IsOpen);
+		// 3.5: a sheet over the window (it was a panel that pushed the table down).
+		Assert.IsType<SubmissionSheetViewModel>(ui.Main.Sheets.Current);
 		Assert.Equal("6 assessments: 5 ready, 1 incomplete (left out)", sub.Count);
 		sub.IncludeIncomplete = true;
 		Assert.Equal("6 assessments: 5 ready, 1 incomplete (included)", sub.Count);
@@ -40,6 +43,7 @@ public class SubmissionUiTests
 		Assert.Contains("5 reports", note);
 		Assert.Contains("Left out because they're incomplete: 700 Riverside", note);
 		Assert.False(sub.IsOpen);
+		Assert.Null(ui.Main.Sheets.Current);
 		string[] reports = Directory.GetFiles(Path.Combine(folder, "Reports")).Select(Path.GetFileName).ToArray();
 		Assert.Equal(5, reports.Length);
 		Assert.Contains("BLD-2026-00123 – 123 River Street.pdf", reports);   // named after the record ID

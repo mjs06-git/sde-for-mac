@@ -1,35 +1,29 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.TeamSheetView"
              x:DataType="sh:TeamSheetViewModel">
-  <!-- A team: its name, members and colour (the fields carry their own spacing) -->
-  <StackPanel Spacing="12">
-    <StackPanel>
-      <StackPanel Classes="field">
-        <TextBlock Classes="fieldLabel" Text="Name" />
-        <TextBox Text="{Binding Name}" PlaceholderText="Team 1" AutomationProperties.Name="Team name" />
-      </StackPanel>
-      <StackPanel Classes="field">
-        <TextBlock Classes="fieldLabel" Text="Members" />
-        <TextBox Text="{Binding Members}" PlaceholderText="Inspector A, Inspector B" AutomationProperties.Name="Team members" />
-      </StackPanel>
-      <StackPanel Spacing="4">
-        <TextBlock Classes="fieldLabel" Text="Colour" />
-        <ListBox Classes="segmented" ItemsSource="{x:Static sh:TeamSheetViewModel.Colours}" SelectedItem="{Binding Colour}" HorizontalAlignment="Left"
-                 AutomationProperties.Name="Team colour">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="sh:TeamColour">
-              <Ellipse Width="14" Height="14" Fill="{Binding Brush}" ToolTip.Tip="{Binding Name}" />
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
-      </StackPanel>
+  <!-- A team: its name, members and colour -->
+  <StackPanel Spacing="16">
+    <Grid ColumnDefinitions="*,*" ColumnSpacing="16" RowDefinitions="Auto,Auto" RowSpacing="4">
+      <TextBlock Classes="fieldLabel" Text="Name" />
+      <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Members" />
+      <TextBox Grid.Row="1" Text="{Binding Name}" PlaceholderText="Team 1" AutomationProperties.Name="Team name" />
+      <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Members}" PlaceholderText="Inspector A, Inspector B" AutomationProperties.Name="Team members" />
+    </Grid>
+    <StackPanel Spacing="4">
+      <TextBlock Classes="fieldLabel" Text="Colour" />
+      <ListBox Classes="segmented" ItemsSource="{x:Static sh:TeamSheetViewModel.Colours}" SelectedItem="{Binding Colour}" HorizontalAlignment="Left"
+               AutomationProperties.Name="Team colour">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="sh:TeamColour">
+            <Ellipse Width="14" Height="14" Fill="{Binding Brush}" ToolTip.Tip="{Binding Name}" />
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
     </StackPanel>
     <TextBlock Classes="danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding HasError}" />
-    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Classes="primary" Content="Save" IsDefault="True" Command="{Binding SaveCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-    </StackPanel>
+    <c:SheetFooter PrimaryText="Save" PrimaryCommand="{Binding SaveCommand}" />
   </StackPanel>
 </UserControl>

@@ -66,40 +66,46 @@ public sealed partial class SdeStore
 	public void TrashProperty(Guid propertyId, SaveContext context = null)
 	{
 		SaveContext ctx = context ?? SaveContext.App;
-		Database.InTransaction((c, tx) =>
+		Database.InTransaction((c, tx) => TrashProperty(c, tx, propertyId, ctx));
+	}
+
+	/// <summary>
+	/// <see cref="TrashProperty(Guid, SaveContext)"/> inside a caller's transaction (merging structures). With
+	/// <paramref name="labelNote"/>, Recently deleted shows it after the address, e.g. "(merged into 12 Oak Street)".
+	/// </summary>
+	private void TrashProperty(IDbConnection c, IDbTransaction tx, Guid propertyId, SaveContext ctx, string labelNote = null)
+	{
+		PropertyRecord p = TableMap<PropertyRecord>.Get(c, new { PropertyID = propertyId }, tx) ?? throw new ArgumentException("That structure no longer exists.");
+		List<Guid> assessments = c.Query<Guid>("SELECT AssessmentID FROM Assessment WHERE PropertyID = @propertyId AND Active = 1", new { propertyId }, tx).ToList();
+		foreach (Guid aid in assessments)
 		{
-			PropertyRecord p = TableMap<PropertyRecord>.Get(c, new { PropertyID = propertyId }, tx) ?? throw new ArgumentException("That structure no longer exists.");
-			List<Guid> assessments = c.Query<Guid>("SELECT AssessmentID FROM Assessment WHERE PropertyID = @propertyId AND Active = 1", new { propertyId }, tx).ToList();
-			foreach (Guid aid in assessments)
+			AssessmentStatusRecord status = GetStatus(c, tx, aid);
+			if (status.IsLocked)
 			{
-				AssessmentStatusRecord status = GetStatus(c, tx, aid);
-				if (status.IsLocked)
-				{
-					throw new AssessmentLockedException(aid, status.Value, new List<FieldDiff>());
-				}
-				EnsureNotCheckedOut(c, tx, aid);
+				throw new AssessmentLockedException(aid, status.Value, new List<FieldDiff>());
 			}
-			c.Execute("UPDATE Assessment SET Active = 0 WHERE PropertyID = @propertyId AND Active = 1", new { propertyId }, tx);
-			c.Execute("UPDATE Property SET Active = 0 WHERE PropertyID = @propertyId", new { propertyId }, tx);
-			foreach (Guid aid in assessments)
-			{
-				BumpVersion(c, tx, aid, VersionKind.Assessment);
-			}
-			BumpVersion(c, tx, propertyId, VersionKind.Property);
-			DateTime now = Clock();
-			TableMap<DeletedItemRecord>.Upsert(c, new DeletedItemRecord
-			{
-				ItemKey = StructureKey(propertyId),
-				Kind = nameof(DeletedKind.Structure),
-				PropertyID = propertyId,
-				Label = AddressLabel(p),
-				Detail = JsonConvert.SerializeObject(assessments),
-				DeletedOn = now,
-				DeletedBy = ctx.User ?? UserName,
-				PurgeAfter = now.AddDays(KeepDays),
-			}, tx);
-			WriteEvent(c, tx, propertyId, null, "Moved to Recently deleted", ctx);
-		});
+			EnsureNotCheckedOut(c, tx, aid);
+		}
+		c.Execute("UPDATE Assessment SET Active = 0 WHERE PropertyID = @propertyId AND Active = 1", new { propertyId }, tx);
+		c.Execute("UPDATE Property SET Active = 0 WHERE PropertyID = @propertyId", new { propertyId }, tx);
+		foreach (Guid aid in assessments)
+		{
+			BumpVersion(c, tx, aid, VersionKind.Assessment);
+		}
+		BumpVersion(c, tx, propertyId, VersionKind.Property);
+		DateTime now = Clock();
+		TableMap<DeletedItemRecord>.Upsert(c, new DeletedItemRecord
+		{
+			ItemKey = StructureKey(propertyId),
+			Kind = nameof(DeletedKind.Structure),
+			PropertyID = propertyId,
+			Label = AddressLabel(p) + (labelNote == null ? "" : " " + labelNote),
+			Detail = JsonConvert.SerializeObject(assessments),
+			DeletedOn = now,
+			DeletedBy = ctx.User ?? UserName,
+			PurgeAfter = now.AddDays(KeepDays),
+		}, tx);
+		WriteEvent(c, tx, propertyId, null, "Moved to Recently deleted", ctx);
 	}
 
 	/// <summary>Moves one assessment to Recently deleted (its structure stays).</summary>
@@ -238,8 +244,8 @@ public sealed partial class SdeStore
 
 	/// <summary>
 	/// Removes items older than <see cref="KeepDays"/> for good, and drops Recently deleted, photo markup and dismissed
-	/// check rows whose target is gone (an older version of this app may have deleted it). Called when the database is
-	/// opened.
+	/// check rows whose target is gone (an older version of this app may have deleted it), and what's kept for undoing a
+	/// merge once the merged structure is gone for good. Called when the database is opened.
 	/// </summary>
 	public int PurgeExpired()
 	{
@@ -253,6 +259,8 @@ public sealed partial class SdeStore
 			  NOT EXISTS (SELECT 1 FROM Assessment a WHERE a.AssessmentID = QaDismissal.ObjectID) AND
 			  NOT EXISTS (SELECT 1 FROM Property p WHERE p.PropertyID = QaDismissal.ObjectID) AND
 			  NOT EXISTS (SELECT 1 FROM Event e WHERE e.EventID = QaDismissal.ObjectID);
+			DELETE FROM MacSetting WHERE Key LIKE 'Merge.%' AND
+			  NOT EXISTS (SELECT 1 FROM Property p WHERE p.PropertyID = json_extract(MacSetting.Value, '$.MergePropertyID'));
 			""", transaction: tx));
 		return PurgeWhere("PurgeAfter <= @now", new { now = Clock() });
 	}

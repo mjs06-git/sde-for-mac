@@ -164,6 +164,131 @@ public class SubmissionFolderTests : IDisposable
 		Assert.Empty(Directory.GetFileSystemEntries(Out));
 	}
 
+	/// <summary>A letter written for the ranch, a document kept with it, a compliance case and an event, for the optional extras.</summary>
+	private (string Letter, DocumentRecord Document) AddExtras(AssessmentFile ranch, AssessmentFile office)
+	{
+		string letters = Directory.CreateDirectory(Path.Combine(_db.Folder, "letters")).FullName;
+		string letter = Path.Combine(letters, "123 River Street SD letter.docx");
+		File.WriteAllText(letter, "synthetic letter");
+		Store.AddLetters(new[] { new LetterLogRecord { AssessmentID = ranch.Assessment.AssessmentID, Kind = "Substantial damage", FileName = letter } });
+		string source = Path.Combine(_db.Folder, "ec.pdf");
+		File.WriteAllText(source, "%PDF-1.4 synthetic");
+		DocumentRecord document = Store.AddDocument(ranch.Property.PropertyID, source, DocumentKinds.ElevationCertificate, "Elevation certificate: 2026/09");
+		ComplianceCaseRecord c = Store.OpenComplianceCase(ranch.Assessment.AssessmentID);
+		c.Deadline = new DateTime(2027, 3, 1);
+		Store.SaveComplianceCase(c);
+		EventRecord flood = Store.SaveEvent(new EventRecord { Name = "September flood", StartDate = new DateTime(2026, 9, 14) });
+		Store.SetEvent(Ids(ranch, office), flood.EventID);
+		return (letter, document);
+	}
+
+	/// <summary>Every file in a folder, as paths relative to it, in order.</summary>
+	private static List<string> Tree(string folder) => Directory.GetFiles(folder, "*", SearchOption.AllDirectories)
+		.Select(f => Path.GetRelativePath(folder, f)).Order(StringComparer.Ordinal).ToList();
+
+	[Fact]
+	public void TheExtras_AreAllOffByDefault_AndTheFolderIsAsBefore()
+	{
+		var s = Sample();
+		AddExtras(s.Ranch, s.Office);
+		SubmissionOptions defaults = new SubmissionOptions();
+		Assert.False(defaults.IncludeLetters || defaults.IncludeDocuments || defaults.IncludeComplianceReport || defaults.IncludeEventSummary || defaults.IncludeCaseFiles);
+
+		List<SubmissionProgress> steps = new();
+		SubmissionResult result = SubmissionFolder.Write(Store, Ids(s.Ranch, s.Office, s.RanchAgain, s.OfficeTwin), Out, new SubmissionOptions { GeneratedOn = At }, new Sync(steps.Add));
+		Assert.Equal(new[] { "Reports", "SDE_1" }, Directory.GetDirectories(result.Folder).Select(Path.GetFileName).Order(StringComparer.Ordinal));
+		Assert.Equal(new[] { "Community report.pdf", "Percent damaged list.pdf", "results.csv" },
+			Directory.GetFiles(result.Folder).Select(Path.GetFileName).Order(StringComparer.Ordinal));
+		Assert.Equal(new[] { "400 Front Street (2).pdf", "400 Front Street.pdf", "BLD-2026-00123 – 123 River Street.pdf" },
+			Directory.GetFiles(Path.Combine(result.Folder, "Reports")).Select(Path.GetFileName).Order(StringComparer.Ordinal));
+		Assert.Empty(result.Warnings);
+		Assert.Equal(new SubmissionProgress(7, 7, "Done"), steps[^1]);
+	}
+
+	[Fact]
+	public void EachExtra_AddsExactlyItsOwnFiles()
+	{
+		var s = Sample();
+		AddExtras(s.Ranch, s.Office);
+		Guid[] ids = Ids(s.Ranch, s.Office);
+		List<string> baseline = Tree(SubmissionFolder.Write(Store, ids, Out, new SubmissionOptions { GeneratedOn = At }).Folder);
+		(SubmissionOptions Options, string[] Added)[] cases =
+		{
+			(new SubmissionOptions { GeneratedOn = At, IncludeLetters = true }, new[] { Path.Combine("Letters", "BLD-2026-00123 – 123 River Street – Substantial damage.docx") }),
+			(new SubmissionOptions { GeneratedOn = At, IncludeDocuments = true }, new[] { Path.Combine("Documents", "123 River Street – Elevation certificate- 202609.pdf") }),
+			(new SubmissionOptions { GeneratedOn = At, IncludeComplianceReport = true }, new[] { "Compliance report.pdf" }),
+			(new SubmissionOptions { GeneratedOn = At, IncludeEventSummary = true }, new[] { "Event summary.pdf" }),
+			(new SubmissionOptions { GeneratedOn = At, IncludeCaseFiles = true }, new[] { Path.Combine("Case files", "123 River Street.pdf"), Path.Combine("Case files", "400 Front Street.pdf") }),
+		};
+		foreach ((SubmissionOptions options, string[] added) in cases)
+		{
+			List<SubmissionProgress> steps = new();
+			SubmissionResult result = SubmissionFolder.Write(Store, ids, Out, options, new Sync(steps.Add));
+			List<string> tree = Tree(result.Folder);
+			Assert.Equal(added.Order(StringComparer.Ordinal), tree.Except(baseline).Order(StringComparer.Ordinal));
+			Assert.Empty(baseline.Except(tree));
+			Assert.Empty(result.Warnings);
+			Assert.Equal(new SubmissionProgress(7, 7, "Done"), steps[^1]);
+		}
+	}
+
+	[Fact]
+	public void TheExtras_HoldWhatTheyShould()
+	{
+		var s = Sample();
+		(string letter, DocumentRecord document) = AddExtras(s.Ranch, s.Office);
+		SubmissionResult result = SubmissionFolder.Write(Store, Ids(s.Ranch, s.Office), Out, new SubmissionOptions
+		{
+			GeneratedOn = At, IncludeLetters = true, IncludeDocuments = true, IncludeComplianceReport = true, IncludeEventSummary = true, IncludeCaseFiles = true,
+		});
+		Assert.Equal(File.ReadAllBytes(letter), File.ReadAllBytes(Path.Combine(result.Folder, "Letters", "BLD-2026-00123 – 123 River Street – Substantial damage.docx")));
+		Assert.Equal(File.ReadAllBytes(Store.DocumentPath(document)), File.ReadAllBytes(Directory.GetFiles(Path.Combine(result.Folder, "Documents")).Single()));
+		string compliance = Poppler.Text(Path.Combine(result.Folder, "Compliance report.pdf"));
+		Assert.Contains("123 River Street", compliance);
+		Assert.Contains("September flood", compliance);
+		Assert.Contains("September flood", Poppler.Text(Path.Combine(result.Folder, "Event summary.pdf")));
+		string caseFile = Poppler.Text(Path.Combine(result.Folder, "Case files", "123 River Street.pdf"));
+		Assert.Contains("Case File", caseFile);
+		Assert.DoesNotContain("400 Front", caseFile);
+	}
+
+	[Fact]
+	public void AMissingLetterFile_IsAWarning_NotAFailure()
+	{
+		var s = Sample();
+		(string letter, _) = AddExtras(s.Ranch, s.Office);
+		Store.AddLetters(new[] { new LetterLogRecord { AssessmentID = s.Office.Assessment.AssessmentID, Kind = "Not substantially damaged", FileName = Path.Combine(_db.Folder, "letters", "moved away.docx") } });
+		SubmissionResult result = SubmissionFolder.Write(Store, Ids(s.Ranch, s.Office), Out, new SubmissionOptions { GeneratedOn = At, IncludeLetters = true });
+
+		string warning = Assert.Single(result.Warnings);
+		Assert.Contains("400 Front Street", warning);
+		Assert.Contains("missing", warning);
+		Assert.DoesNotContain(_db.Folder, warning);
+		Assert.Equal(new[] { "BLD-2026-00123 – 123 River Street – Substantial damage.docx" }, Directory.GetFiles(Path.Combine(result.Folder, "Letters")).Select(Path.GetFileName));
+		Assert.True(File.Exists(Path.Combine(result.Folder, "results.csv")));
+	}
+
+	[Fact]
+	public void ALinkedFile_IsNeverFollowed()
+	{
+		if (OperatingSystem.IsWindows())
+		{
+			return;
+		}
+		var s = Sample();
+		AddExtras(s.Ranch, s.Office);
+		string secret = Path.Combine(_db.Folder, "not for the folder.txt");
+		File.WriteAllText(secret, "private");
+		string link = Path.Combine(_db.Folder, "letters", "linked letter.docx");
+		File.CreateSymbolicLink(link, secret);
+		Store.AddLetters(new[] { new LetterLogRecord { AssessmentID = s.Office.Assessment.AssessmentID, Kind = "Not substantially damaged", FileName = link } });
+		SubmissionResult result = SubmissionFolder.Write(Store, Ids(s.Ranch, s.Office), Out, new SubmissionOptions { GeneratedOn = At, IncludeLetters = true });
+
+		Assert.Contains("link", Assert.Single(result.Warnings));
+		Assert.Single(Directory.GetFiles(Path.Combine(result.Folder, "Letters")));
+		Assert.DoesNotContain(Tree(result.Folder), f => File.ReadAllText(Path.Combine(result.Folder, f)) == "private");
+	}
+
 	/// <summary>Reports progress immediately (Progress&lt;T&gt; would post it later to the thread pool).</summary>
 	private sealed class Sync(Action<SubmissionProgress> report) : IProgress<SubmissionProgress>
 	{

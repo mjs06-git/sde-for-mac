@@ -2,11 +2,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:app="using:Sde.App"
              xmlns:sh="using:Sde.App.ViewModels.Sheets"
+             xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.ImprovementsSheetView"
              x:DataType="sh:ImprovementsSheetViewModel">
-  <StackPanel Spacing="12">
+  <!-- Improvements and SI: the structure's improvement projects, its market value, and the substantial improvement
+       finding they add up to -->
+  <StackPanel Spacing="16">
     <StackPanel Spacing="2">
-      <TextBlock Classes="semibold" Text="{Binding Address}" />
+      <TextBlock Classes="sheetSection" Text="{Binding Address}" />
       <TextBlock Classes="muted" Text="{Binding SettingsText}" TextWrapping="Wrap" />
     </StackPanel>
 
@@ -16,7 +19,7 @@
         <Grid ColumnDefinitions="230,*" ColumnSpacing="14">
           <StackPanel Spacing="6">
             <TextBlock Classes="fieldLabel" Text="Projects (permits)" />
-            <ListBox ItemsSource="{Binding Projects}" SelectedItem="{Binding SelectedProject}" Height="214" AutomationProperties.Name="Improvement projects">
+            <ListBox Classes="sheetList" ItemsSource="{Binding Projects}" SelectedItem="{Binding SelectedProject}" Height="214" AutomationProperties.Name="Improvement projects">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="sh:ImprovementProjectRowViewModel">
                   <StackPanel Margin="2">
@@ -29,15 +32,14 @@
             <Button Content="+ New Project" Command="{Binding NewProjectCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
           </StackPanel>
 
-          <Border Grid.Column="1" Classes="subtle">
+          <Border Grid.Column="1" Classes="card">
             <StackPanel Spacing="8">
-              <TextBlock Classes="h3" Text="{Binding FormTitle}" />
+              <TextBlock Classes="sheetSection" Text="{Binding FormTitle}" />
               <Grid ColumnDefinitions="*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="4">
                 <TextBlock Classes="fieldLabel" Text="Permit number" />
                 <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Date (permit or start)" />
                 <TextBox Grid.Row="1" Text="{Binding PermitNumber}" AutomationProperties.Name="Permit number" />
-                <CalendarDatePicker Grid.Row="1" Grid.Column="1" SelectedDate="{Binding ProjectDate}" HorizontalAlignment="Stretch" SelectedDateFormat="Custom"
-                                    CustomDateFormatString="MMM d, yyyy" PlaceholderText="Pick a date" AutomationProperties.Name="Project date" />
+                <c:DateField Grid.Row="1" Grid.Column="1" SelectedDate="{Binding ProjectDate}" HorizontalAlignment="Stretch" AutomationProperties.Name="Project date" />
                 <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Classes="fieldLabel" Text="Description" Margin="0,4,0,0" />
                 <TextBox Grid.Row="3" Grid.ColumnSpan="2" Text="{Binding Description}" PlaceholderText="For example: kitchen remodel and new roof" AutomationProperties.Name="Project description" />
                 <TextBlock Grid.Row="4" Classes="fieldLabel" Text="Cost of the improvement" Margin="0,4,0,0" />
@@ -54,8 +56,8 @@
               <TextBox Text="{Binding ExclusionReason}" IsVisible="{Binding !Included}" PlaceholderText="Why it doesn't count (for example: routine maintenance)"
                        AutomationProperties.Name="Why the project doesn't count" />
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Classes="primary" Content="Save Project" Command="{Binding SaveProjectCommand}" />
-                <Button Content="Delete Project…" Command="{Binding DeleteProjectCommand}" IsVisible="{Binding !IsNewProject}" />
+                <Button Content="Save Project" Command="{Binding SaveProjectCommand}" />
+                <Button Classes="danger" Content="Delete Project…" Command="{Binding DeleteProjectCommand}" IsVisible="{Binding !IsNewProject}" />
                 <TextBlock Classes="muted" Text="Not saved yet" VerticalAlignment="Center" IsVisible="{Binding IsProjectDirty}" />
               </StackPanel>
             </StackPanel>
@@ -64,7 +66,7 @@
 
         <!-- Market value -->
         <Grid ColumnDefinitions="230,*" ColumnSpacing="14" RowDefinitions="Auto,Auto" RowSpacing="4">
-          <TextBlock Classes="fieldLabel" Text="Market value of the structure" />
+          <TextBlock Classes="fieldLabel" Text="Market value of the structure" ToolTip.Tip="The building only, before the improvement." />
           <TextBlock Grid.Column="1" Classes="fieldLabel" Text="Where the market value came from" />
           <NumericUpDown Grid.Row="1" Value="{Binding MarketValue}" Minimum="0" FormatString="N2" ShowButtonSpinner="False" Classes="number"
                          AutomationProperties.Name="Market value of the structure, before the improvement">
@@ -75,10 +77,10 @@
           <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding MarketValueBasis}" PlaceholderText="For example: professional appraisal"
                    AutomationProperties.Name="Where the market value came from" />
         </Grid>
-        <TextBlock Classes="help" Text="The building only, before the improvement." />
 
         <!-- Result -->
-        <Border Classes="card" BorderThickness="0" Padding="16,12" app:ThemeBrush.Background="{Binding State, Converter={x:Static app:Converters.StatusBackgroundKey}}">
+        <Border Classes="card" BorderThickness="0" Padding="16,12" ToolTip.Tip="A separate finding: damage assessments don't change."
+                app:ThemeBrush.Background="{Binding State, Converter={x:Static app:Converters.StatusBackgroundKey}}">
           <StackPanel Spacing="6">
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
               <TextBlock Classes="display bold" Text="{Binding PercentText}" VerticalAlignment="Center"
@@ -111,8 +113,6 @@
             </ItemsControl>
           </StackPanel>
         </Border>
-        <TextBlock Classes="muted xs" TextWrapping="Wrap"
-                   Text="A separate finding: damage assessments don't change." />
 
         <StackPanel Spacing="4">
           <TextBlock Classes="fieldLabel" Text="Notes for the determination" />
@@ -121,7 +121,7 @@
 
         <!-- Earlier determinations -->
         <StackPanel Spacing="4" IsVisible="{Binding HasDeterminations}">
-          <TextBlock Classes="h3" Text="Determinations made" />
+          <TextBlock Classes="sheetSection" Text="Determinations made" />
           <ItemsControl ItemsSource="{Binding Determinations}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="sh:SiDeterminationRowViewModel">
@@ -142,12 +142,7 @@
     </ScrollViewer>
 
     <TextBlock Classes="medium" Text="{Binding SavedText}" TextWrapping="Wrap" IsVisible="{Binding SavedText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-    <DockPanel>
-      <Button DockPanel.Dock="Left" Content="SI Determination PDF…" Command="{Binding SavePdfCommand}" />
-      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-        <Button Content="Done" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-        <Button Classes="primary" Content="Save Determination" Command="{Binding SaveDeterminationCommand}" HorizontalContentAlignment="Center" />
-      </StackPanel>
-    </DockPanel>
+    <c:SheetFooter LeadingText="SI Determination PDF…" LeadingCommand="{Binding SavePdfCommand}"
+                   CancelText="Done" PrimaryText="Save Determination" PrimaryCommand="{Binding SaveDeterminationCommand}" IsPrimaryDefault="False" />
   </StackPanel>
 </UserControl>

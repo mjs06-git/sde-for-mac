@@ -6,12 +6,44 @@
              xmlns:c="using:Sde.App.Controls"
              xmlns:app="using:Sde.App"
              x:Class="Sde.App.Views.SettingsView"
-             x:DataType="vm:SettingsViewModel">
+             x:DataType="vm:SettingsViewModel"
+             Classes="dataPage">
+  <UserControl.Resources>
+    <!-- The miniature app on an Appearance tile: the navy frame (sidebar and title band) round bright content, with a
+         white card and the dark result card. Drawn from tokens, so inside a ThemeVariantScope it shows that theme. -->
+    <ControlTemplate x:Key="MiniApp">
+      <Border Classes="miniFrame" Width="220" Height="92">
+        <Grid ColumnDefinitions="46,*" RowDefinitions="16,*">
+          <StackPanel Grid.RowSpan="2" Margin="8,22,8,0" Spacing="6">
+            <Border Classes="miniLine selected" Width="28" />
+            <Border Classes="miniLine onFrame" Width="22" />
+            <Border Classes="miniLine onFrame" Width="26" />
+            <Border Classes="miniLine onFrame" Width="18" />
+          </StackPanel>
+          <Border Grid.Column="1" Classes="miniLine onFrame" Width="44" Margin="4,0,0,0" VerticalAlignment="Center" />
+          <Border Grid.Column="1" Grid.Row="1" Classes="miniContent">
+            <Grid ColumnDefinitions="*,44" ColumnSpacing="6">
+              <Border Classes="miniCard">
+                <StackPanel Spacing="6">
+                  <Border Classes="miniLine" Width="56" />
+                  <Border Classes="miniLine" Width="80" />
+                  <Border Classes="miniLine" Width="64" />
+                  <Border Classes="miniButton" />
+                </StackPanel>
+              </Border>
+              <Border Grid.Column="1" Classes="miniCard hero" />
+            </Grid>
+          </Border>
+        </Grid>
+      </Border>
+    </ControlTemplate>
+  </UserControl.Resources>
+
   <UserControl.DataTemplates>
-    <!-- A group of default values: a card of fields, three to a row -->
+    <!-- A group of default values: a white card of fields, three to a row -->
     <DataTemplate DataType="ed:FieldGroupViewModel">
       <Border Classes="card">
-        <StackPanel Spacing="12">
+        <StackPanel Spacing="16">
           <TextBlock Classes="h3" Text="{Binding Title}" />
           <ItemsControl Classes="fields" ItemsSource="{Binding Fields}">
             <ItemsControl.ItemsPanel>
@@ -23,14 +55,15 @@
     </DataTemplate>
   </UserControl.DataTemplates>
 
-  <!-- In the style of the Mac's System Settings: the categories on the left, one shown on the right. Each row is a
-       label and its control; what a setting does is in its tooltip. -->
+  <!-- In the style of the Mac's System Settings: the categories in a white card list on the left of the content, one
+       shown on the right as a column of white cards. Each row is a label and its control; what a setting does is in its
+       tooltip. -->
   <Grid ColumnDefinitions="Auto,*">
-    <Border Classes="stepRail">
+    <Border Classes="settingsRail" Name="SettingsRail">
       <ListBox Classes="steps" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" AutomationProperties.Name="Settings categories">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:SettingsCategoryItem">
-            <StackPanel Orientation="Horizontal" Spacing="10">
+            <StackPanel Orientation="Horizontal" Spacing="10" ToolTip.Tip="{Binding Subtitle}">
               <Border Classes="stepIcon">
                 <c:Icon Kind="{Binding Icon}" Size="16" />
               </Border>
@@ -45,11 +78,11 @@
       <!-- A column at most 840 wide, against the left edge, the same width in every category -->
       <Grid>
         <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="840" /></Grid.ColumnDefinitions>
-        <StackPanel Margin="{StaticResource PagePadding}" Spacing="14">
-          <TextBlock Classes="h2" Text="{Binding SelectedCategory.Title}" ToolTip.Tip="{Binding SelectedCategory.Subtitle}" />
+        <StackPanel Margin="{StaticResource PagePadding}" Spacing="20">
+          <TextBlock Classes="pageHeading" Text="{Binding SelectedCategory.Title}" ToolTip.Tip="{Binding SelectedCategory.Subtitle}" Name="CategoryHeading" />
 
           <!-- General -->
-          <StackPanel Spacing="14" IsVisible="{Binding IsGeneral}">
+          <StackPanel Spacing="20" IsVisible="{Binding IsGeneral}">
             <Border Classes="card settings">
               <StackPanel Classes="settingsGroup">
                 <Border Classes="settingsRow">
@@ -70,7 +103,7 @@
             </Border>
 
             <Border Classes="card">
-              <StackPanel Spacing="12">
+              <StackPanel Spacing="16">
                 <TextBlock Classes="h3" Text="Your fields" ToolTip.Tip="Three extra fields on every assessment" />
                 <ItemsControl Classes="fields" ItemsSource="{Binding CustomFieldNames}">
                   <ItemsControl.ItemsPanel>
@@ -89,7 +122,7 @@
             </Border>
 
             <Border Classes="card">
-              <StackPanel Spacing="12">
+              <StackPanel Spacing="16">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                   <TextBlock Classes="h3" Text="Note snippets" VerticalAlignment="Center" ToolTip.Tip="Text to insert into notes" />
                   <Button Grid.Column="1" Command="{Binding AddSnippetCommand}" AutomationProperties.Name="Add snippet">
@@ -117,23 +150,113 @@
                 </ItemsControl>
               </StackPanel>
             </Border>
+          </StackPanel>
 
+          <!-- Appearance -->
+          <StackPanel Spacing="20" IsVisible="{Binding IsAppearance}" Name="AppearancePanel">
             <Border Classes="card">
-              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
-                <Image Source="/Assets/icon-1024.png" Width="64" Height="64" VerticalAlignment="Top"
-                       RenderOptions.BitmapInterpolationMode="HighQuality" AutomationProperties.Name="App icon" />
-                <StackPanel Grid.Column="1" Spacing="4">
-                  <TextBlock Classes="h3" Text="Substantial Damage Estimator for Mac" />
-                  <TextBlock Classes="secondary"><Run Text="Version " /><Run Text="{Binding Version}" /></TextBlock>
-                  <TextBlock Classes="secondary" TextWrapping="Wrap"
-                             Text="Unofficial Mac port of FEMA's SDE 3.0.0, using FEMA's engine, cost tables and rules. Not produced or endorsed by FEMA. Determinations remain the floodplain administrator's." />
-                </StackPanel>
-              </Grid>
+              <StackPanel Spacing="16">
+                <TextBlock Classes="h3" Text="Light or dark" ToolTip.Tip="Changes at once" />
+                <ListBox Classes="themeTiles" Name="ThemeTiles" SelectedIndex="{Binding ThemeIndex}" AutomationProperties.Name="Appearance: match the Mac, light or dark">
+                  <ListBoxItem AutomationProperties.Name="Match System" ToolTip.Tip="Light or dark, as the Mac is set in System Settings">
+                    <StackPanel>
+                      <Border Classes="tilePreview">
+                        <Viewbox Stretch="Uniform">
+                          <Canvas Width="220" Height="92" ClipToBounds="True">
+                            <ThemeVariantScope RequestedThemeVariant="Light">
+                              <ContentControl Template="{StaticResource MiniApp}" />
+                            </ThemeVariantScope>
+                            <Border Canvas.Left="110" Width="110" Height="92" ClipToBounds="True">
+                              <Canvas>
+                                <ThemeVariantScope Canvas.Left="-110" RequestedThemeVariant="Dark">
+                                  <ContentControl Template="{StaticResource MiniApp}" />
+                                </ThemeVariantScope>
+                              </Canvas>
+                            </Border>
+                          </Canvas>
+                        </Viewbox>
+                      </Border>
+                      <TextBlock Classes="tileLabel" Text="Match System" />
+                    </StackPanel>
+                  </ListBoxItem>
+                  <ListBoxItem AutomationProperties.Name="Light">
+                    <StackPanel>
+                      <Border Classes="tilePreview">
+                        <Viewbox Stretch="Uniform">
+                          <ThemeVariantScope RequestedThemeVariant="Light">
+                            <ContentControl Template="{StaticResource MiniApp}" />
+                          </ThemeVariantScope>
+                        </Viewbox>
+                      </Border>
+                      <TextBlock Classes="tileLabel" Text="Light" />
+                    </StackPanel>
+                  </ListBoxItem>
+                  <ListBoxItem AutomationProperties.Name="Dark">
+                    <StackPanel>
+                      <Border Classes="tilePreview">
+                        <Viewbox Stretch="Uniform">
+                          <ThemeVariantScope RequestedThemeVariant="Dark">
+                            <ContentControl Template="{StaticResource MiniApp}" />
+                          </ThemeVariantScope>
+                        </Viewbox>
+                      </Border>
+                      <TextBlock Classes="tileLabel" Text="Dark" />
+                    </StackPanel>
+                  </ListBoxItem>
+                </ListBox>
+              </StackPanel>
+            </Border>
+
+            <Border Classes="card settings">
+              <StackPanel Classes="settingsGroup">
+                <Border Classes="settingsRow">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                    <TextBlock Classes="medium" Text="Accent colour" VerticalAlignment="Center" ToolTip.Tip="The colour of buttons, links and selected rows. Changes at once." />
+                    <ListBox Grid.Column="1" Classes="segmented" Name="AccentChoice" SelectedIndex="{Binding AccentIndex}" VerticalAlignment="Center"
+                             AutomationProperties.Name="Accent colour">
+                      <ListBoxItem AutomationProperties.Name="SDE blue">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                          <Ellipse Classes="swatch" Fill="{DynamicResource SwatchBrandAccent}" />
+                          <TextBlock Text="SDE Blue" VerticalAlignment="Center" />
+                        </StackPanel>
+                      </ListBoxItem>
+                      <ListBoxItem AutomationProperties.Name="The Mac's accent colour" IsEnabled="{Binding CanUseMacAccent}"
+                                   ToolTip.Tip="{Binding MacAccentNote}" ToolTip.ShowOnDisabled="True">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                          <Ellipse Classes="swatch" Fill="{DynamicResource SwatchMacAccent}" />
+                          <TextBlock Text="Mac Accent" VerticalAlignment="Center" />
+                        </StackPanel>
+                      </ListBoxItem>
+                    </ListBox>
+                  </Grid>
+                </Border>
+                <Border Classes="settingsRow">
+                  <ToggleSwitch IsChecked="{Binding IncreaseContrast}" OnContent="" OffContent="" Name="IncreaseContrastSwitch" AutomationProperties.Name="Increase contrast"
+                                ToolTip.Tip="Stronger borders, dividers and text. Also on whenever Increase Contrast is on in System Settings, Accessibility.">
+                    <ToggleSwitch.Content>
+                      <TextBlock Classes="medium" Text="Increase contrast" />
+                    </ToggleSwitch.Content>
+                  </ToggleSwitch>
+                </Border>
+                <Border Classes="settingsRow">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                      <TextBlock Classes="medium" Text="Density" ToolTip.Tip="Compact fits more rows and fields on the screen" />
+                      <TextBlock Classes="rowDetail" Text="{x:Static vm:SettingsViewModel.DensityNote}" Name="DensityNote" />
+                    </StackPanel>
+                    <ListBox Grid.Column="1" Classes="segmented" Name="DensityChoice" SelectedIndex="{Binding DensityIndex}" VerticalAlignment="Center"
+                             AutomationProperties.Name="Density">
+                      <ListBoxItem Content="Comfortable" AutomationProperties.Name="Comfortable" />
+                      <ListBoxItem Content="Compact" AutomationProperties.Name="Compact" />
+                    </ListBox>
+                  </Grid>
+                </Border>
+              </StackPanel>
             </Border>
           </StackPanel>
 
           <!-- Defaults -->
-          <StackPanel Spacing="14" IsVisible="{Binding IsDefaults}">
+          <StackPanel Spacing="20" IsVisible="{Binding IsDefaults}">
             <Border Classes="card settings">
               <StackPanel Classes="settingsGroup">
                 <Border Classes="settingsRow">
@@ -148,7 +271,7 @@
             </Border>
             <ItemsControl ItemsSource="{Binding DefaultGroups}">
               <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><StackPanel Spacing="14" /></ItemsPanelTemplate>
+                <ItemsPanelTemplate><StackPanel Spacing="20" /></ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
             </ItemsControl>
           </StackPanel>
@@ -157,7 +280,7 @@
           <Panel IsVisible="{Binding IsReportsAndLetters}"><v:OutputSettingsPanel DataContext="{Binding Outputs}" /></Panel>
 
           <!-- Online services -->
-          <StackPanel Spacing="14" IsVisible="{Binding IsOnlineServices}">
+          <StackPanel Spacing="20" IsVisible="{Binding IsOnlineServices}">
             <Border Classes="card settings">
               <StackPanel Classes="settingsGroup">
                 <Border Classes="settingsRow">
@@ -174,10 +297,6 @@
                                ToolTip.Tip="Flood zone, FIRM panel and NFIP community at a structure's coordinates" />
                   </Grid>
                 </Border>
-              </StackPanel>
-            </Border>
-            <Border Classes="card settings">
-              <StackPanel Classes="settingsGroup">
                 <Border Classes="settingsRow">
                   <Grid ColumnDefinitions="Auto,*,280">
                     <Border Classes="rowIcon"><c:Icon Kind="Flood" Size="16" /></Border>
@@ -206,14 +325,14 @@
           <Panel IsVisible="{Binding IsDepthTables}"><v:DepthTablesPanel DataContext="{Binding DepthTables}" /></Panel>
 
           <!-- Backups -->
-          <StackPanel Spacing="14" IsVisible="{Binding IsBackups}">
+          <StackPanel Spacing="20" IsVisible="{Binding IsBackups}">
             <Border Classes="card settings">
               <StackPanel Classes="settingsGroup">
                 <Border Classes="settingsRow">
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                     <StackPanel Spacing="1">
                       <TextBlock Classes="medium" Text="Database file" />
-                      <SelectableTextBlock Classes="sm" Text="{Binding DatabasePath}" TextWrapping="Wrap" />
+                      <SelectableTextBlock Classes="sm secondary" Text="{Binding DatabasePath}" TextWrapping="Wrap" />
                     </StackPanel>
                     <Button Grid.Column="1" Content="Show in Finder" Command="{Binding RevealDatabaseCommand}" VerticalAlignment="Center" />
                   </Grid>
@@ -221,7 +340,7 @@
                 <Border Classes="settingsRow">
                   <StackPanel Spacing="1">
                     <TextBlock Classes="medium" Text="Photos folder" />
-                    <SelectableTextBlock Classes="sm" Text="{Binding AttachmentsPath}" TextWrapping="Wrap" />
+                    <SelectableTextBlock Classes="sm secondary" Text="{Binding AttachmentsPath}" TextWrapping="Wrap" />
                   </StackPanel>
                 </Border>
                 <Border Classes="settingsRow">
@@ -234,7 +353,7 @@
             </Border>
 
             <Border Classes="card">
-              <StackPanel Spacing="12">
+              <StackPanel Spacing="16">
                 <TextBlock Classes="h3" Text="This database" ToolTip.Tip="Tip: one database per event; share through Import &amp; Export" />
                 <WrapPanel>
                   <Button Margin="0,0,8,8" Content="Save a Copy…" Command="{Binding BackUpCommand}" />
@@ -244,6 +363,25 @@
                   <Button Margin="0,0,8,8" Content="New Empty Database…" Command="{Binding NewDatabaseCommand}" />
                 </WrapPanel>
               </StackPanel>
+            </Border>
+          </StackPanel>
+
+          <!-- About -->
+          <StackPanel Spacing="20" IsVisible="{Binding IsAbout}" Name="AboutPanel">
+            <Border Classes="card">
+              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="24">
+                <c:Icon Classes="aboutMark" Kind="BrandMark" AutomationProperties.Name="SDE" />
+                <StackPanel Grid.Column="1" Spacing="6">
+                  <TextBlock Classes="aboutName" Text="{x:Static vm:SettingsViewModel.ProductName}" />
+                  <TextBlock Classes="secondary num" Name="AboutVersion"><Run Text="Version " /><Run Text="{Binding Version}" /></TextBlock>
+                  <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{x:Static vm:SettingsViewModel.AboutNote}" Margin="0,6,0,0" />
+                  <WrapPanel Margin="0,10,0,0">
+                    <Button Margin="0,0,8,8" Classes="primary" Content="What's New" Command="{Binding OpenWhatsNewCommand}" IsVisible="{Binding HasWhatsNew}" />
+                    <Button Margin="0,0,8,8" Content="SDE Help" Command="{Binding ShowHelpCommand}" ToolTip.Tip="Every field's help, in a list you can search" />
+                    <Button Margin="0,0,8,8" Content="FEMA SDE User Manual" Command="{Binding OpenManualCommand}" />
+                  </WrapPanel>
+                </StackPanel>
+              </Grid>
             </Border>
           </StackPanel>
         </StackPanel>

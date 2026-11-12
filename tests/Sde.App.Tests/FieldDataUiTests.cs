@@ -5,6 +5,7 @@ using Sde.App.ViewModels;
 using Sde.App.ViewModels.Editor;
 using Sde.App.ViewModels.Sheets;
 using Sde.Core.Assessments;
+using Sde.Core.Quality;
 using Sde.Core.Records;
 using Sde.Data;
 
@@ -249,6 +250,34 @@ public class FieldDataUiTests
 	}
 
 	[AvaloniaFact]
+	public async Task LookUpOnline_KeepsTheFloodMapsAnswer_EvenWhenNothingIsApplied()
+	{
+		using UiSession ui = new UiSession();
+		ui.Services.HttpClientFactory = () => new HttpClient(FakeOnline.Recorded());
+		AssessmentFile f = SampleCases.RanchFlood(ui.Store);
+		Guid pid = f.Property.PropertyID;
+		AssessmentEditorViewModel e = Open(ui, f);
+		Assert.Contains(QaRules.NotChecked(ui.Store.LoadQaInput()), n => n.RuleId == QaRuleIds.ZoneDiffersFromNfhl);
+
+		Task lookUp = e.LookUpOnlineCommand.ExecuteAsync(null);
+		AutoFillSheetViewModel sheet = Assert.IsType<AutoFillSheetViewModel>(ui.Main.Sheets.Current);
+		await sheet.Lookup;
+		Assert.False(sheet.HasError);
+		sheet.CancelCommand.Execute(null);
+		await lookUp;
+
+		Assert.Null(ui.Store.LoadAssessment(f.Assessment.AssessmentID).Property.FIRMZone);   // nothing applied
+		FloodLookupRecord kept = ui.Store.GetFloodLookup(pid);
+		Assert.NotNull(kept);
+		Assert.Equal(("AE", 12.5m, FloodLookupRecord.NfhlSource), (kept.Zone, kept.Bfe, kept.Source));
+		Assert.Equal(38.88991, kept.Latitude!.Value, 5);   // where it was looked up: the geocoded address
+		Assert.Equal(DateTimeKind.Utc, kept.RetrievedOn.Kind);
+		// The Review checks now compare with it, offline.
+		Assert.Single(QaRules.Check(ui.Store.LoadQaInput()), x => x.RuleId == QaRuleIds.ZoneDiffersFromNfhl && x.PropertyId == pid);
+		Assert.DoesNotContain(QaRules.NotChecked(ui.Store.LoadQaInput()), n => n.RuleId == QaRuleIds.ZoneDiffersFromNfhl);
+	}
+
+	[AvaloniaFact]
 	public async Task LookUpOnline_ServiceDown_IsExplainedInTheSheet()
 	{
 		using UiSession ui = new UiSession();
@@ -310,6 +339,8 @@ public class FieldDataUiTests
 		Assert.NotNull(source.BatchId);
 		Assert.Contains(ui.Store.GetBatch(source.BatchId), h => h.Field == "Property.Latitude");
 		Assert.Null(ui.Store.LoadAssessment(mill.AssessmentID.Value).Property.Latitude);   // Final: left alone
+		// Both answers are kept as the structures' flood lookups, the Final one's too, though nothing was applied to it.
+		Assert.All(new[] { ranch, mill }, r => Assert.True(ui.Store.GetFloodLookup(ui.Store.LoadAssessment(r.AssessmentID!.Value).Property.PropertyID).InFloodway));
 		sheet.CancelCommand.Execute(null);
 		await lookUp;
 		Assert.True(BindingErrors.Instance.Messages.IsEmpty, string.Join("\n", BindingErrors.Instance.Messages.Distinct().Take(20)));

@@ -35,7 +35,7 @@
           <ListBox.ItemTemplate>
             <DataTemplate DataType="shell:PaletteItem">
               <StackPanel AutomationProperties.Name="{Binding AccessibleName}">
-                <TextBlock Classes="eyebrow" Text="{Binding Group}" IsVisible="{Binding IsFirstInGroup}" Margin="12,10,12,4" />
+                <TextBlock Classes="paletteGroup" Text="{Binding Group}" IsVisible="{Binding IsFirstInGroup}" />
                 <Border Classes="paletteRow">
                   <Grid ColumnDefinitions="Auto,*,Auto">
                     <c:Icon Kind="{Binding Icon}" Size="16" VerticalAlignment="Center" />

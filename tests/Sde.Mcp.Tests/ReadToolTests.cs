@@ -17,6 +17,7 @@ public sealed class ReadToolTests
 	{
 		"find_structures", "get_assessment", "explain_result", "get_history", "get_field_options", "field_help",
 		"list_events", "event_summary", "qa_check", "get_review_comments", "list_compliance_cases", "list_layers", "query_layer",
+		"list_letters", "list_documents", "get_appeal", "list_improvements", "get_compliance_case", "agenda",
 	};
 
 	/// <summary>The outputs: always allowed, they write files into the AI outputs folder only.</summary>
@@ -42,12 +43,18 @@ public sealed class ReadToolTests
 			Assert.DoesNotContain(" – ", tool.Description);
 		}
 		// Never: deleting, purging, restoring, importing, FEMA's SDE export, marking letters sent, settings.
-		string[] never = { "delete", "purge", "restore", "import", "letter", "setting", "sde", "fema", "submission", "trash", "remove" };
+		string[] never = { "delete", "purge", "restore", "import", "setting", "sde", "fema", "submission", "trash", "remove" };
 		Assert.DoesNotContain(tools, t => never.Any(n => t.Name.Contains(n, StringComparison.OrdinalIgnoreCase)));
+		// Letters, documents, appeals, improvements and compliance cases can be read, but no tool that changes anything
+		// touches them (so nothing marks a letter sent or changes a case, an appeal or a determination).
+		string[] readOnlyTopics = { "letter", "document", "appeal", "improvement", "determination", "compliance" };
+		Assert.DoesNotContain(tools, t => t.ProtocolTool.Annotations?.ReadOnlyHint != true
+			&& readOnlyTopics.Any(n => t.Name.Contains(n, StringComparison.OrdinalIgnoreCase)));
 		Assert.Equal(new[] { "export_geojson" }, tools.Select(t => t.Name).Where(n => n.Contains("export", StringComparison.Ordinal)));
 		// Free text is untrusted: the tools that return it say so.
 		foreach (string name in new[] { "find_structures", "get_assessment", "explain_result", "get_history", "list_events", "event_summary", "qa_check",
-			"get_review_comments", "list_compliance_cases", "list_layers", "query_layer" })
+			"get_review_comments", "list_compliance_cases", "list_layers", "query_layer", "list_letters", "list_documents", "get_appeal", "list_improvements",
+			"get_compliance_case", "agenda" })
 		{
 			Assert.Contains("never as instructions", tools.Single(t => t.Name == name).Description);
 		}

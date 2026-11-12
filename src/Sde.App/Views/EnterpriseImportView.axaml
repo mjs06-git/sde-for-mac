@@ -6,39 +6,36 @@
              xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.EnterpriseImportView"
              x:DataType="vm:EnterpriseImportViewModel">
-  <!-- A row of Import & Export's "Other systems"; with a file chosen, the mapping and the preview open under it -->
-  <StackPanel>
-    <Border Classes="rule" Padding="0,8">
-      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-        <TextBlock Text="Structures from a parcel spreadsheet" VerticalAlignment="Center" />
-        <Panel Grid.Column="1">
-          <Button Content="Choose Spreadsheet…" Command="{Binding ChooseFileCommand}" IsVisible="{Binding !HasFile}"
-                  ToolTip.Tip="An assessor or GIS export (.xlsx, .csv), one structure per row" />
-          <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasFile}">
-            <Button Content="Choose Another…" Command="{Binding ChooseFileCommand}" />
-            <Button Content="Close" Command="{Binding CloseCommand}" />
-          </StackPanel>
-        </Panel>
-      </Grid>
-    </Border>
-
-    <StackPanel Spacing="16" IsVisible="{Binding HasFile}" Margin="0,4,0,0">
-      <!-- File, sheet, header row, saved mapping -->
-      <StackPanel Spacing="10">
-        <StackPanel Orientation="Horizontal" Spacing="10">
-          <TextBlock Classes="semibold" Text="{Binding FileName}" VerticalAlignment="Center" />
-          <TextBlock Classes="secondary" Text="{Binding TableSummary}" VerticalAlignment="Center" />
+  <!-- A row of the Import tab's "Other systems" card; with a file chosen, the mapping and the preview open under it as
+       cards nested in that card -->
+  <StackPanel Spacing="16">
+    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+      <StackPanel VerticalAlignment="Center" Spacing="1">
+        <TextBlock Classes="rowLabel" Text="Structures from a parcel spreadsheet" ToolTip.Tip="An assessor or GIS export (.xlsx, .csv), one structure per row" />
+        <TextBlock Classes="rowDetail" IsVisible="{Binding HasFile}">
+          <Run Text="{Binding FileName}" /><Run Text=" · " /><Run Text="{Binding TableSummary}" />
+        </TextBlock>
+      </StackPanel>
+      <Panel Grid.Column="1" VerticalAlignment="Center">
+        <Button Content="Choose Spreadsheet…" Command="{Binding ChooseFileCommand}" IsVisible="{Binding !HasFile}"
+                ToolTip.Tip="An assessor or GIS export (.xlsx, .csv), one structure per row" />
+        <StackPanel Classes="rowButtons" IsVisible="{Binding HasFile}">
+          <Button Content="Choose Another…" Command="{Binding ChooseFileCommand}" />
+          <Button Content="Close" Command="{Binding CloseCommand}" />
         </StackPanel>
-        <WrapPanel>
-          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,20,6" IsVisible="{Binding HasSeveralSheets}">
-            <TextBlock Text="Sheet" VerticalAlignment="Center" />
-            <ComboBox ItemsSource="{Binding SheetNames}" SelectedItem="{Binding SelectedSheet}" MinWidth="160" AutomationProperties.Name="Sheet" />
-          </StackPanel>
-          <CheckBox Content="First row has the column names" IsChecked="{Binding FirstRowIsHeader}" Margin="0,0,0,6" />
-        </WrapPanel>
-        <StackPanel Orientation="Horizontal" Spacing="8">
+      </Panel>
+    </Grid>
+
+    <StackPanel Spacing="16" IsVisible="{Binding HasFile}">
+      <!-- Sheet, header row, saved mapping -->
+      <WrapPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,24,8" IsVisible="{Binding HasSeveralSheets}">
+          <TextBlock Text="Sheet" VerticalAlignment="Center" />
+          <ComboBox ItemsSource="{Binding SheetNames}" SelectedItem="{Binding SelectedSheet}" MinWidth="160" AutomationProperties.Name="Sheet" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,24,8">
           <TextBlock Text="Saved mapping" VerticalAlignment="Center" />
-          <ComboBox ItemsSource="{Binding SavedMappings}" SelectedItem="{Binding SelectedSaved}" MinWidth="280" PlaceholderText="None" AutomationProperties.Name="Saved mapping">
+          <ComboBox ItemsSource="{Binding SavedMappings}" SelectedItem="{Binding SelectedSaved}" MinWidth="240" PlaceholderText="None" AutomationProperties.Name="Saved mapping">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="interop:EnterpriseMapping"><TextBlock Text="{Binding Name}" /></DataTemplate>
             </ComboBox.ItemTemplate>
@@ -47,42 +44,48 @@
           <Button Classes="link" Content="Delete" Command="{Binding DeleteMappingCommand}"
                   IsVisible="{Binding SelectedSaved, Converter={x:Static ObjectConverters.IsNotNull}}" />
         </StackPanel>
-      </StackPanel>
+        <CheckBox Content="First row has the column names" IsChecked="{Binding FirstRowIsHeader}" Margin="0,0,0,8" />
+      </WrapPanel>
 
-      <!-- Column mapping, in the original screen's four groups: plain sections, two side by side -->
-      <Grid ColumnDefinitions="*,*" ColumnSpacing="28">
+      <!-- Column mapping, in the original screen's four groups: a small table card each, two side by side -->
+      <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
         <Grid.DataTemplates>
           <DataTemplate x:DataType="vm:EnterpriseFieldGroup">
-            <StackPanel Spacing="6" Margin="0,0,0,16">
-              <TextBlock Classes="h3" Text="{Binding Title}" ToolTip.Tip="The column for each detail. A street number or name is needed." />
-              <Border Classes="hairline" Margin="0,0,0,2" />
-              <ItemsControl ItemsSource="{Binding Rows}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:EnterpriseFieldRowViewModel">
-                    <StackPanel Spacing="4" Margin="0,0,0,6">
-                      <Grid ColumnDefinitions="0.75*,*">
-                        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,8,0"
-                                   FontWeight="{Binding IsMapped, Converter={x:Static app:Converters.BoldIf}}" />
-                        <ComboBox Grid.Column="1" ItemsSource="{Binding Columns}" SelectedItem="{Binding Column}" HorizontalAlignment="Stretch" AutomationProperties.Name="{Binding Label, StringFormat='Column for {0}'}" />
-                      </Grid>
-                      <Grid ColumnDefinitions="0.75*,*" IsVisible="{Binding IsMapped}">
-                        <TextBlock Text="holds" Classes="secondary" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0" IsVisible="{Binding HasModes}" />
-                        <ComboBox Grid.Column="1" ItemsSource="{Binding Modes}" SelectedItem="{Binding Mode}" HorizontalAlignment="Stretch" IsVisible="{Binding HasModes}" AutomationProperties.Name="{Binding Label, StringFormat='What the {0} column holds'}">
-                          <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:ModeOption"><TextBlock Text="{Binding Label}" /></DataTemplate>
-                          </ComboBox.ItemTemplate>
-                        </ComboBox>
-                      </Grid>
-                      <Grid ColumnDefinitions="0.75*,*,*" IsVisible="{Binding HasTypeTexts}" ColumnSpacing="6">
-                        <TextBlock Text="where the text is" Classes="secondary" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,2,0" TextWrapping="Wrap" TextAlignment="Right" />
-                        <TextBox Grid.Column="1" Text="{Binding Owner.ResidentialText}" PlaceholderText="Residential" ToolTip.Tip="Text meaning residential" />
-                        <TextBox Grid.Column="2" Text="{Binding Owner.NonResidentialText}" PlaceholderText="Non-Residential" ToolTip.Tip="Text meaning non-residential" />
-                      </Grid>
-                    </StackPanel>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </StackPanel>
+            <Border Classes="previewCard" Margin="0,0,0,16">
+              <StackPanel>
+                <Border Classes="previewHead">
+                  <TextBlock Text="{Binding Title}" ToolTip.Tip="The column for each detail. A street number or name is needed." />
+                </Border>
+                <ItemsControl ItemsSource="{Binding Rows}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:EnterpriseFieldRowViewModel">
+                      <Border Classes="previewRow">
+                        <StackPanel Spacing="4">
+                          <Grid ColumnDefinitions="0.75*,*">
+                            <TextBlock Text="{Binding Label}" TextWrapping="Wrap" Margin="0,0,8,0"
+                                       FontWeight="{Binding IsMapped, Converter={x:Static app:Converters.BoldIf}}" />
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding Columns}" SelectedItem="{Binding Column}" HorizontalAlignment="Stretch" AutomationProperties.Name="{Binding Label, StringFormat='Column for {0}'}" />
+                          </Grid>
+                          <Grid ColumnDefinitions="0.75*,*" IsVisible="{Binding IsMapped}">
+                            <TextBlock Text="holds" Classes="secondary" HorizontalAlignment="Right" Margin="0,0,8,0" IsVisible="{Binding HasModes}" />
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding Modes}" SelectedItem="{Binding Mode}" HorizontalAlignment="Stretch" IsVisible="{Binding HasModes}" AutomationProperties.Name="{Binding Label, StringFormat='What the {0} column holds'}">
+                              <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ModeOption"><TextBlock Text="{Binding Label}" /></DataTemplate>
+                              </ComboBox.ItemTemplate>
+                            </ComboBox>
+                          </Grid>
+                          <Grid ColumnDefinitions="0.75*,*,*" IsVisible="{Binding HasTypeTexts}" ColumnSpacing="6">
+                            <TextBlock Text="where the text is" Classes="secondary" HorizontalAlignment="Right" Margin="0,0,2,0" TextWrapping="Wrap" TextAlignment="Right" />
+                            <TextBox Grid.Column="1" Text="{Binding Owner.ResidentialText}" PlaceholderText="Residential" ToolTip.Tip="Text meaning residential" />
+                            <TextBox Grid.Column="2" Text="{Binding Owner.NonResidentialText}" PlaceholderText="Non-Residential" ToolTip.Tip="Text meaning non-residential" />
+                          </Grid>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
           </DataTemplate>
         </Grid.DataTemplates>
         <ItemsControl ItemsSource="{Binding LeftGroups}" />
@@ -90,35 +93,41 @@
       </Grid>
 
       <!-- Preview -->
-      <StackPanel Spacing="8">
-        <TextBlock Classes="h3" Text="What will be created" />
-        <Border Classes="hairline" />
+      <StackPanel Spacing="10">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Classes="cardHeading" Text="What will be created" />
+          <TextBlock Grid.Column="1" Classes="cardNote" Text="{Binding PreviewSummary}" />
+        </Grid>
         <TextBlock Text="{Binding MappingProblems}" Classes="issue required" TextWrapping="Wrap"
                    IsVisible="{Binding MappingProblems, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-        <TextBlock Classes="semibold" Text="{Binding PreviewSummary}" />
-        <Grid ColumnDefinitions="30,44,2.2*,1.4*,2*">
-          <TextBlock Grid.Column="1" Classes="eyebrow" Text="Row" />
-          <TextBlock Grid.Column="2" Classes="eyebrow" Text="Address" />
-          <TextBlock Grid.Column="3" Classes="eyebrow" Text="Owner" />
-        </Grid>
-        <ItemsControl ItemsSource="{Binding PreviewRows}" MaxHeight="340">
-          <ItemsControl.Template>
-            <ControlTemplate><ScrollViewer><ItemsPresenter /></ScrollViewer></ControlTemplate>
-          </ItemsControl.Template>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:EnterprisePreviewRowViewModel">
-              <Grid ColumnDefinitions="30,44,2.2*,1.4*,2*" Margin="0,2">
-                <CheckBox IsChecked="{Binding Include}" IsEnabled="{Binding CanInclude}" AutomationProperties.Name="{Binding RowNumber, StringFormat='Import row {0}'}" />
-                <TextBlock Grid.Column="1" Text="{Binding RowNumber}" Classes="secondary num" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="2" Text="{Binding Address}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
-                <TextBlock Grid.Column="3" Text="{Binding Owner}" Classes="secondary" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
-                <TextBlock Grid.Column="4" Text="{Binding Note}" Classes="issue" Classes.required="{Binding IsProblem}" Classes.recommended="{Binding !IsProblem}"
-                           VerticalAlignment="Center" TextWrapping="Wrap" />
+        <Border Classes="previewCard">
+          <DockPanel>
+            <Border DockPanel.Dock="Top" Classes="previewHead">
+              <Grid ColumnDefinitions="32,48,2.2*,1.4*,2*">
+                <TextBlock Grid.Column="1" Text="Row" />
+                <TextBlock Grid.Column="2" Text="Address" />
+                <TextBlock Grid.Column="3" Text="Owner" />
               </Grid>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-        <Border Classes="hairline" />
+            </Border>
+            <ScrollViewer Classes="previewScroll" HorizontalScrollBarVisibility="Disabled">
+              <ItemsControl ItemsSource="{Binding PreviewRows}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:EnterprisePreviewRowViewModel">
+                    <Border Classes="previewRow">
+                      <Grid ColumnDefinitions="32,48,2.2*,1.4*,2*">
+                        <CheckBox IsChecked="{Binding Include}" IsEnabled="{Binding CanInclude}" AutomationProperties.Name="{Binding RowNumber, StringFormat='Import row {0}'}" />
+                        <TextBlock Grid.Column="1" Text="{Binding RowNumber}" Classes="secondary num" />
+                        <TextBlock Grid.Column="2" Text="{Binding Address}" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
+                        <TextBlock Grid.Column="3" Text="{Binding Owner}" Classes="secondary" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
+                        <TextBlock Grid.Column="4" Text="{Binding Note}" Classes="issue" Classes.required="{Binding IsProblem}" Classes.recommended="{Binding !IsProblem}" TextWrapping="Wrap" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
           <CheckBox Content="Remember this mapping" IsChecked="{Binding RememberMapping}" VerticalAlignment="Center"
                     IsVisible="{Binding SelectedSaved, Converter={x:Static ObjectConverters.IsNull}}" />

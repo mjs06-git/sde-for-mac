@@ -1,5 +1,6 @@
 using System.Globalization;
 using Sde.Core.Assessments;
+using Sde.Core.Events;
 using Sde.Core.Exchange;
 using Sde.Data;
 using Sde.Reports.Internal;
@@ -23,6 +24,21 @@ public sealed class SubmissionOptions
 	/// </summary>
 	public bool IncludeMarkedUpCopies { get; init; }
 
+	/// <summary>Also copy the owner letters written for these assessments into "Letters" (off by default).</summary>
+	public bool IncludeLetters { get; init; }
+
+	/// <summary>Also copy the documents kept with these structures into "Documents" (off by default).</summary>
+	public bool IncludeDocuments { get; init; }
+
+	/// <summary>Also write the compliance report of these structures' cases, "Compliance report.pdf" (off by default).</summary>
+	public bool IncludeComplianceReport { get; init; }
+
+	/// <summary>Also write the event summary of these assessments, "Event summary.pdf" (off by default).</summary>
+	public bool IncludeEventSummary { get; init; }
+
+	/// <summary>Also write each structure's case file into "Case files" (off by default).</summary>
+	public bool IncludeCaseFiles { get; init; }
+
 	/// <summary>The time used in the folder name and printed on the reports (default: now).</summary>
 	public DateTime? GeneratedOn { get; init; }
 }
@@ -43,6 +59,12 @@ public sealed class SubmissionResult
 
 	/// <summary>Photo files that were missing from the attachments folder (the SDE package lists them without a file).</summary>
 	public IReadOnlyList<string> MissingPhotos { get; init; } = Array.Empty<string>();
+
+	/// <summary>
+	/// Letters and documents that could not be copied (the file is missing, or is a link), in plain English. The rest of
+	/// the folder is written all the same.
+	/// </summary>
+	public List<string> Warnings { get; init; } = new();
 }
 
 /// <summary>
@@ -58,6 +80,11 @@ public static class SubmissionFolder
 	public const string CommunityFile = "Community report.pdf";
 	public const string ResultsFile = "results.csv";
 	public const string MarkedUpFolder = "Marked-up photos";
+	public const string LettersFolder = "Letters";
+	public const string DocumentsFolder = "Documents";
+	public const string CaseFilesFolder = "Case files";
+	public const string ComplianceFile = "Compliance report.pdf";
+	public const string EventSummaryFile = "Event summary.pdf";
 
 	/// <summary>
 	/// Writes a new "SDE submission &lt;date time&gt;" folder inside <paramref name="parentFolder"/>. Assessments are
@@ -98,7 +125,8 @@ public static class SubmissionFolder
 		Directory.CreateDirectory(folder);
 		try
 		{
-			int total = files.Count + 4, done = 0;
+			int extras = new[] { options.IncludeLetters, options.IncludeDocuments, options.IncludeComplianceReport, options.IncludeEventSummary, options.IncludeCaseFiles }.Count(x => x);
+			int total = files.Count + 4 + extras, done = 0;
 			void Step(string what)
 			{
 				ct.ThrowIfCancellationRequested();
@@ -140,9 +168,41 @@ public static class SubmissionFolder
 			{
 				WriteMarkedUpCopies(store, files, Path.Combine(folder, MarkedUpFolder));
 			}
+
+			List<string> warnings = new();
+			if (options.IncludeLetters)
+			{
+				Step("Letters");
+				CopyLetters(store, files, names, Path.Combine(folder, LettersFolder), warnings);
+				done++;
+			}
+			if (options.IncludeDocuments)
+			{
+				Step("Documents");
+				CopyDocuments(store, files, Path.Combine(folder, DocumentsFolder), warnings);
+				done++;
+			}
+			if (options.IncludeComplianceReport)
+			{
+				Step("Compliance report");
+				WriteComplianceReport(store, files, Path.Combine(folder, ComplianceFile), now);
+				done++;
+			}
+			if (options.IncludeEventSummary)
+			{
+				Step("Event summary");
+				WriteEventSummary(store, files, Path.Combine(folder, EventSummaryFile), now);
+				done++;
+			}
+			if (options.IncludeCaseFiles)
+			{
+				Step("Case files");
+				WriteCaseFiles(store, files, Path.Combine(folder, CaseFilesFolder), now);
+				done++;
+			}
 			progress?.Report(new SubmissionProgress(done, total, "Done"));
 
-			return new SubmissionResult { Folder = folder, Assessments = files.Count, Skipped = skipped, MissingPhotos = missing };
+			return new SubmissionResult { Folder = folder, Assessments = files.Count, Skipped = skipped, MissingPhotos = missing, Warnings = warnings };
 		}
 		catch
 		{
@@ -191,6 +251,129 @@ public static class SubmissionFolder
 			}
 			Directory.CreateDirectory(folder);
 			PhotoMarkupRenderer.WriteMarkedUpCopy(photo, markup, Path.Combine(folder, Path.GetFileNameWithoutExtension(m.Key) + " (marked up).jpg"));
+		}
+	}
+
+	/// <summary>
+	/// Copies the letters written for these assessments, named after the assessment's report and the letter's kind
+	/// ("123 River Street – Substantial damage.docx"). A letter whose file is gone, or is a link, is a warning.
+	/// </summary>
+	private static void CopyLetters(SdeStore store, IReadOnlyList<AssessmentFile> files, IReadOnlyList<string> names, string folder, List<string> warnings)
+	{
+		HashSet<string> used = new(StringComparer.OrdinalIgnoreCase);
+		for (int i = 0; i < files.Count; i++)
+		{
+			string report = Path.GetFileNameWithoutExtension(names[i]);
+			foreach (LetterLogRecord l in store.GetLetters(files[i].Assessment.AssessmentID).OrderBy(x => x.GeneratedOn))
+			{
+				string kind = string.IsNullOrWhiteSpace(l.Kind) ? "Letter" : l.Kind.Trim();
+				string what = $"The {kind.ToLowerInvariant()} letter for {report}";
+				string source = string.IsNullOrWhiteSpace(l.FileName) || !Path.IsPathRooted(l.FileName) ? null : l.FileName;
+				CopySafely(source, folder, $"{report} – {kind}", used, what, warnings);
+			}
+		}
+	}
+
+	/// <summary>
+	/// Copies the documents kept with these structures (those of the structure itself or of an assessment in the
+	/// folder), named after the structure and the document's title. A missing file, or a link, is a warning.
+	/// </summary>
+	private static void CopyDocuments(SdeStore store, IReadOnlyList<AssessmentFile> files, string folder, List<string> warnings)
+	{
+		HashSet<Guid> assessments = files.Select(f => f.Assessment.AssessmentID).ToHashSet();
+		HashSet<string> used = new(StringComparer.OrdinalIgnoreCase);
+		foreach (AssessmentFile f in files.GroupBy(f => f.Property.PropertyID).Select(g => g.First()))
+		{
+			string address = new AssessmentView(f, store.Reference).StreetAddress.OrIfEmpty("No address");
+			foreach (DocumentRecord d in store.GetDocuments(f.Property.PropertyID).Where(d => d.AssessmentID is not Guid a || assessments.Contains(a)).OrderBy(d => d.AddedOn))
+			{
+				string title = string.IsNullOrWhiteSpace(d.Title) ? Path.GetFileNameWithoutExtension(d.OriginalName ?? "") : d.Title.Trim();
+				string what = $"The document \"{title.OrIfEmpty("Document")}\" of {address}";
+				CopySafely(string.IsNullOrWhiteSpace(d.FileName) ? null : store.DocumentPath(d), folder, $"{address} – {title.OrIfEmpty("Document")}", used, what, warnings);
+			}
+		}
+	}
+
+	/// <summary>
+	/// Copies one file into <paramref name="folder"/> as <paramref name="baseName"/> (sanitised, " (2)" when taken) with
+	/// the source's extension. Links are never followed or copied; a missing file is a warning, not a failure.
+	/// </summary>
+	private static void CopySafely(string source, string folder, string baseName, HashSet<string> used, string what, List<string> warnings)
+	{
+		if (source == null || !File.Exists(source) && !IsLink(source))
+		{
+			warnings.Add($"{what} wasn't copied: its file is missing.");
+			return;
+		}
+		if (IsLink(source))
+		{
+			warnings.Add($"{what} wasn't copied: its file is a link, and links aren't followed.");
+			return;
+		}
+		string extension = Path.GetExtension(source).ToLowerInvariant();
+		extension = extension.Length is > 1 and <= 10 && extension.Skip(1).All(char.IsAsciiLetterOrDigit) ? extension : "";
+		string name = Sanitize(baseName);
+		string unique = name;
+		for (int n = 2; !used.Add(unique + extension); n++)
+		{
+			unique = $"{name} ({n})";
+		}
+		Directory.CreateDirectory(folder);
+		File.Copy(source, Path.Combine(folder, unique + extension), overwrite: false);
+	}
+
+	/// <summary>True when the path is a symbolic link (or another reparse point).</summary>
+	private static bool IsLink(string path)
+	{
+		if (string.IsNullOrEmpty(path))
+		{
+			return false;
+		}
+		FileInfo info = new FileInfo(path);
+		return info.LinkTarget != null || (info.Exists && info.Attributes.HasFlag(FileAttributes.ReparsePoint));
+	}
+
+	/// <summary>The compliance cases of the structures in the folder (a substantial damage case only when its assessment is in it).</summary>
+	private static void WriteComplianceReport(SdeStore store, IReadOnlyList<AssessmentFile> files, string path, DateTime now)
+	{
+		HashSet<Guid> structures = files.Select(f => f.Property.PropertyID).ToHashSet();
+		HashSet<Guid> assessments = files.Select(f => f.Assessment.AssessmentID).ToHashSet();
+		List<ComplianceCaseRecord> cases = store.GetActiveComplianceCases()
+			.Where(c => structures.Contains(c.PropertyID) && (c.AssessmentID is not Guid a || assessments.Contains(a))).ToList();
+		ComplianceReport.RenderToFile(ComplianceReport.Rows(store, now, cases), new ComplianceReportOptions { GeneratedOn = now, EventName = OneEvent(store, files)?.Label }, path);
+	}
+
+	/// <summary>The event summary of the assessments in the folder, named after their event when they all share one.</summary>
+	private static void WriteEventSummary(SdeStore store, IReadOnlyList<AssessmentFile> files, string path, DateTime now)
+	{
+		EventRecord e = OneEvent(store, files);
+		EventSummary summary = EventSummary.Build(files, null, e?.Label, store.Reference, details: e?.ToDetails());
+		EventSummaryReport.RenderToFile(summary, new EventSummaryOptions { GeneratedOn = now }, path);
+	}
+
+	/// <summary>The event every assessment in the folder belongs to, or null when they don't all share one.</summary>
+	private static EventRecord OneEvent(SdeStore store, IReadOnlyList<AssessmentFile> files)
+	{
+		Dictionary<Guid, Guid> memberships = store.GetEventMemberships();
+		List<Guid?> events = files.Select(f => memberships.TryGetValue(f.Assessment.AssessmentID, out Guid id) ? id : (Guid?)null).Distinct().ToList();
+		return events.Count == 1 && events[0] is Guid only ? store.GetEvent(only) : null;
+	}
+
+	/// <summary>One case file per structure in the folder, named after its address ("123 River Street.pdf").</summary>
+	private static void WriteCaseFiles(SdeStore store, IReadOnlyList<AssessmentFile> files, string folder, DateTime now)
+	{
+		Directory.CreateDirectory(folder);
+		HashSet<string> used = new(StringComparer.OrdinalIgnoreCase);
+		foreach (AssessmentFile f in files.GroupBy(f => f.Property.PropertyID).Select(g => g.First()))
+		{
+			string name = Sanitize(new AssessmentView(f, store.Reference).StreetAddress.OrIfEmpty("No address"));
+			string unique = name;
+			for (int n = 2; !used.Add(unique); n++)
+			{
+				unique = $"{name} ({n})";
+			}
+			CaseFileReport.RenderToFile(store.GetCaseFile(f.Property.PropertyID), store.Reference, Path.Combine(folder, unique + ".pdf"),
+				new CaseFileReportOptions { GeneratedOn = now });
 		}
 	}
 

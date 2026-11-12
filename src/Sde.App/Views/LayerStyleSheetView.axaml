@@ -2,12 +2,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sh="using:Sde.App.ViewModels.Sheets"
              xmlns:vm="using:Sde.App.ViewModels"
+             xmlns:c="using:Sde.App.Controls"
              x:Class="Sde.App.Views.LayerStyleSheetView"
              x:DataType="sh:LayerStyleSheetViewModel">
-  <StackPanel Spacing="14">
+  <!-- A map layer's style: its colours, its labels and when it shows, each in a grouped box -->
+  <StackPanel Spacing="16">
     <!-- Colours -->
+    <Border Classes="card">
     <StackPanel Spacing="8">
-      <TextBlock Classes="fieldLabel" Text="Colour" />
+      <TextBlock Classes="sheetSection" Text="Colour" />
       <ListBox Classes="segmented" ItemsSource="{Binding Kinds}" SelectedIndex="{Binding KindIndex}" AutomationProperties.Name="How the features are coloured" />
 
       <TextBlock Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding IsByResult}"
@@ -80,9 +83,12 @@
         <NumericUpDown Value="{Binding PointSize}" Minimum="3" Maximum="40" Increment="1" FormatString="0" Width="110" AutomationProperties.Name="Point size in points" />
       </StackPanel>
     </StackPanel>
+    </Border>
 
     <!-- Labels -->
+    <Border Classes="card">
     <StackPanel Spacing="8">
+      <TextBlock Classes="sheetSection" Text="Labels" />
       <CheckBox IsChecked="{Binding ShowLabels}" Content="Label the features" AutomationProperties.Name="Label the features" />
       <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" IsVisible="{Binding ShowLabels}">
         <ComboBox ItemsSource="{Binding Fields}" SelectedItem="{Binding LabelField}" HorizontalAlignment="Stretch" MaxDropDownHeight="400"
@@ -97,10 +103,12 @@
                        PlaceholderText="Always" AutomationProperties.Name="Show labels only when zoomed in past this scale" />
       </StackPanel>
     </StackPanel>
+    </Border>
 
     <!-- Scale range -->
-    <StackPanel Spacing="6">
-      <TextBlock Classes="fieldLabel" Text="When to show the layer" />
+    <Border Classes="card">
+    <StackPanel Spacing="8">
+      <TextBlock Classes="sheetSection" Text="When to show the layer" />
       <StackPanel Orientation="Horizontal" Spacing="8">
         <TextBlock Classes="secondary" Text="Only zoomed in past 1:" VerticalAlignment="Center" Width="190" />
         <NumericUpDown Value="{Binding MinScale}" Minimum="0" Maximum="100000000" Increment="5000" FormatString="N0" Width="150"
@@ -112,13 +120,11 @@
                        PlaceholderText="Never" AutomationProperties.Name="Hide the layer when zoomed in past this scale" />
       </StackPanel>
     </StackPanel>
+    </Border>
 
     <Border Classes="subtle" IsVisible="{Binding HasProblem}">
       <TextBlock Classes="issue required" Text="{Binding Problem}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive" />
     </Border>
-    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-      <Button Content="Cancel" Command="{Binding CancelCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-      <Button Classes="primary" Content="Apply" Command="{Binding ApplyCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
-    </StackPanel>
+    <c:SheetFooter PrimaryText="Apply" PrimaryCommand="{Binding ApplyCommand}" IsPrimaryDefault="False" />
   </StackPanel>
 </UserControl>

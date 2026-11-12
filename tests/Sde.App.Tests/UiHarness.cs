@@ -22,9 +22,18 @@ namespace Sde.App.Tests;
 
 public static class TestAppBuilder
 {
-	public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
+	public static AppBuilder BuildAvaloniaApp()
+	{
+		// Nothing animates off-screen, so a screenshot never catches a sheet half-way in.
+		Motion.Enabled = false;
+		// SDE_TEST_COMPACT=1 runs the UI tests at the Compact sizes (the sizes are read once, as the app's styles load).
+		Appearance.StartCompact = Environment.GetEnvironmentVariable("SDE_TEST_COMPACT") == "1";
+		return Build();
+	}
+
+	private static AppBuilder Build() => AppBuilder.Configure<App>()
 		.UseSkia()
-		.WithMacFonts()
+		.WithAppFonts()
 		.UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
 		.AfterSetup(_ => Logger.Sink = BindingErrors.Instance);
 }
@@ -58,7 +67,14 @@ public sealed class TestDialogs : IDialogs
 
 	public Task<string> SaveFileAsync(string title, string suggestedName, string filterName, string extension) => Task.FromResult(Answers.TryDequeue(out object a) ? a as string : null);
 
-	public Task<bool> ConfirmAsync(string title, string message, string confirmText, bool destructive = false) => Task.FromResult(!Answers.TryDequeue(out object a) || a is true);
+	/// <summary>Every confirmation asked, as "title: message".</summary>
+	public List<string> Confirmations { get; } = new();
+
+	public Task<bool> ConfirmAsync(string title, string message, string confirmText, bool destructive = false)
+	{
+		Confirmations.Add(title + ": " + message);
+		return Task.FromResult(!Answers.TryDequeue(out object a) || a is true);
+	}
 
 	public void Notify(string title, string message, bool isError = false) => Notifications.Add((isError ? "ERROR " : "") + title + ": " + message);
 

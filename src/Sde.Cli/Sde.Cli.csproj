@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../Sde.Data/Sde.Data.csproj" />
+    <ProjectReference Include="../Sde.Reports/Sde.Reports.csproj" />
   </ItemGroup>
 
 </Project>
