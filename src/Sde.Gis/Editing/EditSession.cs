@@ -193,9 +193,21 @@ public sealed class EditSession
 		get
 		{
 			HashSet<long> changed = new HashSet<long>();
+			// One pass over the layer for every touched feature (first one with each id, as Find gives).
+			Dictionary<long, Feature> current = new Dictionary<long, Feature>();
+			if (_touched.Count > 0)
+			{
+				foreach (Feature f in Working.Features)
+				{
+					if (_touched.Contains(f.Id))
+					{
+						current.TryAdd(f.Id, f);
+					}
+				}
+			}
 			foreach (long id in _touched)
 			{
-				Feature now = Find(id);
+				Feature now = current.GetValueOrDefault(id);
 				Feature then = Original(id);
 				if (now == null && then == null)
 				{

@@ -103,6 +103,27 @@ public static class SourceValues
 	/// </summary>
 	public static LookupRecord MatchLookup(string text, int lookupType, ReferenceData reference)
 	{
+		if (text == null)
+		{
+			return null;
+		}
+		// The preview matches every cell, twice, and again after each change to the mapping; a column holds few distinct values.
+		System.Collections.Concurrent.ConcurrentDictionary<(int, string), LookupRecord> cache = Matched.GetOrCreateValue(reference);
+		if (cache.TryGetValue((lookupType, text), out LookupRecord known))
+		{
+			return known;
+		}
+		if (cache.Count > 20000)
+		{
+			cache.Clear();   // shortcut: a crude bound for free-text columns mapped to a choice; an LRU if that ever matters
+		}
+		return cache[(lookupType, text)] = FindLookup(text, lookupType, reference);
+	}
+
+	private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ReferenceData, System.Collections.Concurrent.ConcurrentDictionary<(int, string), LookupRecord>> Matched = new();
+
+	private static LookupRecord FindLookup(string text, int lookupType, ReferenceData reference)
+	{
 		string n = SourceFields.Norm(text);
 		if (n.Length == 0)
 		{

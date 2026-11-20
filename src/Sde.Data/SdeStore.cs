@@ -69,6 +69,24 @@ public sealed partial class SdeStore
 
 	public PropertyRecord GetProperty(Guid id) => Database.Read(c => TableMap<PropertyRecord>.Get(c, new { PropertyID = id }));
 
+	/// <summary>These structures (active or not) by ID, read together; IDs that don't exist are left out.</summary>
+	public Dictionary<Guid, PropertyRecord> GetProperties(IEnumerable<Guid> ids) => Database.Read(c =>
+	{
+		Dictionary<Guid, PropertyRecord> found = new Dictionary<Guid, PropertyRecord>();
+		foreach (Guid[] chunk in ids.Distinct().Chunk(500))
+		{
+			foreach (PropertyRecord p in TableMap<PropertyRecord>.Select(c, "PropertyID IN @chunk", new { chunk = IdText(chunk) }))
+			{
+				found[p.PropertyID] = p;
+			}
+		}
+		return found;
+	});
+
+	/// <summary>The active structures' positions only (ID, latitude, longitude), for finding which have one.</summary>
+	public List<PropertyRecord> GetPropertyPositions() => Database.Read(c =>
+		c.Query<PropertyRecord>("SELECT PropertyID, Latitude, Longitude FROM Property WHERE Active = 1").Select(JetScaling.Apply).ToList());
+
 	public List<PropertyRecord> GetProperties(bool activeOnly = true) =>
 		Database.Read(c => TableMap<PropertyRecord>.Select(c, activeOnly ? "Active = 1" : null).ToList());
 
@@ -201,13 +219,68 @@ public sealed partial class SdeStore
 	}
 
 	/// <summary>Loads several assessments (skipping IDs that don't exist), in the order given, over one connection.</summary>
-	public List<AssessmentFile> LoadAssessments(IEnumerable<Guid> assessmentIds) =>
-		Database.Read(c => assessmentIds.Select(id => LoadAssessment(c, null, id)).Where(f => f != null).ToList());
+	public List<AssessmentFile> LoadAssessments(IEnumerable<Guid> assessmentIds) => Database.Read(c =>
+	{
+		// One snapshot: the per-table queries must not straddle another window's save.
+		using IDbTransaction tx = c.BeginTransaction(deferred: true);
+		return LoadAssessments(c, tx, assessmentIds.ToList());
+	});
 
 	/// <summary>All active assessments of active structures.</summary>
-	public List<AssessmentFile> LoadAllAssessments() => Database.Read(c => c.Query<Guid>(
+	public List<AssessmentFile> LoadAllAssessments() => Database.Read(c => LoadAssessments(c, null, c.Query<Guid>(
 			"SELECT a.AssessmentID FROM Assessment a JOIN Property p ON p.PropertyID = a.PropertyID WHERE a.Active = 1 AND p.Active = 1 ORDER BY a.DateofInspection DESC")
-		.ToList().Select(id => LoadAssessment(c, null, id)).Where(f => f != null).ToList());
+		.ToList()));
+
+	/// <summary>
+	/// The same as <see cref="LoadAssessment(IDbConnection, IDbTransaction, Guid)"/> for each ID in turn (skipping IDs
+	/// that don't exist), but one query per table for each 500 IDs instead of seven per assessment. Child rows come in
+	/// the same order as the single load's; each file gets its own records, even two assessments of one structure.
+	/// </summary>
+	internal static List<AssessmentFile> LoadAssessments(IDbConnection c, IDbTransaction tx, IReadOnlyList<Guid> ids)
+	{
+		List<AssessmentFile> files = new List<AssessmentFile>(ids.Count);
+		HashSet<Guid> seen = new HashSet<Guid>();
+		foreach (Guid[] chunk in ids.Chunk(500))
+		{
+			object args = new { ids = IdText(chunk) };
+			Dictionary<Guid, AssessmentRecord> assessments = TableMap<AssessmentRecord>.Select(c, "AssessmentID IN @ids", args, tx).ToDictionary(a => a.AssessmentID);
+			ILookup<Guid, CostAdjustmentResultRecord> costs = TableMap<CostAdjustmentResultRecord>.Select(c, "AssessmentID IN @ids", args, tx, orderBy: "rowid").ToLookup(r => r.AssessmentID);
+			ILookup<Guid, AdditionalAdjustmentRecord> additional = TableMap<AdditionalAdjustmentRecord>.Select(c, "AssessmentID IN @ids", args, tx, orderBy: "zOrder, rowid").ToLookup(r => r.AssessmentID);
+			ILookup<Guid, ElementPercentageRecord> elements = TableMap<ElementPercentageRecord>.Select(c, "AssessmentID IN @ids", args, tx, orderBy: "rowid").ToLookup(r => r.AssessmentID);
+			ILookup<Guid, AttachmentRecord> attachments = TableMap<AttachmentRecord>.Select(c, "AssessmentID IN @ids AND Active = 1", args, tx, orderBy: "AttachmentID").ToLookup(r => r.AssessmentID);
+			ILookup<Guid, CustomFieldResultRecord> custom = TableMap<CustomFieldResultRecord>.Select(c, "ObjectIdentifier IN @ids", args, tx, orderBy: "zOrder, CustomFieldID").ToLookup(r => r.ObjectIdentifier);
+			Dictionary<Guid, PropertyRecord> properties = TableMap<PropertyRecord>.Select(c, "PropertyID IN @ids", new { ids = IdText(assessments.Values.Select(a => a.PropertyID)) }, tx)
+				.ToDictionary(p => p.PropertyID);
+			HashSet<Guid> propertyUsed = new HashSet<Guid>();
+			foreach (Guid id in chunk)
+			{
+				if (!seen.Add(id))
+				{
+					files.Add(LoadAssessment(c, tx, id));   // asked for twice: a copy of its own
+					continue;
+				}
+				if (!assessments.TryGetValue(id, out AssessmentRecord a))
+				{
+					continue;
+				}
+				files.Add(new AssessmentFile
+				{
+					Assessment = a,
+					// A second assessment of the same structure gets its own copy, as when loaded alone.
+					Property = propertyUsed.Add(a.PropertyID)
+						? properties.GetValueOrDefault(a.PropertyID)
+						: TableMap<PropertyRecord>.Get(c, new { a.PropertyID }, tx),
+					CostAdjustments = costs[id].ToList(),
+					AdditionalAdjustments = additional[id].ToList(),
+					ElementPercentages = elements[id].ToList(),
+					Attachments = attachments[id].ToList(),
+					CustomFields = custom[id].ToList(),
+				});
+			}
+		}
+		files.RemoveAll(f => f == null);
+		return files;
+	}
 
 	public List<AssessmentRecord> GetAssessmentsForProperty(Guid propertyId) =>
 		Database.Read(c => TableMap<AssessmentRecord>.Select(c, "PropertyID = @propertyId AND Active = 1", new { propertyId }, orderBy: "DateofInspection DESC").ToList());

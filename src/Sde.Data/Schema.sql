@@ -258,6 +258,8 @@ CREATE TABLE IF NOT EXISTS Attachment (
 	Active         INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS IX_Attachment_Assessment ON Attachment(AssessmentID);
+-- Photo markup, Recently deleted and photo restore find a photo by its file name.
+CREATE INDEX IF NOT EXISTS IX_Attachment_FileName ON Attachment(FileName);
 
 CREATE TABLE IF NOT EXISTS Shapes (
 	ShapeID      INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -496,6 +498,7 @@ CREATE TABLE IF NOT EXISTS PhotoInfo (
 	Longitude    REAL,
 	OriginalName TEXT
 );
+CREATE INDEX IF NOT EXISTS IX_PhotoInfo_Assessment ON PhotoInfo(AssessmentID);
 
 -- Element percentages filled in from the depth table that nobody has accepted or changed yet.
 CREATE TABLE IF NOT EXISTS DamageSuggestion (
@@ -517,6 +520,7 @@ CREATE TABLE IF NOT EXISTS ContractorBid (
 	BidDate      TEXT,
 	Notes        TEXT
 );
+CREATE INDEX IF NOT EXISTS IX_ContractorBid_Assessment ON ContractorBid(AssessmentID);
 
 CREATE TABLE IF NOT EXISTS Appeal (
 	AssessmentID TEXT PRIMARY KEY NOT NULL REFERENCES Assessment(AssessmentID) ON DELETE CASCADE,
@@ -538,6 +542,7 @@ CREATE TABLE IF NOT EXISTS LetterLog (
 	SentOn       TEXT,
 	FileName     TEXT
 );
+CREATE INDEX IF NOT EXISTS IX_LetterLog_Assessment ON LetterLog(AssessmentID);
 
 -- Substantial improvement: improvement projects (permits) and the determinations made from them.
 CREATE TABLE IF NOT EXISTS ImprovementProject (

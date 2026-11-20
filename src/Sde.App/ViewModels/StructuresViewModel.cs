@@ -53,7 +53,7 @@ public sealed partial class StructureRowViewModel(StructureSummary s, ReferenceD
 	public string Updated => Summary.LastUpdate?.ToString("MMM d, yyyy") ?? "";
 
 	/// <summary>The tile this row counts toward; the rule lives in <see cref="Determinations"/>.</summary>
-	public ResultState State => Summary.AssessmentID == null ? ResultState.Incomplete
+	public ResultState State => _state ??= Summary.AssessmentID == null ? ResultState.Incomplete
 		: Determinations.Classify(Summary.DamageMessage, Summary.PercentDamage) switch
 		{
 			DeterminationClass.Substantial => ResultState.Substantial,
@@ -62,6 +62,12 @@ public sealed partial class StructureRowViewModel(StructureSummary s, ReferenceD
 			DeterminationClass.Undetermined => ResultState.Undetermined,
 			_ => ResultState.Incomplete,
 		};
+
+	// A row's summary and tags never change (a reload makes new rows), so these are worked out once: the tiles, every
+	// cell, the sort and each search keystroke read them.
+	private ResultState? _state;
+	private string _tagsText;
+	private string _searchText;
 
 	public bool HasPercent => State is not (ResultState.Incomplete or ResultState.Undetermined);
 
@@ -81,9 +87,9 @@ public sealed partial class StructureRowViewModel(StructureSummary s, ReferenceD
 	public bool HasTags => Tags.Count > 0;
 
 	/// <summary>"Revisit; Owner called": the tags as text, for the Tags column's tooltip, sorting and exports.</summary>
-	public string TagsText => string.Join("; ", Tags.Select(t => t.Name));
+	public string TagsText => _tagsText ??= string.Join("; ", Tags.Select(t => t.Name));
 
-	public string SearchText => string.Join(" | ", Summary.Address, Summary.Owner, Summary.City, Summary.NFIPCID, Summary.NFIPCommunityName, Summary.InspectorName, Summary.DamageMessage, Summary.ExternalId, Summary.ParcelNumber, Summary.ZipCode, TagsText).ToLowerInvariant();
+	public string SearchText => _searchText ??= string.Join(" | ", Summary.Address, Summary.Owner, Summary.City, Summary.NFIPCID, Summary.NFIPCommunityName, Summary.InspectorName, Summary.DamageMessage, Summary.ExternalId, Summary.ParcelNumber, Summary.ZipCode, TagsText).ToLowerInvariant();
 }
 
 /// <summary>The figures the inspector shows for one structure, from its latest assessment.</summary>
@@ -394,10 +400,7 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	[RelayCommand]
 	private void ClearChecked()
 	{
-		foreach (StructureRowViewModel r in _all)
-		{
-			r.IsChecked = false;
-		}
+		SetChecked(_all, _ => false);
 	}
 
 	public bool IsEmpty => _all.Count == 0;
@@ -529,11 +532,32 @@ public sealed partial class StructuresViewModel : ViewModelBase
 
 	private void RowChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
 	{
-		if (e.PropertyName == nameof(StructureRowViewModel.IsChecked))
+		if (e.PropertyName == nameof(StructureRowViewModel.IsChecked) && !_checkingMany)
 		{
 			CheckedCount = _all.Count(r => r.IsChecked);
 			OnPropertyChanged(nameof(AllChecked));
 		}
+	}
+
+	private bool _checkingMany;
+
+	/// <summary>Checks or unchecks many rows, then counts once (counting after each row made "check all" slow on long lists).</summary>
+	private void SetChecked(IEnumerable<StructureRowViewModel> rows, Func<StructureRowViewModel, bool> check)
+	{
+		_checkingMany = true;
+		try
+		{
+			foreach (StructureRowViewModel r in rows)
+			{
+				r.IsChecked = check(r);
+			}
+		}
+		finally
+		{
+			_checkingMany = false;
+		}
+		CheckedCount = _all.Count(r => r.IsChecked);
+		OnPropertyChanged(nameof(AllChecked));
 	}
 
 	/// <summary>
@@ -550,11 +574,7 @@ public sealed partial class StructuresViewModel : ViewModelBase
 		set
 		{
 			bool check = value == true;
-			foreach (StructureRowViewModel r in Rows)
-			{
-				r.IsChecked = check;
-			}
-			OnPropertyChanged();
+			SetChecked(Rows, _ => check);
 		}
 	}
 
@@ -562,10 +582,7 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	public void CheckOnly(IEnumerable<Guid> assessmentIds)
 	{
 		HashSet<Guid> ids = assessmentIds.ToHashSet();
-		foreach (StructureRowViewModel r in _all)
-		{
-			r.IsChecked = r.AssessmentID is Guid id && ids.Contains(id);
-		}
+		SetChecked(_all, r => r.AssessmentID is Guid id && ids.Contains(id));
 	}
 
 	/// <summary>Raised by Edit, then Find (Cmd+F): the view puts the cursor in the search box.</summary>
@@ -975,9 +992,12 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	}
 
 	/// <summary>The checked assessments: those shown first, in the list's order, then any checked but filtered out.</summary>
-	public IReadOnlyList<Guid> CheckedAssessmentIds() =>
-		Rows.Where(r => r.IsChecked && r.AssessmentID != null).Select(r => r.AssessmentID!.Value)
-			.Concat(_all.Where(r => r.IsChecked && r.AssessmentID != null && !Rows.Contains(r)).Select(r => r.AssessmentID!.Value)).ToList();
+	public IReadOnlyList<Guid> CheckedAssessmentIds()
+	{
+		HashSet<StructureRowViewModel> shown = new(Rows);
+		return Rows.Where(r => r.IsChecked && r.AssessmentID != null).Select(r => r.AssessmentID!.Value)
+			.Concat(_all.Where(r => r.IsChecked && r.AssessmentID != null && !shown.Contains(r)).Select(r => r.AssessmentID!.Value)).ToList();
+	}
 
 	public IReadOnlyList<Guid> VisibleAssessmentIds() =>
 		Rows.Where(r => r.AssessmentID != null).Select(r => r.AssessmentID!.Value).ToList();

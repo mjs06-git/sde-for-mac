@@ -216,6 +216,12 @@ public sealed partial class EditTools
 					{
 						throw new McpException($"{new AssessmentCheckedOutException(a.AssessmentID, checkOut).Message} FEMA's Team name can't be set on it, so nothing was assigned.");
 					}
+					// Team name is one of the structure's own fields, which update_fields won't change under a locked assessment either.
+					AssessmentStatusRecord status = store.GetStatus(a.AssessmentID);
+					if (status.IsLocked)
+					{
+						throw new McpException($"Assessment {a.AssessmentID} of {Describe.Address(store.GetProperty(pid), store.Reference)} is {AssessmentStatuses.Label(status.Value)}, so SDE won't let an AI assistant set FEMA's Team name on its structure. Assign it without alsoSetFemaTeamName, or a person can set it in SDE. Nothing was assigned.");
+					}
 				}
 			}
 		}

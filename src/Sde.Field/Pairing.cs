@@ -19,6 +19,9 @@ public sealed class PairedPhone
 
 	public Guid Id { get; } = Guid.NewGuid();
 
+	/// <summary>Changes from this phone being saved right now (see FieldServer.MaxChangesPerPhone).</summary>
+	internal int ChangesInFlight;
+
 	public string Name { get; }
 
 	public string RemoteAddress { get; }

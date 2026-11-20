@@ -5,6 +5,7 @@ using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
 using Sde.Core.Assessments;
 using Sde.Core.Exchange;
+using Sde.Core.Records;
 using Sde.Data.Infrastructure;
 
 namespace Sde.Data;
@@ -141,9 +142,10 @@ public static class WorkPackages
 			CreatedBy = ctx.User ?? office.UserName,
 			CheckedOutTo = string.IsNullOrWhiteSpace(checkedOutTo) ? null : checkedOutTo.Trim(),
 		};
+		Dictionary<Guid, VersionStamp> stamps = office.GetStamps(files.Select(f => f.Assessment.AssessmentID));
 		foreach (AssessmentFile f in files)
 		{
-			VersionStamp stamp = office.GetStamp(f.Assessment.AssessmentID);
+			VersionStamp stamp = stamps.GetValueOrDefault(f.Assessment.AssessmentID);
 			manifest.Items.Add(new WorkPackageItem
 			{
 				AssessmentID = f.Assessment.AssessmentID,
@@ -235,6 +237,12 @@ public static class WorkPackages
 			SdeStore package = new SdeStore(SdeDatabase.Open(Path.Combine(staging, DatabaseFile)));
 			CheckInResult result = new CheckInResult();
 			Dictionary<Guid, CheckOutRecord> checkedOut = office.GetCheckOuts().Where(r => r.PackageID == manifest.PackageId).ToDictionary(r => r.AssessmentID);
+			// Which structure each assessment belongs to, here and in the package: a package may change only the structures it
+			// was given, plus structures new to this database.
+			Dictionary<Guid, Guid> structureHere = office.Database.Read(c => c.Query<AssessmentRecord>("SELECT AssessmentID, PropertyID FROM Assessment")
+				.ToDictionary(a => a.AssessmentID, a => a.PropertyID));
+			List<AssessmentRecord> packageRows = package.Database.Read(c => c.Query<AssessmentRecord>("SELECT AssessmentID, PropertyID, Active FROM Assessment").ToList());
+			Dictionary<Guid, Guid> structureThere = packageRows.ToDictionary(a => a.AssessmentID, a => a.PropertyID);
 			List<Guid> accepted = new List<Guid>();
 			foreach (WorkPackageItem item in manifest.Items)
 			{
@@ -256,12 +264,27 @@ public static class WorkPackages
 					result.Refused.Add($"{item.Address}: changed here while it was out. Take it back and copy the field's values over one by one.");
 					continue;
 				}
+				if (!structureThere.TryGetValue(item.AssessmentID, out Guid there) || there != structureHere[item.AssessmentID])
+				{
+					result.Refused.Add($"{item.Address}: the package moved it to another structure.");
+					continue;
+				}
 				accepted.Add(item.AssessmentID);
 			}
-			HashSet<Guid> inOffice = office.Database.Read(c => c.Query<Guid>("SELECT AssessmentID FROM Assessment").ToHashSet());
 			HashSet<Guid> manifestIds = manifest.Items.Select(i => i.AssessmentID).ToHashSet();
-			List<Guid> added = package.Database.Read(c => c.Query<Guid>("SELECT AssessmentID FROM Assessment WHERE Active = 1").ToList())
-				.Where(id => !manifestIds.Contains(id) && !inOffice.Contains(id)).ToList();
+			HashSet<Guid> given = accepted.Select(id => structureHere[id]).ToHashSet();
+			HashSet<Guid> structuresHere = office.Database.Read(c => c.Query<Guid>("SELECT PropertyID FROM Property").ToHashSet());
+			List<Guid> added = new List<Guid>();
+			foreach (AssessmentRecord a in packageRows.Where(a => a.Active && !manifestIds.Contains(a.AssessmentID) && !structureHere.ContainsKey(a.AssessmentID)))
+			{
+				// A new visit counts only for a structure this package was given; a new structure only for a package checked out here.
+				if (checkedOut.Count == 0 || (structuresHere.Contains(a.PropertyID) && !given.Contains(a.PropertyID)))
+				{
+					result.Refused.Add($"{Address(package.LoadAssessment(a.AssessmentID))}: added in the field for a structure this package didn't hold, so it wasn't brought in.");
+					continue;
+				}
+				added.Add(a.AssessmentID);
+			}
 			List<Guid> bringing = accepted.Concat(added).ToList();
 			if (bringing.Count == 0)
 			{

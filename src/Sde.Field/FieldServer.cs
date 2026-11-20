@@ -78,6 +78,15 @@ public sealed class FieldServer : IAsyncDisposable
 	private Timer _autoStop;
 	private HashSet<string> _hosts;
 	private string _tempFolder;
+	private Func<DateTime> _clock = () => DateTime.UtcNow;
+	// HEIC conversions waited for without holding a thread (the converter itself blocks while sips runs).
+	private readonly SemaphoreSlim _conversions = new SemaphoreSlim(2);
+
+	/// <summary>
+	/// Changes one phone may have in flight at once: the page sends its saves one after another and one photo at a time,
+	/// so more means something other than the page is sending them.
+	/// </summary>
+	internal const int MaxChangesPerPhone = 2;
 
 	public FieldServer(Func<SdeStore> store, IFieldWriter writer, IPhotoConverter photos = null)
 	{
@@ -126,6 +135,7 @@ public sealed class FieldServer : IAsyncDisposable
 		bool alsoLoopback = options.IncludeLoopback && !IPAddress.IsLoopback(address);
 		int port = options.Port != 0 ? options.Port : NetworkAccess.FreePort(address);
 		Func<DateTime> clock = options.Clock ?? (() => DateTime.UtcNow);
+		_clock = clock;
 		Pairing = new PairingManager(clock);
 		_tempFolder = options.TempFolder ?? Path.Combine(Path.GetTempPath(), "sde-phone-" + Guid.NewGuid().ToString("N")[..8]);
 		_hosts = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { HostName(address, port) };
@@ -158,14 +168,15 @@ public sealed class FieldServer : IAsyncDisposable
 		app.UseRouting();
 		app.Use(Guard);
 		MapEndpoints(app);
+		// Set before the first request can arrive: the guard refuses everything after it.
+		StopsAtUtc = clock() + options.Lifetime;
 		await app.StartAsync();
 
 		lock (_gate)
 		{
 			_app = app;
 			BaseAddress = new Uri("http://" + HostName(address, port) + "/");
-			StopsAtUtc = clock() + options.Lifetime;
-			_autoStop = new Timer(_ => _ = StopAsync("The phone form stopped itself after 12 hours."), null, options.Lifetime, Timeout.InfiniteTimeSpan);
+			_autoStop = new Timer(_ => _ = StopAsync(LifetimeOver), null, options.Lifetime, Timeout.InfiniteTimeSpan);
 		}
 	}
 
@@ -210,6 +221,8 @@ public sealed class FieldServer : IAsyncDisposable
 
 	private static string HostName(IPAddress address, int port) => address + ":" + port;
 
+	private const string LifetimeOver = "The phone form stopped itself after 12 hours.";
+
 	// ───────────────────────── Guard: who may ask what ─────────────────────────
 
 	private async Task Guard(HttpContext ctx, Func<Task> next)
@@ -234,6 +247,13 @@ public sealed class FieldServer : IAsyncDisposable
 			await Fail(ctx, StatusCodes.Status400BadRequest, "Open the phone form with the address shown on the Mac.");
 			return;
 		}
+		// The 12 hours hold on every request, even if the timer that stops the server runs late (after the Mac slept).
+		if (_clock() >= StopsAtUtc)
+		{
+			_ = StopAsync(LifetimeOver);
+			await Fail(ctx, StatusCodes.Status503ServiceUnavailable, "The phone form has stopped. Start it again on the Mac, then pair this phone again.");
+			return;
+		}
 		bool changes = !(HttpMethods.IsGet(ctx.Request.Method) || HttpMethods.IsHead(ctx.Request.Method));
 		if (changes && ctx.Request.Headers[CsrfHeader] != "1")
 		{
@@ -252,6 +272,14 @@ public sealed class FieldServer : IAsyncDisposable
 				return;
 			}
 			ctx.Items[typeof(PairedPhone)] = phone;
+		}
+		// Each change waits for the Mac's window to save it, so one phone can't queue up an unbounded number.
+		PairedPhone counted = changes && ctx.Items.TryGetValue(typeof(PairedPhone), out object who) ? who as PairedPhone : null;
+		if (counted != null && Interlocked.Increment(ref counted.ChangesInFlight) > MaxChangesPerPhone)
+		{
+			Interlocked.Decrement(ref counted.ChangesInFlight);
+			await Fail(ctx, StatusCodes.Status429TooManyRequests, "The Mac is still saving this phone's last changes. Wait a moment and try again.");
+			return;
 		}
 
 		try
@@ -286,6 +314,13 @@ public sealed class FieldServer : IAsyncDisposable
 		{
 			Failed?.Invoke(ex);
 			await Fail(ctx, StatusCodes.Status500InternalServerError, "Something went wrong on the Mac, so that wasn't saved. Try again; if it keeps happening, check SDE on the Mac.");
+		}
+		finally
+		{
+			if (counted != null)
+			{
+				Interlocked.Decrement(ref counted.ChangesInFlight);
+			}
 		}
 	}
 
@@ -600,6 +635,10 @@ public sealed class FieldServer : IAsyncDisposable
 			string typed = Path.Combine(_tempFolder, name + extension);
 			File.Move(upload, typed);
 			upload = typed;
+			if (!await _conversions.WaitAsync(TimeSpan.FromSeconds(60), ctx.RequestAborted))
+			{
+				return Results.Json(new { error = "The Mac is busy with other photos. Try again in a moment." }, statusCode: StatusCodes.Status503ServiceUnavailable);
+			}
 			try
 			{
 				converted = _photos.ToCompatible(upload, _tempFolder);
@@ -608,6 +647,19 @@ public sealed class FieldServer : IAsyncDisposable
 			{
 				return Results.Json(new { error = "The Mac couldn't convert that photo. Try taking it again, or set the camera to save JPEG (Most Compatible)." },
 					statusCode: StatusCodes.Status422UnprocessableEntity);
+			}
+			finally
+			{
+				_conversions.Release();
+			}
+			// A converted HEIC is checked like an upload: its picture size comes from the HEIC, which wasn't checked.
+			if (converted != upload)
+			{
+				using FileStream f = File.OpenRead(converted);
+				if (PhotoUpload.Detect(f) == null)
+				{
+					return Unsupported();
+				}
 			}
 			// Copied into the attachments folder here, on the web server's thread: the save itself runs on the Mac
 			// app's UI thread, which a 25 MB copy would freeze.

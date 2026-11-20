@@ -165,6 +165,22 @@ public sealed class EventAndReviewToolTests
 	}
 
 	[Fact]
+	public async Task Compliance_cases_of_a_structure_in_recently_deleted_are_kept_from_the_assistant()
+	{
+		await using McpSession s = await McpSession.StartAsync();
+		AssessmentFile kept = SampleCases.RanchFlood(s.Store);
+		AssessmentFile deleted = SampleCases.RanchFlood(s.Store);
+		s.Store.OpenComplianceCase(kept.Id());
+		ComplianceCaseRecord gone = s.Store.OpenComplianceCase(deleted.Id());
+		s.Store.TrashProperty(deleted.Property.PropertyID);
+
+		JsonElement all = await s.CallOkAsync("list_compliance_cases");
+		Assert.Equal(1, all.Int("total"));
+		Assert.NotEqual(gone.CaseID.ToString(), all.List("items")[0].Str("caseId"));
+		Assert.Contains("Recently deleted", await s.CallErrorAsync("get_compliance_case", new { caseId = gone.CaseID.ToString() }));
+	}
+
+	[Fact]
 	public async Task Compliance_cases_filter_as_the_compliance_page_does()
 	{
 		await using McpSession s = await McpSession.StartAsync();

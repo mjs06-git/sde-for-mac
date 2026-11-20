@@ -28,6 +28,21 @@ internal static class TableMap<T>
 
 	private static readonly string KeyWhere = string.Join(" AND ", Keys.Select(k => $"{Q(k.Name)} = @{k.Name}"));
 
+	// Built once per record type: an import writes hundreds of thousands of rows with the same statements.
+	private static readonly string InsertSql = InsertFor(Columns);
+
+	private static readonly PropertyInfo[] ColumnsWithoutAutoIncrement = Columns.Where(p => p != AutoIncrement).ToArray();
+
+	private static readonly string InsertWithoutAutoIncrementSql = InsertFor(ColumnsWithoutAutoIncrement);
+
+	private static readonly string UpdateSql =
+		$"UPDATE {Q(Table)} SET {string.Join(", ", Columns.Where(p => !Keys.Contains(p)).Select(p => $"{Q(p.Name)} = @{p.Name}"))} WHERE {KeyWhere}";
+
+	private static readonly HashSet<PropertyInfo> JetScaleColumns = Columns.Where(p => p.GetCustomAttribute<JetScaleAttribute>() != null).ToHashSet();
+
+	private static string InsertFor(PropertyInfo[] columns) =>
+		$"INSERT INTO {Q(Table)} ({string.Join(", ", columns.Select(p => Q(p.Name)))}) VALUES ({string.Join(", ", columns.Select(p => "@" + p.Name))})";
+
 	public static string Q(string identifier) => "\"" + identifier.Replace("\"", "\"\"") + "\"";
 
 	public static IEnumerable<T> Select(IDbConnection c, string where = null, object args = null, IDbTransaction tx = null, string orderBy = null)
@@ -43,15 +58,8 @@ internal static class TableMap<T>
 	public static void Insert(IDbConnection c, T record, IDbTransaction tx = null)
 	{
 		JetScaling.Apply(record);
-		IEnumerable<PropertyInfo> cols = Columns;
 		bool assignId = AutoIncrement != null && IsUnset(AutoIncrement.GetValue(record));
-		if (assignId)
-		{
-			cols = cols.Where(p => p != AutoIncrement);
-		}
-		List<PropertyInfo> list = cols.ToList();
-		string sql = $"INSERT INTO {Q(Table)} ({string.Join(", ", list.Select(p => Q(p.Name)))}) VALUES ({string.Join(", ", list.Select(p => "@" + p.Name))})";
-		c.Execute(sql, Parameters(record, list), tx);
+		c.Execute(assignId ? InsertWithoutAutoIncrementSql : InsertSql, Parameters(record, assignId ? ColumnsWithoutAutoIncrement : Columns), tx);
 		if (assignId)
 		{
 			long id = c.ExecuteScalar<long>("SELECT last_insert_rowid()", transaction: tx);
@@ -63,9 +71,7 @@ internal static class TableMap<T>
 	public static int Update(IDbConnection c, T record, IDbTransaction tx = null)
 	{
 		JetScaling.Apply(record);
-		List<PropertyInfo> set = Columns.Where(p => !Keys.Contains(p)).ToList();
-		string sql = $"UPDATE {Q(Table)} SET {string.Join(", ", set.Select(p => $"{Q(p.Name)} = @{p.Name}"))} WHERE {KeyWhere}";
-		return c.Execute(sql, Parameters(record, Columns), tx);
+		return c.Execute(UpdateSql, Parameters(record, Columns), tx);
 	}
 
 	/// <summary>Update if the key exists, otherwise insert. (Not INSERT OR REPLACE, which would fire cascading deletes.)</summary>
@@ -88,7 +94,7 @@ internal static class TableMap<T>
 		{
 			object value = prop.GetValue(record);
 			// [JetScale] string columns (ElementPercentage.ItemCost/DamageValues) hold numbers: store them as numbers.
-			if (value is string s && prop.GetCustomAttribute<JetScaleAttribute>() != null)
+			if (value is string s && JetScaleColumns.Contains(prop))
 			{
 				value = JetScaling.TryParse(s, out decimal d) ? d : null;
 			}

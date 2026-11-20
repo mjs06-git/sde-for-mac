@@ -168,6 +168,9 @@ public sealed partial class SdeStore
 		}
 	}
 
+	/// <summary>How many things are in Recently deleted (the sidebar's badge).</summary>
+	public int CountDeletedItems() => Database.Read(c => c.ExecuteScalar<int>("SELECT COUNT(*) FROM DeletedItem"));
+
 	/// <summary>Everything in Recently deleted, most recent first.</summary>
 	public List<DeletedItemRecord> GetDeletedItems() =>
 		Database.Read(c => TableMap<DeletedItemRecord>.Select(c, orderBy: "DeletedOn DESC").ToList());
@@ -321,9 +324,11 @@ public sealed partial class SdeStore
 	{
 		List<string> removed = new List<string>();
 		List<string> files = new List<string>();
+		// What is in Recently deleted, read once rather than asked about each imported ID.
+		HashSet<Guid> trashedAssessments = c.Query<Guid>("SELECT AssessmentID FROM Assessment WHERE Active = 0", transaction: tx).ToHashSet();
 		foreach (Guid aid in assessmentIds.Distinct())
 		{
-			if (c.ExecuteScalar<long?>("SELECT Active FROM Assessment WHERE AssessmentID = @aid", new { aid }, tx) == 0)
+			if (trashedAssessments.Contains(aid))
 			{
 				files.AddRange(DeleteAssessmentRows(c, tx, aid));
 				BumpVersion(c, tx, aid, VersionKind.Assessment);
@@ -331,9 +336,10 @@ public sealed partial class SdeStore
 				removed.Add($"Assessment {aid} was in Recently deleted and has been replaced by the imported one.");
 			}
 		}
+		HashSet<Guid> trashedProperties = c.Query<Guid>("SELECT PropertyID FROM Property WHERE Active = 0", transaction: tx).ToHashSet();
 		foreach (Guid pid in propertyIds.Distinct())
 		{
-			if (c.ExecuteScalar<long?>("SELECT Active FROM Property WHERE PropertyID = @pid", new { pid }, tx) == 0)
+			if (trashedProperties.Contains(pid))
 			{
 				foreach (Guid aid in c.Query<Guid>("SELECT AssessmentID FROM Assessment WHERE PropertyID = @pid", new { pid }, tx).ToList())
 				{

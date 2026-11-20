@@ -29,28 +29,32 @@ public static class PhotoFolderMatcher
 	public static IReadOnlyList<PhotoMatch> Match(IReadOnlyList<string> photoPaths, IReadOnlyList<PhotoMatchCandidate> candidates, double toleranceMeters = 40)
 	{
 		List<PhotoMatch> matches = new List<PhotoMatch>();
+		// Each structure's keys are worked out once, not again for every photo.
+		string[] recordIds = candidates.Select(c => Normalize(c.RecordId)).ToArray();
+		string[] parcels = candidates.Select(c => Normalize(c.Parcel)).ToArray();
+		string[] addresses = candidates.Select(AddressKey).ToArray();
 		foreach (string path in photoPaths)
 		{
-			matches.Add(MatchOne(path, candidates, toleranceMeters));
+			matches.Add(MatchOne(path, candidates, recordIds, parcels, addresses, toleranceMeters));
 		}
 		return matches;
 	}
 
-	private static PhotoMatch MatchOne(string path, IReadOnlyList<PhotoMatchCandidate> candidates, double toleranceMeters)
+	private static PhotoMatch MatchOne(string path, IReadOnlyList<PhotoMatchCandidate> candidates, string[] recordIds, string[] parcels, string[] addresses, double toleranceMeters)
 	{
 		string name = Normalize(Path.GetFileNameWithoutExtension(path));
 
-		PhotoMatchCandidate byName = FindByName(name, candidates, c => Normalize(c.RecordId), out _);
+		PhotoMatchCandidate byName = FindByName(name, candidates, recordIds, out _);
 		if (byName != null)
 		{
 			return new PhotoMatch(path, byName, "file name has the record ID", null);
 		}
-		byName = FindByName(name, candidates, c => Normalize(c.Parcel), out _);
+		byName = FindByName(name, candidates, parcels, out _);
 		if (byName != null)
 		{
 			return new PhotoMatch(path, byName, "file name has the parcel number", null);
 		}
-		byName = FindByName(name, candidates, AddressKey, out _);
+		byName = FindByName(name, candidates, addresses, out _);
 		if (byName != null)
 		{
 			return new PhotoMatch(path, byName, "file name has the address", null);
@@ -101,14 +105,15 @@ public static class PhotoFolderMatcher
 	}
 
 	/// <summary>The one candidate whose key is in the file name (the longest key wins; a tie at the longest length matches nothing).</summary>
-	private static PhotoMatchCandidate FindByName(string name, IReadOnlyList<PhotoMatchCandidate> candidates, Func<PhotoMatchCandidate, string> key, out bool tie)
+	private static PhotoMatchCandidate FindByName(string name, IReadOnlyList<PhotoMatchCandidate> candidates, string[] keys, out bool tie)
 	{
 		tie = false;
 		PhotoMatchCandidate best = null;
 		int bestLength = 0;
-		foreach (PhotoMatchCandidate c in candidates)
+		for (int i = 0; i < candidates.Count; i++)
 		{
-			string k = key(c);
+			PhotoMatchCandidate c = candidates[i];
+			string k = keys[i];
 			if (k.Length == 0 || !name.Contains(k, StringComparison.Ordinal))
 			{
 				continue;

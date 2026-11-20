@@ -71,7 +71,8 @@ public sealed partial class MapViewModel
 	/// </summary>
 	public void SelectStructures(IReadOnlyCollection<Guid> propertyIds, bool add)
 	{
-		HashSet<Guid> ids = _all.Where(p => propertyIds.Contains(p.Id) && p.AssessmentID != null).Select(p => p.AssessmentID!.Value).ToHashSet();
+		HashSet<Guid> wanted = propertyIds as HashSet<Guid> ?? propertyIds.ToHashSet();
+		HashSet<Guid> ids = _all.Where(p => wanted.Contains(p.Id) && p.AssessmentID != null).Select(p => p.AssessmentID!.Value).ToHashSet();
 		if (add)
 		{
 			ids.UnionWith(_main.Structures.CheckedAssessmentIds());

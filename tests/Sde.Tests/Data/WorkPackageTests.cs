@@ -172,4 +172,26 @@ public class WorkPackageTests
 		Assert.Equal("Office", now.Assessment.CostData);
 		Assert.Contains(WorkPackages.CheckIn(trip.Office.Store, trip.BackPath).Refused, r => r.Contains("taken back"));
 	}
+
+	[Fact]
+	public void CheckingIn_RefusesAVisitAddedToAStructureThePackageDidntHold()
+	{
+		using Trip trip = new Trip();
+		PropertyRecord other = trip.Office.Store.SaveProperty(new PropertyRecord { StructureTypeID = 1, StreetNumber = "9", StreetName = "Other Lane", OwnerLastName = "Office owner" });
+		WorkPackages.CheckOut(trip.Office.Store, new[] { trip.Id }, trip.OutPath, "Team 1");
+		trip.WorkInTheField(field =>
+		{
+			// The package never held the other structure: the field makes a row with its ID and a visit to it.
+			field.SaveProperty(new PropertyRecord { PropertyID = other.PropertyID, StructureTypeID = 1, StreetNumber = "9", StreetName = "Other Lane", OwnerLastName = "Package owner", Active = true });
+			field.CreateAssessment(other.PropertyID, applyDefaults: false);
+		});
+
+		CheckInResult result = WorkPackages.CheckIn(trip.Office.Store, trip.BackPath);
+
+		Assert.Equal(1, result.CheckedIn);
+		Assert.Equal(0, result.Added);
+		Assert.Contains(result.Refused, r => r.Contains("9 Other Lane") && r.Contains("didn't hold"));
+		Assert.Equal("Office owner", trip.Office.Store.GetProperty(other.PropertyID).OwnerLastName);
+		Assert.Empty(trip.Office.Store.Database.Read(c => Dapper.SqlMapper.Query<Guid>(c, "SELECT AssessmentID FROM Assessment WHERE PropertyID = @id", new { id = other.PropertyID.ToString("D") })));
+	}
 }

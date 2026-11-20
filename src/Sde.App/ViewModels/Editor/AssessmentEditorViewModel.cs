@@ -730,10 +730,16 @@ public sealed partial class AssessmentEditorViewModel : ViewModelBase
 		}
 		// FEMA's green "suggested" rules (owner/mailing details) are counted separately so they don't drown out real gaps.
 		List<ValidationIssue> important = issues.Where(i => i.Severity != IssueSeverity.Suggested).ToList();
-		Issues.Clear();
-		foreach (ValidationIssue i in important.OrderBy(i => i.Severity).ThenBy(i => SectionIndexFor(i)))
+		List<IssueItem> items = important.OrderBy(i => i.Severity).ThenBy(i => SectionIndexFor(i))
+			.Select(i => new IssueItem(i, GoToIssueCommand, labels.GetValueOrDefault((i.Model == "Property" ? "P." : "A.") + i.ControlName))).ToList();
+		// Most keystrokes leave the list as it was: only rebuild the To Check panel when it changed.
+		if (!Issues.SequenceEqual(items))
 		{
-			Issues.Add(new IssueItem(i, GoToIssueCommand, labels.GetValueOrDefault((i.Model == "Property" ? "P." : "A.") + i.ControlName)));
+			Issues.Clear();
+			foreach (IssueItem item in items)
+			{
+				Issues.Add(item);
+			}
 		}
 		RequiredIssueCount = issues.Count(i => i.Severity == IssueSeverity.Required);
 		OtherIssueCount = important.Count - RequiredIssueCount;
@@ -856,7 +862,7 @@ public sealed partial class AssessmentEditorViewModel : ViewModelBase
 	}
 
 	private PhotoViewModel NewPhotoVm(AttachmentRecord a, PhotoMarkup markup = null) =>
-		new(a, _app.Store.PhotoPath(a), Edited, MakeDefaultPhoto, RemovePhoto, p => _app.Dialogs.Open(p.Path), markup) { Mover = MovePhoto, MarkUpAction = MarkUpPhotoAsync };
+		new(a, _app.Store.PhotoPath(a), Edited, MakeDefaultPhoto, RemovePhoto, OpenPhoto, markup) { Mover = MovePhoto, MarkUpAction = MarkUpPhotoAsync };
 
 	/// <summary>
 	/// A photo's Mark up…: the markup sheet for it (a new photo is saved with the assessment first, so its marks have a
@@ -880,6 +886,20 @@ public sealed partial class AssessmentEditorViewModel : ViewModelBase
 	}
 
 	public static readonly string[] PhotoPatterns = { "*.jpg", "*.jpeg", "*.png", "*.heic", "*.gif", "*.bmp", "*.tif", "*.tiff" };
+
+	/// <summary>
+	/// A photo's Open in Preview. The stored name can come from an import or work package, so only a picture is handed
+	/// to the Mac, never a script or app.
+	/// </summary>
+	private void OpenPhoto(PhotoViewModel p)
+	{
+		if (!PhotoPatterns.Contains("*" + Path.GetExtension(p.Path).ToLowerInvariant()) || !System.IO.File.Exists(p.Path))
+		{
+			_app.Dialogs.Notify("Couldn't open the photo", "This photo's file is missing or isn't a picture.", isError: true);
+			return;
+		}
+		_app.Dialogs.Open(p.Path);
+	}
 
 	[RelayCommand]
 	private async Task ChoosePhotos()

@@ -33,18 +33,16 @@ internal static class CsvTableLoader
 		using SqliteCommand cmd = c.CreateCommand();
 		cmd.CommandText = sql;
 		cmd.Transaction = (SqliteTransaction)tx;
-		foreach (int i in keep)
-		{
-			cmd.Parameters.Add(new SqliteParameter("$p" + i, DBNull.Value));
-		}
+		SqliteParameter[] parameters = keep.Select(i => cmd.Parameters.Add(new SqliteParameter("$p" + i, DBNull.Value))).ToArray();
 		int count = 0;
 		while (rows.MoveNext())
 		{
 			List<CsvCell> row = rows.Current;
-			foreach (int i in keep)
+			for (int k = 0; k < keep.Count; k++)
 			{
+				int i = keep[k];
 				CsvCell cell = i < row.Count ? row[i] : new CsvCell("", false);
-				cmd.Parameters["$p" + i].Value = Convert(cell);
+				parameters[k].Value = Convert(cell);
 			}
 			cmd.ExecuteNonQuery();
 			count++;

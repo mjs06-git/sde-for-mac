@@ -60,7 +60,7 @@ public sealed partial class SdeStore
 				{
 					continue;
 				}
-				SaveTracked(c, tx, f, ctx);
+				SaveTracked(c, tx, f, ctx, stored: before);
 				result.Changed++;
 			}
 		});
@@ -93,7 +93,9 @@ public sealed partial class SdeStore
 			return new BulkResult { BatchId = undone.BatchId, Changed = undone.AssessmentsMovedBack + 1 };
 		}
 		List<EditHistoryRecord> rows = GetBatch(batchId).Where(r => r.Field != null && FieldCatalog.Get(r.Field) != null).ToList();
-		Dictionary<Guid, AssessmentFile> files = new Dictionary<Guid, AssessmentFile>();
+		// Every assessment the batch touched, read together rather than one connection each, in the order the loop meets them.
+		Dictionary<Guid, AssessmentFile> files = LoadAssessments(rows.AsEnumerable().Reverse().Select(r => r.AssessmentID).OfType<Guid>().Distinct())
+			.ToDictionary(x => x.Assessment.AssessmentID);
 		Dictionary<Guid, PropertyRecord> properties = new Dictionary<Guid, PropertyRecord>();
 		int changedSince = 0;
 		foreach (EditHistoryRecord row in rows.AsEnumerable().Reverse())
@@ -104,12 +106,7 @@ public sealed partial class SdeStore
 			{
 				if (!files.TryGetValue(id, out target))
 				{
-					target = LoadAssessment(id);
-					if (target == null)
-					{
-						continue;
-					}
-					files[id] = target;
+					continue;   // gone since
 				}
 			}
 			else if (row.PropertyID is Guid pid && f.Model == FieldModel.Property)

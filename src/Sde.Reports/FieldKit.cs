@@ -73,10 +73,11 @@ public static class FieldKit
 			}
 		}
 		List<FieldKitStop> stops = new();
-		foreach (AssignmentRecord a in store.GetAssignments(teamId, eventId))
+		List<AssignmentRecord> assignments = store.GetAssignments(teamId, eventId);
+		Dictionary<Guid, PropertyRecord> properties = store.GetProperties(assignments.Select(a => a.PropertyID));
+		foreach (AssignmentRecord a in assignments)
 		{
-			PropertyRecord p = store.GetProperty(a.PropertyID);
-			if (p == null)
+			if (!properties.TryGetValue(a.PropertyID, out PropertyRecord p))
 			{
 				continue;
 			}
@@ -308,6 +309,6 @@ public static class FieldKit
 		renderer.RenderDocument();
 		using MemoryStream buffer = new MemoryStream();
 		renderer.PdfDocument.Save(buffer, false);
-		File.WriteAllBytes(path, buffer.ToArray());
+		File.WriteAllBytes(path, buffer.GetBuffer().AsSpan(0, (int)buffer.Length));
 	}
 }

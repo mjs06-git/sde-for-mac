@@ -57,6 +57,28 @@ public class PhoneFormUiTests
 	}
 
 	[AvaloniaFact]
+	public async Task OpeningAnotherDatabase_StopsThePhoneForm_AndEndsEverySession()
+	{
+		using UiSession ui = new UiSession();
+		PhoneFormService phone = ui.Services.PhoneForm;
+		phone.Options = new FieldServerOptions { BindAddress = IPAddress.Loopback };
+		await phone.StartCommand.ExecuteAsync(null);
+		PairResult paired = phone.Server.Pairing.PairWithToken(phone.Server.Pairing.Current.Token, "Test Inspector", "127.0.0.1");
+		Assert.Equal(PairOutcome.Paired, paired.Outcome);
+
+		ui.Services.Open(Path.Combine(ui.Folder, "another.sqlite"));
+		for (int i = 0; i < 100 && phone.IsRunning; i++)
+		{
+			await Task.Delay(20, TestContext.Current.CancellationToken);
+			ui.Pump();
+		}
+
+		Assert.False(phone.Server.IsRunning);
+		Assert.False(phone.IsRunning);
+		Assert.Contains("Another database was opened", phone.LastStopped);
+	}
+
+	[AvaloniaFact]
 	public async Task PhoneChange_GoesThroughTheCoordinator_IntoTheOpenEditor()
 	{
 		using UiSession ui = new UiSession();

@@ -33,6 +33,19 @@ jobs:
         with:
           persist-credentials: false
 
+      # Only a commit already on main is released, before any step receives the signing secrets. (A tag pointing at a
+      # commit with an altered copy of this file skips this check; the release environment's protection rules in
+      # docs/RELEASING.md are what stop that.)
+      - name: Check the tagged commit is on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          STATUS=$(gh api "repos/$GITHUB_REPOSITORY/compare/$GITHUB_SHA...main" --jq .status)
+          if [ "$STATUS" != "ahead" ] && [ "$STATUS" != "identical" ]; then
+            echo "Tag $GITHUB_REF_NAME points at $GITHUB_SHA, which is not on main ($STATUS). Merge it to main first." >&2
+            exit 1
+          fi
+
       - name: Set up .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
@@ -96,7 +109,12 @@ jobs:
         run: |
           FILES="out/SDE-$VERSION-osx-arm64.zip out/SDE-$VERSION-osx-x64.zip out/SHA256SUMS"
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            # A re-run of the same tag: replace the files on the existing release.
+            # A re-run of the same tag replaces the files, but only while the release is still a draft: a published
+            # release's files never change.
+            if [ "$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft)" != "true" ]; then
+              echo "Release $GITHUB_REF_NAME is already published, so its files are not replaced. Tag a new version." >&2
+              exit 1
+            fi
             gh release upload "$GITHUB_REF_NAME" $FILES --clobber
           else
             case "$GITHUB_REF_NAME" in

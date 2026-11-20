@@ -586,7 +586,7 @@ public sealed partial class MainViewModel : ViewModelBase, IEditorHost
 		int deleted = 0;
 		try
 		{
-			deleted = _app.Store.GetDeletedItems().Count;
+			deleted = _app.Store.CountDeletedItems();
 		}
 		catch (Exception ex) when (ex is not OutOfMemoryException)
 		{

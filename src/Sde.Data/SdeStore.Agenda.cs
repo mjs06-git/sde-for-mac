@@ -97,7 +97,8 @@ public sealed partial class SdeStore
 
 		return Database.Read(c =>
 		{
-			Dictionary<Guid, PropertyRecord> properties = TableMap<PropertyRecord>.Select(c, "Active = 1").ToDictionary(p => p.PropertyID);
+			Dictionary<Guid, PropertyRecord> properties = c.Query<PropertyRecord>(
+				"SELECT PropertyID, StreetNumber, StreetName, StreetSuffixID FROM Property WHERE Active = 1").ToDictionary(p => p.PropertyID);   // only what AddressLabel reads
 			Dictionary<Guid, Guid> inUse = c.Query<AssessmentStructureRow>(
 				"SELECT a.AssessmentID, a.PropertyID FROM Assessment a JOIN Property p ON p.PropertyID = a.PropertyID WHERE a.Active = 1 AND p.Active = 1")
 				.ToDictionary(r => r.AssessmentID, r => r.PropertyID);

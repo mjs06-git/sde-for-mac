@@ -527,10 +527,15 @@ public sealed partial class ReviewViewModel : ViewModelBase
 		OpenFindingCount = _findings.Count(f => !f.IsDismissed);
 		ErrorCount = _findings.Count(f => !f.IsDismissed && f.Severity == QaSeverity.Error);
 		OpenCommentCount = _all.Sum(r => r.CommentCount);
+		_loadedFor = null;
 		FillRows();
 		FillGroups();
 		Selected = selected is Guid keep ? Rows.FirstOrDefault(r => r.AssessmentID == keep) : null;
-		LoadSelected();
+		// FillRows usually selects the row again, which loads it already: don't read its comments twice.
+		if (Selected == null || !ReferenceEquals(_loadedFor, Selected))
+		{
+			LoadSelected();
+		}
 		OnPropertyChanged(nameof(Subtitle));
 		OnPropertyChanged(nameof(QueueEmptyTitle));
 		OnPropertyChanged(nameof(ChecksTabText));
@@ -619,9 +624,13 @@ public sealed partial class ReviewViewModel : ViewModelBase
 		return new QaFindingViewModel(f, where) { Open = OpenFindingCommand, Dismiss = DismissFindingCommand, BringBack = BringBackCommand, Merge = MergeFindingCommand };
 	}
 
+	/// <summary>The row <see cref="LoadSelected"/> last loaded the findings and comments of.</summary>
+	private ReviewRowViewModel _loadedFor;
+
 	/// <summary>The selected assessment's comments and open findings, for the panel beside the queue.</summary>
 	private void LoadSelected()
 	{
+		_loadedFor = Selected;
 		if (SelectedComments != null)
 		{
 			SelectedComments.Changed -= OnCommentsChanged;

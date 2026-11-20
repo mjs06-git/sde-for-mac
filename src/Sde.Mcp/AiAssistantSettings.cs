@@ -367,20 +367,11 @@ public static class AiAssistantSettings
 		});
 	}
 
-	/// <summary>A path in double quotes for zsh or bash, with the characters that are special there escaped.</summary>
-	private static string ShellQuote(string path)
-	{
-		System.Text.StringBuilder quoted = new System.Text.StringBuilder("\"");
-		foreach (char c in path ?? "")
-		{
-			if (c is '"' or '\\' or '$' or '`')
-			{
-				quoted.Append('\\');
-			}
-			quoted.Append(c);
-		}
-		return quoted.Append('"').ToString();
-	}
+	/// <summary>
+	/// A path in single quotes for zsh or bash: nothing inside is special (not even '!', which history expansion reads
+	/// inside double quotes), and each ' is written as '\''.
+	/// </summary>
+	private static string ShellQuote(string path) => "'" + (path ?? "").Replace("'", "'\\''") + "'";
 
 	/// <summary>A status from its label ("Draft", "Letter sent"…), or null.</summary>
 	internal static AssessmentStatus? ParseStatus(string label)

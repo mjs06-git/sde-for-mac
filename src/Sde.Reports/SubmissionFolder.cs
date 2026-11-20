@@ -137,20 +137,23 @@ public static class SubmissionFolder
 			Dictionary<Guid, ExternalLinkRecord> links = store.GetExternalLinks().ToDictionary(l => l.AssessmentID);
 			List<string> names = ReportNames(files, links, store);
 			string reports = Path.Combine(folder, ReportsFolder);
+			// One set of prepared photos for every report in the folder: each photo is decoded and resized once.
+			Dictionary<string, string> markups = Markups(store, files);
+			Internal.PhotoLibrary photos = new Internal.PhotoLibrary(store.AttachmentsFolder, markups);
 			Directory.CreateDirectory(reports);
 			for (int i = 0; i < files.Count; i++)
 			{
 				Step($"Report {i + 1} of {files.Count}: {Path.GetFileNameWithoutExtension(names[i])}");
-				ReportGenerator.RenderToFile(Request(options.PerAssessmentReport, new[] { files[i] }, options, store, now), store.Reference, Path.Combine(reports, names[i]));
+				ReportGenerator.RenderToFile(Request(options.PerAssessmentReport, new[] { files[i] }, options, store, now, photos), store.Reference, Path.Combine(reports, names[i]));
 				done++;
 			}
 
 			// The two lists, for everything in the folder.
 			Step("Structure & percent damaged list");
-			ReportGenerator.RenderToFile(Request(ReportKind.PercentDamaged, files, options, store, now), store.Reference, Path.Combine(folder, PercentDamagedFile));
+			ReportGenerator.RenderToFile(Request(ReportKind.PercentDamaged, files, options, store, now, photos), store.Reference, Path.Combine(folder, PercentDamagedFile));
 			done++;
 			Step("Community report");
-			ReportGenerator.RenderToFile(Request(ReportKind.Community, files, options, store, now), store.Reference, Path.Combine(folder, CommunityFile));
+			ReportGenerator.RenderToFile(Request(ReportKind.Community, files, options, store, now, photos), store.Reference, Path.Combine(folder, CommunityFile));
 			done++;
 
 			// The FEMA SDE package.
@@ -166,7 +169,7 @@ public static class SubmissionFolder
 
 			if (options.IncludeMarkedUpCopies)
 			{
-				WriteMarkedUpCopies(store, files, Path.Combine(folder, MarkedUpFolder));
+				WriteMarkedUpCopies(store, markups, Path.Combine(folder, MarkedUpFolder));
 			}
 
 			List<string> warnings = new();
@@ -214,14 +217,14 @@ public static class SubmissionFolder
 	/// <summary>"Data Entry Incomplete" (or never calculated); a "damage undetermined" result counts as complete.</summary>
 	public static bool IsIncomplete(AssessmentFile f) => f.Assessment.DamageMessage is null or "" or "Data Entry Incomplete";
 
-	private static ReportRequest Request(ReportKind kind, IReadOnlyList<AssessmentFile> files, SubmissionOptions options, SdeStore store, DateTime now) => new()
+	private static ReportRequest Request(ReportKind kind, IReadOnlyList<AssessmentFile> files, SubmissionOptions options, SdeStore store, DateTime now, Internal.PhotoLibrary photos) => new()
 	{
 		Kind = kind,
 		Assessments = files,
 		IncludePhotos = options.IncludePhotos,
 		PhotosFolder = store.AttachmentsFolder,
 		GeneratedOn = now,
-		PhotoMarkups = Markups(store, files),
+		Photos = photos,
 	};
 
 	/// <summary>The markup of these assessments' photos, by file name.</summary>
@@ -239,12 +242,13 @@ public static class SubmissionFolder
 	}
 
 	/// <summary>A JPEG copy of each marked-up photo with its marks drawn on, named after the stored photo.</summary>
-	private static void WriteMarkedUpCopies(SdeStore store, IReadOnlyList<AssessmentFile> files, string folder)
+	private static void WriteMarkedUpCopies(SdeStore store, Dictionary<string, string> markups, string folder)
 	{
-		foreach (KeyValuePair<string, string> m in Markups(store, files))
+		foreach (KeyValuePair<string, string> m in markups)
 		{
 			Sde.Core.Photos.PhotoMarkup markup = Sde.Core.Photos.PhotoMarkup.Parse(m.Value);
-			string photo = Path.Combine(store.AttachmentsFolder, m.Key);
+			// The key comes from the database: only ever a photo in the attachments folder.
+			string photo = Path.Combine(store.AttachmentsFolder, Path.GetFileName(m.Key));
 			if (markup == null || markup.IsEmpty || !File.Exists(photo))
 			{
 				continue;
@@ -256,7 +260,9 @@ public static class SubmissionFolder
 
 	/// <summary>
 	/// Copies the letters written for these assessments, named after the assessment's report and the letter's kind
-	/// ("123 River Street – Substantial damage.docx"). A letter whose file is gone, or is a link, is a warning.
+	/// ("123 River Street – Substantial damage.docx"). A letter whose file is gone, or is a link, is a warning. SDE writes
+	/// letters only as Word documents, so a stored path to any other kind of file (from a database or package made
+	/// elsewhere) is refused, and never copied into a folder meant to leave the office.
 	/// </summary>
 	private static void CopyLetters(SdeStore store, IReadOnlyList<AssessmentFile> files, IReadOnlyList<string> names, string folder, List<string> warnings)
 	{
@@ -269,6 +275,12 @@ public static class SubmissionFolder
 				string kind = string.IsNullOrWhiteSpace(l.Kind) ? "Letter" : l.Kind.Trim();
 				string what = $"The {kind.ToLowerInvariant()} letter for {report}";
 				string source = string.IsNullOrWhiteSpace(l.FileName) || !Path.IsPathRooted(l.FileName) ? null : l.FileName;
+				// shortcut: any .docx the stored path names is still copied; record a hash of each written letter to tie the file to it.
+				if (source != null && !string.Equals(Path.GetExtension(source), ".docx", StringComparison.OrdinalIgnoreCase))
+				{
+					warnings.Add($"{what} wasn't copied: its file isn't a Word letter.");
+					continue;
+				}
 				CopySafely(source, folder, $"{report} – {kind}", used, what, warnings);
 			}
 		}

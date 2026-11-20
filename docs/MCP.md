@@ -17,7 +17,7 @@ Avalonia loads). Its code is in `src/Sde.Mcp` and uses the official C# SDK (`Mod
 **Claude Code**, from a terminal:
 
 ```
-claude mcp add sde -- "/Applications/SDE.app/Contents/MacOS/SDE" mcp --db "/Users/you/Library/Application Support/SDE/sde.sqlite"
+claude mcp add sde -- '/Applications/SDE.app/Contents/MacOS/SDE' mcp --db '/Users/you/Library/Application Support/SDE/sde.sqlite'
 ```
 
 Add `--scope user` to make it available in every project.

@@ -204,6 +204,10 @@ public sealed partial class MapCanvas : Panel, IDisposable
 		get => _clusters;
 		set
 		{
+			if (value == null && _clusters == null)
+			{
+				return;   // still a dot each: nothing to redraw (the analysis sets this after every pan with a surface on)
+			}
 			_clusters = value;
 			ShowMarkers();
 		}
@@ -1269,6 +1273,10 @@ public sealed partial class MapCanvas : Panel, IDisposable
 
 	private void DrawSketch()
 	{
+		if (_sketch.Count == 0 && !_sketchArea.IsVisible && !_sketchLine.IsVisible)
+		{
+			return;   // nothing sketched and nothing showing: this runs on every frame of a pan
+		}
 		Points points = new Points(_sketch.Select(p => ToScreen(p.Latitude, p.Longitude)));
 		bool area = _sketchKind == MapSketch.Polygon && _sketch.Count >= 3;
 		_sketchArea.Points = area ? points : new Points();

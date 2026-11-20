@@ -151,7 +151,11 @@ public static class LegacySde2Import
 			}
 		}
 
-		List<FileInfo> allFiles = new DirectoryInfo(folder).GetFiles("*", SearchOption.AllDirectories).ToList();
+		// Links (to files or folders) are left out: one could point at any file on the Mac.
+		List<FileInfo> allFiles = new DirectoryInfo(folder).GetFiles("*", new EnumerationOptions
+		{
+			RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = false, MatchType = MatchType.Win32,
+		}).ToList();
 		foreach ((string sub, XmlPropertyData.NewDataSet p) in properties)
 		{
 			Guid id = new Guid(p.tblProperty.PropertyID);

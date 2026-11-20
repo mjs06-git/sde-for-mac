@@ -243,9 +243,10 @@ public sealed partial class MapViewModel : ViewModelBase
 	{
 		if (prune)
 		{
+			HashSet<MapPointViewModel> unplaced = new(Unplaced);
 			for (int i = PlaceChoices.Count - 1; i >= 0; i--)
 			{
-				if (!ReferenceEquals(PlaceChoices[i], PlaceTarget) && !Unplaced.Contains(PlaceChoices[i]))
+				if (!ReferenceEquals(PlaceChoices[i], PlaceTarget) && !unplaced.Contains(PlaceChoices[i]))
 				{
 					PlaceChoices.RemoveAt(i);
 				}
@@ -255,9 +256,10 @@ public sealed partial class MapViewModel : ViewModelBase
 		{
 			PlaceChoices.Insert(0, PlaceTarget);
 		}
+		HashSet<MapPointViewModel> listed = new(PlaceChoices);
 		foreach (MapPointViewModel p in Unplaced)
 		{
-			if (!PlaceChoices.Contains(p))
+			if (listed.Add(p))
 			{
 				PlaceChoices.Add(p);
 			}

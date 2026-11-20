@@ -39,6 +39,22 @@ public class DocumentsUiTests
 	}
 
 	[AvaloniaFact]
+	public void Open_RefusesAStoredFileThatIsntAKindKept()
+	{
+		(UiSession ui, AssessmentEditorViewModel editor) = WithEditor();
+		using UiSession session = ui;
+		// As a work package or import could store it: a Terminal script under a harmless title.
+		ui.Store.AddDocument(editor.Property.PropertyID, Write(ui, "EC.command"), DocumentKinds.ElevationCertificate, "Elevation certificate");
+		DocumentsSheetViewModel sheet = Open(ui, editor);
+
+		sheet.OpenCommand.Execute(Assert.Single(sheet.Rows));
+		ui.Pump();
+
+		Assert.Empty(ui.Dialogs.Opened);
+		Assert.Contains("won't open it", sheet.Error);
+	}
+
+	[AvaloniaFact]
 	public void AddDocument_ChoosesKindAndTitle_AndKeepsACopy()
 	{
 		(UiSession ui, AssessmentEditorViewModel editor) = WithEditor();

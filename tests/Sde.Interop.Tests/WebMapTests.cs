@@ -91,6 +91,10 @@ public class WebMapTests
 	[InlineData("7", "Elm", "0 block of Elm")]
 	[InlineData("12B", "Oak", "0 block of Oak")]
 	[InlineData(null, "Oak", "Oak")]
+	[InlineData(null, "123 River St", "100 block of River St")]
+	[InlineData("", "123A River St", "100 block of River St")]
+	[InlineData("123", "123 River St", "100 block of River St")]
+	[InlineData("Unit 4", "1st Ave", "1st Ave")]
 	public void Block_CutsTheNumberToItsHundred(string number, string street, string expected)
 	{
 		Assert.Equal(expected, WebMapExport.Block(new PropertyRecord { StreetNumber = number, StreetName = street }, null));

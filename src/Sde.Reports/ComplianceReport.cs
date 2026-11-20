@@ -135,7 +135,7 @@ public static class ComplianceReport
 		renderer.RenderDocument();
 		using MemoryStream buffer = new MemoryStream();
 		renderer.PdfDocument.Save(buffer, false);
-		File.WriteAllBytes(path, buffer.ToArray());
+		File.WriteAllBytes(path, buffer.GetBuffer().AsSpan(0, (int)buffer.Length));
 	}
 
 	private static Document Build(IReadOnlyList<ComplianceRow> rows, ComplianceReportOptions o)

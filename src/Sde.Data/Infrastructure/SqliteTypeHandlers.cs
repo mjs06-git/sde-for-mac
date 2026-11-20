@@ -46,7 +46,9 @@ internal static class SqliteTypeHandlers
 		public override decimal Parse(object value) => value switch
 		{
 			decimal d => d,
-			double d => Convert.ToDecimal(d),
+			// A value an import stored near decimal's limit comes back as a double just past it: clamp, so one row
+			// can't make every structure unreadable.
+			double d => double.IsNaN(d) ? 0m : d >= (double)decimal.MaxValue ? decimal.MaxValue : d <= (double)decimal.MinValue ? decimal.MinValue : Convert.ToDecimal(d),
 			long l => l,
 			string s => decimal.Parse(s, NumberStyles.Number | NumberStyles.AllowExponent, CultureInfo.InvariantCulture),
 			_ => Convert.ToDecimal(value, CultureInfo.InvariantCulture),

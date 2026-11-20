@@ -168,9 +168,16 @@ public static class DepthSurface
 			Parallel.For(0, height, row =>
 			{
 				double lat = north - (row + 0.5) * dy;
+				// A mark further north or south than the radius is out of range of the whole row (the distance is never
+				// less than the north-south distance), so leave it out; the order of the rest, which settles ties, is kept.
+				List<HighWaterMark> rowMarks = near.Where(m => Math.Abs(m.Latitude - lat) * GeoMath.MetersPerDegreeLatitude <= o.RadiusMeters + 1).ToList();
+				if (rowMarks.Count == 0)
+				{
+					return;
+				}
 				for (int col = 0; col < width; col++)
 				{
-					WaterSurfaceEstimate e = HighWaterMarks.Estimate(near, lat, west + (col + 0.5) * dx, o);
+					WaterSurfaceEstimate e = HighWaterMarks.Estimate(rowMarks, lat, west + (col + 0.5) * dx, o);
 					if (e.ElevationFt is decimal ft)
 					{
 						elevation[row * width + col] = (float)ft;

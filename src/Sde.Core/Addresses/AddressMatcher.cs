@@ -48,6 +48,8 @@ public sealed class AddressMatcher
 
 	private static readonly Regex HouseNumber = new(@"^\d+[a-z]?$", RegexOptions.CultureInvariant);
 
+	private static readonly Regex NotWord = new(@"[^\p{L}\p{N}]+");
+
 	private readonly Dictionary<string, int> _suffixes = new(StringComparer.Ordinal);
 
 	public AddressMatcher(ReferenceData reference, bool matchUnit = false)
@@ -143,7 +145,7 @@ public sealed class AddressMatcher
 
 	/// <summary>Lower-case words of letters and digits, with "#" read as a unit ("N. Main St., #4" → n, main, st, unit, 4).</summary>
 	private static List<string> Tokens(string text) =>
-		Regex.Split((text ?? "").Replace("#", " unit ").ToLowerInvariant(), @"[^\p{L}\p{N}]+").Where(t => t.Length > 0).ToList();
+		NotWord.Split((text ?? "").Replace("#", " unit ").ToLowerInvariant()).Where(t => t.Length > 0).ToList();
 
 	private void Add(string text, int suffixId)
 	{

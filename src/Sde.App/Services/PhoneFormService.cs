@@ -12,15 +12,23 @@ using Sde.Field;
 
 namespace Sde.App.Services;
 
-/// <summary>Saves the phone form's changes through the write coordinator, so the editor shows them at once.</summary>
-public sealed class AppFieldWriter(AppServices app) : IFieldWriter
+/// <summary>
+/// Saves the phone form's changes through the write coordinator, so the editor shows them at once. With
+/// <paramref name="served"/>, a change that reaches the UI thread after the Mac opened another database is refused.
+/// </summary>
+public sealed class AppFieldWriter(AppServices app, Func<SdeStore> served = null) : IFieldWriter
 {
 	public Task<AssessmentFile> ApplyAsync(Guid assessmentId, Action<AssessmentFile> change, SaveContext context) =>
-		app.Writes.ApplyFromBackgroundAsync(assessmentId, change, context);
+		app.Writes.ApplyFromBackgroundAsync(assessmentId, f =>
+		{
+			EnsureSameDatabase();
+			change(f);
+		}, context);
 
 	public Task<AssessmentFile> AddAsync(AssessmentFile file, SaveContext context) =>
 		Dispatcher.UIThread.InvokeAsync(() => app.Writes.Write(Array.Empty<Guid>(), () =>
 		{
+			EnsureSameDatabase();
 			app.Store.SaveAssessment(file, context);
 			return file;
 		})).GetTask();
@@ -31,7 +39,19 @@ public sealed class AppFieldWriter(AppServices app) : IFieldWriter
 	/// edit history). Replaces the interface's default, which saved and reloaded with two extra no-change applies.
 	/// </summary>
 	public Task SetStatusAsync(Guid assessmentId, Action setStatus, SaveContext context) =>
-		Dispatcher.UIThread.InvokeAsync(() => app.Writes.Write(new[] { assessmentId }, setStatus)).GetTask();
+		Dispatcher.UIThread.InvokeAsync(() => app.Writes.Write(new[] { assessmentId }, () =>
+		{
+			EnsureSameDatabase();
+			setStatus();
+		})).GetTask();
+
+	private void EnsureSameDatabase()
+	{
+		if (served?.Invoke() is SdeStore store && !ReferenceEquals(store, app.Store))
+		{
+			throw new InvalidOperationException("Another database was opened on the Mac, so this change wasn't saved.");
+		}
+	}
 }
 
 /// <summary>HEIC to JPEG with macOS's sips (<see cref="PhotoConversion"/>); elsewhere photos are kept as they are.</summary>
@@ -68,17 +88,20 @@ public sealed partial class PhoneFormService : ObservableObject
 	private readonly FieldServer _server;
 	private readonly DispatcherTimer _timer;
 	private PairingManager _pairing;
+	// The database open when the form started: phones paired for it never reach another one.
+	private SdeStore _served;
 	private string _shownToken;
 	private Process _caffeinate;
 
 	public PhoneFormService(AppServices app)
 	{
 		_app = app;
-		_server = new FieldServer(() => _app.Store, new AppFieldWriter(app), new MacPhotoConverter());
+		_server = new FieldServer(() => _served ?? _app.Store, new AppFieldWriter(app, () => _served), new MacPhotoConverter());
 		_server.Stopped += reason => Dispatcher.UIThread.Post(() => OnStopped(reason));
 		_server.Failed += ex => AppLog.Write("Phone form request failed", ex);
 		_timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
 		_timer.Tick += (_, _) => Refresh();
+		_app.DatabaseChanged += OnDatabaseChanged;
 	}
 
 	/// <summary>The web server itself (for tests and diagnostics).</summary>
@@ -137,6 +160,7 @@ public sealed partial class PhoneFormService : ObservableObject
 		try
 		{
 			FieldServerOptions options = Options ?? new FieldServerOptions();
+			_served = _app.Store;
 			await Task.Run(() => _server.StartAsync(options));
 		}
 		catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -176,6 +200,15 @@ public sealed partial class PhoneFormService : ObservableObject
 	}
 
 	private void OnPairingChanged() => Dispatcher.UIThread.Post(Refresh);
+
+	/// <summary>Pairing is for one database: opening another stops the form, which ends every phone's session.</summary>
+	private void OnDatabaseChanged()
+	{
+		if (_server.IsRunning && !ReferenceEquals(_served, _app.Store))
+		{
+			_ = _server.StopAsync("Another database was opened, so the phone form stopped. Start it again to pair phones for this one.");
+		}
+	}
 
 	private void OnStopped(string reason)
 	{

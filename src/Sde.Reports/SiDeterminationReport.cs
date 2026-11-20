@@ -68,7 +68,7 @@ public static class SiDeterminationReport
 		}
 		using MemoryStream buffer = new MemoryStream();
 		Render(request, reference, buffer);
-		File.WriteAllBytes(path, buffer.ToArray());
+		File.WriteAllBytes(path, buffer.GetBuffer().AsSpan(0, (int)buffer.Length));
 	}
 
 	internal static Document Build(SiDeterminationRequest request, ReferenceData reference)
