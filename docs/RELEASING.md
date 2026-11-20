@@ -18,7 +18,9 @@ and press Publish.
    - `SHA256SUMS`
 5. Open the draft, read the generated notes, add anything the commit log does not say, and publish. A tag with a hyphen
    (`v3.6.0-beta1`) is marked as a pre-release.
-Re-running the workflow for the same tag replaces the files on the existing release.
+Re-running the workflow for the same tag replaces the files on the existing release while it is still a draft. A
+published release's files are never replaced: tag a new version instead. The workflow also stops when the tagged
+commit is not on `main`.
 
 ## What the workflow does
 
@@ -54,6 +56,13 @@ With the secrets below the app is signed with a Developer ID Application certifi
 The release job runs in an environment named `release`. The safest place for these secrets is that environment
 (Settings, Environments, `release`, with its deployment rule limited to tags matching `v*`), so that no other workflow,
 branch or pull request can read them. Repository secrets (Settings, Secrets and variables, Actions) work too.
+
+A pushed `v*` tag is what starts a release, and the workflow runs from the tagged commit, so its own checks can be
+edited away by whoever pushes the tag. Before adding the signing secrets, also set in GitHub:
+
+- **Required reviewers** on the `release` environment, so a person approves each run before it receives the secrets.
+- **A tag ruleset** (Settings, Rules, Rulesets) for `v*` that allows only maintainers to create tags and blocks
+  updating or deleting them, so a published release's tag can't be moved.
 
 | Secret | What it is |
 | --- | --- |

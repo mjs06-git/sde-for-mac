@@ -32,12 +32,13 @@ internal sealed class RecordingConverter : IPhotoConverter
 /// <summary>A database with one structure, the phone form running on 127.0.0.1, and a "phone" (an HttpClient with cookies).</summary>
 internal sealed class PhoneSession : IAsyncDisposable
 {
-	public PhoneSession(TimeSpan? lifetime = null)
+	public PhoneSession(TimeSpan? lifetime = null, Func<IFieldWriter, IFieldWriter> writer = null)
 	{
 		Db = new TempDatabase();
 		PropertyRecord p = Db.Store.SaveProperty(new PropertyRecord { StructureTypeID = 1, StreetNumber = "101", StreetName = "Sample Road", City = "Testville", ParcelNumber = "P-0001" });
 		Assessment = Db.Store.CreateAssessment(p.PropertyID, applyDefaults: false);
-		Server = new FieldServer(() => Db.Store, new DirectFieldWriter(() => Db.Store), Converter);
+		IFieldWriter direct = new DirectFieldWriter(() => Db.Store);
+		Server = new FieldServer(() => Db.Store, writer?.Invoke(direct) ?? direct, Converter);
 		Server.Start(new FieldServerOptions
 		{
 			BindAddress = IPAddress.Loopback,
@@ -485,6 +486,82 @@ public class FieldServerTests
 		string reason = await stopped.Task.WaitAsync(TimeSpan.FromSeconds(15), Ct);
 		Assert.Contains("12 hours", reason);
 		Assert.False(s.Server.IsRunning);
+	}
+
+	[Fact]
+	public async Task Server_RefusesEveryRequestPastItsTime_EvenIfTheTimerIsLate()
+	{
+		await using PhoneSession s = new PhoneSession();
+		await s.PairAsync();
+		TaskCompletionSource<string> stopped = new TaskCompletionSource<string>();
+		s.Server.Stopped += r => stopped.TrySetResult(r);
+		// The Mac slept through the timer: the clock is past the stop time, the timer hasn't fired.
+		s.Now += TimeSpan.FromHours(13);
+
+		HttpResponseMessage late = await s.Client.GetAsync("/api/session", Ct);
+
+		Assert.Equal(HttpStatusCode.ServiceUnavailable, late.StatusCode);
+		Assert.Contains("12 hours", await stopped.Task.WaitAsync(TimeSpan.FromSeconds(15), Ct));
+		Assert.False(s.Server.IsRunning);
+	}
+
+	[Fact]
+	public async Task OnePhone_CantQueueMoreChangesThanThePageSends()
+	{
+		TaskCompletionSource release = new TaskCompletionSource();
+		GatedWriter gated = null;
+		await using PhoneSession s = new PhoneSession(writer: inner => gated = new GatedWriter(inner, release.Task));
+		await s.PairAsync();
+
+		Task<HttpResponseMessage> first = s.Change("Assessment.InspectorName", "One");
+		Task<HttpResponseMessage> second = s.Change("Assessment.InspectorName", "Two");
+		await gated.BothWaiting.Task.WaitAsync(TimeSpan.FromSeconds(15), Ct);
+		HttpResponseMessage third = await s.Change("Assessment.InspectorName", "Three");
+		release.SetResult();
+
+		Assert.Equal((HttpStatusCode)429, third.StatusCode);
+		Assert.Equal(HttpStatusCode.OK, (await first).StatusCode);
+		Assert.Equal(HttpStatusCode.OK, (await second).StatusCode);
+		Assert.Equal(HttpStatusCode.OK, (await s.Change("Assessment.InspectorName", "Four")).StatusCode);
+	}
+
+	/// <summary>Holds every change until released, and says when two are waiting.</summary>
+	private sealed class GatedWriter(IFieldWriter inner, Task release) : IFieldWriter
+	{
+		private int _waiting;
+
+		public TaskCompletionSource BothWaiting { get; } = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+		public async Task<AssessmentFile> ApplyAsync(Guid assessmentId, Action<AssessmentFile> change, SaveContext context)
+		{
+			if (Interlocked.Increment(ref _waiting) == FieldServer.MaxChangesPerPhone)
+			{
+				BothWaiting.TrySetResult();
+			}
+			await release;
+			return await inner.ApplyAsync(assessmentId, change, context);
+		}
+
+		public Task<AssessmentFile> AddAsync(AssessmentFile file, SaveContext context) => inner.AddAsync(file, context);
+	}
+
+	[Fact]
+	public void APhotoDeclaringAHugePicture_IsRefused()
+	{
+		// A 1×1 JPEG frame header, then the same file declaring 60000×60000 (3.6 billion pixels).
+		byte[] small = PhoneSession.Jpeg(256);
+		using MemoryStream ok = new MemoryStream(small);
+		Assert.Equal(".jpg", PhotoUpload.Detect(ok));
+		byte[] huge = (byte[])small.Clone();
+		const int sof = 25;   // the frame header's height and width, after FF C0, its length and the precision
+		huge[sof] = 0xEA; huge[sof + 1] = 0x60; huge[sof + 2] = 0xEA; huge[sof + 3] = 0x60;
+		using MemoryStream bad = new MemoryStream(huge);
+		Assert.Null(PhotoUpload.Detect(bad));
+
+		byte[] png = new byte[64];
+		new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13, (byte)'I', (byte)'H', (byte)'D', (byte)'R', 0, 1, 0, 0, 0, 1, 0, 0 }.CopyTo(png, 0);
+		using MemoryStream bigPng = new MemoryStream(png);
+		Assert.Null(PhotoUpload.Detect(bigPng));   // 65536×65536
 	}
 
 	// ───────────────────────── Damage by element ─────────────────────────

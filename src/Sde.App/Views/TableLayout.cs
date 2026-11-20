@@ -41,7 +41,7 @@ public static class TableLayout
 
 	public static void SetKey(DataGrid grid, string value) => grid.SetValue(KeyProperty, value);
 
-	private static MainViewModel Main(DataGrid grid) => TopLevel.GetTopLevel(grid)?.DataContext as MainViewModel;
+	private static MainViewModel MainOf(DataGrid grid) => TopLevel.GetTopLevel(grid)?.DataContext as MainViewModel;
 
 	private static void OnAttached(object sender, VisualTreeAttachmentEventArgs e) => Restore((DataGrid)sender);
 
@@ -70,7 +70,7 @@ public static class TableLayout
 	/// <summary>Puts the remembered widths back (columns not remembered keep the view's width).</summary>
 	public static void Restore(DataGrid grid)
 	{
-		MainViewModel main = Main(grid);
+		MainViewModel main = MainOf(grid);
 		string table = GetKey(grid);
 		if (main == null || table == null)
 		{
@@ -92,7 +92,7 @@ public static class TableLayout
 	/// <summary>Keeps the widths that differ from the view's.</summary>
 	public static void Remember(DataGrid grid)
 	{
-		MainViewModel main = Main(grid);
+		MainViewModel main = MainOf(grid);
 		string table = GetKey(grid);
 		if (main == null || table == null)
 		{

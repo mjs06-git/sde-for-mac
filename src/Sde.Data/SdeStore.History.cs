@@ -26,12 +26,12 @@ public sealed partial class SdeStore
 	/// Nothing is written when nothing changed, so viewing an assessment never moves its LastUpdate; a locked assessment
 	/// that hasn't changed isn't written either, so its lock stays valid. The caller has already recalculated it. With
 	/// <paramref name="shapes"/>, the structure's square-footage shapes are replaced too. Returns the versions after
-	/// the save.
+	/// the save. <paramref name="stored"/> is the stored copy when the caller has just read it in this transaction.
 	/// </summary>
-	internal VersionStamp SaveTracked(IDbConnection c, IDbTransaction tx, AssessmentFile file, SaveContext ctx, IReadOnlyList<ShapeRecord> shapes = null)
+	internal VersionStamp SaveTracked(IDbConnection c, IDbTransaction tx, AssessmentFile file, SaveContext ctx, IReadOnlyList<ShapeRecord> shapes = null, AssessmentFile stored = null)
 	{
 		Guid id = file.Assessment.AssessmentID;
-		AssessmentFile before = id == Guid.Empty ? null : LoadAssessment(c, tx, id);
+		AssessmentFile before = id == Guid.Empty ? null : stored ?? LoadAssessment(c, tx, id);
 		PropertyRecord storedProperty = before?.Property
 			?? (file.Property.PropertyID == Guid.Empty ? null : TableMap<PropertyRecord>.Get(c, new { file.Property.PropertyID }, tx));
 		CheckExpected(c, tx, id, before != null, file.Property.PropertyID, storedProperty != null, ctx);

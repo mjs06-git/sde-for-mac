@@ -228,6 +228,12 @@ public sealed class PlanningEditToolTests
 		Assert.Contains("checked out to Team 1", await s.CallErrorAsync("assign_to_team", new { team = "South", structures = new[] { c.Id().ToString() }, alsoSetFemaTeamName = true }));
 		s.Store.TrashProperty(a.Property.PropertyID);
 		Assert.Contains("Recently deleted", await s.CallErrorAsync("assign_to_team", new { team = "South", structures = new[] { a.Property.PropertyID.ToString() } }));
+
+		// FEMA's Team name is one of the structure's own fields: not set while an assessment of it is Final.
+		AssessmentFile final = SampleCases.RanchFlood(s.Store);
+		s.Store.SetStatus(final.Id(), AssessmentStatus.Final);
+		Assert.Contains("Final", await s.CallErrorAsync("assign_to_team", new { team = "South", structures = new[] { final.Id().ToString() }, alsoSetFemaTeamName = true }));
+		Assert.Null(s.Store.GetProperty(final.Property.PropertyID).TeamName);
 	}
 
 	[Fact]

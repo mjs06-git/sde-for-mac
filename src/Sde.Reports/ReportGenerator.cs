@@ -40,7 +40,7 @@ public static class ReportGenerator
 		}
 		using MemoryStream buffer = new MemoryStream();
 		Render(request, reference, buffer);
-		File.WriteAllBytes(path, buffer.ToArray());
+		File.WriteAllBytes(path, buffer.GetBuffer().AsSpan(0, (int)buffer.Length));
 	}
 
 	/// <summary>The report title (PDF metadata; also a sensible default file name).</summary>
@@ -60,7 +60,7 @@ public static class ReportGenerator
 			.Where(f => f != null)
 			.Select(f => new AssessmentView(f, reference))
 			.ToList();
-		PhotoLibrary photos = new PhotoLibrary(request.PhotosFolder, request.PhotoMarkups);
+		PhotoLibrary photos = request.Photos ?? new PhotoLibrary(request.PhotosFolder, request.PhotoMarkups);
 		Document doc = Theme.NewDocument(Title(request.Kind), $"{items.Count} assessment(s)");
 
 		if (items.Count == 0)

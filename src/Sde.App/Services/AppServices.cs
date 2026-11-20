@@ -491,6 +491,8 @@ public sealed class AppServices
 	public void RestoreBackup(BackupInfo backup)
 	{
 		string path = Store.Database.FilePath;
+		// The AI edits switch is a choice about the database now, not part of its data: a restore keeps it as it is.
+		bool allowEdits = Sde.Mcp.AiAssistantSettings.AllowEdits(Store);
 		OpeningBackup.Wait(TimeSpan.FromSeconds(30));
 		Watcher?.Dispose();
 		Watcher = null;
@@ -504,6 +506,10 @@ public sealed class AppServices
 			throw;
 		}
 		Open(path);
+		if (Sde.Mcp.AiAssistantSettings.AllowEdits(Store) != allowEdits)
+		{
+			Sde.Mcp.AiAssistantSettings.SetAllowEdits(Store, allowEdits);
+		}
 	}
 
 	/// <summary>

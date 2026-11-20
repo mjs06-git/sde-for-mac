@@ -34,7 +34,7 @@ public class AiAssistantsUiTests
 		await ai.CopyClaudeCodeCommand.ExecuteAsync(null);
 		await ai.CopyClaudeDesktopCommand.ExecuteAsync(null);
 		Assert.Equal(2, ui.Dialogs.Copied.Count);
-		Assert.StartsWith("claude mcp add sde -- \"/Applications/SDE.app/Contents/MacOS/SDE\" mcp --db \"", ui.Dialogs.Copied[0]);
+		Assert.StartsWith("claude mcp add sde -- '/Applications/SDE.app/Contents/MacOS/SDE' mcp --db '", ui.Dialogs.Copied[0]);
 		Assert.Contains(ui.Store.Database.FilePath, ui.Dialogs.Copied[0]);
 		Assert.Contains("\"mcpServers\"", ui.Dialogs.Copied[1]);
 		Assert.False(ai.HasTranslocationWarning);

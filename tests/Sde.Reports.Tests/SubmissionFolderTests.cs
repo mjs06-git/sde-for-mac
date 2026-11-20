@@ -269,6 +269,20 @@ public class SubmissionFolderTests : IDisposable
 	}
 
 	[Fact]
+	public void AStoredLetterPathToAnotherKindOfFile_IsNeverCopied()
+	{
+		var s = Sample();
+		AddExtras(s.Ranch, s.Office);
+		string elsewhere = Path.Combine(_db.Folder, "someone else's.sqlite");
+		File.WriteAllText(elsewhere, "not a letter");
+		Store.AddLetters(new[] { new LetterLogRecord { AssessmentID = s.Office.Assessment.AssessmentID, Kind = "Substantial damage", FileName = elsewhere } });
+		SubmissionResult result = SubmissionFolder.Write(Store, Ids(s.Ranch, s.Office), Out, new SubmissionOptions { GeneratedOn = At, IncludeLetters = true });
+
+		Assert.Contains(result.Warnings, w => w.Contains("400 Front Street") && w.Contains("isn't a Word letter"));
+		Assert.Equal(new[] { "BLD-2026-00123 – 123 River Street – Substantial damage.docx" }, Directory.GetFiles(Path.Combine(result.Folder, "Letters")).Select(Path.GetFileName));
+	}
+
+	[Fact]
 	public void ALinkedFile_IsNeverFollowed()
 	{
 		if (OperatingSystem.IsWindows())

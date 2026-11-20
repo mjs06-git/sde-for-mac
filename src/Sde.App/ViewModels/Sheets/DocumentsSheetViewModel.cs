@@ -245,6 +245,12 @@ public sealed partial class DocumentsSheetViewModel : SheetViewModel
 			Error = $"The file for {row.Title} is missing from the documents folder.";
 			return;
 		}
+		// The stored name can come from a work package or import: never hand the Mac a script or app to run.
+		if (!Extensions.Contains(Path.GetExtension(path).ToLowerInvariant()))
+		{
+			Error = $"{row.Title} isn't a PDF, picture or office file, so SDE won't open it. Use Show in Finder to look at it.";
+			return;
+		}
 		_app.Dialogs.Open(path);
 	}
 

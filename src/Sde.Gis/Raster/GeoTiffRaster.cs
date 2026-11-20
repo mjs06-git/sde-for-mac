@@ -299,8 +299,11 @@ public sealed class GeoTiffRaster : IDisposable
 	{
 		if (_blocks.TryGetValue(key, out double[] cached))
 		{
-			_recent.Remove(key);
-			_recent.AddFirst(key);
+			if (_recent.First.Value != key)   // usually the block just read: skip the search
+			{
+				_recent.Remove(key);
+				_recent.AddFirst(key);
+			}
 			return cached;
 		}
 		int size = _tiled ? _tiff.TileSize() : _tiff.StripSize();

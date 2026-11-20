@@ -228,7 +228,7 @@ public class DateField : TextBox
 	}
 
 	/// <summary>Empties the field (the clear button).</summary>
-	public void Clear()
+	public new void Clear()
 	{
 		HasError = false;
 		SetDate(null);

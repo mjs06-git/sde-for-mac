@@ -99,11 +99,9 @@ internal static class StaffGauge
 			canvas.DrawLine(mx, MarkTop, mx, MarkBottom, mark);
 		}
 
-		using SKTypeface regular = Typeface("PublicSans-Regular");
-		using SKTypeface semiBold = Typeface("PublicSans-SemiBold");
-		Label(canvas, "0", X(0), regular, Theme.Muted);
-		Label(canvas, threshold.ToString("0.##", Fmt.Us) + "%", mx, semiBold, Theme.Ink);
-		Label(canvas, "100%", X(100), regular, Theme.Muted);
+		Label(canvas, "0", X(0), Regular.Value, Theme.Muted);
+		Label(canvas, threshold.ToString("0.##", Fmt.Us) + "%", mx, SemiBold.Value, Theme.Ink);
+		Label(canvas, "100%", X(100), Regular.Value, Theme.Muted);
 	}
 
 	/// <summary>A label centred on <paramref name="x"/>, drawn as letter outlines (not text).</summary>
@@ -115,6 +113,10 @@ internal static class StaffGauge
 		using SKPaint fill = new SKPaint { Color = Sk(color), IsAntialias = true };
 		canvas.DrawPath(path, fill);
 	}
+
+	// Parsed once and kept: a submission draws hundreds of gauges with the same two faces.
+	private static readonly Lazy<SKTypeface> Regular = new(() => Typeface("PublicSans-Regular"));
+	private static readonly Lazy<SKTypeface> SemiBold = new(() => Typeface("PublicSans-SemiBold"));
 
 	private static SKTypeface Typeface(string face)
 	{

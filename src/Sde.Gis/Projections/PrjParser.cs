@@ -370,8 +370,12 @@ internal sealed class WktNode
 	/// <summary>Parses WKT. Throws <see cref="FormatException"/> when the text isn't well formed.</summary>
 	public static WktNode Parse(string text)
 	{
+		if (text.Length > MaxLength)
+		{
+			throw new FormatException($"The text is longer than {MaxLength} characters.");
+		}
 		int pos = 0;
-		WktNode node = ReadNode(text, ref pos);
+		WktNode node = ReadNode(text, ref pos, 0);
 		SkipSpace(text, ref pos);
 		if (pos < text.Length)
 		{
@@ -380,8 +384,17 @@ internal sealed class WktNode
 		return node;
 	}
 
-	private static WktNode ReadNode(string s, ref int pos)
+	// Real coordinate systems nest a few levels and run to a few kilobytes; a file nesting deeper would overflow the
+	// stack, which ends the app rather than throwing.
+	private const int MaxDepth = 32;
+	private const int MaxLength = 64 * 1024;
+
+	private static WktNode ReadNode(string s, ref int pos, int depth)
 	{
+		if (depth > MaxDepth)
+		{
+			throw new FormatException($"The text nests more than {MaxDepth} levels deep.");
+		}
 		SkipSpace(s, ref pos);
 		string keyword = ReadWord(s, ref pos);
 		if (keyword.Length == 0)
@@ -425,7 +438,7 @@ internal sealed class WktNode
 				if (pos < s.Length && (s[pos] == '[' || s[pos] == '('))
 				{
 					pos = start;
-					node.Items.Add(ReadNode(s, ref pos));
+					node.Items.Add(ReadNode(s, ref pos, depth + 1));
 				}
 				else
 				{

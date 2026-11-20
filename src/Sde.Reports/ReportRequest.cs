@@ -33,4 +33,7 @@ public sealed class ReportRequest
 
 	/// <summary>Markup JSON by photo file name (see <c>SdeStore.GetPhotoMarkups</c>), drawn on the printed photos. Null: none.</summary>
 	public IReadOnlyDictionary<string, string> PhotoMarkups { get; init; }
+
+	/// <summary>Prepared photos shared by several reports made in one go, so each photo is prepared once. Null: this report's own.</summary>
+	internal Internal.PhotoLibrary Photos { get; init; }
 }

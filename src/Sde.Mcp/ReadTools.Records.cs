@@ -153,7 +153,12 @@ public sealed partial class ReadTools
 		{
 			throw new McpException($"\"{Describe.Shorten(caseId, 60)}\" isn't a compliance case ID. list_compliance_cases lists the cases and their IDs.");
 		}
-		return store.GetComplianceCase(id) ?? throw new McpException($"There's no compliance case {id} in this database. list_compliance_cases lists the cases.");
+		ComplianceCaseRecord c = store.GetComplianceCase(id) ?? throw new McpException($"There's no compliance case {id} in this database. list_compliance_cases lists the cases.");
+		if (!store.GetActiveComplianceCases().Any(a => a.CaseID == id))
+		{
+			throw new McpException($"Compliance case {id} belongs to a structure or assessment in Recently deleted in SDE, so it can't be used here.");
+		}
+		return c;
 	}
 
 	/// <summary>

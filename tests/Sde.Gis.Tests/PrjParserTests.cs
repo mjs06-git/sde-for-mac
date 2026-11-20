@@ -165,4 +165,13 @@ public class PrjParserTests
 			Assert.Equal(y1, y2, 1e-6);
 		}
 	}
+
+	[Fact]
+	public void DeeplyNestedOrHugeText_IsRefused_NotAStackOverflow()
+	{
+		string deep = string.Concat(Enumerable.Repeat("A[", 100_000)) + string.Concat(Enumerable.Repeat("]", 100_000));
+		Assert.Throws<UnsupportedCoordinateSystemException>(() => PrjParser.Parse(deep));
+		string nested = string.Concat(Enumerable.Repeat("A[", 1_000)) + string.Concat(Enumerable.Repeat("]", 1_000));
+		Assert.Throws<UnsupportedCoordinateSystemException>(() => PrjParser.Parse(nested));
+	}
 }

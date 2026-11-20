@@ -95,6 +95,7 @@ public static class DepthFromMarks
 		FieldInfo floodField = FieldCatalog.Get(DepthProposal.DepthOfFloodKey);
 		FieldInfo aboveField = FieldCatalog.Get(DepthProposal.DepthAboveFloorKey);
 		Dictionary<Guid, decimal?> offsets = new();
+		Dictionary<Guid, Guid> eventOf = null;   // read once, when the first row needs it
 		List<DepthRow> rows = new();
 		foreach (AssessmentFile f in store.LoadAssessments(assessmentIds))
 		{
@@ -113,7 +114,7 @@ public static class DepthFromMarks
 			else
 			{
 				estimate = estimateAt((double)lat, (double)lon);
-				proposal = HighWaterMarks.Propose(estimate, f.Property, datumOffsetFt ?? EventOffset(store, f.Assessment.AssessmentID, offsets));
+				proposal = HighWaterMarks.Propose(estimate, f.Property, datumOffsetFt ?? EventOffset(store, f.Assessment.AssessmentID, eventOf ??= store.GetEventMemberships(), offsets));
 				if (!proposal.CanApply)
 				{
 					skipped = proposal.Notes.FirstOrDefault() ?? estimate.Note ?? "No estimate.";
@@ -165,9 +166,9 @@ public static class DepthFromMarks
 		return result;
 	}
 
-	private static decimal? EventOffset(SdeStore store, Guid assessmentId, Dictionary<Guid, decimal?> cache)
+	private static decimal? EventOffset(SdeStore store, Guid assessmentId, Dictionary<Guid, Guid> eventOf, Dictionary<Guid, decimal?> cache)
 	{
-		if (store.GetEventOf(assessmentId) is not Guid eventId)
+		if (!eventOf.TryGetValue(assessmentId, out Guid eventId))
 		{
 			return null;
 		}

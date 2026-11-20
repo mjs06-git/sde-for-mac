@@ -13,6 +13,13 @@ internal sealed class PropertyRowParser
 	private readonly EnterpriseMapping _m;
 	private readonly ReferenceData _ref;
 
+	// What each distinct text resolved to: a column holds the same few values on thousands of rows, and each look-up
+	// otherwise searches the whole lookup or county table. Warnings are still added for every row.
+	private readonly Dictionary<string, int?> _suffixes = new(StringComparer.Ordinal);
+	private readonly Dictionary<string, StateRecord> _states = new(StringComparer.Ordinal);
+	private readonly Dictionary<(int, string), CountyRecord> _counties = new();
+	private readonly Dictionary<(int, string), LookupRecord> _lookups = new();
+
 	public PropertyRowParser(EnterpriseMapping mapping, ReferenceData reference)
 	{
 		_m = mapping;
@@ -229,6 +236,16 @@ internal sealed class PropertyRowParser
 	/// </summary>
 	private int? StreetSuffix(string text)
 	{
+		if (!_suffixes.TryGetValue(text ?? "", out int? id))
+		{
+			id = FindStreetSuffix(text);
+			_suffixes[text ?? ""] = id;
+		}
+		return id;
+	}
+
+	private int? FindStreetSuffix(string text)
+	{
 		string s = text?.Trim().TrimEnd('.');
 		if (string.IsNullOrEmpty(s))
 		{
@@ -262,7 +279,11 @@ internal sealed class PropertyRowParser
 			}
 			return;
 		}
-		StateRecord s = _ref.States.FirstOrDefault(x => Same(x.State, state) || Same(x.StateAbb, state));
+		if (!_states.TryGetValue(state, out StateRecord s))
+		{
+			s = _ref.States.FirstOrDefault(x => Same(x.State, state) || Same(x.StateAbb, state));
+			_states[state] = s;
+		}
 		if (s == null)
 		{
 			warn.Add($"State '{state}' is not recognised");
@@ -277,9 +298,13 @@ internal sealed class PropertyRowParser
 		{
 			return;
 		}
-		string bare = System.Text.RegularExpressions.Regex.Replace(county, @"\s+(County|Parish|Borough|Census Area|Municipality)$", "",
-			System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-		CountyRecord c = _ref.Counties.FirstOrDefault(x => x.StateID == s.StateID && (Same(x.County, county) || Same(x.County, bare)));
+		if (!_counties.TryGetValue((s.StateID, county), out CountyRecord c))
+		{
+			string bare = System.Text.RegularExpressions.Regex.Replace(county, @"\s+(County|Parish|Borough|Census Area|Municipality)$", "",
+				System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+			c = _ref.Counties.FirstOrDefault(x => x.StateID == s.StateID && (Same(x.County, county) || Same(x.County, bare)));
+			_counties[(s.StateID, county)] = c;
+		}
 		if (c == null)
 		{
 			warn.Add($"County '{county}' is not a county of {s.State}");
@@ -320,7 +345,11 @@ internal sealed class PropertyRowParser
 		{
 			return null;
 		}
-		LookupRecord l = _ref.Lookups.FirstOrDefault(x => x.LookupTypeID == lookupType && Same(x.LookupFieldName, text));
+		if (!_lookups.TryGetValue((lookupType, text), out LookupRecord l))
+		{
+			l = _ref.Lookups.FirstOrDefault(x => x.LookupTypeID == lookupType && Same(x.LookupFieldName, text));
+			_lookups[(lookupType, text)] = l;
+		}
 		if (l == null)
 		{
 			warn.Add($"{EnterpriseImport.Label(field)} '{text}' is not recognised");

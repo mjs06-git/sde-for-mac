@@ -9,12 +9,19 @@ public static class PhotoUpload
 	/// <summary>The largest photo accepted (25 MB).</summary>
 	public const long MaxBytes = 25L * 1024 * 1024;
 
+	/// <summary>
+	/// The largest picture accepted, in pixels: well above a phone camera's 48 megapixels, and small enough that
+	/// decoding it for a thumbnail or report can't run the Mac out of memory (a small file can declare any size).
+	/// </summary>
+	public const long MaxPixels = 100_000_000;
+
 	private static readonly string[] HeifBrands = { "heic", "heix", "hevc", "hevx", "heim", "heis", "mif1", "msf1" };
 
 	/// <summary>
 	/// The extension to store a photo under (".jpg", ".png" or ".heic"), or null when it isn't one. The first bytes say
 	/// which kind the file claims to be; a JPEG or PNG must then also describe a picture with a width and height in its
-	/// own structure, so a file that only starts like one is refused (a HEIC is checked when the Mac converts it).
+	/// own structure no larger than <see cref="MaxPixels"/>, so a file that only starts like one is refused (a HEIC is
+	/// checked when the Mac converts it).
 	/// <paramref name="s"/> must be seekable.
 	/// </summary>
 	public static string Detect(Stream s)
@@ -65,7 +72,7 @@ public static class PhotoUpload
 				s.ReadByte();   // sample precision
 				int height = ReadUInt16(s);
 				int width = ReadUInt16(s);
-				return length >= 8 && height > 0 && width > 0;
+				return length >= 8 && height > 0 && width > 0 && (long)width * height <= MaxPixels;
 			}
 			s.Position += length - 2;
 		}
@@ -78,7 +85,8 @@ public static class PhotoUpload
 		&& BinaryPrimitives.ReadUInt32BigEndian(head[8..12]) == 13
 		&& Encoding.ASCII.GetString(head[12..16]) == "IHDR"
 		&& BinaryPrimitives.ReadUInt32BigEndian(head[16..20]) > 0
-		&& BinaryPrimitives.ReadUInt32BigEndian(head[20..24]) > 0;
+		&& BinaryPrimitives.ReadUInt32BigEndian(head[20..24]) > 0
+		&& (ulong)BinaryPrimitives.ReadUInt32BigEndian(head[16..20]) * BinaryPrimitives.ReadUInt32BigEndian(head[20..24]) <= MaxPixels;
 
 	private static int ReadUInt16(Stream s)
 	{

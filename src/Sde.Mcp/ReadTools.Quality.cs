@@ -174,7 +174,8 @@ public sealed partial class ReadTools
 		page = Math.Max(page, 1);
 
 		DateTime today = store.Clock().Date;
-		List<ComplianceRow> rows = ComplianceReport.Rows(store, today).Where(r =>
+		// Only cases of structures that aren't in Recently deleted, as the Compliance page shows them.
+		List<ComplianceRow> rows = ComplianceReport.Rows(store, today, store.GetActiveComplianceCases()).Where(r =>
 		{
 			ComplianceCaseRecord c = r.Case;
 			return (wantOpen == null || c.IsOpen == wantOpen)

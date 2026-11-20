@@ -69,7 +69,8 @@ public static class SdeExchangeFolder
 			{
 				continue;
 			}
-			string source = Path.Combine(attachmentsFolder ?? "", a.FileName);
+			// The stored name can come from a database made elsewhere: only ever a file in the attachments folder.
+			string source = Path.Combine(attachmentsFolder ?? "", Path.GetFileName(a.FileName));
 			if (File.Exists(source))
 			{
 				File.Copy(source, Path.Combine(photos, Path.GetFileName(a.FileName)), overwrite: true);

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Sde.Core;
 using Sde.Core.Assessments;
 using Sde.Core.Events;
@@ -203,19 +204,30 @@ public static class WebMapExport
 		return Encoding.UTF8.GetString(buffer.ToArray());
 	}
 
-	/// <summary>"100 block of River St" for 123 River St; null without a street.</summary>
+	/// <summary>
+	/// "100 block of River St" for 123 River St; null without a street. A house number kept at the start of the street
+	/// name ("123 River St", as some imports store it) is cut to the block too, never published.
+	/// </summary>
 	public static string Block(PropertyRecord p, ReferenceData reference)
 	{
-		string street = Text.Join(p.StreetName, reference?.LookupName(p.StreetSuffixID));
+		Match inName = NumberInStreetName.Match(p.StreetName ?? "");
+		string street = Text.Join(inName.Success ? inName.Groups[2].Value : p.StreetName, reference?.LookupName(p.StreetSuffixID));
 		if (string.IsNullOrWhiteSpace(street))
 		{
 			return null;
 		}
 		string digits = new string((p.StreetNumber ?? "").TakeWhile(char.IsDigit).ToArray());
+		if (digits.Length == 0 && inName.Success)
+		{
+			digits = inName.Groups[1].Value;
+		}
 		return long.TryParse(digits, NumberStyles.Integer, CultureInfo.InvariantCulture, out long number)
 			? $"{number / 100 * 100} block of {street}"
 			: street;
 	}
+
+	// "123 River St" or "123A River St", but not "1st Ave".
+	private static readonly Regex NumberInStreetName = new Regex(@"^\s*(\d+)[A-Za-z]?\s+(\S.*)$", RegexOptions.CultureInvariant);
 
 	private static void Point(Utf8JsonWriter w, double lon, double lat, DeterminationClass c, int count, string popup)
 	{

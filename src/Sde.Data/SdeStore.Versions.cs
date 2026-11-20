@@ -98,6 +98,21 @@ public sealed partial class SdeStore
 		return propertyId == null ? null : GetStamp(c, null, assessmentId, propertyId.Value);
 	});
 
+	/// <summary>The versions of several assessments, over one connection; IDs that don't exist are left out.</summary>
+	public Dictionary<Guid, VersionStamp> GetStamps(IEnumerable<Guid> assessmentIds) => Database.Read(c =>
+	{
+		Dictionary<Guid, VersionStamp> stamps = new Dictionary<Guid, VersionStamp>();
+		foreach (Guid assessmentId in assessmentIds.Distinct())
+		{
+			Guid? propertyId = c.ExecuteScalar<Guid?>("SELECT PropertyID FROM Assessment WHERE AssessmentID = @assessmentId", new { assessmentId });
+			if (propertyId != null)
+			{
+				stamps[assessmentId] = GetStamp(c, null, assessmentId, propertyId.Value);
+			}
+		}
+		return stamps;
+	});
+
 	internal static VersionStamp GetStamp(IDbConnection c, IDbTransaction tx, Guid assessmentId, Guid propertyId) => new VersionStamp(
 		GetVersion(c, tx, assessmentId),
 		GetVersion(c, tx, propertyId),

@@ -158,6 +158,22 @@ public class DataSafetyUiTests
 	}
 
 	[AvaloniaFact]
+	public async Task RestoringABackup_KeepsTheAiEditsSwitchAsItIs()
+	{
+		using UiSession ui = new UiSession();
+		ui.Services.Open(Path.Combine(ui.Folder, "event.sqlite"));
+		await ui.Services.OpeningBackup;
+		Sde.Mcp.AiAssistantSettings.SetAllowEdits(ui.Store, true);
+		Sde.Data.BackupInfo before = ui.Services.Backups.BackUp("before AI edits");
+		// Turned off after the backup was made: restoring it doesn't turn AI edits back on.
+		Sde.Mcp.AiAssistantSettings.SetAllowEdits(ui.Store, false);
+
+		ui.Services.RestoreBackup(before);
+
+		Assert.False(Sde.Mcp.AiAssistantSettings.AllowEdits(ui.Store));
+	}
+
+	[AvaloniaFact]
 	public async Task MoveTheDatabase_TakesItsPhotos_AndOpensItThere()
 	{
 		if (OperatingSystem.IsWindows())

@@ -34,7 +34,7 @@ public sealed partial class SdeStore
 		{
 			List<Guid> ids = assessmentIds?.Distinct().ToList() ?? c.Query<Guid>(
 				"SELECT a.AssessmentID FROM Assessment a JOIN Property p ON p.PropertyID = a.PropertyID WHERE a.Active = 1 AND p.Active = 1 ORDER BY a.DateofInspection DESC").ToList();
-			List<AssessmentFile> files = ids.Select(id => LoadAssessment(c, null, id)).Where(f => f != null).ToList();
+			List<AssessmentFile> files = LoadAssessments(c, null, ids);
 			Dictionary<Guid, int> suggestions = c.Query<CountRow>("SELECT AssessmentID AS Id, COUNT(*) AS Count FROM DamageSuggestion GROUP BY AssessmentID")
 				.ToDictionary(r => r.Id, r => r.Count);
 			Dictionary<Guid, Guid> eventOf = c.Query<EventLinkRow>("SELECT AssessmentID, EventID FROM EventAssessment")

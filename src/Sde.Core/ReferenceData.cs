@@ -53,6 +53,11 @@ public static class LookupIds
 public sealed class ReferenceData
 {
 	private readonly Dictionary<int, LookupRecord> _byId;
+	private readonly Dictionary<int, StateRecord> _statesById;
+	private readonly Dictionary<int, CountyRecord> _countiesById;
+	// Reference data never changes once loaded, so each type's sorted list is made once (import previews run off the UI thread).
+	private readonly System.Collections.Concurrent.ConcurrentDictionary<int, IReadOnlyList<LookupRecord>> _ofType = new();
+	private readonly System.Collections.Concurrent.ConcurrentDictionary<int, IReadOnlyList<CountyRecord>> _countiesIn = new();
 
 	public ReferenceData(
 		IReadOnlyList<LookupRecord> lookups,
@@ -75,6 +80,8 @@ public sealed class ReferenceData
 		LatLongBoxes = latLongBoxes;
 		CustomFields = customFields;
 		_byId = lookups.GroupBy(l => l.LookupID).ToDictionary(g => g.Key, g => g.First());
+		_statesById = states.GroupBy(s => s.StateID).ToDictionary(g => g.Key, g => g.First());
+		_countiesById = counties.GroupBy(c => c.CountyID).ToDictionary(g => g.Key, g => g.First());
 	}
 
 	public IReadOnlyList<LookupRecord> Lookups { get; }
@@ -95,17 +102,18 @@ public sealed class ReferenceData
 	/// Lookups of one type in the original's display order: ORDER BY zOrder, which in Jet puts NULLs first;
 	/// ties fall back to LookupID (Jet's physical order).
 	/// </summary>
-	public IReadOnlyList<LookupRecord> OfType(int lookupTypeId) =>
-		Lookups.Where(l => l.LookupTypeID == lookupTypeId).OrderBy(l => l.zOrder ?? int.MinValue).ThenBy(l => l.LookupID).ToList();
+	public IReadOnlyList<LookupRecord> OfType(int lookupTypeId) => _ofType.GetOrAdd(lookupTypeId, type =>
+		Lookups.Where(l => l.LookupTypeID == type).OrderBy(l => l.zOrder ?? int.MinValue).ThenBy(l => l.LookupID).ToList().AsReadOnly());
 
-	public IReadOnlyList<CountyRecord> CountiesIn(int? stateId) =>
-		Counties.Where(c => c.StateID == stateId).OrderBy(c => c.County).ToList();
+	/// <summary>A state's counties by name (the County drop-downs, rebuilt on every edit in the editor).</summary>
+	public IReadOnlyList<CountyRecord> CountiesIn(int? stateId) => stateId is not int id ? Array.Empty<CountyRecord>() : _countiesIn.GetOrAdd(id, _ =>
+		Counties.Where(c => c.StateID == id).OrderBy(c => c.County).ToList().AsReadOnly());
 
-	public string StateName(int? id) => States.FirstOrDefault(s => s.StateID == id)?.State;
+	public string StateName(int? id) => id is int i && _statesById.TryGetValue(i, out StateRecord s) ? s.State : null;
 
-	public string StateAbbreviation(int? id) => States.FirstOrDefault(s => s.StateID == id)?.StateAbb;
+	public string StateAbbreviation(int? id) => id is int i && _statesById.TryGetValue(i, out StateRecord s) ? s.StateAbb : null;
 
-	public string CountyName(int? id) => Counties.FirstOrDefault(c => c.CountyID == id)?.County;
+	public string CountyName(int? id) => id is int i && _countiesById.TryGetValue(i, out CountyRecord c) ? c.County : null;
 
 	/// <summary>
 	/// Depreciation % for a rating. Port of DAL LookupService.GetDepreciationValues (decomp/DAL/DAL.Services/LookupService.cs:141):

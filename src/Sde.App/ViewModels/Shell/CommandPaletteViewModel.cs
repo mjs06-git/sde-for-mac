@@ -50,10 +50,12 @@ public sealed class PaletteItem
 	public string AccessibleName => HasDetail ? $"{Title}, {Detail}" : Title;
 
 	/// <summary>True when every word of <paramref name="words"/> appears in the title, detail or keywords.</summary>
+	private string _text;
+
 	public bool Matches(IReadOnlyList<string> words)
 	{
-		string text = (Title + " " + Detail + " " + Keywords).ToLowerInvariant();
-		return words.All(w => text.Contains(w, StringComparison.Ordinal));
+		_text ??= (Title + " " + Detail + " " + Keywords).ToLowerInvariant();
+		return words.All(w => _text.Contains(w, StringComparison.Ordinal));
 	}
 }
 

@@ -62,7 +62,7 @@ public static class CaseFileReport
 		}
 		using MemoryStream buffer = new MemoryStream();
 		Render(caseFile, reference, buffer, options);
-		File.WriteAllBytes(path, buffer.ToArray());
+		File.WriteAllBytes(path, buffer.GetBuffer().AsSpan(0, (int)buffer.Length));
 	}
 
 	internal static Document Build(CaseFile cf, ReferenceData reference, CaseFileReportOptions options)

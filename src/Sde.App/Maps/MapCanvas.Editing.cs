@@ -600,32 +600,36 @@ public sealed partial class MapCanvas
 			features.Add(outline);
 			if (kind != GeometryKind.Point)
 			{
+				// One style for each kind of handle, shared by all of them: this runs on every pointer move of a drag.
 				if (_drag == null)
 				{
+					SymbolStyle middleStyle = new SymbolStyle
+					{
+						SymbolType = SymbolType.Ellipse,
+						SymbolScale = 7 / SymbolStyle.DefaultWidth,
+						Fill = new Brush(new MColor(accent.R, accent.G, accent.B, 170)),
+						Outline = new Pen(card, 1.5),
+					};
 					foreach ((VertexRef _, Coordinate a, Coordinate b) in GeometryEdit.Edges(shape))
 					{
 						PointFeature middle = new PointFeature((a.X + b.X) / 2, (a.Y + b.Y) / 2);
-						middle.Styles.Add(new SymbolStyle
-						{
-							SymbolType = SymbolType.Ellipse,
-							SymbolScale = 7 / SymbolStyle.DefaultWidth,
-							Fill = new Brush(new MColor(accent.R, accent.G, accent.B, 170)),
-							Outline = new Pen(card, 1.5),
-						});
+						middle.Styles.Add(middleStyle);
 						features.Add(middle);
 					}
 				}
+				SymbolStyle CornerStyle(bool picked) => new SymbolStyle
+				{
+					SymbolType = SymbolType.Rectangle,
+					SymbolScale = (picked ? 11 : 9) / SymbolStyle.DefaultWidth,
+					Fill = new Brush(picked ? accent : card),
+					Outline = new Pen(picked ? card : accent, 2),
+				};
+				SymbolStyle plainCorner = CornerStyle(false), pickedCorner = CornerStyle(true);
 				foreach ((VertexRef v, Coordinate c) in GeometryEdit.Vertices(shape))
 				{
 					bool picked = _selectedVertex == v || _drag != null && _drag.Kind is DragKind.Corner or DragKind.NewCorner && _drag.Vertex == v;
 					PointFeature corner = new PointFeature(c.X, c.Y);
-					corner.Styles.Add(new SymbolStyle
-					{
-						SymbolType = SymbolType.Rectangle,
-						SymbolScale = (picked ? 11 : 9) / SymbolStyle.DefaultWidth,
-						Fill = new Brush(picked ? accent : card),
-						Outline = new Pen(picked ? card : accent, 2),
-					});
+					corner.Styles.Add(picked ? pickedCorner : plainCorner);
 					features.Add(corner);
 				}
 			}

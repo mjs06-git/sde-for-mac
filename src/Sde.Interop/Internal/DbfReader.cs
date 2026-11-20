@@ -68,10 +68,18 @@ internal static class DbfReader
 		string dbfPath = ResolveDbfPath(path);
 		byte[] bytes;
 		using (FileStream fs = new FileStream(dbfPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-		using (MemoryStream ms = new MemoryStream())
 		{
-			fs.CopyTo(ms);
-			bytes = ms.ToArray();
+			// Straight into one array of the file's size: a parcel table can be hundreds of megabytes.
+			if (fs.Length > Array.MaxLength)
+			{
+				throw new InvalidDataException($"{Path.GetFileName(dbfPath)} is too large to read (over 2 GB).");
+			}
+			bytes = new byte[fs.Length];
+			int read = fs.ReadAtLeast(bytes, bytes.Length, throwOnEndOfStream: false);
+			if (read < bytes.Length)
+			{
+				Array.Resize(ref bytes, read);
+			}
 		}
 		string cpgPath = FindSibling(dbfPath, ".cpg");
 		string cpg = cpgPath == null ? null : File.ReadAllText(cpgPath);

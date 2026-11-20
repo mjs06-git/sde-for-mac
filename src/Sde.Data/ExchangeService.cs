@@ -145,6 +145,7 @@ public sealed class ExchangeService
 		ImportResult result = new ImportResult();
 		AssessmentCalculator calculator = _store.Calculator;
 		List<(string From, string To)> photoCopies = new();
+		DatasetIndex index = new DatasetIndex(data);
 
 		SaveContext ctx = context?.AsBatch() ?? SaveContext.Batch(SaveVia.Import, "Imported" + (string.IsNullOrEmpty(sourceName) ? "" : " from " + sourceName));
 		_store.Database.InTransaction((c, tx) =>
@@ -155,6 +156,13 @@ public sealed class ExchangeService
 			HashSet<Guid> dbProperties = c.Query<Guid>("SELECT PropertyID FROM Property", transaction: tx).ToHashSet();
 			HashSet<Guid> dbAssessments = c.Query<Guid>("SELECT AssessmentID FROM Assessment", transaction: tx).ToHashSet();
 			Dictionary<Guid, PropertyRecord> propertiesById = data.Properties.GroupBy(p => p.PropertyID).ToDictionary(g => g.Key, g => g.First());
+			// Which assessments use each photo name (case-insensitive, like the Mac's disk): an imported photo never
+			// replaces another assessment's file.
+			Dictionary<string, HashSet<Guid>> photoOwners = new Dictionary<string, HashSet<Guid>>(StringComparer.OrdinalIgnoreCase);
+			foreach (AttachmentRecord used in c.Query<AttachmentRecord>("SELECT AssessmentID, FileName FROM Attachment WHERE FileName IS NOT NULL", transaction: tx))
+			{
+				ClaimPhotoName(photoOwners, Path.GetFileName(used.FileName), used.AssessmentID);
+			}
 
 			foreach (AssessmentRecord orphan in data.Assessments.Where(a => !propertiesById.ContainsKey(a.PropertyID)))
 			{
@@ -165,7 +173,7 @@ public sealed class ExchangeService
 			{
 				Guid sourceId = source.PropertyID;
 				bool propertyExists = dbProperties.Contains(sourceId);
-				List<AssessmentRecord> assessments = data.Assessments.Where(a => a.PropertyID == sourceId).ToList();
+				List<AssessmentRecord> assessments = index.Assessments[sourceId].ToList();
 				bool copyAll = propertyExists && existing == ExistingRecordAction.Copy;
 
 				// The structure row.
@@ -188,7 +196,7 @@ public sealed class ExchangeService
 					{
 						result.PropertiesAdded++;
 					}
-					ReplacePropertyChildren(c, tx, data, sourceId, target.PropertyID);
+					ReplacePropertyChildren(c, tx, index, sourceId, target.PropertyID);
 				}
 				else
 				{
@@ -221,7 +229,7 @@ public sealed class ExchangeService
 						result.Warnings.Add($"Assessment {sourceAssessment.AssessmentID} wasn't replaced: it is checked out to another Mac in a work package.");
 						continue;
 					}
-					AssessmentFile file = BuildFile(data, sourceAssessment, target, newIds, photoCopies, photosFolder);
+					AssessmentFile file = BuildFile(index, sourceAssessment, target, newIds, photoCopies, photoOwners);
 					if (assessmentExists && !newIds)
 					{
 						result.AssessmentsUpdated++;
@@ -262,6 +270,12 @@ public sealed class ExchangeService
 				result.Warnings.Add("Photo not found in import: " + from);
 				continue;
 			}
+			// A link in an import folder could point at any file on the Mac: never copied.
+			if (File.GetAttributes(source).HasFlag(FileAttributes.ReparsePoint) || File.GetAttributes(Path.GetDirectoryName(source)!).HasFlag(FileAttributes.ReparsePoint))
+			{
+				result.Warnings.Add($"Photo {from} wasn't copied: it is a link, and links aren't followed.");
+				continue;
+			}
 			try
 			{
 				File.Copy(source, Path.Combine(_store.AttachmentsFolder, to), overwrite: true);
@@ -275,8 +289,31 @@ public sealed class ExchangeService
 		return result;
 	}
 
-	private static AssessmentFile BuildFile(SdeDataset data, AssessmentRecord source, PropertyRecord property, bool newIds,
-		List<(string, string)> photoCopies, string photosFolder)
+	/// <summary>An import's rows grouped by the structure or assessment they belong to (each group in file order), so a large import does not search every list again for every row.</summary>
+	private sealed class DatasetIndex
+	{
+		public DatasetIndex(SdeDataset data)
+		{
+			Assessments = data.Assessments.ToLookup(a => a.PropertyID);
+			CostAdjustments = data.CostAdjustments.ToLookup(x => x.AssessmentID);
+			AdditionalAdjustments = data.AdditionalAdjustments.ToLookup(x => x.AssessmentID);
+			ElementPercentages = data.ElementPercentages.ToLookup(x => x.AssessmentID);
+			CustomFieldsResults = data.CustomFieldsResults.ToLookup(x => x.ObjectIdentifier);
+			Attachments = data.Attachments.ToLookup(x => x.AssessmentID);
+			Shapes = data.Shapes.ToLookup(x => x.PropertyID);
+		}
+
+		public ILookup<Guid, AssessmentRecord> Assessments { get; }
+		public ILookup<Guid, CostAdjustmentResultRecord> CostAdjustments { get; }
+		public ILookup<Guid, AdditionalAdjustmentRecord> AdditionalAdjustments { get; }
+		public ILookup<Guid, ElementPercentageRecord> ElementPercentages { get; }
+		public ILookup<Guid, CustomFieldResultRecord> CustomFieldsResults { get; }
+		public ILookup<Guid, AttachmentRecord> Attachments { get; }
+		public ILookup<Guid, ShapeRecord> Shapes { get; }
+	}
+
+	private static AssessmentFile BuildFile(DatasetIndex data, AssessmentRecord source, PropertyRecord property, bool newIds,
+		List<(string, string)> photoCopies, Dictionary<string, HashSet<Guid>> photoOwners)
 	{
 		Guid sourceId = source.AssessmentID;
 		AssessmentRecord a = Clone(source);
@@ -290,34 +327,34 @@ public sealed class ExchangeService
 		{
 			Property = property,
 			Assessment = a,
-			CostAdjustments = data.CostAdjustments.Where(x => x.AssessmentID == sourceId).Select(x =>
+			CostAdjustments = data.CostAdjustments[sourceId].Select(x =>
 			{
 				CostAdjustmentResultRecord r = Clone(x);
 				r.ResultID = Guid.NewGuid();
 				r.AssessmentID = aid;
 				return r;
 			}).ToList(),
-			AdditionalAdjustments = data.AdditionalAdjustments.Where(x => x.AssessmentID == sourceId).Select(x =>
+			AdditionalAdjustments = data.AdditionalAdjustments[sourceId].Select(x =>
 			{
 				AdditionalAdjustmentRecord r = Clone(x);
 				r.AdditionalAdjustmentID = Guid.NewGuid();
 				r.AssessmentID = aid;
 				return r;
 			}).ToList(),
-			ElementPercentages = data.ElementPercentages.Where(x => x.AssessmentID == sourceId).Select(x =>
+			ElementPercentages = data.ElementPercentages[sourceId].Select(x =>
 			{
 				ElementPercentageRecord r = Clone(x);
 				r.ElementID = Guid.NewGuid();
 				r.AssessmentID = aid;
 				return r;
 			}).ToList(),
-			CustomFields = data.CustomFieldsResults.Where(x => x.ObjectIdentifier == sourceId).Select(x =>
+			CustomFields = data.CustomFieldsResults[sourceId].Select(x =>
 			{
 				CustomFieldResultRecord r = Clone(x);
 				r.ObjectIdentifier = aid;
 				return r;
 			}).ToList(),
-			Attachments = data.Attachments.Where(x => x.AssessmentID == sourceId).Select(x =>
+			Attachments = data.Attachments[sourceId].Select(x =>
 			{
 				AttachmentRecord r = Clone(x);
 				r.AttachmentID = 0;
@@ -326,8 +363,11 @@ public sealed class ExchangeService
 				if (!string.IsNullOrEmpty(r.FileName))
 				{
 					string from = Path.GetFileName(r.FileName);
-					// Copies get their own photo files so deleting one copy can't remove the other's photos.
-					string to = newIds ? Guid.NewGuid() + Path.GetExtension(from) : from;
+					// Copies get their own photo files so deleting one copy can't remove the other's photos, and a name another
+					// assessment already uses gets a new one so its photo isn't written over.
+					bool taken = photoOwners.TryGetValue(from, out HashSet<Guid> owners) && owners.Any(o => o != aid);
+					string to = newIds || taken ? Guid.NewGuid() + Path.GetExtension(from) : from;
+					ClaimPhotoName(photoOwners, to, aid);
 					photoCopies.Add((from, to));
 					r.FileName = to;
 				}
@@ -337,11 +377,20 @@ public sealed class ExchangeService
 		return file;
 	}
 
-	private static void ReplacePropertyChildren(IDbConnection c, IDbTransaction tx, SdeDataset data, Guid sourceId, Guid targetId)
+	private static void ClaimPhotoName(Dictionary<string, HashSet<Guid>> owners, string name, Guid assessmentId)
+	{
+		if (!owners.TryGetValue(name, out HashSet<Guid> set))
+		{
+			owners[name] = set = new HashSet<Guid>();
+		}
+		set.Add(assessmentId);
+	}
+
+	private static void ReplacePropertyChildren(IDbConnection c, IDbTransaction tx, DatasetIndex data, Guid sourceId, Guid targetId)
 	{
 		TableMap<ShapeRecord>.Delete(c, "PropertyID = @targetId", new { targetId }, tx);
 		// The original's grid had one row per assessment and inserted a property's shapes once per row; de-duplicate.
-		foreach (ShapeRecord s in data.Shapes.Where(x => x.PropertyID == sourceId)
+		foreach (ShapeRecord s in data.Shapes[sourceId]
 			.GroupBy(x => (x.ShapeType, x.TotalSqFt, x.LengthA, x.WidthA, x.LengthB, x.WidthB, x.LengthC, x.WidthC, x.StoriesA, x.StoriesB, x.StoriesC))
 			.Select(g => g.First()))
 		{
@@ -351,7 +400,7 @@ public sealed class ExchangeService
 			TableMap<ShapeRecord>.Insert(c, copy, tx);
 		}
 		TableMap<CustomFieldResultRecord>.Delete(c, "ObjectIdentifier = @targetId", new { targetId }, tx);
-		foreach (CustomFieldResultRecord r in data.CustomFieldsResults.Where(x => x.ObjectIdentifier == sourceId))
+		foreach (CustomFieldResultRecord r in data.CustomFieldsResults[sourceId])
 		{
 			CustomFieldResultRecord copy = Clone(r);
 			copy.ObjectIdentifier = targetId;

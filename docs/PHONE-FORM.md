@@ -105,8 +105,8 @@ make every phone show a security warning that inspectors would learn to click th
 
 What protects the phone form:
 
-- **Off by default.** Nothing listens until someone presses Start on the Mac. It stops after 12 hours, when SDE quits, and
-  when someone presses Stop. Stopping ends every phone's session.
+- **Off by default.** Nothing listens until someone presses Start on the Mac. It stops after 12 hours, when SDE quits, when
+  someone presses Stop, and when the Mac opens another database. Stopping ends every phone's session.
 - **Local network only.** The server listens only on the Mac's private network address (10.x.x.x, 172.16-31.x.x or
   192.168.x.x), never on every address, so it isn't reachable on a public address the Mac might have. It also refuses any
   request whose sender isn't on a private network or the Mac itself, and any request addressed to another host name (so

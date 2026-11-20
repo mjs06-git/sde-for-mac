@@ -47,6 +47,7 @@ internal static class PhotoPrep
 		{
 			canvas.Clear(SKColors.White); // JPEG has no transparency; transparent PNG areas print white
 			canvas.SetMatrix(Orientation(origin, outW, outH));
+			decoded.SetImmutable();   // so the image shares the decoded pixels instead of copying them (about 48 MB for 12 MP)
 			using SKImage image = SKImage.FromBitmap(decoded);
 			canvas.DrawImage(image, SKRect.Create(0, 0, w, h), new SKSamplingOptions(SKCubicResampler.Mitchell));
 			canvas.ResetMatrix();

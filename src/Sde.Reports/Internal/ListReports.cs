@@ -202,19 +202,23 @@ internal static class ListReports
 	private static List<Group> GroupByCommunity(IReadOnlyList<AssessmentView> items)
 	{
 		List<Group> groups = new();
+		// Looked up by key, so a community of thousands of structures is not searched again for each assessment.
+		Dictionary<string, Group> byKey = new();
+		Dictionary<(string, Guid), List<AssessmentView>> byProperty = new();
 		foreach (AssessmentView v in items)
 		{
 			string key = v.P.NFIPCID?.Trim() ?? "";
-			Group g = groups.FirstOrDefault(x => x.Key == key);
-			if (g == null)
+			if (!byKey.TryGetValue(key, out Group g))
 			{
 				g = new Group(key, v.P.NFIPCommunityName?.Trim() ?? "", new List<List<AssessmentView>>());
 				groups.Add(g);
+				byKey[key] = g;
 			}
-			List<AssessmentView> property = g.Properties.FirstOrDefault(p => p[0].P.PropertyID == v.P.PropertyID);
-			if (property == null)
+			if (!byProperty.TryGetValue((key, v.P.PropertyID), out List<AssessmentView> property))
 			{
-				g.Properties.Add(new List<AssessmentView> { v });
+				property = new List<AssessmentView> { v };
+				g.Properties.Add(property);
+				byProperty[(key, v.P.PropertyID)] = property;
 			}
 			else
 			{

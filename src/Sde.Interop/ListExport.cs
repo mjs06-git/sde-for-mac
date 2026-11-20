@@ -95,9 +95,11 @@ public static class ListExport
 		sb.AppendJoin(',', fields).Append("\r\n");
 	}
 
+	private static readonly char[] CsvSpecial = { ',', '"', '\r', '\n' };
+
 	private static string CsvField(string text)
 	{
-		if (text.IndexOfAny(new[] { ',', '"', '\r', '\n' }) < 0)
+		if (text.IndexOfAny(CsvSpecial) < 0)
 		{
 			return text;
 		}

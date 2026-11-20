@@ -68,7 +68,7 @@ public sealed partial class ReadTools(SdeMcpContext sde)
 		pageSize = Math.Clamp(pageSize, 1, MaxStructurePage);
 		page = Math.Max(page, 1);
 
-		HashSet<Guid> located = store.GetProperties()
+		HashSet<Guid> located = store.GetPropertyPositions()
 			.Where(p => p.Latitude is decimal lat && p.Longitude is decimal lon && (lat != 0m || lon != 0m))
 			.Select(p => p.PropertyID).ToHashSet();
 		string q = (query ?? "").Trim().ToLowerInvariant();

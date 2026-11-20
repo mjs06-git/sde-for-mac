@@ -46,9 +46,9 @@ public sealed class ServerTests
 	{
 		string app = "/Applications/SDE.app/Contents/MacOS/SDE";
 		string db = "/Users/pat/Library/Application Support/SDE/sde.sqlite";
-		Assert.Equal("claude mcp add sde -- \"/Applications/SDE.app/Contents/MacOS/SDE\" mcp --db \"/Users/pat/Library/Application Support/SDE/sde.sqlite\"",
+		Assert.Equal("claude mcp add sde -- '/Applications/SDE.app/Contents/MacOS/SDE' mcp --db '/Users/pat/Library/Application Support/SDE/sde.sqlite'",
 			AiAssistantSettings.ClaudeCodeCommand(app, db));
-		Assert.Equal("claude mcp add sde -- \"/a\" mcp --db \"/b/\\\"odd\\\" \\$name\"", AiAssistantSettings.ClaudeCodeCommand("/a", "/b/\"odd\" $name"));
+		Assert.Equal("claude mcp add sde -- '/a' mcp --db '/b/\"odd\" $name !#:5 it'\\''s'", AiAssistantSettings.ClaudeCodeCommand("/a", "/b/\"odd\" $name !#:5 it's"));
 		using JsonDocument config = JsonDocument.Parse(AiAssistantSettings.ClaudeDesktopConfig(app, db));
 		JsonElement sde = config.RootElement.GetProperty("mcpServers").GetProperty("sde");
 		Assert.Equal(app, sde.GetProperty("command").GetString());
