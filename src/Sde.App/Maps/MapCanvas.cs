@@ -549,8 +549,7 @@ public sealed partial class MapCanvas : Panel, IDisposable
 					{
 						if (_overlays.TryGetValue(tiles.Key, out o))
 						{
-							o.Layer.Dispose();
-							o.Source.Dispose();
+							DropTiles(o.Layer, o.Source);
 						}
 						SdeTileSource source = new SdeTileSource(tiles.Source, _tiles, PixelDensity > 1.5 ? 2 : 1);
 						// Only the tiles of the zoom level shown: FEMA's map service draws each one on request.
@@ -572,8 +571,7 @@ public sealed partial class MapCanvas : Panel, IDisposable
 		}
 		foreach (string gone in _overlays.Keys.Where(k => !keys.Contains(k)).ToList())
 		{
-			_overlays[gone].Layer.Dispose();
-			_overlays[gone].Source.Dispose();
+			DropTiles(_overlays[gone].Layer, _overlays[gone].Source);
 			_overlays.Remove(gone);
 		}
 		Arrange();
@@ -685,8 +683,7 @@ public sealed partial class MapCanvas : Panel, IDisposable
 		{
 			return;
 		}
-		_basemapLayer?.Dispose();
-		_basemapSource?.Dispose();
+		DropTiles(_basemapLayer, _basemapSource);
 		_basemapLayer = null;
 		_basemapSource = null;
 		if (_tiles != null && _basemap.HasTiles)
@@ -951,8 +948,7 @@ public sealed partial class MapCanvas : Panel, IDisposable
 		_built.Clear();
 		foreach ((TileLayer layer, SdeTileSource source) in _overlays.Values)
 		{
-			layer.Dispose();
-			source.Dispose();
+			DropTiles(layer, source);
 		}
 		_overlays.Clear();
 		foreach (MemoryLayer raster in _rasterLayers.Values)
@@ -960,10 +956,20 @@ public sealed partial class MapCanvas : Panel, IDisposable
 			raster.Dispose();
 		}
 		_rasterLayers.Clear();
-		_basemapSource?.Dispose();
-		_basemapLayer?.Dispose();
+		DropTiles(_basemapLayer, _basemapSource);
 		_basemapLayer = null;
 		_basemapSource = null;
+	}
+
+	/// <summary>Stops a layer of tiles that is going away, and its downloads.</summary>
+	private static void DropTiles(TileLayer layer, SdeTileSource source)
+	{
+		// The source first, so no new download starts for it.
+		source?.Dispose();
+		// ClearCache, not layer.Dispose(): a download already under way still adds its tile to the layer's MemoryCache,
+		// and BruTile 6 walks that cache in Dispose without its lock ("Collection was modified"). Clear takes the lock,
+		// and the layer holds nothing else to free (its HttpClient is never used, the source being local).
+		layer?.ClearCache();
 	}
 
 	/// <summary>True once <see cref="Dispose"/> has run (and until the page shows the map again).</summary>
