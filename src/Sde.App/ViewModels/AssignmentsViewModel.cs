@@ -159,9 +159,9 @@ public sealed partial class AssignmentsViewModel : ViewModelBase
 	/// <summary>Set by the window while this is the page showing (it then reloads when the data changes).</summary>
 	public bool IsActive { get; set; }
 
-	public ObservableCollection<TeamRowViewModel> Teams { get; } = new();
+	public RangeObservableCollection<TeamRowViewModel> Teams { get; } = new();
 
-	public ObservableCollection<AssignmentRowViewModel> Stops { get; } = new();
+	public RangeObservableCollection<AssignmentRowViewModel> Stops { get; } = new();
 
 	[ObservableProperty]
 	[NotifyPropertyChangedFor(nameof(HasTeam), nameof(TeamTitle), nameof(TeamDetail), nameof(StatusText))]
@@ -218,18 +218,21 @@ public sealed partial class AssignmentsViewModel : ViewModelBase
 	/// <summary>Reads the teams and the selected team's route again.</summary>
 	public void Reload()
 	{
-		Guid? keep = SelectedTeam?.Team.TeamID;
+		TeamRowViewModel previous = SelectedTeam;
+		Guid? keep = previous?.Team.TeamID;
 		Dictionary<Guid, TeamProgress> progress = _app.Store.GetTeamProgress(EventId).ToDictionary(p => p.TeamID);
-		Teams.Clear();
-		foreach (TeamRecord t in _app.Store.GetTeams())
-		{
-			Teams.Add(new TeamRowViewModel(t, progress.GetValueOrDefault(t.TeamID)));
-		}
-		SelectedTeam = Teams.FirstOrDefault(t => t.Team.TeamID == keep) ?? Teams.FirstOrDefault();
+		List<TeamRowViewModel> nextTeams = _app.Store.GetTeams().Select(t => new TeamRowViewModel(t, progress.GetValueOrDefault(t.TeamID))).ToList();
+		Teams.ReplaceAll(nextTeams);
+		TeamRowViewModel nextSelected = Teams.FirstOrDefault(t => t.Team.TeamID == keep) ?? Teams.FirstOrDefault();
+		bool sameSelection = ReferenceEquals(previous, nextSelected);
+		SelectedTeam = nextSelected;
 		OnPropertyChanged(nameof(HasTeams));
 		OnPropertyChanged(nameof(HasNoTeams));
 		OnPropertyChanged(nameof(Subtitle));
-		LoadStops();
+		if (sameSelection)
+		{
+			LoadStops();
+		}
 	}
 
 	partial void OnSelectedTeamChanged(TeamRowViewModel value) => LoadStops();
@@ -240,16 +243,23 @@ public sealed partial class AssignmentsViewModel : ViewModelBase
 		{
 			old.PropertyChanged -= OnStopChanged;
 		}
-		Stops.Clear();
 		if (SelectedTeam != null)
 		{
 			ReferenceData reference = _app.Store.Reference;
-			foreach (FieldKitStop stop in FieldKit.Stops(_app.Store, SelectedTeam.Team.TeamID, EventId))
+			List<FieldKitStop> stops = FieldKit.Stops(_app.Store, SelectedTeam.Team.TeamID, EventId);
+			List<AssignmentRowViewModel> rows = new List<AssignmentRowViewModel>(stops.Count);
+			for (int i = 0; i < stops.Count; i++)
 			{
+				FieldKitStop stop = stops[i];
 				AssignmentRowViewModel row = new AssignmentRowViewModel(stop, FieldKit.MapsLink(stop.Property, reference), SetStatus);
 				row.PropertyChanged += OnStopChanged;
-				Stops.Add(row);
+				rows.Add(row);
 			}
+			Stops.ReplaceAll(rows);
+		}
+		else
+		{
+			Stops.Clear();
 		}
 		OnPropertyChanged(nameof(HasStops));
 		OnPropertyChanged(nameof(HasNoStops));

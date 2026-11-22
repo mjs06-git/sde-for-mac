@@ -215,9 +215,10 @@ public sealed class PairingManager
 		{
 			return null;
 		}
+		string hash = Hash(sessionToken);
 		lock (_gate)
 		{
-			if (_sessions.TryGetValue(Hash(sessionToken), out PairedPhone phone))
+			if (_sessions.TryGetValue(hash, out PairedPhone phone))
 			{
 				phone.LastSeenUtc = _clock();
 				return phone;
@@ -261,16 +262,26 @@ public sealed class PairingManager
 	/// <summary>Trims text, removes control characters and cuts it to <paramref name="max"/> characters; null when nothing is left.</summary>
 	internal static string CleanText(string text, int max)
 	{
-		if (text == null)
+		if (string.IsNullOrEmpty(text))
 		{
 			return null;
 		}
-		string clean = new string(text.Where(c => !char.IsControl(c)).ToArray()).Trim();
+		Span<char> buf = text.Length <= 256 ? stackalloc char[text.Length] : new char[text.Length];
+		int n = 0;
+		for (int i = 0; i < text.Length; i++)
+		{
+			char c = text[i];
+			if (!char.IsControl(c))
+			{
+				buf[n++] = c;
+			}
+		}
+		ReadOnlySpan<char> clean = buf.Slice(0, n).Trim();
 		if (clean.Length > max)
 		{
-			clean = clean[..max].Trim();
+			clean = clean.Slice(0, max).Trim();
 		}
-		return clean.Length == 0 ? null : clean;
+		return clean.IsEmpty ? null : new string(clean);
 	}
 
 	private PairingCode NewCode() =>
@@ -280,7 +291,22 @@ public sealed class PairingManager
 	internal static string Secret(int bytes) =>
 		Convert.ToBase64String(RandomNumberGenerator.GetBytes(bytes)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
-	private static string Hash(string secret) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(secret)));
+	private static string Hash(string secret)
+	{
+		Span<byte> digest = stackalloc byte[32];
+		int maxUtf8 = Encoding.UTF8.GetMaxByteCount(secret.Length);
+		if (maxUtf8 <= 320)
+		{
+			Span<byte> utf8 = stackalloc byte[maxUtf8];
+			int written = Encoding.UTF8.GetBytes(secret.AsSpan(), utf8);
+			SHA256.HashData(utf8.Slice(0, written), digest);
+		}
+		else
+		{
+			SHA256.HashData(Encoding.UTF8.GetBytes(secret), digest);
+		}
+		return Convert.ToHexString(digest);
+	}
 
 	/// <summary>Compares two secrets in constant time.</summary>
 	private static bool SameSecret(string given, string expected)

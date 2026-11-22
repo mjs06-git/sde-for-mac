@@ -213,6 +213,10 @@ CREATE TABLE IF NOT EXISTS Assessment (
 	GeographicAdjustment     REAL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS IX_Assessment_Property ON Assessment(PropertyID);
+CREATE INDEX IF NOT EXISTS IX_Assessment_Property_Active_Order ON Assessment(PropertyID, Active, DateofInspection DESC, LastUpdate DESC);
+CREATE INDEX IF NOT EXISTS IX_Property_Inactive ON Property(PropertyID) WHERE Active = 0;
+CREATE INDEX IF NOT EXISTS IX_Assessment_Inactive ON Assessment(AssessmentID) WHERE Active = 0;
+CREATE INDEX IF NOT EXISTS IX_Property_Active_Parcel ON Property(TRIM(ParcelNumber) COLLATE NOCASE) WHERE Active = 1;
 
 CREATE TABLE IF NOT EXISTS ElementPercentage (
 	ElementID         TEXT PRIMARY KEY NOT NULL,
@@ -309,6 +313,8 @@ CREATE TABLE IF NOT EXISTS LastFiveAssesments (
 	StructureType TEXT,
 	LastUpdate    TEXT
 );
+CREATE INDEX IF NOT EXISTS IX_LastFiveAssesments_LastUpdate ON LastFiveAssesments(LastUpdate DESC);
+CREATE INDEX IF NOT EXISTS IX_LastFiveAssesments_Property ON LastFiveAssesments(PropertyID);
 
 -- ───────────────────────── User settings ─────────────────────────
 
@@ -481,6 +487,7 @@ CREATE TABLE IF NOT EXISTS EditHistory (
 CREATE INDEX IF NOT EXISTS IX_EditHistory_Assessment ON EditHistory(AssessmentID, ChangedOn);
 CREATE INDEX IF NOT EXISTS IX_EditHistory_Property ON EditHistory(PropertyID, ChangedOn);
 CREATE INDEX IF NOT EXISTS IX_EditHistory_Batch ON EditHistory(BatchId);
+CREATE INDEX IF NOT EXISTS IX_EditHistory_FieldLatest ON EditHistory(PropertyID, AssessmentID, Field, ChangedOn DESC, HistoryID DESC);
 
 -- Named filters for the Structures list.
 CREATE TABLE IF NOT EXISTS SavedView (
@@ -543,6 +550,7 @@ CREATE TABLE IF NOT EXISTS LetterLog (
 	FileName     TEXT
 );
 CREATE INDEX IF NOT EXISTS IX_LetterLog_Assessment ON LetterLog(AssessmentID);
+CREATE INDEX IF NOT EXISTS IX_LetterLog_SentOn ON LetterLog(SentOn, AssessmentID) WHERE SentOn IS NOT NULL;
 
 -- Substantial improvement: improvement projects (permits) and the determinations made from them.
 CREATE TABLE IF NOT EXISTS ImprovementProject (
@@ -573,6 +581,7 @@ CREATE TABLE IF NOT EXISTS SIDetermination (
 	DeterminedBy     TEXT,
 	Notes            TEXT
 );
+CREATE INDEX IF NOT EXISTS IX_SIDetermination_Property ON SIDetermination(PropertyID);
 
 -- Links a structure to a record in another system (an assessor's parcel, a permit), for imports that update structures.
 CREATE TABLE IF NOT EXISTS StructureLink (
@@ -585,6 +594,7 @@ CREATE TABLE IF NOT EXISTS StructureLink (
 	PRIMARY KEY (Source, RecordId)
 );
 CREATE INDEX IF NOT EXISTS IX_StructureLink_Property ON StructureLink(PropertyID);
+CREATE INDEX IF NOT EXISTS IX_StructureLink_Property_Imported ON StructureLink(PropertyID, ImportedOn DESC, Source, RecordId);
 
 -- ───────────────────────── Mac-only, added in v2.5 (MacSchemaVersion 3) ─────────────────────────
 -- Same rules as v2.0's tables: foreign keys to FEMA's rows use ON DELETE CASCADE (or there are none, and rows whose
@@ -651,6 +661,7 @@ CREATE TABLE IF NOT EXISTS Assignment (
 );
 CREATE INDEX IF NOT EXISTS IX_Assignment_Team ON Assignment(TeamID);
 CREATE INDEX IF NOT EXISTS IX_Assignment_Property ON Assignment(PropertyID);
+CREATE INDEX IF NOT EXISTS IX_Assignment_Event ON Assignment(EventID) WHERE EventID IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS UX_Assignment_ShortCode ON Assignment(ShortCode) WHERE ShortCode IS NOT NULL;
 
 -- Review: comments on an assessment (threaded, resolvable) and quality checks someone looked at and set aside.
@@ -667,6 +678,8 @@ CREATE TABLE IF NOT EXISTS ReviewComment (
 	ResolvedBy   TEXT
 );
 CREATE INDEX IF NOT EXISTS IX_ReviewComment_Assessment ON ReviewComment(AssessmentID);
+CREATE INDEX IF NOT EXISTS IX_ReviewComment_Parent ON ReviewComment(ParentID) WHERE ParentID IS NOT NULL;
+CREATE INDEX IF NOT EXISTS IX_ReviewComment_OpenRoot ON ReviewComment(AssessmentID) WHERE ParentID IS NULL AND ResolvedOn IS NULL;
 
 -- No foreign key: ObjectID can be a structure, an assessment or an event.
 CREATE TABLE IF NOT EXISTS QaDismissal (
@@ -753,6 +766,7 @@ CREATE TABLE IF NOT EXISTS Document (
 	AddedBy      TEXT
 );
 CREATE INDEX IF NOT EXISTS IX_Document_Property ON Document(PropertyID);
+CREATE INDEX IF NOT EXISTS IX_Document_Assessment ON Document(AssessmentID) WHERE AssessmentID IS NOT NULL;
 
 -- The map's layers and bookmarks. Feature data lives in "<database>.layers.gpkg" beside the database.
 CREATE TABLE IF NOT EXISTS MapLayer (

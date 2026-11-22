@@ -52,10 +52,68 @@ public sealed class MapLabelRenderer : ISkiaStyleRenderer
 
 	private sealed class Frame
 	{
+		private const float CellSize = 64f;
+
 		public long Iteration = -1;
 
-		public readonly List<SKRect> Taken = new List<SKRect>();
+		private readonly Dictionary<long, List<SKRect>> _cells = new Dictionary<long, List<SKRect>>();
+
+		public void Clear() => _cells.Clear();
+
+		public bool TryReserve(SKRect box)
+		{
+			int minX = (int)MathF.Floor(box.Left / CellSize);
+			int maxX = (int)MathF.Floor(box.Right / CellSize);
+			int minY = (int)MathF.Floor(box.Top / CellSize);
+			int maxY = (int)MathF.Floor(box.Bottom / CellSize);
+			for (int cy = minY; cy <= maxY; cy++)
+			{
+				for (int cx = minX; cx <= maxX; cx++)
+				{
+					long key = ((long)cx << 32) | (uint)cy;
+					if (_cells.TryGetValue(key, out List<SKRect> list))
+					{
+						for (int i = 0; i < list.Count; i++)
+						{
+							if (list[i].IntersectsWith(box))
+							{
+								return false;
+							}
+						}
+					}
+				}
+			}
+			for (int cy = minY; cy <= maxY; cy++)
+			{
+				for (int cx = minX; cx <= maxX; cx++)
+				{
+					long key = ((long)cx << 32) | (uint)cy;
+					if (!_cells.TryGetValue(key, out List<SKRect> list))
+					{
+						list = new List<SKRect>(4);
+						_cells[key] = list;
+					}
+					list.Add(box);
+				}
+			}
+			return true;
+		}
 	}
+
+	[ThreadStatic]
+	private static SKPaint _strokePaint;
+
+	[ThreadStatic]
+	private static SKPaint _fillPaint;
+
+	[ThreadStatic]
+	private static SKFont _cachedFont;
+
+	[ThreadStatic]
+	private static float _cachedFontSize;
+
+	[ThreadStatic]
+	private static SKFontMetrics _cachedMetrics;
 
 	/// <summary>Registers the renderer with the map engine (once; safe to call often).</summary>
 	public static void Register()
@@ -88,9 +146,18 @@ public sealed class MapLabelRenderer : ISkiaStyleRenderer
 			return false;
 		}
 		(double sx, double sy) = viewport.WorldToScreenXY(at.X, at.Y);
-		using SKFont font = new SKFont(Typeface, (float)label.Size);
+		float fontSize = (float)label.Size;
+		SKFont font = _cachedFont;
+		if (font == null || _cachedFontSize != fontSize)
+		{
+			font?.Dispose();
+			font = new SKFont(Typeface, fontSize);
+			font.GetFontMetrics(out _cachedMetrics);
+			_cachedFont = font;
+			_cachedFontSize = fontSize;
+		}
+		SKFontMetrics metrics = _cachedMetrics;
 		float width = font.MeasureText(text);
-		font.GetFontMetrics(out SKFontMetrics metrics);
 		float x = (float)sx - width / 2;
 		// Centred on the point, or (for labels on dots) sitting above it.
 		float baseline = label.Rise > 0
@@ -103,31 +170,28 @@ public sealed class MapLabelRenderer : ISkiaStyleRenderer
 			if (iteration != frame.Iteration)
 			{
 				frame.Iteration = iteration;
-				frame.Taken.Clear();
+				frame.Clear();
 			}
-			foreach (SKRect r in frame.Taken)
+			if (!frame.TryReserve(box))
 			{
-				if (r.IntersectsWith(box))
-				{
-					return false;
-				}
+				return false;
 			}
-			frame.Taken.Add(box);
 		}
 		float opacity = (float)layer.Opacity * label.Opacity;
 		if (label.Halo is Color halo && label.HaloWidth > 0)
 		{
-			using SKPaint stroke = new SKPaint
+			SKPaint stroke = _strokePaint ??= new SKPaint
 			{
 				IsAntialias = true,
 				Style = SKPaintStyle.Stroke,
-				StrokeWidth = (float)(label.HaloWidth * 2),
 				StrokeJoin = SKStrokeJoin.Round,
-				Color = ToSkia(halo, opacity),
 			};
+			stroke.StrokeWidth = (float)(label.HaloWidth * 2);
+			stroke.Color = ToSkia(halo, opacity);
 			canvas.DrawText(text, x, baseline, font, stroke);
 		}
-		using SKPaint fill = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill, Color = ToSkia(label.Color, opacity) };
+		SKPaint fill = _fillPaint ??= new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill };
+		fill.Color = ToSkia(label.Color, opacity);
 		canvas.DrawText(text, x, baseline, font, fill);
 		return true;
 	}

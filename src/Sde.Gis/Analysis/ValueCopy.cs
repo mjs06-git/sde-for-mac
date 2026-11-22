@@ -57,6 +57,9 @@ public static class ValueCopy
 		ArgumentNullException.ThrowIfNull(target);
 		ArgumentNullException.ThrowIfNull(reference);
 		List<ValueCopyRow> rows = new List<ValueCopyRow>();
+		Dictionary<string, LookupRecord> lookupByName = target.Kind == FieldKind.Lookup && target.LookupType != LookupTypes.FirmZone
+			? BuildLookupMap(reference, target.LookupType)
+			: null;
 		foreach (PointJoinResult match in SpatialJoin.PointsInPolygons(points, polygons))
 		{
 			if (match.Polygon == null)
@@ -65,7 +68,7 @@ public static class ValueCopy
 				continue;
 			}
 			object raw = match.Polygon[sourceField];
-			(string text, string input, string problem) = Convert(raw, target, reference);
+			(string text, string input, string problem) = Convert(raw, target, reference, lookupByName);
 			rows.Add(new ValueCopyRow
 			{
 				Point = match.Point,
@@ -80,11 +83,29 @@ public static class ValueCopy
 		return rows;
 	}
 
+	private static Dictionary<string, LookupRecord> BuildLookupMap(ReferenceData reference, int lookupType)
+	{
+		IReadOnlyList<LookupRecord> choices = reference.OfType(lookupType);
+		Dictionary<string, LookupRecord> map = new Dictionary<string, LookupRecord>(choices.Count, StringComparer.OrdinalIgnoreCase);
+		for (int i = 0; i < choices.Count; i++)
+		{
+			string name = choices[i].LookupFieldName?.Trim();
+			if (!string.IsNullOrEmpty(name))
+			{
+				map.TryAdd(name, choices[i]);
+			}
+		}
+		return map;
+	}
+
 	/// <summary>
 	/// A polygon's value as text to show, as the value for <see cref="FieldInput"/>, and why it can't be used (null
 	/// when it can).
 	/// </summary>
-	public static (string Text, string Input, string Problem) Convert(object raw, FieldInfo target, ReferenceData reference)
+	public static (string Text, string Input, string Problem) Convert(object raw, FieldInfo target, ReferenceData reference) =>
+		Convert(raw, target, reference, null);
+
+	private static (string Text, string Input, string Problem) Convert(object raw, FieldInfo target, ReferenceData reference, Dictionary<string, LookupRecord> lookupByName)
 	{
 		string text = raw == null ? null : FieldValues.Format(raw).Trim();
 		if (string.IsNullOrEmpty(text))
@@ -94,21 +115,25 @@ public static class ValueCopy
 		switch (target.Kind)
 		{
 			case FieldKind.Number:
-				if (raw is long or double || decimal.TryParse(text.Replace(",", "", StringComparison.Ordinal), NumberStyles.Number, CultureInfo.InvariantCulture, out _))
+				if (raw is long l)
 				{
-					decimal n = raw switch
-					{
-						long l => l,
-						double d => (decimal)d,
-						_ => decimal.Parse(text.Replace(",", "", StringComparison.Ordinal), NumberStyles.Number, CultureInfo.InvariantCulture),
-					};
-					return (text, n.ToString(CultureInfo.InvariantCulture), null);
+					return (text, l.ToString(CultureInfo.InvariantCulture), null);
+				}
+				if (raw is double d)
+				{
+					return (text, ((decimal)d).ToString(CultureInfo.InvariantCulture), null);
+				}
+				string cleaned = text.Contains(',', StringComparison.Ordinal) ? text.Replace(",", "", StringComparison.Ordinal) : text;
+				if (decimal.TryParse(cleaned, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal parsedNumber))
+				{
+					return (text, parsedNumber.ToString(CultureInfo.InvariantCulture), null);
 				}
 				return (text, null, $"{target.Label} needs a number, not \"{text}\".");
 			case FieldKind.Date:
 				if (raw is DateTime date)
 				{
-					return (date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), null);
+					string iso = date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+					return (iso, iso, null);
 				}
 				return DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsed)
 					? (text, parsed.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), null)
@@ -116,7 +141,9 @@ public static class ValueCopy
 			case FieldKind.Lookup:
 				LookupRecord choice = target.LookupType == LookupTypes.FirmZone
 					? FirmZones.Find(text, reference)
-					: reference.OfType(target.LookupType).FirstOrDefault(l => string.Equals(l.LookupFieldName?.Trim(), text, StringComparison.OrdinalIgnoreCase));
+					: lookupByName != null
+						? (lookupByName.TryGetValue(text, out LookupRecord found) ? found : null)
+						: reference.OfType(target.LookupType).FirstOrDefault(l => string.Equals(l.LookupFieldName?.Trim(), text, StringComparison.OrdinalIgnoreCase));
 				return choice == null
 					? (text, null, target.LookupType == LookupTypes.FirmZone
 						? $"\"{text}\" isn't a flood zone FEMA's form has a choice for."

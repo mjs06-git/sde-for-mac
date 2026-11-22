@@ -16,9 +16,19 @@ public static class Reproject
 			return geometry;
 		}
 		Geometry copy = geometry.Copy();
-		copy.Apply(new CoordinateFilter((x, y) => source.ToWgs84(x, y)));
-		copy.GeometryChanged();
+		copy.Apply(source.ToWgs84Filter);
 		return copy;
+	}
+
+	/// <summary>Converts a newly created, unshared geometry to WGS 84 in place without cloning it.</summary>
+	internal static Geometry ToWgs84InPlace(Geometry geometry, CoordinateSystem source)
+	{
+		if (geometry == null || source == null || source.IsGeographic)
+		{
+			return geometry;
+		}
+		geometry.Apply(source.ToWgs84Filter);
+		return geometry;
 	}
 
 	/// <summary>A copy of a WGS 84 geometry in <paramref name="target"/>'s coordinates.</summary>
@@ -29,8 +39,7 @@ public static class Reproject
 			return geometry;
 		}
 		Geometry copy = geometry.Copy();
-		copy.Apply(new CoordinateFilter((lon, lat) => target.FromWgs84(lon, lat)));
-		copy.GeometryChanged();
+		copy.Apply(target.FromWgs84Filter);
 		return copy;
 	}
 
@@ -43,7 +52,6 @@ public static class Reproject
 		}
 		Geometry copy = geometry.Copy();
 		copy.Apply(new CoordinateFilter(convert));
-		copy.GeometryChanged();
 		return copy;
 	}
 

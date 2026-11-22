@@ -72,6 +72,10 @@ public static class EcReader
 		return Read(bytes);
 	}
 
+	private static readonly XmlReaderSettings TemplateXmlSettings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, IgnoreComments = true, IgnoreWhitespace = true };
+	private static readonly XmlReaderSettings DefaultXmlSettings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, IgnoreComments = true };
+	private static readonly Regex BracketIndexRegex = new Regex(@"\[\d+\]", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
 	/// <summary>Reads a certificate from the PDF's bytes.</summary>
 	public static EcReadResult Read(byte[] pdf)
 	{
@@ -91,7 +95,7 @@ public static class EcReader
 		using (doc)
 		{
 			PdfDictionary acroForm = doc.Internals.Catalog.Elements.GetDictionary("/AcroForm");
-			byte[] datasets = acroForm == null ? null : XfaPacket(acroForm, "datasets");
+			(byte[] datasets, byte[] template) = acroForm == null ? (null, null) : XfaPackets(acroForm);
 			if (datasets != null)
 			{
 				Dictionary<string, string> fields;
@@ -106,7 +110,7 @@ public static class EcReader
 				if (IsElevationCertificate(fields.Keys))
 				{
 					// Unticked check boxes hold "0" (or "2", the neutral state): they aren't values anyone entered.
-					HashSet<string> checkBoxes = XfaCheckBoxes(XfaPacket(acroForm, "template"));
+					HashSet<string> checkBoxes = XfaCheckBoxes(template);
 					foreach (string box in fields.Where(kv => kv.Value is "0" or "2" && checkBoxes.Contains(kv.Key)).Select(kv => kv.Key).ToList())
 					{
 						fields.Remove(box);
@@ -171,6 +175,56 @@ public static class EcReader
 	}
 
 	// ───────────────────────── XFA ─────────────────────────
+
+	private static (byte[] Datasets, byte[] Template) XfaPackets(PdfDictionary acroForm)
+	{
+		PdfItem xfa = Resolve(acroForm.Elements["/XFA"]);
+		if (xfa is PdfArray array)
+		{
+			byte[] datasets = null;
+			byte[] template = null;
+			for (int i = 0; i + 1 < array.Elements.Count; i += 2)
+			{
+				if (Resolve(array.Elements[i]) is PdfString name && Resolve(array.Elements[i + 1]) is PdfDictionary stream)
+				{
+					if (name.Value == "datasets")
+					{
+						datasets = stream.Stream?.UnfilteredValue;
+					}
+					else if (name.Value == "template")
+					{
+						template = stream.Stream?.UnfilteredValue;
+					}
+				}
+			}
+			return (datasets, template);
+		}
+		if (xfa is PdfDictionary whole && whole.Stream?.UnfilteredValue is byte[] xdp)
+		{
+			XDocument doc = LoadXml(xdp);
+			XElement ds = null;
+			XElement tpl = null;
+			foreach (XElement e in doc.Descendants())
+			{
+				if (ds == null && e.Name.LocalName == "datasets")
+				{
+					ds = e;
+				}
+				else if (tpl == null && e.Name.LocalName == "template")
+				{
+					tpl = e;
+				}
+				if (ds != null && tpl != null)
+				{
+					break;
+				}
+			}
+			return (
+				ds == null ? null : System.Text.Encoding.UTF8.GetBytes(ds.ToString(SaveOptions.DisableFormatting)),
+				tpl == null ? null : System.Text.Encoding.UTF8.GetBytes(tpl.ToString(SaveOptions.DisableFormatting)));
+		}
+		return (null, null);
+	}
 
 	/// <summary>
 	/// One packet of an XFA form ("datasets", "template"), decoded. /XFA is either an array of name and stream pairs or
@@ -245,8 +299,7 @@ public static class EcReader
 		}
 		try
 		{
-			XmlReaderSettings settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, IgnoreComments = true, IgnoreWhitespace = true };
-			using XmlReader reader = XmlReader.Create(new MemoryStream(template), settings);
+			using XmlReader reader = XmlReader.Create(new MemoryStream(template), TemplateXmlSettings);
 			Stack<string> fields = new Stack<string>();
 			while (reader.Read())
 			{
@@ -282,8 +335,7 @@ public static class EcReader
 	/// <summary>Parses XML without DTDs or external entities.</summary>
 	private static XDocument LoadXml(byte[] bytes)
 	{
-		XmlReaderSettings settings = new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, IgnoreComments = true };
-		using XmlReader reader = XmlReader.Create(new MemoryStream(bytes), settings);
+		using XmlReader reader = XmlReader.Create(new MemoryStream(bytes), DefaultXmlSettings);
 		return XDocument.Load(reader);
 	}
 
@@ -338,15 +390,24 @@ public static class EcReader
 	/// </summary>
 	private static Dictionary<string, string> MatchNames(Dictionary<string, string> byFullName)
 	{
-		List<(string Name, string Value)> cleaned = byFullName
-			.Select(kv => (Name: Regex.Replace(kv.Key, @"\[\d+\]", "").Replace("\\.", "."), kv.Value)).ToList();
+		Dictionary<string, string> bySuffix = new Dictionary<string, string>(byFullName.Count * 2, StringComparer.Ordinal);
+		foreach ((string rawKey, string value) in byFullName)
+		{
+			string clean = BracketIndexRegex.Replace(rawKey, "").Replace("\\.", ".", StringComparison.Ordinal);
+			bySuffix.TryAdd(clean, value);
+			int dot = clean.IndexOf('.');
+			while (dot >= 0 && dot + 1 < clean.Length)
+			{
+				bySuffix.TryAdd(clean.Substring(dot + 1), value);
+				dot = clean.IndexOf('.', dot + 1);
+			}
+		}
 		Dictionary<string, string> fields = new Dictionary<string, string>(StringComparer.Ordinal);
 		foreach (string wanted in ElevationCertificateValues.Names.All)
 		{
-			(string Name, string Value) hit = cleaned.FirstOrDefault(c => c.Name == wanted || c.Name.EndsWith("." + wanted, StringComparison.Ordinal));
-			if (hit.Name != null)
+			if (bySuffix.TryGetValue(wanted, out string val))
 			{
-				fields[wanted] = hit.Value;
+				fields[wanted] = val;
 			}
 		}
 		return fields;

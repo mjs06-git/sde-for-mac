@@ -60,10 +60,16 @@ public static class FieldKit
 	public static List<FieldKitStop> Stops(SdeStore store, Guid teamId, Guid? eventId = null)
 	{
 		ArgumentNullException.ThrowIfNull(store);
-		Dictionary<Guid, StructureSummary> latest = new();
+		List<AssignmentRecord> assignments = store.GetAssignments(teamId, eventId);
+		if (assignments.Count == 0)
+		{
+			return new List<FieldKitStop>();
+		}
+		Dictionary<Guid, PropertyRecord> properties = store.GetProperties(assignments.Select(a => a.PropertyID));
+		Dictionary<Guid, StructureSummary> latest = new Dictionary<Guid, StructureSummary>();
 		foreach (StructureSummary s in store.ListStructures())
 		{
-			if (s.AssessmentID == null)
+			if (s.AssessmentID == null || !properties.ContainsKey(s.PropertyID))
 			{
 				continue;
 			}
@@ -72,9 +78,7 @@ public static class FieldKit
 				latest[s.PropertyID] = s;
 			}
 		}
-		List<FieldKitStop> stops = new();
-		List<AssignmentRecord> assignments = store.GetAssignments(teamId, eventId);
-		Dictionary<Guid, PropertyRecord> properties = store.GetProperties(assignments.Select(a => a.PropertyID));
+		List<FieldKitStop> stops = new List<FieldKitStop>(assignments.Count);
 		foreach (AssignmentRecord a in assignments)
 		{
 			if (!properties.TryGetValue(a.PropertyID, out PropertyRecord p))
@@ -204,17 +208,14 @@ public static class FieldKit
 		}
 		Kit.Gap(sec, 8);
 
-		byte[] map = Normalized(o.MapSnippet?.Invoke(s));
-		if (map is { Length: > 0 })
+		(byte[] Png, int Width, int Height)? normalizedMap = NormalizedWithSize(o.MapSnippet?.Invoke(s));
+		if (normalizedMap is (byte[] map, int mapW, int mapH) && map.Length > 0)
 		{
 			Paragraph m = sec.AddParagraph();
 			m.Format.Alignment = ParagraphAlignment.Center;
 			MigraDoc.DocumentObjectModel.Shapes.Image img = m.AddImage("base64:" + Convert.ToBase64String(map));
-			using (SKCodec codec = SKCodec.Create(new MemoryStream(map)))
-			{
-				// Full width, but never taller than MapHeight inches, so the worksheet stays on one page.
-				img.Width = Unit.FromInch(Math.Min(Kit.PortraitWidth, MapHeight * codec.Info.Width / Math.Max(1, codec.Info.Height)));
-			}
+			// Full width, but never taller than MapHeight inches, so the worksheet stays on one page.
+			img.Width = Unit.FromInch(Math.Min(Kit.PortraitWidth, MapHeight * mapW / Math.Max(1, mapH)));
 			img.LockAspectRatio = true;
 			Kit.Gap(sec, 6);
 		}
@@ -254,24 +255,25 @@ public static class FieldKit
 	{
 		using QRCodeGenerator generator = new QRCodeGenerator();
 		using QRCodeData data = generator.CreateQrCode(text ?? "", QRCodeGenerator.ECCLevel.M);
-		return Normalized(new PngByteQRCode(data).GetGraphic(10));
+		using PngByteQRCode qr = new PngByteQRCode(data);
+		return NormalizedWithSize(qr.GetGraphic(10))?.Png;
 	}
 
 	/// <summary>
 	/// The picture re-encoded as a 32-bit PNG, which PDFsharp always embeds (it skips some 1-bit and palette PNGs, such
-	/// as QRCoder's). Null when the bytes aren't a picture.
+	/// as QRCoder's), along with its pixel dimensions. Null when the bytes aren't a picture.
 	/// </summary>
-	private static byte[] Normalized(byte[] picture)
+	private static (byte[] Png, int Width, int Height)? NormalizedWithSize(byte[] picture)
 	{
 		using SKBitmap bitmap = picture is { Length: > 0 } ? SKBitmap.Decode(picture) : null;
 		if (bitmap == null)
 		{
 			return null;
 		}
-		using SKBitmap rgba = bitmap.Copy(SKColorType.Rgba8888);
-		using SKImage image = SKImage.FromBitmap(rgba ?? bitmap);
-		using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
-		return data.ToArray();
+		using SKBitmap rgba = bitmap.ColorType == SKColorType.Rgba8888 ? null : bitmap.Copy(SKColorType.Rgba8888);
+		SKBitmap target = rgba ?? bitmap;
+		using SKData data = target.Encode(SKEncodedImageFormat.Png, 100);
+		return data == null ? null : (data.ToArray(), target.Width, target.Height);
 	}
 
 	private static void Heading(Section sec, string title, FieldKitOptions o, DateTime printed)

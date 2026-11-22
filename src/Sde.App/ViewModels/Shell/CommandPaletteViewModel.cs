@@ -54,8 +54,19 @@ public sealed class PaletteItem
 
 	public bool Matches(IReadOnlyList<string> words)
 	{
+		if (words.Count == 0)
+		{
+			return true;
+		}
 		_text ??= (Title + " " + Detail + " " + Keywords).ToLowerInvariant();
-		return words.All(w => _text.Contains(w, StringComparison.Ordinal));
+		for (int i = 0; i < words.Count; i++)
+		{
+			if (!_text.Contains(words[i], StringComparison.Ordinal))
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 }
 
@@ -85,7 +96,7 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 	[ObservableProperty]
 	public partial string Query { get; set; } = "";
 
-	public ObservableCollection<PaletteItem> Results { get; } = new();
+	public RangeObservableCollection<PaletteItem> Results { get; } = new();
 
 	[ObservableProperty]
 	public partial PaletteItem Selected { get; set; }
@@ -167,11 +178,7 @@ public sealed partial class CommandPaletteViewModel : ObservableObject
 			item.IsFirstInGroup = item.Group != group;
 			group = item.Group;
 		}
-		Results.Clear();
-		foreach (PaletteItem item in list)
-		{
-			Results.Add(item);
-		}
+		Results.ReplaceAll(list);
 		Selected = Results.FirstOrDefault();
 		IsEmpty = Results.Count == 0;
 	}

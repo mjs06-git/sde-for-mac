@@ -135,10 +135,10 @@ public sealed class DepthProposal
 	}
 
 	/// <summary>The FieldCatalog key of Assessment.DepthOfFlood.</summary>
-	public static string DepthOfFloodKey => FieldCatalog.Find(FieldModel.Assessment, nameof(AssessmentRecord.DepthOfFlood)).Key;
+	public const string DepthOfFloodKey = "Assessment." + nameof(AssessmentRecord.DepthOfFlood);
 
 	/// <summary>The FieldCatalog key of Assessment.DepthOfFloodAboveFFE.</summary>
-	public static string DepthAboveFloorKey => FieldCatalog.Find(FieldModel.Assessment, nameof(AssessmentRecord.DepthOfFloodAboveFFE)).Key;
+	public const string DepthAboveFloorKey = "Assessment." + nameof(AssessmentRecord.DepthOfFloodAboveFFE);
 }
 
 /// <summary>
@@ -177,13 +177,39 @@ public static class HighWaterMarks
 	public static WaterSurfaceEstimate Estimate(IEnumerable<HighWaterMark> marks, double latitude, double longitude, HighWaterMarkOptions options = null)
 	{
 		HighWaterMarkOptions o = options ?? new HighWaterMarkOptions();
-		List<(HighWaterMark Mark, double Meters)> inRange = (marks ?? Enumerable.Empty<HighWaterMark>())
-			.Where(m => m != null && (m.Quality == null || m.Quality <= o.WorstQuality))
-			.Select((m, i) => (Mark: m, Meters: GeoMath.Meters(latitude, longitude, m.Latitude, m.Longitude), Order: i))
-			.Where(x => x.Meters <= o.RadiusMeters)
-			.OrderBy(x => x.Meters).ThenBy(x => x.Order)
-			.Select(x => (x.Mark, x.Meters))
-			.ToList();
+		List<(HighWaterMark Mark, double Meters, int Order)> hits = new List<(HighWaterMark, double, int)>();
+		int order = 0;
+		foreach (HighWaterMark m in marks ?? Enumerable.Empty<HighWaterMark>())
+		{
+			if (m != null && (m.Quality == null || m.Quality <= o.WorstQuality))
+			{
+				double meters = GeoMath.Meters(latitude, longitude, m.Latitude, m.Longitude);
+				if (meters <= o.RadiusMeters)
+				{
+					hits.Add((m, meters, order));
+				}
+			}
+			order++;
+		}
+		if (hits.Count > 1)
+		{
+			hits.Sort(static (a, b) =>
+			{
+				int cmp = a.Meters.CompareTo(b.Meters);
+				return cmp != 0 ? cmp : a.Order.CompareTo(b.Order);
+			});
+		}
+		List<(HighWaterMark Mark, double Meters)> inRange = new List<(HighWaterMark, double)>(hits.Count);
+		for (int i = 0; i < hits.Count; i++)
+		{
+			inRange.Add((hits[i].Mark, hits[i].Meters));
+		}
+		return EstimateFromInRange(inRange, o);
+	}
+
+	/// <summary>Estimates the water-surface elevation from pre-indexed in-range marks (already sorted nearest first).</summary>
+	internal static WaterSurfaceEstimate EstimateFromInRange(List<(HighWaterMark Mark, double Meters)> inRange, HighWaterMarkOptions o)
+	{
 		if (inRange.Count == 0)
 		{
 			return new WaterSurfaceEstimate
@@ -194,37 +220,87 @@ public static class HighWaterMarks
 		}
 
 		// One datum only: the nearest mark that names one decides; marks that don't name one are a last resort.
-		(HighWaterMark Mark, double Meters) leader = inRange.FirstOrDefault(x => x.Mark.Datum != VerticalDatum.Unknown);
-		string datumName = leader.Mark?.DatumName;
-		List<(HighWaterMark Mark, double Meters)> sameDatum = leader.Mark == null
-			? inRange
-			: inRange.Where(x => x.Mark.Datum != VerticalDatum.Unknown && !VerticalDatums.Differ(x.Mark.DatumName, datumName)).ToList();
-		int otherDatum = inRange.Count(x => x.Mark.Datum != VerticalDatum.Unknown) - sameDatum.Count;
-		int noDatum = leader.Mark == null ? 0 : inRange.Count(x => x.Mark.Datum == VerticalDatum.Unknown);
-
-		List<(HighWaterMark Mark, double Meters)> used = sameDatum.Take(Math.Max(1, o.NearestCount)).ToList();
-		double[] raw = used.Select(x => QualityWeight(x.Mark.Quality) / Math.Pow(Math.Max(x.Meters, MinimumDistanceMeters), o.Power)).ToArray();
-		double total = raw.Sum();
-		double estimate = 0;
-		for (int i = 0; i < used.Count; i++)
+		VerticalDatum[] datums = new VerticalDatum[inRange.Count];
+		int leaderIndex = -1;
+		for (int i = 0; i < inRange.Count; i++)
 		{
-			estimate += (double)used[i].Mark.ElevationFt * raw[i] / total;
+			VerticalDatum d = inRange[i].Mark.Datum;
+			datums[i] = d;
+			if (leaderIndex < 0 && d != VerticalDatum.Unknown)
+			{
+				leaderIndex = i;
+			}
 		}
-		List<UsedMark> usedMarks = used.Select((x, i) => new UsedMark(x.Mark, x.Meters, raw[i] / total)).ToList();
+		string datumName = leaderIndex >= 0 ? inRange[leaderIndex].Mark.DatumName : null;
+		List<(HighWaterMark Mark, double Meters)> sameDatum;
+		int otherDatum = 0;
+		int noDatum = 0;
+		if (leaderIndex < 0)
+		{
+			sameDatum = inRange;
+		}
+		else
+		{
+			sameDatum = new List<(HighWaterMark, double)>(inRange.Count);
+			for (int i = 0; i < inRange.Count; i++)
+			{
+				if (datums[i] == VerticalDatum.Unknown)
+				{
+					noDatum++;
+				}
+				else if (!VerticalDatums.Differ(inRange[i].Mark.DatumName, datumName))
+				{
+					sameDatum.Add(inRange[i]);
+				}
+				else
+				{
+					otherDatum++;
+				}
+			}
+		}
 
-		decimal spread = used.Max(x => x.Mark.ElevationFt) - used.Min(x => x.Mark.ElevationFt);
-		double nearest = used[0].Meters;
-		bool noDatumAtAll = leader.Mark == null;
+		int take = Math.Min(sameDatum.Count, Math.Max(1, o.NearestCount));
+		double[] raw = new double[take];
+		double total = 0;
+		for (int i = 0; i < take; i++)
+		{
+			double w = QualityWeight(sameDatum[i].Mark.Quality) / Math.Pow(Math.Max(sameDatum[i].Meters, MinimumDistanceMeters), o.Power);
+			raw[i] = w;
+			total += w;
+		}
+		double estimate = 0;
+		List<UsedMark> usedMarks = new List<UsedMark>(take);
+		decimal minElev = sameDatum[0].Mark.ElevationFt;
+		decimal maxElev = minElev;
+		for (int i = 0; i < take; i++)
+		{
+			decimal elev = sameDatum[i].Mark.ElevationFt;
+			if (elev < minElev)
+			{
+				minElev = elev;
+			}
+			if (elev > maxElev)
+			{
+				maxElev = elev;
+			}
+			double share = raw[i] / total;
+			estimate += (double)elev * share;
+			usedMarks.Add(new UsedMark(sameDatum[i].Mark, sameDatum[i].Meters, share));
+		}
+
+		decimal spread = maxElev - minElev;
+		double nearest = sameDatum[0].Meters;
+		bool noDatumAtAll = leaderIndex < 0;
 		EstimateConfidence confidence =
-			used.Count == 1 || nearest > 500 || spread > 2.0m || noDatumAtAll ? EstimateConfidence.Low
-			: used.Count >= 3 && nearest <= 200 && spread <= 1.0m ? EstimateConfidence.High
+			take == 1 || nearest > 500 || spread > 2.0m || noDatumAtAll ? EstimateConfidence.Low
+			: take >= 3 && nearest <= 200 && spread <= 1.0m ? EstimateConfidence.High
 			: EstimateConfidence.Medium;
 
 		List<string> notes = new List<string>
 		{
-			used.Count == 1
+			take == 1
 				? $"From 1 mark, {Distance(nearest)} away."
-				: $"From {used.Count} marks within {Distance(used[^1].Meters)}, the nearest {Distance(nearest)} away. They differ by up to {spread.ToString("0.0#", CultureInfo.InvariantCulture)} ft.",
+				: $"From {take} marks within {Distance(sameDatum[take - 1].Meters)}, the nearest {Distance(nearest)} away. They differ by up to {spread.ToString("0.0#", CultureInfo.InvariantCulture)} ft.",
 		};
 		if (otherDatum > 0)
 		{
@@ -247,6 +323,10 @@ public static class HighWaterMarks
 			Note = string.Join(" ", notes),
 		};
 	}
+
+	/// <summary>Creates a spatial index over <paramref name="marks"/> for estimating many structures quickly.</summary>
+	public static HighWaterMarkIndex Index(IEnumerable<HighWaterMark> marks, HighWaterMarkOptions options = null) =>
+		new HighWaterMarkIndex(marks, options ?? new HighWaterMarkOptions());
 
 	/// <summary>
 	/// The depth values an estimate suggests for an assessment of <paramref name="structure"/>: the flood elevation,
@@ -329,4 +409,27 @@ public static class HighWaterMarks
 	internal static string Distance(double meters) => meters < 1000
 		? Math.Round(meters).ToString("0", CultureInfo.InvariantCulture) + " m"
 		: (meters / 1000).ToString("0.#", CultureInfo.InvariantCulture) + " km";
+}
+
+/// <summary>A spatial index over high-water marks so estimating many structures avoids scanning every mark per structure.</summary>
+public sealed class HighWaterMarkIndex
+{
+	private readonly HighWaterMarkOptions _options;
+	private readonly PointIndex<HighWaterMark> _index;
+
+	internal HighWaterMarkIndex(IEnumerable<HighWaterMark> marks, HighWaterMarkOptions options)
+	{
+		_options = options;
+		_index = new PointIndex<HighWaterMark>(
+			(marks ?? Enumerable.Empty<HighWaterMark>())
+				.Where(m => m != null && (m.Quality == null || m.Quality <= options.WorstQuality))
+				.Select(m => (m, m.Latitude, m.Longitude)),
+			Math.Max(options.RadiusMeters, 1.0));
+	}
+
+	public WaterSurfaceEstimate Estimate(double latitude, double longitude)
+	{
+		List<(HighWaterMark Item, double Meters)> inRange = _index.Within(latitude, longitude, _options.RadiusMeters);
+		return HighWaterMarks.EstimateFromInRange(inRange, _options);
+	}
 }

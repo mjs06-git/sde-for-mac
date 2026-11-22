@@ -33,29 +33,61 @@ public sealed partial class SdeStore
 	/// Saves many assessments in one transaction (all or nothing), as one batch in edit history. Locked assessments are
 	/// skipped (unless the context allows it) and listed in the result.
 	/// </summary>
-	public BulkResult SaveAssessments(IReadOnlyList<AssessmentFile> files, SaveContext context)
+	public BulkResult SaveAssessments(IReadOnlyList<AssessmentFile> files, SaveContext context) =>
+		SaveAssessmentsInternal(files, context, recalculate: true);
+
+	private BulkResult SaveAssessmentsInternal(IReadOnlyList<AssessmentFile> files, SaveContext context, bool recalculate)
 	{
 		SaveContext ctx = context.AsBatch();
-		AssessmentCalculator calc = Calculator;
-		foreach (AssessmentFile f in files)
+		if (recalculate)
 		{
-			calc.Recalculate(f);
-		}
-		BulkResult result = new BulkResult { BatchId = ctx.BatchId };
-		Database.InTransaction((c, tx) =>
-		{
+			AssessmentCalculator calc = Calculator;
 			foreach (AssessmentFile f in files)
 			{
-				if (!ctx.AllowLocked && (GetStatus(c, tx, f.Assessment.AssessmentID).IsLocked || IsCheckedOut(c, tx, f.Assessment.AssessmentID)))
+				calc.Recalculate(f);
+			}
+		}
+		BulkResult result = new BulkResult { BatchId = ctx.BatchId };
+		if (files.Count == 0)
+		{
+			return result;
+		}
+		Database.InTransaction((c, tx) =>
+		{
+			List<Guid> ids = files.Select(f => f.Assessment.AssessmentID).Distinct().ToList();
+			Dictionary<Guid, AssessmentFile> beforeById = LoadAssessments(c, tx, ids).ToDictionary(f => f.Assessment.AssessmentID);
+			HashSet<Guid> lockedOrOut = null;
+			if (!ctx.AllowLocked)
+			{
+				lockedOrOut = new HashSet<Guid>();
+				foreach (Guid[] chunk in ids.Chunk(500))
 				{
-					AssessmentFile stored = LoadAssessment(c, tx, f.Assessment.AssessmentID);
-					if (stored != null && AssessmentDiff.Compare(stored, f, Reference).Count > 0)
+					object args = new { chunk = IdText(chunk) };
+					foreach (AssessmentStatusRecord s in TableMap<AssessmentStatusRecord>.Select(c, "AssessmentID IN @chunk", args, tx))
 					{
-						result.Locked.Add(f.Assessment.AssessmentID);
+						if (s.IsLocked)
+						{
+							lockedOrOut.Add(s.AssessmentID);
+						}
+					}
+					foreach (Guid co in Dapper.SqlMapper.Query<Guid>(c, "SELECT AssessmentID FROM CheckOut WHERE AssessmentID IN @chunk", args, tx))
+					{
+						lockedOrOut.Add(co);
+					}
+				}
+			}
+			foreach (AssessmentFile f in files)
+			{
+				Guid aid = f.Assessment.AssessmentID;
+				beforeById.TryGetValue(aid, out AssessmentFile before);
+				if (lockedOrOut != null && lockedOrOut.Contains(aid))
+				{
+					if (before != null && AssessmentDiff.Compare(before, f, Reference).Count > 0)
+					{
+						result.Locked.Add(aid);
 					}
 					continue;
 				}
-				AssessmentFile before = LoadAssessment(c, tx, f.Assessment.AssessmentID);
 				if (before != null && AssessmentDiff.Compare(before, f, Reference).Count == 0)
 				{
 					continue;
@@ -76,7 +108,7 @@ public sealed partial class SdeStore
 		{
 			FieldRules.Apply(f, changes, calc);
 		}
-		return SaveAssessments(files, context);
+		return SaveAssessmentsInternal(files, context, recalculate: false);
 	}
 
 	/// <summary>
@@ -96,6 +128,7 @@ public sealed partial class SdeStore
 		// Every assessment the batch touched, read together rather than one connection each, in the order the loop meets them.
 		Dictionary<Guid, AssessmentFile> files = LoadAssessments(rows.AsEnumerable().Reverse().Select(r => r.AssessmentID).OfType<Guid>().Distinct())
 			.ToDictionary(x => x.Assessment.AssessmentID);
+		Dictionary<Guid, PropertyRecord> preloadedProperties = GetProperties(rows.Where(r => r.AssessmentID == null && r.PropertyID.HasValue).Select(r => r.PropertyID.Value));
 		Dictionary<Guid, PropertyRecord> properties = new Dictionary<Guid, PropertyRecord>();
 		int changedSince = 0;
 		foreach (EditHistoryRecord row in rows.AsEnumerable().Reverse())
@@ -113,8 +146,7 @@ public sealed partial class SdeStore
 			{
 				if (!properties.TryGetValue(pid, out PropertyRecord p))
 				{
-					p = GetProperty(pid);
-					if (p == null)
+					if (!preloadedProperties.TryGetValue(pid, out p))
 					{
 						continue;
 					}
@@ -200,7 +232,9 @@ public sealed partial class SdeStore
 			return matches;
 		}
 		Dictionary<Guid, AssessmentStatusRecord> statuses = GetStatuses();
-		foreach (AssessmentFile file in LoadAllAssessments())
+		List<Guid> allIds = Database.Read(c => Dapper.SqlMapper.Query<Guid>(c,
+			"SELECT a.AssessmentID FROM Assessment a JOIN Property p ON p.PropertyID = a.PropertyID WHERE a.Active = 1 AND p.Active = 1 ORDER BY a.DateofInspection DESC").ToList());
+		foreach (AssessmentFile file in LoadAssessmentHeaders(allIds))
 		{
 			object value = FieldCatalog.GetValue(file, field.Field);
 			string before = field.IsText ? value as string : FieldCatalog.Display(field.Field, value, Reference);
@@ -245,16 +279,30 @@ public sealed partial class SdeStore
 			});
 			return result;
 		}
-		List<AssessmentFile> files = new List<AssessmentFile>();
-		foreach (AssessmentFile file in LoadAllAssessments())
+		List<Guid> allIds = Database.Read(c => Dapper.SqlMapper.Query<Guid>(c,
+			"SELECT a.AssessmentID FROM Assessment a JOIN Property p ON p.PropertyID = a.PropertyID WHERE a.Active = 1 AND p.Active = 1 ORDER BY a.DateofInspection DESC").ToList());
+		List<(Guid Id, string After)> matching = new List<(Guid, string)>();
+		foreach (AssessmentFile header in LoadAssessmentHeaders(allIds))
 		{
-			string after = Replaced(field, FieldCatalog.GetValue(file, field.Field), search, replace);
-			if (after == null)
+			string after = Replaced(field, FieldCatalog.GetValue(header, field.Field), search, replace);
+			if (after != null)
 			{
-				continue;
+				matching.Add((header.Assessment.AssessmentID, after));
 			}
-			FieldCatalog.SetValue(file, field.Field, after.Length == 0 ? null : (object)after);
-			files.Add(file);
+		}
+		if (matching.Count == 0)
+		{
+			return new BulkResult { BatchId = ctx.BatchId };
+		}
+		Dictionary<Guid, AssessmentFile> loaded = LoadAssessments(matching.Select(m => m.Id)).ToDictionary(f => f.Assessment.AssessmentID);
+		List<AssessmentFile> files = new List<AssessmentFile>(matching.Count);
+		foreach ((Guid id, string after) in matching)
+		{
+			if (loaded.TryGetValue(id, out AssessmentFile file))
+			{
+				FieldCatalog.SetValue(file, field.Field, after.Length == 0 ? null : (object)after);
+				files.Add(file);
+			}
 		}
 		return SaveAssessments(files, ctx);
 	}

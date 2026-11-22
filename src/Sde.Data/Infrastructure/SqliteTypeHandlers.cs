@@ -99,10 +99,15 @@ internal static class SqliteTypeHandlers
 		return hex.Length == 32 ? Guid.ParseExact(hex, "N") : throw new FormatException("Not a GUID: " + s);
 	}
 
+	private static readonly string[] DateFormats = { DateFormat, "yyyy-MM-dd HH:mm:ss.FFFFFFF", "yyyy-MM-ddTHH:mm:ss.FFFFFFF", "yyyy-MM-dd" };
+
 	public static DateTime ParseDate(string s)
 	{
-		string[] formats = { DateFormat, "yyyy-MM-dd HH:mm:ss.FFFFFFF", "yyyy-MM-ddTHH:mm:ss.FFFFFFF", "yyyy-MM-dd" };
-		return DateTime.TryParseExact(s, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime d)
+		if (DateTime.TryParseExact(s, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime d))
+		{
+			return d;
+		}
+		return DateTime.TryParseExact(s, DateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out d)
 			? d
 			: DateTime.Parse(s, CultureInfo.InvariantCulture);
 	}

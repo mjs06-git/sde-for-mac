@@ -1,5 +1,6 @@
 using System.Data;
 using System.Globalization;
+using System.Linq.Expressions;
 using System.Reflection;
 using Dapper;
 using Sde.Core.Records;
@@ -35,10 +36,35 @@ internal static class TableMap<T>
 
 	private static readonly string InsertWithoutAutoIncrementSql = InsertFor(ColumnsWithoutAutoIncrement);
 
-	private static readonly string UpdateSql =
-		$"UPDATE {Q(Table)} SET {string.Join(", ", Columns.Where(p => !Keys.Contains(p)).Select(p => $"{Q(p.Name)} = @{p.Name}"))} WHERE {KeyWhere}";
+	private static readonly string InsertReturningSql = AutoIncrement == null
+		? null
+		: InsertWithoutAutoIncrementSql + " RETURNING " + Q(AutoIncrement.Name);
 
-	private static readonly HashSet<PropertyInfo> JetScaleColumns = Columns.Where(p => p.GetCustomAttribute<JetScaleAttribute>() != null).ToHashSet();
+	private static readonly PropertyInfo[] NonKeyColumns = Columns.Where(p => !Keys.Contains(p)).ToArray();
+
+	private static readonly string UpdateSql =
+		$"UPDATE {Q(Table)} SET {string.Join(", ", NonKeyColumns.Select(p => $"{Q(p.Name)} = @{p.Name}"))} WHERE {KeyWhere}";
+
+	// Single-statement upsert (not INSERT OR REPLACE, which would fire cascading deletes).
+	private static readonly string UpsertSql = Keys.Length == 0
+		? null
+		: NonKeyColumns.Length == 0
+			? $"{InsertSql} ON CONFLICT ({string.Join(", ", Keys.Select(k => Q(k.Name)))}) DO NOTHING"
+			: $"{InsertSql} ON CONFLICT ({string.Join(", ", Keys.Select(k => Q(k.Name)))}) DO UPDATE SET {string.Join(", ", NonKeyColumns.Select(p => $"{Q(p.Name)} = excluded.{Q(p.Name)}"))}";
+
+	private static readonly HashSet<PropertyInfo> JetScaleStringColumns = Columns
+		.Where(p => p.PropertyType == typeof(string) && p.GetCustomAttribute<JetScaleAttribute>() != null)
+		.ToHashSet();
+
+	private static readonly bool HasJetScaleStrings = JetScaleStringColumns.Count > 0;
+
+	private static readonly Func<T, bool> IsAutoIncrementUnset = AutoIncrement == null ? null : BuildIsUnset(AutoIncrement);
+
+	private static readonly Action<T, long> SetAutoIncrement = AutoIncrement == null ? null : BuildSetLong(AutoIncrement);
+
+	private static readonly Func<T, bool> HasAllKeys = BuildHasAllKeys();
+
+	public static readonly Func<T, T> Clone = BuildClone();
 
 	private static string InsertFor(PropertyInfo[] columns) =>
 		$"INSERT INTO {Q(Table)} ({string.Join(", ", columns.Select(p => Q(p.Name)))}) VALUES ({string.Join(", ", columns.Select(p => "@" + p.Name))})";
@@ -58,12 +84,17 @@ internal static class TableMap<T>
 	public static void Insert(IDbConnection c, T record, IDbTransaction tx = null)
 	{
 		JetScaling.Apply(record);
-		bool assignId = AutoIncrement != null && IsUnset(AutoIncrement.GetValue(record));
-		c.Execute(assignId ? InsertWithoutAutoIncrementSql : InsertSql, Parameters(record, assignId ? ColumnsWithoutAutoIncrement : Columns), tx);
+		bool assignId = IsAutoIncrementUnset != null && IsAutoIncrementUnset(record);
 		if (assignId)
 		{
-			long id = c.ExecuteScalar<long>("SELECT last_insert_rowid()", transaction: tx);
-			AutoIncrement.SetValue(record, Convert.ChangeType(id, Nullable.GetUnderlyingType(AutoIncrement.PropertyType) ?? AutoIncrement.PropertyType, CultureInfo.InvariantCulture));
+			object args = HasJetScaleStrings ? Parameters(record, ColumnsWithoutAutoIncrement) : record;
+			long id = c.ExecuteScalar<long>(InsertReturningSql, args, tx);
+			SetAutoIncrement(record, id);
+		}
+		else
+		{
+			object args = HasJetScaleStrings ? Parameters(record, Columns) : record;
+			c.Execute(InsertSql, args, tx);
 		}
 	}
 
@@ -71,14 +102,20 @@ internal static class TableMap<T>
 	public static int Update(IDbConnection c, T record, IDbTransaction tx = null)
 	{
 		JetScaling.Apply(record);
-		return c.Execute(UpdateSql, Parameters(record, Columns), tx);
+		object args = HasJetScaleStrings ? Parameters(record, Columns) : record;
+		return c.Execute(UpdateSql, args, tx);
 	}
 
 	/// <summary>Update if the key exists, otherwise insert. (Not INSERT OR REPLACE, which would fire cascading deletes.)</summary>
 	public static void Upsert(IDbConnection c, T record, IDbTransaction tx = null)
 	{
-		bool hasKey = Keys.All(k => !IsUnset(k.GetValue(record)));
-		if (!hasKey || Update(c, record, tx) == 0)
+		if (HasAllKeys(record) && UpsertSql != null)
+		{
+			JetScaling.Apply(record);
+			object args = HasJetScaleStrings ? Parameters(record, Columns) : record;
+			c.Execute(UpsertSql, args, tx);
+		}
+		else
 		{
 			Insert(c, record, tx);
 		}
@@ -87,14 +124,15 @@ internal static class TableMap<T>
 	public static int Delete(IDbConnection c, string where, object args, IDbTransaction tx = null) =>
 		c.Execute($"DELETE FROM {Q(Table)} WHERE {where}", args, tx);
 
-	private static DynamicParameters Parameters(T record, IEnumerable<PropertyInfo> props)
+	private static DynamicParameters Parameters(T record, PropertyInfo[] props)
 	{
 		DynamicParameters p = new DynamicParameters();
-		foreach (PropertyInfo prop in props)
+		for (int i = 0; i < props.Length; i++)
 		{
+			PropertyInfo prop = props[i];
 			object value = prop.GetValue(record);
 			// [JetScale] string columns (ElementPercentage.ItemCost/DamageValues) hold numbers: store them as numbers.
-			if (value is string s && JetScaleColumns.Contains(prop))
+			if (value is string s && JetScaleStringColumns.Contains(prop))
 			{
 				value = JetScaling.TryParse(s, out decimal d) ? d : null;
 			}
@@ -103,12 +141,79 @@ internal static class TableMap<T>
 		return p;
 	}
 
-	private static bool IsUnset(object v) => v switch
+	private static Func<T, bool> BuildIsUnset(PropertyInfo prop)
 	{
-		null => true,
-		int i => i == 0,
-		long l => l == 0,
-		Guid g => g == Guid.Empty,
-		_ => false,
-	};
+		ParameterExpression target = Expression.Parameter(typeof(T), "record");
+		MemberExpression read = Expression.Property(target, prop);
+		Expression check = IsUnsetExpression(read, prop.PropertyType);
+		return Expression.Lambda<Func<T, bool>>(check, target).Compile();
+	}
+
+	private static Func<T, bool> BuildHasAllKeys()
+	{
+		if (Keys.Length == 0)
+		{
+			return static _ => false;
+		}
+		ParameterExpression target = Expression.Parameter(typeof(T), "record");
+		Expression combined = null;
+		foreach (PropertyInfo key in Keys)
+		{
+			Expression set = Expression.Not(IsUnsetExpression(Expression.Property(target, key), key.PropertyType));
+			combined = combined == null ? set : Expression.AndAlso(combined, set);
+		}
+		return Expression.Lambda<Func<T, bool>>(combined, target).Compile();
+	}
+
+	private static Expression IsUnsetExpression(Expression value, Type type)
+	{
+		if (type == typeof(int))
+		{
+			return Expression.Equal(value, Expression.Constant(0));
+		}
+		if (type == typeof(long))
+		{
+			return Expression.Equal(value, Expression.Constant(0L));
+		}
+		if (type == typeof(Guid))
+		{
+			return Expression.Equal(value, Expression.Constant(Guid.Empty));
+		}
+		if (Nullable.GetUnderlyingType(type) is Type underlying)
+		{
+			Expression noVal = Expression.Not(Expression.Property(value, "HasValue"));
+			Expression inner = IsUnsetExpression(Expression.Property(value, "Value"), underlying);
+			return Expression.OrElse(noVal, inner);
+		}
+		if (!type.IsValueType)
+		{
+			return Expression.Equal(value, Expression.Constant(null, type));
+		}
+		return Expression.Constant(false);
+	}
+
+	private static Action<T, long> BuildSetLong(PropertyInfo prop)
+	{
+		ParameterExpression target = Expression.Parameter(typeof(T), "record");
+		ParameterExpression id = Expression.Parameter(typeof(long), "id");
+		Type underlying = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+		Expression converted = Expression.Convert(id, underlying);
+		if (prop.PropertyType != underlying)
+		{
+			converted = Expression.Convert(converted, prop.PropertyType);
+		}
+		return Expression.Lambda<Action<T, long>>(Expression.Assign(Expression.Property(target, prop), converted), target, id).Compile();
+	}
+
+	private static Func<T, T> BuildClone()
+	{
+		ParameterExpression source = Expression.Parameter(typeof(T), "source");
+		MemberBinding[] bindings = new MemberBinding[Columns.Length];
+		for (int i = 0; i < Columns.Length; i++)
+		{
+			bindings[i] = Expression.Bind(Columns[i], Expression.Property(source, Columns[i]));
+		}
+		MemberInitExpression init = Expression.MemberInit(Expression.New(typeof(T)), bindings);
+		return Expression.Lambda<Func<T, T>>(init, source).Compile();
+	}
 }

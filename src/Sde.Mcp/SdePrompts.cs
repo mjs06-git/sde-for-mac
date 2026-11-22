@@ -81,7 +81,7 @@ public sealed class SdePrompts(SdeMcpContext sde)
 	public GetPromptResult OwnerLetterDraft(
 		[Description("The assessment's ID (find_structures lists them).")] string assessmentId)
 	{
-		AssessmentFile file = sde.LoadAssessment(sde.Reader, assessmentId);
+		AssessmentFile file = sde.LoadAssessmentHeader(sde.Reader, assessmentId);
 		string id = file.Assessment.AssessmentID.ToString();
 		string address = Describe.Address(file.Property, sde.Reader.Reference);
 		string text = string.Join("\n", new[]

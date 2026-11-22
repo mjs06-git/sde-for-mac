@@ -55,9 +55,13 @@ public sealed class ReferenceData
 	private readonly Dictionary<int, LookupRecord> _byId;
 	private readonly Dictionary<int, StateRecord> _statesById;
 	private readonly Dictionary<int, CountyRecord> _countiesById;
+	private readonly Dictionary<int, LatLongValidationRecord> _latLongByState;
+	private readonly Dictionary<Guid, CustomFieldRecord> _customFieldsById;
+	private readonly Dictionary<(int Story, int Use, int Rating), decimal> _depreciationByKey;
 	// Reference data never changes once loaded, so each type's sorted list is made once (import previews run off the UI thread).
 	private readonly System.Collections.Concurrent.ConcurrentDictionary<int, IReadOnlyList<LookupRecord>> _ofType = new();
 	private readonly System.Collections.Concurrent.ConcurrentDictionary<int, IReadOnlyList<CountyRecord>> _countiesIn = new();
+	private readonly System.Collections.Concurrent.ConcurrentDictionary<(int? StructureTypeId, int? ResidenceTypeId), IReadOnlyList<LookupRecord>> _costAdjustments = new();
 
 	public ReferenceData(
 		IReadOnlyList<LookupRecord> lookups,
@@ -82,6 +86,13 @@ public sealed class ReferenceData
 		_byId = lookups.GroupBy(l => l.LookupID).ToDictionary(g => g.Key, g => g.First());
 		_statesById = states.GroupBy(s => s.StateID).ToDictionary(g => g.Key, g => g.First());
 		_countiesById = counties.GroupBy(c => c.CountyID).ToDictionary(g => g.Key, g => g.First());
+		_latLongByState = latLongBoxes.GroupBy(b => b.StateID).ToDictionary(g => g.Key, g => g.First());
+		_customFieldsById = customFields.GroupBy(c => c.CustomFieldID).ToDictionary(g => g.Key, g => g.First());
+		_depreciationByKey = new Dictionary<(int, int, int), decimal>(depreciation.Count);
+		foreach (DepreciationValueRecord d in depreciation.OrderBy(d => Lookup(d.DepreciationLookupID)?.zOrder ?? int.MaxValue))
+		{
+			_depreciationByKey.TryAdd((d.StoriesLookupID, d.StructureUseLookupID, d.DepreciationLookupID), d.DepreciationPercentage ?? 0m);
+		}
 	}
 
 	public IReadOnlyList<LookupRecord> Lookups { get; }
@@ -115,6 +126,10 @@ public sealed class ReferenceData
 
 	public string CountyName(int? id) => id is int i && _countiesById.TryGetValue(i, out CountyRecord c) ? c.County : null;
 
+	public LatLongValidationRecord LatLongBox(int stateId) => _latLongByState.TryGetValue(stateId, out LatLongValidationRecord box) ? box : null;
+
+	public CustomFieldRecord CustomField(Guid id) => _customFieldsById.TryGetValue(id, out CustomFieldRecord cf) ? cf : null;
+
 	/// <summary>
 	/// Depreciation % for a rating. Port of DAL LookupService.GetDepreciationValues (decomp/DAL/DAL.Services/LookupService.cs:141):
 	/// residential uses story = use = 0; non-residential uses the structure's story and use. 0 when no row matches
@@ -127,11 +142,7 @@ public sealed class ReferenceData
 			storyId = 0;
 			structureUseId = 0;
 		}
-		DepreciationValueRecord row = Depreciation
-			.Where(d => d.StoriesLookupID == storyId && d.StructureUseLookupID == structureUseId && d.DepreciationLookupID == ratingLookupId)
-			.OrderBy(d => Lookup(d.DepreciationLookupID)?.zOrder ?? int.MaxValue)
-			.FirstOrDefault();
-		return row?.DepreciationPercentage ?? 0m;
+		return _depreciationByKey.TryGetValue((storyId, structureUseId, ratingLookupId), out decimal pct) ? pct : 0m;
 	}
 
 	/// <summary>
@@ -142,9 +153,14 @@ public sealed class ReferenceData
 	/// </summary>
 	public IReadOnlyList<LookupRecord> CostAdjustmentsFor(int? structureTypeId, int? residenceTypeId)
 	{
-		HashSet<int> set = structureTypeId == 1
-			? CostAdjustmentTypes.Where(c => c.ResidenceType == residenceTypeId).Select(c => c.LookupID).ToHashSet()
-			: OfType(LookupTypes.CostAdjustment).Where(l => l.LookupValue2 == "2").Select(l => l.LookupID).ToHashSet();
-		return OfType(LookupTypes.CostAdjustment).Where(l => set.Contains(l.LookupID)).ToList();
+		int? keyType = structureTypeId == 1 ? 1 : 0;
+		int? keyResidence = structureTypeId == 1 ? residenceTypeId : null;
+		return _costAdjustments.GetOrAdd((keyType, keyResidence), key =>
+		{
+			HashSet<int> set = key.StructureTypeId == 1
+				? CostAdjustmentTypes.Where(c => c.ResidenceType == key.ResidenceTypeId).Select(c => c.LookupID).ToHashSet()
+				: OfType(LookupTypes.CostAdjustment).Where(l => l.LookupValue2 == "2").Select(l => l.LookupID).ToHashSet();
+			return OfType(LookupTypes.CostAdjustment).Where(l => set.Contains(l.LookupID)).ToList().AsReadOnly();
+		});
 	}
 }

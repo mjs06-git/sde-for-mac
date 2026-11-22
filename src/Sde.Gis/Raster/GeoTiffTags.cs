@@ -39,6 +39,9 @@ public static class GeoTiffTags
 		}
 	}
 
+	/// <summary>Clears any recorded LibTiff.NET errors on this thread without allocating a list.</summary>
+	internal static void ClearErrors() => _errors = null;
+
 	/// <summary>LibTiff.NET's errors on this thread since the last call (cleared by reading).</summary>
 	internal static List<string> TakeErrors()
 	{
@@ -47,20 +50,21 @@ public static class GeoTiffTags
 		return errors;
 	}
 
+	private static readonly TiffFieldInfo[] CustomFields =
+	{
+		new TiffFieldInfo(ModelPixelScale, -1, -1, TiffType.DOUBLE, FieldBit.Custom, true, true, "ModelPixelScaleTag"),
+		new TiffFieldInfo(ModelTiepoint, -1, -1, TiffType.DOUBLE, FieldBit.Custom, true, true, "ModelTiepointTag"),
+		new TiffFieldInfo(ModelTransformation, -1, -1, TiffType.DOUBLE, FieldBit.Custom, true, true, "ModelTransformationTag"),
+		new TiffFieldInfo(GeoKeyDirectory, -1, -1, TiffType.SHORT, FieldBit.Custom, true, true, "GeoKeyDirectoryTag"),
+		new TiffFieldInfo(GeoDoubleParams, -1, -1, TiffType.DOUBLE, FieldBit.Custom, true, true, "GeoDoubleParamsTag"),
+		new TiffFieldInfo(GeoAsciiParams, -1, -1, TiffType.ASCII, FieldBit.Custom, true, false, "GeoASCIIParamsTag"),
+		new TiffFieldInfo(GdalMetadata, -1, -1, TiffType.ASCII, FieldBit.Custom, true, false, "GDALMetadata"),
+		new TiffFieldInfo(GdalNoData, -1, -1, TiffType.ASCII, FieldBit.Custom, true, false, "GDALNoDataValue"),
+	};
+
 	private static void Extend(Tiff tif)
 	{
-		TiffFieldInfo[] fields =
-		{
-			new TiffFieldInfo(ModelPixelScale, -1, -1, TiffType.DOUBLE, FieldBit.Custom, true, true, "ModelPixelScaleTag"),
-			new TiffFieldInfo(ModelTiepoint, -1, -1, TiffType.DOUBLE, FieldBit.Custom, true, true, "ModelTiepointTag"),
-			new TiffFieldInfo(ModelTransformation, -1, -1, TiffType.DOUBLE, FieldBit.Custom, true, true, "ModelTransformationTag"),
-			new TiffFieldInfo(GeoKeyDirectory, -1, -1, TiffType.SHORT, FieldBit.Custom, true, true, "GeoKeyDirectoryTag"),
-			new TiffFieldInfo(GeoDoubleParams, -1, -1, TiffType.DOUBLE, FieldBit.Custom, true, true, "GeoDoubleParamsTag"),
-			new TiffFieldInfo(GeoAsciiParams, -1, -1, TiffType.ASCII, FieldBit.Custom, true, false, "GeoASCIIParamsTag"),
-			new TiffFieldInfo(GdalMetadata, -1, -1, TiffType.ASCII, FieldBit.Custom, true, false, "GDALMetadata"),
-			new TiffFieldInfo(GdalNoData, -1, -1, TiffType.ASCII, FieldBit.Custom, true, false, "GDALNoDataValue"),
-		};
-		tif.MergeFieldInfo(fields, fields.Length);
+		tif.MergeFieldInfo(CustomFields, CustomFields.Length);
 		_parent?.Invoke(tif);
 	}
 

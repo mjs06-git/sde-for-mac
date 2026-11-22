@@ -329,11 +329,14 @@ public sealed partial class ImprovementsSheetViewModel : SheetViewModel
 		ResultText = r.ResultText;
 		State = !r.CanDetermine ? ResultState.Incomplete : r.IsSubstantialImprovement ? ResultState.Substantial : ResultState.NotSubstantial;
 		Explanation = r.Explanation;
-		Lines = r.Projects.Select(l => new SiLineViewModel(
-			l.IsCurrent ? "This project" + (new ImprovementProjectRowViewModel(l.Project).Title is string t && t != "(no permit or description)" ? ": " + t : "") : new ImprovementProjectRowViewModel(l.Project).Title,
-			l.Counted ? l.CostCounted.ToString("C2", Us) : "",
-			l.Reason,
-			l.Counted)).ToList();
+		Lines = r.Projects.Select(l =>
+		{
+			string title = new ImprovementProjectRowViewModel(l.Project).Title;
+			string display = l.IsCurrent
+				? "This project" + (title != "(no permit or description)" ? ": " + title : "")
+				: title;
+			return new SiLineViewModel(display, l.Counted ? l.CostCounted.ToString("C2", Us) : "", l.Reason, l.Counted);
+		}).ToList();
 	}
 
 	// ───────────── Determinations ─────────────
@@ -348,7 +351,19 @@ public sealed partial class ImprovementsSheetViewModel : SheetViewModel
 	private void LoadDeterminations()
 	{
 		Determinations.Clear();
-		foreach (SIDeterminationRecord d in _app.Store.GetSiDeterminations(_propertyId))
+		List<SIDeterminationRecord> records = _app.Store.GetSiDeterminations(_propertyId);
+		HashSet<Guid> withCase = new HashSet<Guid>();
+		if (records.Count > 0)
+		{
+			foreach (ComplianceCaseRecord cc in _app.Store.GetComplianceCasesForProperty(_propertyId))
+			{
+				if (cc.DeterminationID is Guid detId)
+				{
+					withCase.Add(detId);
+				}
+			}
+		}
+		foreach (SIDeterminationRecord d in records)
 		{
 			string pct = d.Percent is decimal p ? p.ToString("0.0", Us) + "% of " + (d.MarketValue?.ToString("C0", Us) ?? "?") : "no market value";
 			Determinations.Add(new SiDeterminationRowViewModel(d.DeterminedOn.ToString("MMM d, yyyy", Us), d.Result,
@@ -356,7 +371,7 @@ public sealed partial class ImprovementsSheetViewModel : SheetViewModel
 			{
 				DeterminationId = d.DeterminationID,
 				IsSubstantial = d.Result == SiResult.SubstantialImprovement,
-				CaseText = _app.Store.GetComplianceCaseForImprovement(d.DeterminationID) == null ? "Open compliance case…" : "Compliance case…",
+				CaseText = withCase.Contains(d.DeterminationID) ? "Compliance case…" : "Open compliance case…",
 				OpenCase = OpenComplianceCaseCommand,
 			});
 		}

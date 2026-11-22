@@ -56,18 +56,22 @@ public sealed class ChangeWatcher : IDisposable
 		_commits = commits;
 
 		ExternalChanges changes = new ExternalChanges();
-		List<RowVersionRecord> rows = _connection.Query<RowVersionRecord>(
-			"SELECT ObjectID, Kind, Version, Seq, WriterId, ChangedOn FROM RowVersion WHERE Seq > @last ORDER BY Seq", new { last = _lastSeq }).ToList();
-		foreach (RowVersionRecord row in rows)
+		bool anyRows = false;
+		foreach (RowVersionRecord row in _connection.Query<RowVersionRecord>(
+			"SELECT ObjectID, Kind, Seq, WriterId FROM RowVersion WHERE Seq > @last ORDER BY Seq", new { last = _lastSeq }))
 		{
-			_lastSeq = Math.Max(_lastSeq, row.Seq);
+			anyRows = true;
+			if (row.Seq > _lastSeq)
+			{
+				_lastSeq = row.Seq;
+			}
 			if (row.WriterId == _database.WriterId)
 			{
 				continue;
 			}
 			(row.Value == VersionKind.Property ? changes.Properties : changes.Assessments).Add(row.ObjectID);
 		}
-		changes.Unversioned = rows.Count == 0 && !ownCommit;
+		changes.Unversioned = !anyRows && !ownCommit;
 		return changes.Any ? changes : null;
 	}
 

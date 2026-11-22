@@ -62,6 +62,20 @@ public sealed partial class SdeStore
 	public ComplianceCaseRecord GetComplianceCaseForImprovement(Guid determinationId) =>
 		Database.Read(c => TableMap<ComplianceCaseRecord>.Select(c, "DeterminationID = @determinationId", new { determinationId }).FirstOrDefault());
 
+	/// <summary>True when a compliance case belongs to an active structure (and, for an SD case, an active assessment).</summary>
+	public bool IsComplianceCaseActive(Guid caseId) => Database.Read(c => c.ExecuteScalar<int>("""
+		SELECT EXISTS(
+			SELECT 1 FROM ComplianceCase cc
+			JOIN Property p ON p.PropertyID = cc.PropertyID AND p.Active = 1
+			WHERE cc.CaseID = @caseId
+			  AND (cc.AssessmentID IS NULL OR EXISTS (SELECT 1 FROM Assessment a WHERE a.AssessmentID = cc.AssessmentID AND a.Active = 1))
+		)
+		""", new { caseId }) != 0);
+
+	/// <summary>All compliance cases for one structure.</summary>
+	public List<ComplianceCaseRecord> GetComplianceCasesForProperty(Guid propertyId) =>
+		Database.Read(c => TableMap<ComplianceCaseRecord>.Select(c, "PropertyID = @propertyId", new { propertyId }).ToList());
+
 	private sealed class ActiveStatusRow
 	{
 		public Guid AssessmentID { get; set; }

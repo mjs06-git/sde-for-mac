@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
 using Sde.Reports.Fonts;
@@ -30,12 +31,25 @@ internal static class StaffGauge
 	private const float LabelBaseline = 18.8f;
 	private const float LabelSize = 6f;
 
+	private const int MaxCacheEntries = 2048;
+	private static readonly ConcurrentDictionary<(decimal Percent, decimal Threshold, double Width), string> Base64Cache = new();
+
 	/// <summary>Adds the gauge as a paragraph holding the drawing, <paramref name="widthPoints"/> wide.</summary>
 	public static Paragraph Add(Cell cell, decimal percent, decimal threshold, double widthPoints, double spaceBefore)
 	{
 		Paragraph p = cell.AddParagraph();
 		p.Format.SpaceBefore = Unit.FromPoint(spaceBefore);
-		MigraDoc.DocumentObjectModel.Shapes.Image img = p.AddImage("base64:" + Convert.ToBase64String(Pdf(percent, threshold, widthPoints)));
+		(decimal Percent, decimal Threshold, double Width) key = (Math.Clamp(percent, 0m, 100m), threshold, widthPoints);
+		string source;
+		if (!Base64Cache.TryGetValue(key, out source))
+		{
+			source = "base64:" + Convert.ToBase64String(Pdf(percent, threshold, widthPoints));
+			if (Base64Cache.Count < MaxCacheEntries)
+			{
+				Base64Cache.TryAdd(key, source);
+			}
+		}
+		MigraDoc.DocumentObjectModel.Shapes.Image img = p.AddImage(source);
 		img.LockAspectRatio = true;
 		img.Width = Unit.FromPoint(widthPoints);
 		return p;

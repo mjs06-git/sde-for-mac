@@ -19,6 +19,7 @@ public sealed partial class CheckOutSheetViewModel : SheetViewModel
 	{
 		_app = app;
 		HashSet<Guid> checkedOut = app.Store.GetCheckOuts().Select(c => c.AssessmentID).ToHashSet();
+		Dictionary<Guid, AssessmentStatusRecord> statuses = app.Store.GetStatuses();
 		int locked = 0;
 		int already = 0;
 		_ids = new List<Guid>();
@@ -28,7 +29,7 @@ public sealed partial class CheckOutSheetViewModel : SheetViewModel
 			{
 				already++;
 			}
-			else if (app.Store.GetStatus(id).IsLocked)
+			else if (statuses.TryGetValue(id, out AssessmentStatusRecord status) && status.IsLocked)
 			{
 				locked++;
 			}

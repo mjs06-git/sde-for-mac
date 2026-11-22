@@ -38,6 +38,9 @@ public static class RouteOrder
 	/// <summary>A change has to save more than this to count, so rounding can't make the search go round in circles.</summary>
 	private const double MinimumGainMeters = 1e-6;
 
+	/// <summary>Largest stop count for which a precomputed pairwise distance matrix is allocated (2000 × 2000 = 32 MB).</summary>
+	private const int MatrixLimit = 2000;
+
 	/// <summary>
 	/// Orders the stops. With a start point (the office, or where the team is), the route starts there; without one,
 	/// nearest neighbour starts at the first stop with a position and 2-opt may then turn either end of the route round.
@@ -46,21 +49,59 @@ public static class RouteOrder
 	/// </summary>
 	public static RoutePlan Plan(IEnumerable<RouteStop> stops, double? startLatitude = null, double? startLongitude = null)
 	{
-		List<RouteStop> all = (stops ?? Enumerable.Empty<RouteStop>()).Where(s => s != null).ToList();
-		List<RouteStop> placed = all.Where(s => s.HasPosition).ToList();
-		List<RouteStop> unplaced = all.Where(s => !s.HasPosition).ToList();
+		List<RouteStop> placed = new List<RouteStop>();
+		List<RouteStop> unplaced = new List<RouteStop>();
+		foreach (RouteStop s in stops ?? Enumerable.Empty<RouteStop>())
+		{
+			if (s == null)
+			{
+				continue;
+			}
+			if (s.HasPosition)
+			{
+				placed.Add(s);
+			}
+			else
+			{
+				unplaced.Add(s);
+			}
+		}
 		RouteStop start = startLatitude is double sla && startLongitude is double slo ? new RouteStop(Guid.Empty, sla, slo) : null;
 		if (start != null && !start.HasPosition)
 		{
 			start = null;
 		}
 
-		List<RouteStop> route = NearestNeighbour(placed, start);
-		TwoOpt(route, start);
+		List<RouteStop> route;
+		double meters;
+		if (placed.Count >= 2 && placed.Count <= MatrixLimit)
+		{
+			int n = placed.Count;
+			double[] dist = BuildDistanceMatrix(placed);
+			double[] fromStart = start == null ? null : BuildStartDistances(placed, start);
+			int[] order = NearestNeighbourMatrix(n, dist, fromStart);
+			TwoOptMatrix(order, dist, fromStart);
+			route = new List<RouteStop>(n + unplaced.Count);
+			for (int i = 0; i < n; i++)
+			{
+				route.Add(placed[order[i]]);
+			}
+			meters = LengthMatrix(order, dist, fromStart);
+		}
+		else
+		{
+			route = NearestNeighbour(placed, start);
+			TwoOpt(route, start);
+			meters = Length(route, start);
+		}
+		if (unplaced.Count > 0)
+		{
+			route.AddRange(unplaced);
+		}
 		return new RoutePlan
 		{
-			Stops = route.Concat(unplaced).ToList(),
-			Meters = Length(route, start),
+			Stops = route,
+			Meters = meters,
 			WithoutPosition = unplaced.Count,
 		};
 	}
@@ -166,6 +207,134 @@ public static class RouteOrder
 				}
 			}
 		}
+	}
+
+	private static double[] BuildDistanceMatrix(List<RouteStop> stops)
+	{
+		int n = stops.Count;
+		double[] dist = new double[n * n];
+		for (int i = 0; i < n; i++)
+		{
+			RouteStop a = stops[i];
+			int row = i * n;
+			for (int j = i + 1; j < n; j++)
+			{
+				double d = Distance(a, stops[j]);
+				dist[row + j] = d;
+				dist[j * n + i] = d;
+			}
+		}
+		return dist;
+	}
+
+	private static double[] BuildStartDistances(List<RouteStop> stops, RouteStop start)
+	{
+		int n = stops.Count;
+		double[] dist = new double[n];
+		for (int i = 0; i < n; i++)
+		{
+			dist[i] = Distance(start, stops[i]);
+		}
+		return dist;
+	}
+
+	private static int[] NearestNeighbourMatrix(int n, double[] dist, double[] fromStart)
+	{
+		int[] order = new int[n];
+		bool[] used = new bool[n];
+		int pos = 0;
+		int current;
+		if (fromStart == null)
+		{
+			current = 0;
+			used[0] = true;
+			order[pos++] = 0;
+		}
+		else
+		{
+			int best = 0;
+			double bestDistance = fromStart[0];
+			for (int i = 1; i < n; i++)
+			{
+				if (fromStart[i] < bestDistance)
+				{
+					best = i;
+					bestDistance = fromStart[i];
+				}
+			}
+			current = best;
+			used[best] = true;
+			order[pos++] = best;
+		}
+		while (pos < n)
+		{
+			int row = current * n;
+			int best = -1;
+			double bestDistance = double.PositiveInfinity;
+			for (int i = 0; i < n; i++)
+			{
+				if (used[i])
+				{
+					continue;
+				}
+				double d = dist[row + i];
+				if (best < 0 || d < bestDistance)
+				{
+					best = i;
+					bestDistance = d;
+				}
+			}
+			current = best;
+			used[best] = true;
+			order[pos++] = best;
+		}
+		return order;
+	}
+
+	private static void TwoOptMatrix(int[] order, double[] dist, double[] fromStart)
+	{
+		int n = order.Length;
+		int passes = 0;
+		bool improved = true;
+		while (improved && passes++ < 10 * n + 10)
+		{
+			improved = false;
+			for (int i = 0; i < n - 1; i++)
+			{
+				int beforeIdx = i - 1;
+				int beforeRow = beforeIdx >= 0 ? order[beforeIdx] * n : -1;
+				int oi = order[i];
+				double legBeforeI = beforeIdx >= 0 ? dist[beforeRow + oi] : (fromStart != null ? fromStart[oi] : 0.0);
+				for (int j = i + 1; j < n; j++)
+				{
+					int oj = order[j];
+					int afterIdx = j + 1;
+					double legJAfter = afterIdx < n ? dist[oj * n + order[afterIdx]] : 0.0;
+					double now = legBeforeI + legJAfter;
+					double legBeforeJ = beforeIdx >= 0 ? dist[beforeRow + oj] : (fromStart != null ? fromStart[oj] : 0.0);
+					double legIAfter = afterIdx < n ? dist[oi * n + order[afterIdx]] : 0.0;
+					double reversed = legBeforeJ + legIAfter;
+					if (reversed < now - MinimumGainMeters)
+					{
+						Array.Reverse(order, i, j - i + 1);
+						oi = order[i];
+						legBeforeI = beforeIdx >= 0 ? dist[beforeRow + oi] : (fromStart != null ? fromStart[oi] : 0.0);
+						improved = true;
+					}
+				}
+			}
+		}
+	}
+
+	private static double LengthMatrix(int[] order, double[] dist, double[] fromStart)
+	{
+		int n = order.Length;
+		double total = fromStart != null ? fromStart[order[0]] : 0.0;
+		for (int i = 1; i < n; i++)
+		{
+			total += dist[order[i - 1] * n + order[i]];
+		}
+		return total;
 	}
 
 	private static double Distance(RouteStop a, RouteStop b) => GeoMath.Meters(a.Latitude.Value, a.Longitude.Value, b.Latitude.Value, b.Longitude.Value);

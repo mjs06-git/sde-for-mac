@@ -39,6 +39,9 @@ public static class CsvFormat
 	private static readonly string[] LatitudeNames = { "latitude", "lat", "y", "pointy", "latdd", "latitudedd", "ycoord", "ycoordinate", "latwgs84", "latitudewgs84", "gpslat", "gpslatitude", "northing" };
 	private static readonly string[] LongitudeNames = { "longitude", "lon", "long", "lng", "x", "pointx", "londd", "longdd", "longitudedd", "xcoord", "xcoordinate", "lonwgs84", "longitudewgs84", "gpslon", "gpslong", "gpslongitude", "easting" };
 	private static readonly string[] WktNames = { "wkt", "geometry", "geom", "thegeom", "shape", "wktgeometry", "geometrywkt" };
+	private static readonly UTF8Encoding StrictUtf8 = new UTF8Encoding(false, throwOnInvalidBytes: true);
+	private static readonly NetTopologySuite.NtsGeometryServices WktServices =
+		new NetTopologySuite.NtsGeometryServices(GisSetup.Factory.CoordinateSequenceFactory, GisSetup.Factory.PrecisionModel, 4326);
 
 	/// <summary>Reads a CSV file. Throws <see cref="GisException"/> when no location columns can be found.</summary>
 	public static FeatureLayer Read(string path, CsvOptions options = null)
@@ -78,7 +81,7 @@ public static class CsvFormat
 
 		FeatureLayer layer = new FeatureLayer(name);
 		layer.SourceCoordinateSystem = cs.IsGeographic ? null : cs;
-		List<int> attributeColumns = new List<int>();
+		List<int> attributeColumns = new List<int>(header.Length);
 		for (int i = 0; i < header.Length; i++)
 		{
 			if (i == wkt || header[i].Length == 0 || layer.Fields.Contains(header[i]))
@@ -86,16 +89,26 @@ public static class CsvFormat
 				continue;
 			}
 			attributeColumns.Add(i);
-			layer.AddField(header[i], InferType(rows.Skip(1).Select(r => i < r.Length ? r[i] : "")));
+			layer.AddField(header[i], InferType(rows, i));
 		}
 
-		WKTReader wktReader = new WKTReader(new NetTopologySuite.NtsGeometryServices(GisSetup.Factory.CoordinateSequenceFactory, GisSetup.Factory.PrecisionModel, 4326));
+		WKTReader wktReader = useWkt ? new WKTReader(WktServices) : null;
 		int skipped = 0;
 		long rowNumber = 0;
-		foreach (string[] row in rows.Skip(1))
+		for (int rowIndex = 1; rowIndex < rows.Count; rowIndex++)
 		{
+			string[] row = rows[rowIndex];
 			rowNumber++;
-			if (row.All(string.IsNullOrWhiteSpace))
+			bool blank = true;
+			for (int c = 0; c < row.Length; c++)
+			{
+				if (!string.IsNullOrWhiteSpace(row[c]))
+				{
+					blank = false;
+					break;
+				}
+			}
+			if (blank)
 			{
 				continue;
 			}
@@ -168,7 +181,7 @@ public static class CsvFormat
 		try
 		{
 			Geometry g = reader.Read(text.Trim());
-			return g == null || g.IsEmpty ? null : Reproject.ToWgs84(g, cs);
+			return g == null || g.IsEmpty ? null : Reproject.ToWgs84InPlace(g, cs);
 		}
 		catch (Exception ex) when (ex is ParseException or ArgumentException or FormatException or InvalidOperationException)
 		{
@@ -176,31 +189,27 @@ public static class CsvFormat
 		}
 	}
 
-	private static bool TryNumber(string text, out double value) =>
-		double.TryParse((text ?? "").Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value);
+	private static bool TryNumber(string text, out double value)
+	{
+		if (string.IsNullOrEmpty(text))
+		{
+			value = 0;
+			return false;
+		}
+		return double.TryParse(text.AsSpan().Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value);
+	}
 
-	/// <summary>Integer when every value is a whole number without leading zeros, Real when every value is a number, otherwise Text.</summary>
-	internal static FieldType InferType(IEnumerable<string> values)
+	private static FieldType InferType(List<string[]> rows, int columnIndex)
 	{
 		bool allInteger = true;
 		bool any = false;
-		foreach (string raw in values)
+		for (int i = 1; i < rows.Count; i++)
 		{
-			string v = (raw ?? "").Trim();
-			if (v.Length == 0)
-			{
-				continue;
-			}
-			any = true;
-			bool leadingZero = v.Length > 1 && v[0] == '0' && char.IsAsciiDigit(v[1]);
-			bool tooLong = v.Count(char.IsAsciiDigit) > 15;
-			if (leadingZero || tooLong || !double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+			string[] row = rows[i];
+			string raw = columnIndex < row.Length ? row[columnIndex] : null;
+			if (!CheckInferValue(raw, ref any, ref allInteger))
 			{
 				return FieldType.Text;
-			}
-			if (!long.TryParse(v, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out _))
-			{
-				allInteger = false;
 			}
 		}
 		if (!any)
@@ -210,12 +219,71 @@ public static class CsvFormat
 		return allInteger ? FieldType.Integer : FieldType.Real;
 	}
 
+	/// <summary>Integer when every value is a whole number without leading zeros, Real when every value is a number, otherwise Text.</summary>
+	internal static FieldType InferType(IEnumerable<string> values)
+	{
+		bool allInteger = true;
+		bool any = false;
+		foreach (string raw in values)
+		{
+			if (!CheckInferValue(raw, ref any, ref allInteger))
+			{
+				return FieldType.Text;
+			}
+		}
+		if (!any)
+		{
+			return FieldType.Text;
+		}
+		return allInteger ? FieldType.Integer : FieldType.Real;
+	}
+
+	private static bool CheckInferValue(string raw, ref bool any, ref bool allInteger)
+	{
+		if (string.IsNullOrEmpty(raw))
+		{
+			return true;
+		}
+		ReadOnlySpan<char> v = raw.AsSpan().Trim();
+		if (v.Length == 0)
+		{
+			return true;
+		}
+		any = true;
+		if (v.Length > 1 && v[0] == '0' && char.IsAsciiDigit(v[1]))
+		{
+			return false;
+		}
+		int digits = 0;
+		for (int i = 0; i < v.Length; i++)
+		{
+			if (char.IsAsciiDigit(v[i]))
+			{
+				digits++;
+				if (digits > 15)
+				{
+					return false;
+				}
+			}
+		}
+		if (!double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+		{
+			return false;
+		}
+		if (allInteger && !long.TryParse(v, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out _))
+		{
+			allInteger = false;
+		}
+		return true;
+	}
+
 	/// <summary>UTF-8 (with or without a byte order mark), falling back to Windows-1252 when the bytes aren't valid UTF-8.</summary>
 	internal static string DecodeText(byte[] bytes)
 	{
 		try
 		{
-			return new UTF8Encoding(false, throwOnInvalidBytes: true).GetString(bytes).TrimStart('﻿');
+			int offset = bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF ? 3 : 0;
+			return StrictUtf8.GetString(bytes, offset, bytes.Length - offset);
 		}
 		catch (DecoderFallbackException)
 		{
@@ -227,15 +295,18 @@ public static class CsvFormat
 	private static char DetectDelimiter(string text)
 	{
 		int end = text.IndexOf('\n');
-		string first = end < 0 ? text : text.Substring(0, end);
+		ReadOnlySpan<char> first = end < 0 ? text.AsSpan() : text.AsSpan(0, end);
 		char best = ',';
 		int bestCount = 0;
-		foreach (char c in new[] { ',', ';', '\t', '|' })
+		ReadOnlySpan<char> candidates = stackalloc char[] { ',', ';', '\t', '|' };
+		for (int j = 0; j < candidates.Length; j++)
 		{
+			char c = candidates[j];
 			int count = 0;
 			bool quoted = false;
-			foreach (char ch in first)
+			for (int i = 0; i < first.Length; i++)
 			{
+				char ch = first[i];
 				if (ch == '"')
 				{
 					quoted = !quoted;
@@ -259,67 +330,214 @@ public static class CsvFormat
 	{
 		List<string[]> rows = new List<string[]>();
 		List<string> row = new List<string>();
-		StringBuilder cell = new StringBuilder();
-		bool quoted = false;
+		StringBuilder cell = null;
+		int len = text.Length;
+		int i = 0;
 		bool rowHasContent = false;
-		for (int i = 0; i < text.Length; i++)
+		while (i < len)
 		{
 			char c = text[i];
-			if (quoted)
+			if (c == '"')
 			{
-				if (c == '"')
+				rowHasContent = true;
+				i++;
+				int start = i;
+				bool hasEscaped = false;
+				while (i < len)
 				{
-					if (i + 1 < text.Length && text[i + 1] == '"')
+					if (text[i] == '"')
 					{
-						cell.Append('"');
-						i++;
+						if (i + 1 < len && text[i + 1] == '"')
+						{
+							hasEscaped = true;
+							cell ??= new StringBuilder();
+							cell.Append(text, start, i - start);
+							cell.Append('"');
+							i += 2;
+							start = i;
+							continue;
+						}
+						break;
 					}
-					else
-					{
-						quoted = false;
-					}
+					i++;
+				}
+				string value;
+				if (hasEscaped)
+				{
+					cell.Append(text, start, i - start);
+					value = cell.ToString();
+					cell.Clear();
 				}
 				else
 				{
-					cell.Append(c);
+					value = i > start ? text.Substring(start, i - start) : "";
 				}
-				continue;
-			}
-			if (c == '"')
-			{
-				quoted = true;
-				rowHasContent = true;
-			}
-			else if (c == delimiter)
-			{
-				row.Add(cell.ToString());
-				cell.Clear();
-				rowHasContent = true;
-			}
-			else if (c == '\r' || c == '\n')
-			{
-				if (c == '\r' && i + 1 < text.Length && text[i + 1] == '\n')
+				if (i < len && text[i] == '"')
 				{
 					i++;
 				}
-				if (rowHasContent || cell.Length > 0)
+				// Handle any trailing characters before delimiter/newline (defensive RFC compatibility).
+				if (i < len && text[i] != delimiter && text[i] != '\r' && text[i] != '\n')
 				{
-					row.Add(cell.ToString());
-					rows.Add(row.ToArray());
+					cell ??= new StringBuilder();
+					cell.Append(value);
+					while (i < len && text[i] != delimiter && text[i] != '\r' && text[i] != '\n')
+					{
+						if (text[i] == '"')
+						{
+							i++;
+							while (i < len)
+							{
+								if (text[i] == '"')
+								{
+									if (i + 1 < len && text[i + 1] == '"')
+									{
+										cell.Append('"');
+										i += 2;
+										continue;
+									}
+									i++;
+									break;
+								}
+								cell.Append(text[i]);
+								i++;
+							}
+						}
+						else
+						{
+							cell.Append(text[i]);
+							i++;
+						}
+					}
+					value = cell.ToString();
+					cell.Clear();
 				}
-				row.Clear();
-				cell.Clear();
-				rowHasContent = false;
+				row.Add(value);
+				if (i < len && text[i] == delimiter)
+				{
+					i++;
+					if (i == len || text[i] == '\r' || text[i] == '\n')
+					{
+						row.Add("");
+					}
+				}
+				else if (i < len && (text[i] == '\r' || text[i] == '\n'))
+				{
+					if (text[i] == '\r' && i + 1 < len && text[i + 1] == '\n')
+					{
+						i += 2;
+					}
+					else
+					{
+						i++;
+					}
+					rows.Add(row.ToArray());
+					row.Clear();
+					rowHasContent = false;
+				}
+			}
+			else if (c == '\r' || c == '\n')
+			{
+				if (c == '\r' && i + 1 < len && text[i + 1] == '\n')
+				{
+					i += 2;
+				}
+				else
+				{
+					i++;
+				}
+				if (rowHasContent)
+				{
+					rows.Add(row.ToArray());
+					row.Clear();
+					rowHasContent = false;
+				}
+			}
+			else if (c == delimiter)
+			{
+				rowHasContent = true;
+				row.Add("");
+				i++;
+				if (i == len || text[i] == '\r' || text[i] == '\n')
+				{
+					row.Add("");
+				}
 			}
 			else
 			{
-				cell.Append(c);
 				rowHasContent = true;
+				int start = i;
+				while (i < len && text[i] != delimiter && text[i] != '\r' && text[i] != '\n' && text[i] != '"')
+				{
+					i++;
+				}
+				string value;
+				if (i < len && text[i] == '"')
+				{
+					cell ??= new StringBuilder();
+					cell.Append(text, start, i - start);
+					while (i < len && text[i] != delimiter && text[i] != '\r' && text[i] != '\n')
+					{
+						if (text[i] == '"')
+						{
+							i++;
+							while (i < len)
+							{
+								if (text[i] == '"')
+								{
+									if (i + 1 < len && text[i + 1] == '"')
+									{
+										cell.Append('"');
+										i += 2;
+										continue;
+									}
+									i++;
+									break;
+								}
+								cell.Append(text[i]);
+								i++;
+							}
+						}
+						else
+						{
+							cell.Append(text[i]);
+							i++;
+						}
+					}
+					value = cell.ToString();
+					cell.Clear();
+				}
+				else
+				{
+					value = text.Substring(start, i - start);
+				}
+				row.Add(value);
+				if (i < len && text[i] == delimiter)
+				{
+					i++;
+					if (i == len || text[i] == '\r' || text[i] == '\n')
+					{
+						row.Add("");
+					}
+				}
+				else if (i < len && (text[i] == '\r' || text[i] == '\n'))
+				{
+					if (text[i] == '\r' && i + 1 < len && text[i + 1] == '\n')
+					{
+						i += 2;
+					}
+					else
+					{
+						i++;
+					}
+					rows.Add(row.ToArray());
+					row.Clear();
+					rowHasContent = false;
+				}
 			}
 		}
-		if (rowHasContent || cell.Length > 0)
+		if (rowHasContent && row.Count > 0)
 		{
-			row.Add(cell.ToString());
 			rows.Add(row.ToArray());
 		}
 		return rows;
@@ -345,14 +563,20 @@ public static class CsvFormat
 
 	private static string Key(string s)
 	{
-		StringBuilder b = new StringBuilder();
-		foreach (char c in s ?? "")
+		if (string.IsNullOrEmpty(s))
 		{
+			return "";
+		}
+		Span<char> buf = s.Length <= 64 ? stackalloc char[s.Length] : new char[s.Length];
+		int n = 0;
+		for (int i = 0; i < s.Length; i++)
+		{
+			char c = s[i];
 			if (char.IsAsciiLetterOrDigit(c))
 			{
-				b.Append(char.ToLowerInvariant(c));
+				buf[n++] = char.ToLowerInvariant(c);
 			}
 		}
-		return b.ToString();
+		return new string(buf.Slice(0, n));
 	}
 }

@@ -60,15 +60,14 @@ public static class GeoFileExport
 		using FileStream fs = new FileStream(kmzPath, FileMode.Create, FileAccess.Write);
 		using ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Create);
 		ZipArchiveEntry entry = zip.CreateEntry(KmlEntryName, CompressionLevel.Optimal);
-		using (Stream s = entry.Open())
+		using (StreamWriter sw = new StreamWriter(entry.Open(), new UTF8Encoding(false)))
 		{
-			byte[] bytes = new UTF8Encoding(false).GetBytes(kml);
-			s.Write(bytes, 0, bytes.Length);
+			sw.Write(kml);
 		}
 		foreach (string icon in IconFiles)
 		{
 			using Stream source = Icon(icon);
-			using Stream target = zip.CreateEntry(icon, CompressionLevel.Optimal).Open();
+			using Stream target = zip.CreateEntry(icon, CompressionLevel.NoCompression).Open();
 			source.CopyTo(target);
 		}
 		return result;

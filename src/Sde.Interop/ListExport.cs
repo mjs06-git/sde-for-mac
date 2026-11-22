@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Globalization;
 using System.Text;
 using ClosedXML.Excel;
@@ -23,16 +24,27 @@ public static class ListExport
 	public static string BuildCsv(IReadOnlyList<string> headers, IEnumerable<IReadOnlyList<object>> rows)
 	{
 		StringBuilder sb = new StringBuilder();
-		AddCsvLine(sb, headers.Select(h => CsvField(GuardText(h))));
+		for (int c = 0; c < headers.Count; c++)
+		{
+			if (c > 0)
+			{
+				sb.Append(',');
+			}
+			AppendCsvField(sb, GuardText(headers[c]));
+		}
+		sb.Append("\r\n");
 		foreach (IReadOnlyList<object> row in rows ?? Enumerable.Empty<IReadOnlyList<object>>())
 		{
 			CheckWidth(headers, row);
-			List<string> fields = new List<string>(headers.Count);
 			for (int c = 0; c < headers.Count; c++)
 			{
-				fields.Add(CsvField(c < row.Count ? CsvText(row[c]) : ""));
+				if (c > 0)
+				{
+					sb.Append(',');
+				}
+				AppendCsvField(sb, c < row.Count ? CsvText(row[c]) : "");
 			}
-			AddCsvLine(sb, fields);
+			sb.Append("\r\n");
 		}
 		return sb.ToString();
 	}
@@ -90,20 +102,32 @@ public static class ListExport
 		}
 	}
 
-	private static void AddCsvLine(StringBuilder sb, IEnumerable<string> fields)
-	{
-		sb.AppendJoin(',', fields).Append("\r\n");
-	}
+	private static bool NeedsFormulaGuard(string text) =>
+		!string.IsNullOrEmpty(text) && text[0] is '=' or '+' or '-' or '@' or '\t' or '\r';
 
-	private static readonly char[] CsvSpecial = { ',', '"', '\r', '\n' };
+	private static readonly SearchValues<char> CsvSpecial = SearchValues.Create(",\"\r\n");
 
-	private static string CsvField(string text)
+	private static void AppendCsvField(StringBuilder sb, string text)
 	{
-		if (text.IndexOfAny(CsvSpecial) < 0)
+		if (text.AsSpan().IndexOfAny(CsvSpecial) < 0)
 		{
-			return text;
+			sb.Append(text);
+			return;
 		}
-		return "\"" + text.Replace("\"", "\"\"") + "\"";
+		sb.Append('"');
+		for (int i = 0; i < text.Length; i++)
+		{
+			char ch = text[i];
+			if (ch == '"')
+			{
+				sb.Append("\"\"");
+			}
+			else
+			{
+				sb.Append(ch);
+			}
+		}
+		sb.Append('"');
 	}
 
 	private static string CsvText(object value)
@@ -139,7 +163,7 @@ public static class ListExport
 		}
 		cell.SetValue(text);
 		cell.Style.NumberFormat.Format = "@";
-		if (GuardText(text) != text)
+		if (NeedsFormulaGuard(text))
 		{
 			// Excel's "quote prefix": the cell is text even when edited, the same as typing an apostrophe first.
 			cell.Style.IncludeQuotePrefix = true;

@@ -108,12 +108,23 @@ public sealed class EventSummary
 		EventDetails details = null)
 	{
 		List<AssessmentFile> files = (assessments ?? Enumerable.Empty<AssessmentFile>()).Where(f => f?.Assessment != null).ToList();
-		Dictionary<DeterminationClass, int> counts = Enum.GetValues<DeterminationClass>().ToDictionary(c => c, c => 0);
-		List<Row> rows = new();
-		HashSet<Guid> assessedProperties = new();
-		List<EventPoint> points = new();
+		Dictionary<DeterminationClass, int> counts = new Dictionary<DeterminationClass, int>(5)
+		{
+			[DeterminationClass.Substantial] = 0,
+			[DeterminationClass.Close] = 0,
+			[DeterminationClass.NotSubstantial] = 0,
+			[DeterminationClass.Undetermined] = 0,
+			[DeterminationClass.Incomplete] = 0,
+		};
+		List<Row> rows = new List<Row>(files.Count);
+		HashSet<Guid> assessedProperties = new HashSet<Guid>();
+		List<EventPoint> points = new List<EventPoint>();
 		decimal value = 0m;
 		decimal cost = 0m;
+		DateTime? damageStart = null;
+		DateTime? damageEnd = null;
+		DateTime? inspectionStart = null;
+		DateTime? inspectionEnd = null;
 		foreach (AssessmentFile f in files)
 		{
 			AssessmentRecord a = f.Assessment;
@@ -130,16 +141,42 @@ public sealed class EventSummary
 			{
 				points.Add(new EventPoint(lat, lon, c));
 			}
+			if (a.DateDamageOccurred is DateTime dmg)
+			{
+				if (damageStart == null || dmg < damageStart.Value)
+				{
+					damageStart = dmg;
+				}
+				if (damageEnd == null || dmg > damageEnd.Value)
+				{
+					damageEnd = dmg;
+				}
+			}
+			if (a.DateofInspection is DateTime insp)
+			{
+				if (inspectionStart == null || insp < inspectionStart.Value)
+				{
+					inspectionStart = insp;
+				}
+				if (inspectionEnd == null || insp > inspectionEnd.Value)
+				{
+					inspectionEnd = insp;
+				}
+			}
 		}
 
-		int notYet = (allProperties ?? Enumerable.Empty<PropertyRecord>())
-			.Where(p => p != null)
-			.Select(p => p.PropertyID)
-			.Distinct()
-			.Count(id => !assessedProperties.Contains(id));
-
-		List<DateTime> damage = files.Where(f => f.Assessment.DateDamageOccurred != null).Select(f => f.Assessment.DateDamageOccurred.Value).ToList();
-		List<DateTime> inspected = files.Where(f => f.Assessment.DateofInspection != null).Select(f => f.Assessment.DateofInspection.Value).ToList();
+		int notYet = 0;
+		if (allProperties != null)
+		{
+			HashSet<Guid> seenUnassessed = new HashSet<Guid>();
+			foreach (PropertyRecord p in allProperties)
+			{
+				if (p != null && !assessedProperties.Contains(p.PropertyID) && seenUnassessed.Add(p.PropertyID))
+				{
+					notYet++;
+				}
+			}
+		}
 
 		return new EventSummary
 		{
@@ -153,10 +190,10 @@ public sealed class EventSummary
 			ClassCounts = counts,
 			TotalBuildingValue = value,
 			TotalRepairCost = cost,
-			DamageStart = damage.Count == 0 ? null : damage.Min(),
-			DamageEnd = damage.Count == 0 ? null : damage.Max(),
-			InspectionStart = inspected.Count == 0 ? null : inspected.Min(),
-			InspectionEnd = inspected.Count == 0 ? null : inspected.Max(),
+			DamageStart = damageStart,
+			DamageEnd = damageEnd,
+			InspectionStart = inspectionStart,
+			InspectionEnd = inspectionEnd,
 			ByStreet = Group(rows, r => r.Street),
 			ByCommunity = Group(rows, r => r.Community),
 			ByInspector = Group(rows, r => r.Inspector),
@@ -166,23 +203,76 @@ public sealed class EventSummary
 
 	private sealed record Row(DeterminationClass Class, decimal Value, decimal Cost, string Street, string Community, string Inspector);
 
-	private static IReadOnlyList<EventGroup> Group(List<Row> rows, Func<Row, string> key) => rows
-		.GroupBy(key, StringComparer.OrdinalIgnoreCase)
-		.Select(g => new EventGroup
+	private static IReadOnlyList<EventGroup> Group(List<Row> rows, Func<Row, string> key)
+	{
+		Dictionary<string, GroupAccumulator> acc = new Dictionary<string, GroupAccumulator>(StringComparer.OrdinalIgnoreCase);
+		for (int i = 0; i < rows.Count; i++)
 		{
-			Label = g.Key,
-			Count = g.Count(),
-			Substantial = g.Count(r => r.Class == DeterminationClass.Substantial),
-			Close = g.Count(r => r.Class == DeterminationClass.Close),
-			NotSubstantial = g.Count(r => r.Class == DeterminationClass.NotSubstantial),
-			Other = g.Count(r => r.Class is DeterminationClass.Incomplete or DeterminationClass.Undetermined),
-			BuildingValue = g.Sum(r => r.Value),
-			RepairCost = g.Sum(r => r.Cost),
-		})
-		.OrderByDescending(g => g.Count)
-		.ThenByDescending(g => g.Substantial)
-		.ThenBy(g => g.Label, StringComparer.OrdinalIgnoreCase)
-		.ToList();
+			Row r = rows[i];
+			string label = key(r);
+			if (!acc.TryGetValue(label, out GroupAccumulator g))
+			{
+				g = new GroupAccumulator(label);
+				acc[label] = g;
+			}
+			g.Count++;
+			switch (r.Class)
+			{
+				case DeterminationClass.Substantial:
+					g.Substantial++;
+					break;
+				case DeterminationClass.Close:
+					g.Close++;
+					break;
+				case DeterminationClass.NotSubstantial:
+					g.NotSubstantial++;
+					break;
+				default:
+					g.Other++;
+					break;
+			}
+			g.BuildingValue += r.Value;
+			g.RepairCost += r.Cost;
+		}
+		List<EventGroup> result = new List<EventGroup>(acc.Count);
+		foreach (GroupAccumulator g in acc.Values)
+		{
+			result.Add(new EventGroup
+			{
+				Label = g.Label,
+				Count = g.Count,
+				Substantial = g.Substantial,
+				Close = g.Close,
+				NotSubstantial = g.NotSubstantial,
+				Other = g.Other,
+				BuildingValue = g.BuildingValue,
+				RepairCost = g.RepairCost,
+			});
+		}
+		result.Sort(static (a, b) =>
+		{
+			int c = b.Count.CompareTo(a.Count);
+			if (c != 0)
+			{
+				return c;
+			}
+			int s = b.Substantial.CompareTo(a.Substantial);
+			return s != 0 ? s : StringComparer.OrdinalIgnoreCase.Compare(a.Label, b.Label);
+		});
+		return result;
+	}
+
+	private sealed class GroupAccumulator(string label)
+	{
+		public string Label { get; } = label;
+		public int Count;
+		public int Substantial;
+		public int Close;
+		public int NotSubstantial;
+		public int Other;
+		public decimal BuildingValue;
+		public decimal RepairCost;
+	}
 
 	private static string Clean(string s) => string.IsNullOrWhiteSpace(s) ? NotRecorded : string.Join(" ", s.Split((char[])null, StringSplitOptions.RemoveEmptyEntries));
 

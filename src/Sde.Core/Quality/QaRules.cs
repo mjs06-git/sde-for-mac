@@ -49,6 +49,7 @@ public static class QaRules
 	};
 
 	private static readonly Dictionary<string, QaRuleInfo> ById = Catalog.ToDictionary(r => r.Id, StringComparer.Ordinal);
+	private static readonly CultureInfo Us = CultureInfo.GetCultureInfo("en-US");
 
 	/// <summary>A check by its ID, or null.</summary>
 	public static QaRuleInfo Rule(string id) => id != null && ById.TryGetValue(id, out QaRuleInfo r) ? r : null;
@@ -63,7 +64,11 @@ public static class QaRules
 		{
 			throw new ArgumentException("The quality checks need the reference data.", nameof(input));
 		}
-		Context ctx = new Context(input);
+		return Check(new Context(input));
+	}
+
+	private static List<QaFinding> Check(Context ctx)
+	{
 		List<QaFinding> found = new List<QaFinding>();
 		found.AddRange(UnacceptedSuggestions(ctx));
 		found.AddRange(InspectedBeforeDamage(ctx));
@@ -80,7 +85,7 @@ public static class QaRules
 		found.AddRange(SeveralDamageDates(ctx));
 		found.AddRange(NearThreshold(ctx));
 		found.AddRange(MissingMailingAddresses(ctx));
-		return ApplyDismissals(found, input.Dismissals);
+		return ApplyDismissals(found, ctx.Input.Dismissals);
 	}
 
 	/// <summary>
@@ -88,7 +93,15 @@ public static class QaRules
 	/// available: the flood map zone check without a stored lookup, the high-water mark check without marks. Nothing here
 	/// goes online. An unavailable check is listed, never skipped silently.
 	/// </summary>
-	public static QaResult CheckWithStatus(QaInput input) => new QaResult(Check(input), NotChecked(input));
+	public static QaResult CheckWithStatus(QaInput input)
+	{
+		if (input?.Reference == null)
+		{
+			throw new ArgumentException("The quality checks need the reference data.", nameof(input));
+		}
+		Context ctx = new Context(input);
+		return new QaResult(Check(ctx), NotChecked(ctx));
+	}
 
 	/// <summary>The checks that cannot run, or cannot run for every structure, with the data they are missing.</summary>
 	public static List<QaNotChecked> NotChecked(QaInput input)
@@ -97,7 +110,12 @@ public static class QaRules
 		{
 			throw new ArgumentException("The quality checks need the reference data.", nameof(input));
 		}
-		Context ctx = new Context(input);
+		return NotChecked(new Context(input));
+	}
+
+	private static List<QaNotChecked> NotChecked(Context ctx)
+	{
+		QaInput input = ctx.Input;
 		List<QaNotChecked> list = new List<QaNotChecked>();
 		if (ctx.Structures.Count > 0)
 		{
@@ -153,17 +171,47 @@ public static class QaRules
 	public static List<QaFinding> ApplyDismissals(IEnumerable<QaFinding> findings, IEnumerable<QaDismissalRecord> dismissals)
 	{
 		List<QaDismissalRecord> list = dismissals?.Where(d => d != null).ToList() ?? new List<QaDismissalRecord>();
-		return findings.Select(f =>
+		if (list.Count == 0)
+		{
+			return findings.ToList();
+		}
+		Dictionary<(string RuleId, Guid ObjectId, string Detail), QaDismissalRecord> exact = new Dictionary<(string, Guid, string), QaDismissalRecord>(list.Count);
+		Dictionary<(string RuleId, string Group), QaDismissalRecord> byGroup = null;
+		foreach (QaDismissalRecord d in list)
+		{
+			string detail = d.Detail ?? "";
+			exact.TryAdd((d.RuleId, d.ObjectID, detail), d);
+			QaRuleInfo rule = Rule(d.RuleId);
+			if (rule != null && rule.Pairwise)
+			{
+				string group = CanonicalGroup(d.ObjectID, detail);
+				if (group != null)
+				{
+					byGroup ??= new Dictionary<(string, string), QaDismissalRecord>();
+					byGroup.TryAdd((d.RuleId, group), d);
+				}
+			}
+		}
+		List<QaFinding> result = new List<QaFinding>();
+		foreach (QaFinding f in findings)
 		{
 			QaRuleInfo rule = Rule(f.RuleId);
 			if (rule == null || !rule.CanDismiss)
 			{
-				return f;
+				result.Add(f);
+				continue;
 			}
-			QaDismissalRecord match = list.FirstOrDefault(d => d.RuleId == f.RuleId && d.ObjectID == f.ObjectId && (d.Detail ?? "") == f.Detail)
-				?? (rule.Pairwise ? list.FirstOrDefault(d => d.RuleId == f.RuleId && SameGroup(d.ObjectID, d.Detail, f.ObjectId, f.Detail)) : null);
-			return match == null ? f : f with { Dismissal = match };
-		}).ToList();
+			if (!exact.TryGetValue((f.RuleId, f.ObjectId, f.Detail), out QaDismissalRecord match) && rule.Pairwise && byGroup != null)
+			{
+				string group = CanonicalGroup(f.ObjectId, f.Detail);
+				if (group != null)
+				{
+					byGroup.TryGetValue((f.RuleId, group), out match);
+				}
+			}
+			result.Add(match == null ? f : f with { Dismissal = match });
+		}
+		return result;
 	}
 
 	/// <summary>A structure's address for messages, e.g. "123 River Road"; "a structure with no address" when it has none.</summary>
@@ -210,7 +258,7 @@ public static class QaRules
 	{
 		foreach (AssessmentFile f in ctx.Files)
 		{
-			if (!(f.Attachments ?? new List<AttachmentRecord>()).Any(x => x.Active))
+			if (f.Attachments == null || !f.Attachments.Any(x => x.Active))
 			{
 				yield return ForAssessment(QaRuleIds.MissingPhotos, f, "", "There are no photos.");
 			}
@@ -342,9 +390,12 @@ public static class QaRules
 	private static IEnumerable<QaFinding> DuplicateParcels(Context ctx)
 	{
 		Dictionary<string, List<PropertyRecord>> byParcel = new Dictionary<string, List<PropertyRecord>>(StringComparer.Ordinal);
-		foreach (PropertyRecord p in ctx.Structures)
+		string[] normalized = new string[ctx.Structures.Count];
+		for (int i = 0; i < ctx.Structures.Count; i++)
 		{
+			PropertyRecord p = ctx.Structures[i];
 			string parcel = ParcelNumbers.Normalize(p.ParcelNumber);
+			normalized[i] = parcel;
 			if (parcel == null)
 			{
 				continue;
@@ -356,13 +407,14 @@ public static class QaRules
 			}
 			list.Add(p);
 		}
-		foreach (PropertyRecord p in ctx.Structures)
+		for (int i = 0; i < ctx.Structures.Count; i++)
 		{
-			string parcel = ParcelNumbers.Normalize(p.ParcelNumber);
+			string parcel = normalized[i];
 			if (parcel == null || byParcel[parcel].Count < 2)
 			{
 				continue;
 			}
+			PropertyRecord p = ctx.Structures[i];
 			List<PropertyRecord> others = byParcel[parcel].Where(x => x.PropertyID != p.PropertyID).ToList();
 			yield return ForStructure(ctx, QaRuleIds.DuplicateParcel, p, GroupDetail(others),
 				$"{Others(ctx, others)} {(others.Count == 1 ? "has" : "have")} the same parcel number ({p.ParcelNumber.Trim()}).",
@@ -373,10 +425,17 @@ public static class QaRules
 	private static IEnumerable<QaFinding> DuplicateAddresses(Context ctx)
 	{
 		AddressMatcher matcher = new AddressMatcher(ctx.Input.Reference, matchUnit: true);
-		AddressIndex<PropertyRecord> index = matcher.Index(ctx.Structures, matcher.KeyFor);
-		foreach (PropertyRecord p in ctx.Structures)
+		AddressKey[] keys = new AddressKey[ctx.Structures.Count];
+		for (int i = 0; i < ctx.Structures.Count; i++)
 		{
-			List<PropertyRecord> others = index.Find(matcher.KeyFor(p))
+			keys[i] = matcher.KeyFor(ctx.Structures[i]);
+		}
+		int idx = 0;
+		AddressIndex<PropertyRecord> index = matcher.Index(ctx.Structures, _ => keys[idx++]);
+		for (int i = 0; i < ctx.Structures.Count; i++)
+		{
+			PropertyRecord p = ctx.Structures[i];
+			List<PropertyRecord> others = index.Find(keys[i])
 				.Where(x => x.PropertyID != p.PropertyID && !DifferentCities(p, x))
 				.ToList();
 			if (others.Count == 0)
@@ -561,22 +620,25 @@ public static class QaRules
 	private static string GroupDetail(IEnumerable<PropertyRecord> others) =>
 		string.Join(",", others.Select(o => o.PropertyID.ToString("N")).Distinct().OrderBy(s => s, StringComparer.Ordinal));
 
-	/// <summary>True when a dismissal of (object, detail) is about the same group of structures as a finding (object, detail).</summary>
-	private static bool SameGroup(Guid dismissedObject, string dismissedDetail, Guid findingObject, string findingDetail)
-	{
-		HashSet<string> a = Members(dismissedObject, dismissedDetail);
-		HashSet<string> b = Members(findingObject, findingDetail);
-		return a.Count > 1 && a.SetEquals(b);
-	}
-
-	private static HashSet<string> Members(Guid objectId, string detail)
+	/// <summary>Sorted comma-joined member IDs for a pairwise group (null if fewer than 2 members).</summary>
+	private static string CanonicalGroup(Guid objectId, string detail)
 	{
 		HashSet<string> set = new HashSet<string>(StringComparer.Ordinal) { objectId.ToString("N") };
-		foreach (string part in (detail ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+		if (!string.IsNullOrEmpty(detail))
 		{
-			set.Add(Guid.TryParse(part, out Guid g) ? g.ToString("N") : part);
+			foreach (string part in detail.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+			{
+				set.Add(Guid.TryParse(part, out Guid g) ? g.ToString("N") : part);
+			}
 		}
-		return set;
+		if (set.Count <= 1)
+		{
+			return null;
+		}
+		string[] sorted = new string[set.Count];
+		set.CopyTo(sorted);
+		Array.Sort(sorted, StringComparer.Ordinal);
+		return string.Join(",", sorted);
 	}
 
 	private static bool DifferentCities(PropertyRecord a, PropertyRecord b)
@@ -586,7 +648,24 @@ public static class QaRules
 		return ca.Length > 0 && cb.Length > 0 && ca != cb;
 	}
 
-	private static string Squash(string s) => new string((s ?? "").Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
+	private static string Squash(string s)
+	{
+		if (string.IsNullOrEmpty(s))
+		{
+			return "";
+		}
+		Span<char> buf = s.Length <= 128 ? stackalloc char[s.Length] : new char[s.Length];
+		int len = 0;
+		for (int i = 0; i < s.Length; i++)
+		{
+			char c = s[i];
+			if (char.IsLetterOrDigit(c))
+			{
+				buf[len++] = char.ToLowerInvariant(c);
+			}
+		}
+		return len == 0 ? "" : new string(buf.Slice(0, len));
+	}
 
 	/// <summary>"Another structure, 125 River Road," or "2 other structures (125 River Road and 127 River Road)".</summary>
 	private static string Others(Context ctx, List<PropertyRecord> others, bool withAddress = true)
@@ -652,13 +731,13 @@ public static class QaRules
 
 	private static string Iso(DateTime d) => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-	private static string Day(DateTime d) => d.ToString("MMM d, yyyy", CultureInfo.GetCultureInfo("en-US"));
+	private static string Day(DateTime d) => d.ToString("MMM d, yyyy", Us);
 
 	private static string Percent(decimal p) => p.ToString("0.#", CultureInfo.InvariantCulture) + "%";
 
-	private static string Feet(decimal ft) => ft.ToString("#,##0.0#", CultureInfo.GetCultureInfo("en-US")) + " ft";
+	private static string Feet(decimal ft) => ft.ToString("#,##0.0#", Us) + " ft";
 
-	private static string Dollars(double d) => "$" + Math.Round(d).ToString("#,##0", CultureInfo.GetCultureInfo("en-US"));
+	private static string Dollars(double d) => "$" + Math.Round(d).ToString("#,##0", Us);
 
-	private static string Meters(double m) => Math.Round(m).ToString("#,##0", CultureInfo.GetCultureInfo("en-US")) + " m";
+	private static string Meters(double m) => Math.Round(m).ToString("#,##0", Us) + " m";
 }

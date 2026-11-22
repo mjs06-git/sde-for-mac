@@ -17,6 +17,16 @@ public static class GeoJsonFormat
 {
 	private static readonly JsonSerializerOptions Options = CreateOptions();
 
+	private static readonly JsonDocumentOptions ParseOptions = new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip };
+	private static readonly JsonEncodedText TypeKey = JsonEncodedText.Encode("type");
+	private static readonly JsonEncodedText NameKey = JsonEncodedText.Encode("name");
+	private static readonly JsonEncodedText FeaturesKey = JsonEncodedText.Encode("features");
+	private static readonly JsonEncodedText IdKey = JsonEncodedText.Encode("id");
+	private static readonly JsonEncodedText GeometryKey = JsonEncodedText.Encode("geometry");
+	private static readonly JsonEncodedText PropertiesKey = JsonEncodedText.Encode("properties");
+	private static readonly JsonEncodedText FeatureCollectionVal = JsonEncodedText.Encode("FeatureCollection");
+	private static readonly JsonEncodedText FeatureVal = JsonEncodedText.Encode("Feature");
+
 	/// <summary>Reads a .geojson or .json file.</summary>
 	public static FeatureLayer Read(string path)
 	{
@@ -31,8 +41,19 @@ public static class GeoJsonFormat
 	/// <summary>Reads GeoJSON text.</summary>
 	public static FeatureLayer ReadString(string json, string name = "layer")
 	{
-		using MemoryStream stream = new MemoryStream(Encoding.UTF8.GetBytes(json ?? ""));
-		return Read(stream, name);
+		JsonDocument doc;
+		try
+		{
+			doc = JsonDocument.Parse(json ?? "", ParseOptions);
+		}
+		catch (JsonException ex)
+		{
+			throw new GisException("This file isn't valid GeoJSON.", ex.Message, ex);
+		}
+		using (doc)
+		{
+			return ReadDocument(doc, name);
+		}
 	}
 
 	/// <summary>Reads GeoJSON from a stream: a FeatureCollection, a single Feature or a bare geometry.</summary>
@@ -41,13 +62,20 @@ public static class GeoJsonFormat
 		JsonDocument doc;
 		try
 		{
-			doc = JsonDocument.Parse(stream, new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip });
+			doc = JsonDocument.Parse(stream, ParseOptions);
 		}
 		catch (JsonException ex)
 		{
 			throw new GisException("This file isn't valid GeoJSON.", ex.Message, ex);
 		}
 		using (doc)
+		{
+			return ReadDocument(doc, name);
+		}
+	}
+
+	private static FeatureLayer ReadDocument(JsonDocument doc, string name)
+	{
 		{
 			JsonElement root = doc.RootElement;
 			if (root.ValueKind != JsonValueKind.Object)
@@ -123,6 +151,7 @@ public static class GeoJsonFormat
 			}
 
 			// Second pass: the features.
+			layer.Features.EnsureCapacity(features.Count);
 			int bad = 0;
 			foreach (JsonElement f in features)
 			{
@@ -196,30 +225,35 @@ public static class GeoJsonFormat
 	{
 		using MemoryStream stream = new MemoryStream();
 		Write(stream, layer);
-		return Encoding.UTF8.GetString(stream.ToArray());
+		return Encoding.UTF8.GetString(stream.GetBuffer(), 0, (int)stream.Length);
 	}
 
 	/// <summary>Writes a layer as GeoJSON to a stream.</summary>
 	public static void Write(Stream stream, FeatureLayer layer)
 	{
 		ArgumentNullException.ThrowIfNull(layer);
+		JsonEncodedText[] fieldNames = new JsonEncodedText[layer.Fields.Count];
+		for (int i = 0; i < layer.Fields.Count; i++)
+		{
+			fieldNames[i] = JsonEncodedText.Encode(layer.Fields[i].Name);
+		}
 		using Utf8JsonWriter w = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = false });
 		w.WriteStartObject();
-		w.WriteString("type", "FeatureCollection");
+		w.WriteString(TypeKey, FeatureCollectionVal);
 		if (!string.IsNullOrEmpty(layer.Name))
 		{
-			w.WriteString("name", layer.Name);
+			w.WriteString(NameKey, layer.Name);
 		}
-		w.WriteStartArray("features");
+		w.WriteStartArray(FeaturesKey);
 		foreach (Feature f in layer.Features)
 		{
 			w.WriteStartObject();
-			w.WriteString("type", "Feature");
+			w.WriteString(TypeKey, FeatureVal);
 			if (f.Id > 0)
 			{
-				w.WriteNumber("id", f.Id);
+				w.WriteNumber(IdKey, f.Id);
 			}
-			w.WritePropertyName("geometry");
+			w.WritePropertyName(GeometryKey);
 			if (f.Geometry == null)
 			{
 				w.WriteNullValue();
@@ -228,35 +262,36 @@ public static class GeoJsonFormat
 			{
 				JsonSerializer.Serialize(w, f.Geometry, Options);
 			}
-			w.WriteStartObject("properties");
+			w.WriteStartObject(PropertiesKey);
 			for (int i = 0; i < layer.Fields.Count; i++)
 			{
 				LayerField field = layer.Fields[i];
+				JsonEncodedText fieldName = fieldNames[i];
 				object value = f[i];
 				switch (value)
 				{
 					case null:
-						w.WriteNull(field.Name);
+						w.WriteNull(fieldName);
 						break;
 					case long l:
-						w.WriteNumber(field.Name, l);
+						w.WriteNumber(fieldName, l);
 						break;
 					case double d when double.IsFinite(d):
-						w.WriteNumber(field.Name, d);
+						w.WriteNumber(fieldName, d);
 						break;
 					case double:
-						w.WriteNull(field.Name);
+						w.WriteNull(fieldName);
 						break;
 					case bool b:
-						w.WriteBoolean(field.Name, b);
+						w.WriteBoolean(fieldName, b);
 						break;
 					case DateTime dt:
-						w.WriteString(field.Name, field.Type == FieldType.Date
+						w.WriteString(fieldName, field.Type == FieldType.Date
 							? dt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
 							: dt.ToString(dt.Kind == DateTimeKind.Utc ? "yyyy-MM-dd'T'HH:mm:ss'Z'" : "yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture));
 						break;
 					default:
-						w.WriteString(field.Name, Convert.ToString(value, CultureInfo.InvariantCulture));
+						w.WriteString(fieldName, Convert.ToString(value, CultureInfo.InvariantCulture));
 						break;
 				}
 			}
@@ -283,7 +318,7 @@ public static class GeoJsonFormat
 		{
 			return null;
 		}
-		return Reproject.ToWgs84(g, cs);
+		return Reproject.ToWgs84InPlace(g, cs);
 	}
 
 	/// <summary>The coordinate system named by a 2008-style "crs" member, or WGS 84 when there is none (RFC 7946).</summary>

@@ -15,7 +15,10 @@ public static class DatabaseFiles
 	/// documents it refers to and its layers. Files already in the target folders are kept. The copy keeps the
 	/// database's ID: it holds the same structures. <paramref name="progress"/> gets (done, total) as files are copied.
 	/// </summary>
-	public static void Copy(SdeDatabase source, string newPath, IProgress<(int Done, int Total)> progress = null)
+	public static void Copy(SdeDatabase source, string newPath, IProgress<(int Done, int Total)> progress = null) =>
+		CopyAndListUsed(source, newPath, progress);
+
+	private static (List<string> Photos, List<string> Documents) CopyAndListUsed(SdeDatabase source, string newPath, IProgress<(int Done, int Total)> progress)
 	{
 		newPath = Path.GetFullPath(newPath);
 		if (string.Equals(newPath, source.FilePath, StringComparison.Ordinal))
@@ -41,6 +44,7 @@ public static class DatabaseFiles
 		int done = 0;
 		CopyFiles(photos, source.AttachmentsFolder, Path.Combine(folder, "attachments"), ref done, total, progress);
 		CopyFiles(documents, source.DocumentsFolder, Path.Combine(folder, "documents"), ref done, total, progress);
+		return (photos, documents);
 	}
 
 	/// <summary>
@@ -59,8 +63,7 @@ public static class DatabaseFiles
 			{
 				throw new InvalidOperationException("This database is also open in another copy of SDE (another window, or an AI assistant connected to it). Close that first, then move it.");
 			}
-			Copy(source, newPath, progress);
-			(List<string> photos, List<string> documents) = FilesUsed(source);
+			(List<string> photos, List<string> documents) = CopyAndListUsed(source, newPath, progress);
 			HashSet<string> usedElsewhere = FilesUsedByOthers(source);
 			SqliteConnection.ClearAllPools();
 			foreach (string path in new[] { source.FilePath, source.LayersPath })

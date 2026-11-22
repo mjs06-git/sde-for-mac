@@ -72,7 +72,8 @@ internal static class DetailReport
 
 		if (includePhotos)
 		{
-			Photos(sec, photos.Primary(v.File), photos.Additional(v.File));
+			(Photo primary, Photo additional) = photos.Pair(v.File);
+			Photos(sec, primary, additional);
 		}
 
 		StructureInformation(sec, v);

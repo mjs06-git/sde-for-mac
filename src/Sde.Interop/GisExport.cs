@@ -154,10 +154,20 @@ public static class GisExport
 						columns.Add("owner_name");
 					}
 					insert.CommandText = $"INSERT INTO \"{layer}\" ({string.Join(", ", columns)}) VALUES ({string.Join(", ", columns.Select(c => "$" + c))})";
-					foreach (string c in columns)
-					{
-						insert.Parameters.Add("$" + c, c == "geom" ? SqliteType.Blob : SqliteType.Text);
-					}
+					SqliteParameter pGeom = insert.Parameters.Add("$geom", SqliteType.Blob);
+					SqliteParameter pStructId = insert.Parameters.Add("$structure_id", SqliteType.Text);
+					SqliteParameter pAssessId = insert.Parameters.Add("$assessment_id", SqliteType.Text);
+					SqliteParameter pAddress = insert.Parameters.Add("$address", SqliteType.Text);
+					SqliteParameter pParcel = insert.Parameters.Add("$parcel", SqliteType.Text);
+					SqliteParameter pDamagePct = insert.Parameters.Add("$damage_pct", SqliteType.Real);
+					SqliteParameter pClass = insert.Parameters.Add($"${ClassField}", SqliteType.Text);
+					SqliteParameter pBldgVal = insert.Parameters.Add("$building_value", SqliteType.Real);
+					SqliteParameter pRepairCost = insert.Parameters.Add("$repair_cost", SqliteType.Real);
+					SqliteParameter pInspDate = insert.Parameters.Add("$inspection_date", SqliteType.Text);
+					SqliteParameter pFirmZone = insert.Parameters.Add("$firm_zone", SqliteType.Text);
+					SqliteParameter pOwner = options.IncludeOwnerNames ? insert.Parameters.Add("$owner_name", SqliteType.Text) : null;
+					insert.Prepare();
+					byte[] pointBlob = PointBlob(0, 0);
 					foreach (GisRow row in rows)
 					{
 						if (!row.HasLocation)
@@ -171,20 +181,22 @@ public static class GisExport
 						maxX = Math.Max(maxX, x);
 						minY = Math.Min(minY, y);
 						maxY = Math.Max(maxY, y);
-						insert.Parameters["$geom"].Value = PointBlob(x, y);
-						insert.Parameters["$structure_id"].Value = row.StructureID.ToString();
-						insert.Parameters["$assessment_id"].Value = row.AssessmentID.ToString();
-						insert.Parameters["$address"].Value = Db(row.Address);
-						insert.Parameters["$parcel"].Value = Db(row.Parcel);
-						insert.Parameters["$damage_pct"].Value = Db(row.PercentDamage);
-						insert.Parameters[$"${ClassField}"].Value = ClassName(row.Class);
-						insert.Parameters["$building_value"].Value = Db(row.BuildingValue);
-						insert.Parameters["$repair_cost"].Value = Db(row.RepairCost);
-						insert.Parameters["$inspection_date"].Value = row.InspectionDate is DateTime d ? d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : DBNull.Value;
-						insert.Parameters["$firm_zone"].Value = Db(row.FirmZone);
-						if (options.IncludeOwnerNames)
+						BitConverter.TryWriteBytes(pointBlob.AsSpan(13, 8), x);
+						BitConverter.TryWriteBytes(pointBlob.AsSpan(21, 8), y);
+						pGeom.Value = pointBlob;
+						pStructId.Value = row.StructureID.ToString();
+						pAssessId.Value = row.AssessmentID.ToString();
+						pAddress.Value = Db(row.Address);
+						pParcel.Value = Db(row.Parcel);
+						pDamagePct.Value = Db(row.PercentDamage);
+						pClass.Value = ClassName(row.Class);
+						pBldgVal.Value = Db(row.BuildingValue);
+						pRepairCost.Value = Db(row.RepairCost);
+						pInspDate.Value = row.InspectionDate is DateTime d ? d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : DBNull.Value;
+						pFirmZone.Value = Db(row.FirmZone);
+						if (pOwner != null)
 						{
-							insert.Parameters["$owner_name"].Value = Db(row.OwnerName);
+							pOwner.Value = Db(row.OwnerName);
 						}
 						insert.ExecuteNonQuery();
 						result.Features++;
@@ -316,51 +328,60 @@ public static class GisExport
 		{
 			Directory.CreateDirectory(dir);
 		}
-		using MemoryStream buffer = new MemoryStream();
-		using (Utf8JsonWriter w = new Utf8JsonWriter(buffer, new JsonWriterOptions { Indented = true }))
+		string temp = path + ".tmp";
+		File.Delete(temp);
+		try
 		{
-			w.WriteStartObject();
-			w.WriteString("type", "FeatureCollection");
-			w.WriteStartArray("features");
-			foreach (GisRow row in rows)
+			using (FileStream fs = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 65536))
+			using (Utf8JsonWriter w = new Utf8JsonWriter(fs, new JsonWriterOptions { Indented = true }))
 			{
-				if (!row.HasLocation)
-				{
-					result.Skipped.Add(Skip(row));
-					continue;
-				}
 				w.WriteStartObject();
-				w.WriteString("type", "Feature");
-				w.WriteStartObject("geometry");
-				w.WriteString("type", "Point");
-				w.WriteStartArray("coordinates");
-				w.WriteNumberValue(row.Longitude.Value);
-				w.WriteNumberValue(row.Latitude.Value);
+				w.WriteString("type", "FeatureCollection");
+				w.WriteStartArray("features");
+				foreach (GisRow row in rows)
+				{
+					if (!row.HasLocation)
+					{
+						result.Skipped.Add(Skip(row));
+						continue;
+					}
+					w.WriteStartObject();
+					w.WriteString("type", "Feature");
+					w.WriteStartObject("geometry");
+					w.WriteString("type", "Point");
+					w.WriteStartArray("coordinates");
+					w.WriteNumberValue(row.Longitude.Value);
+					w.WriteNumberValue(row.Latitude.Value);
+					w.WriteEndArray();
+					w.WriteEndObject();
+					w.WriteStartObject("properties");
+					w.WriteString("structure_id", row.StructureID.ToString());
+					w.WriteString("assessment_id", row.AssessmentID.ToString());
+					Nullable(w, "address", row.Address);
+					Nullable(w, "parcel", row.Parcel);
+					Nullable(w, "damage_pct", row.PercentDamage);
+					w.WriteString(ClassField, ClassName(row.Class));
+					Nullable(w, "building_value", row.BuildingValue);
+					Nullable(w, "repair_cost", row.RepairCost);
+					Nullable(w, "inspection_date", row.InspectionDate is DateTime d ? d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : null);
+					Nullable(w, "firm_zone", row.FirmZone);
+					if (options.IncludeOwnerNames)
+					{
+						Nullable(w, "owner_name", row.OwnerName);
+					}
+					w.WriteEndObject();
+					w.WriteEndObject();
+					result.Features++;
+				}
 				w.WriteEndArray();
 				w.WriteEndObject();
-				w.WriteStartObject("properties");
-				w.WriteString("structure_id", row.StructureID.ToString());
-				w.WriteString("assessment_id", row.AssessmentID.ToString());
-				Nullable(w, "address", row.Address);
-				Nullable(w, "parcel", row.Parcel);
-				Nullable(w, "damage_pct", row.PercentDamage);
-				w.WriteString(ClassField, ClassName(row.Class));
-				Nullable(w, "building_value", row.BuildingValue);
-				Nullable(w, "repair_cost", row.RepairCost);
-				Nullable(w, "inspection_date", row.InspectionDate is DateTime d ? d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : null);
-				Nullable(w, "firm_zone", row.FirmZone);
-				if (options.IncludeOwnerNames)
-				{
-					Nullable(w, "owner_name", row.OwnerName);
-				}
-				w.WriteEndObject();
-				w.WriteEndObject();
-				result.Features++;
 			}
-			w.WriteEndArray();
-			w.WriteEndObject();
+			File.Move(temp, path, overwrite: true);
 		}
-		File.WriteAllBytes(path, buffer.ToArray());
+		finally
+		{
+			File.Delete(temp);
+		}
 		return result;
 	}
 
@@ -402,8 +423,12 @@ public static class GisExport
 		File.WriteAllText(path, QgisStyleXml(), new UTF8Encoding(false));
 	}
 
+	private static readonly Lazy<string> CachedQgisStyleXml = new Lazy<string>(BuildQgisStyleXml);
+
 	/// <summary>The QML text: a categorized renderer on the <see cref="ClassField"/> field, one round marker per class.</summary>
-	public static string QgisStyleXml()
+	public static string QgisStyleXml() => CachedQgisStyleXml.Value;
+
+	private static string BuildQgisStyleXml()
 	{
 		(DeterminationClass Class, string Rgb)[] colours =
 		{

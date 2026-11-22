@@ -93,12 +93,13 @@ internal static class SheetReader
 
 	private static List<string> HeaderNames(List<string> header, int width)
 	{
-		List<string> names = new();
+		List<string> names = new List<string>(width);
+		HashSet<string> used = new HashSet<string>(width, StringComparer.OrdinalIgnoreCase);
 		for (int i = 0; i < width; i++)
 		{
 			string name = i < header.Count && !string.IsNullOrWhiteSpace(header[i]) ? header[i].Trim() : "Column" + (i + 1);
 			string unique = name;
-			for (int n = 2; names.Contains(unique, StringComparer.OrdinalIgnoreCase); n++)
+			for (int n = 2; !used.Add(unique); n++)
 			{
 				unique = $"{name} ({n})";
 			}
@@ -137,22 +138,52 @@ internal static class SheetReader
 		}
 		sheetName = ws.Name;
 
-		List<(int, List<string>)> rows = new();
 		IXLRange used = ws.RangeUsed();
 		if (used == null)
 		{
-			return rows;
+			return new List<(int, List<string>)>();
 		}
 		int firstRow = used.FirstRow().RowNumber(), lastRow = used.LastRow().RowNumber();
 		int firstCol = used.FirstColumn().ColumnNumber(), lastCol = used.LastColumn().ColumnNumber();
-		for (int r = firstRow; r <= lastRow; r++)
+		int rowCount = lastRow - firstRow + 1;
+		int colCount = lastCol - firstCol + 1;
+		string[][] grid = new string[rowCount][];
+		foreach (IXLCell cell in ws.CellsUsed(XLCellsUsedOptions.Contents))
 		{
-			List<string> values = new();
-			for (int c = firstCol; c <= lastCol; c++)
+			int r = cell.Address.RowNumber;
+			int c = cell.Address.ColumnNumber;
+			if (r < firstRow || r > lastRow || c < firstCol || c > lastCol)
 			{
-				values.Add(CellText(ws.Cell(r, c)));
+				continue;
 			}
-			rows.Add((r, values));
+			string text = CellText(cell);
+			if (text.Length == 0)
+			{
+				continue;
+			}
+			string[] rowArr = grid[r - firstRow] ??= new string[colCount];
+			rowArr[c - firstCol] = text;
+		}
+		List<(int, List<string>)> rows = new List<(int, List<string>)>(rowCount);
+		for (int r = 0; r < rowCount; r++)
+		{
+			string[] rowArr = grid[r];
+			List<string> values = new List<string>(colCount);
+			if (rowArr == null)
+			{
+				for (int c = 0; c < colCount; c++)
+				{
+					values.Add("");
+				}
+			}
+			else
+			{
+				for (int c = 0; c < colCount; c++)
+				{
+					values.Add(rowArr[c] ?? "");
+				}
+			}
+			rows.Add((firstRow + r, values));
 		}
 		return rows;
 	}
@@ -341,22 +372,21 @@ internal static class SheetReader
 
 	// ───────────────────────── .csv ─────────────────────────
 
+	private static readonly UTF8Encoding StrictUtf8 = new UTF8Encoding(false, throwOnInvalidBytes: true);
+
 	private static List<(int, List<string>)> ReadCsv(string path)
 	{
 		byte[] bytes = File.ReadAllBytes(path);
 		string text;
 		try
 		{
-			text = new UTF8Encoding(false, throwOnInvalidBytes: true).GetString(bytes);
+			int offset = bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF ? 3 : 0;
+			text = StrictUtf8.GetString(bytes, offset, bytes.Length - offset);
 		}
 		catch (DecoderFallbackException)
 		{
 			// Not UTF-8: Excel on Windows saves CSV in the ANSI code page; Latin-1 is the closest built-in match.
 			text = Encoding.Latin1.GetString(bytes);
-		}
-		if (text.Length > 0 && text[0] == '﻿')
-		{
-			text = text[1..];
 		}
 		return ParseCsv(text);
 	}
@@ -364,69 +394,238 @@ internal static class SheetReader
 	/// <summary>RFC 4180: comma-separated, double-quoted fields may contain commas, quotes ("") and line breaks.</summary>
 	internal static List<(int, List<string>)> ParseCsv(string text)
 	{
-		List<(int, List<string>)> rows = new();
-		List<string> fields = new();
-		StringBuilder field = new();
-		bool quoted = false, any = false;
-		int line = 1, rowStart = 1;
-		for (int i = 0; i < text.Length; i++)
+		List<(int, List<string>)> rows = new List<(int, List<string>)>();
+		List<string> fields = new List<string>();
+		StringBuilder field = null;
+		int len = text.Length;
+		int i = 0;
+		int line = 1;
+		int rowStart = 1;
+		bool any = false;
+		while (i < len)
 		{
 			char ch = text[i];
-			if (quoted)
+			if (ch == '"')
 			{
-				if (ch == '"')
+				any = true;
+				i++;
+				int start = i;
+				bool hasEscaped = false;
+				while (i < len)
 				{
-					if (i + 1 < text.Length && text[i + 1] == '"')
+					char q = text[i];
+					if (q == '"')
 					{
-						field.Append('"');
-						i++;
+						if (i + 1 < len && text[i + 1] == '"')
+						{
+							hasEscaped = true;
+							field ??= new StringBuilder();
+							field.Append(text, start, i - start);
+							field.Append('"');
+							i += 2;
+							start = i;
+							continue;
+						}
+						break;
 					}
-					else
-					{
-						quoted = false;
-					}
-				}
-				else
-				{
-					if (ch == '\n')
+					if (q == '\n')
 					{
 						line++;
 					}
-					field.Append(ch);
+					i++;
 				}
-				continue;
-			}
-			switch (ch)
-			{
-				case '"':
-					quoted = true;
-					any = true;
-					break;
-				case ',':
-					fields.Add(field.ToString());
+				string value;
+				if (hasEscaped)
+				{
+					field.Append(text, start, i - start);
+					value = field.ToString();
 					field.Clear();
-					any = true;
-					break;
-				case '\r':
-					break;
-				case '\n':
-					fields.Add(field.ToString());
+				}
+				else
+				{
+					value = i > start ? text.Substring(start, i - start) : "";
+				}
+				if (i < len && text[i] == '"')
+				{
+					i++;
+				}
+				if (i < len && text[i] != ',' && text[i] != '\n' && text[i] != '\r')
+				{
+					field ??= new StringBuilder();
+					field.Append(value);
+					while (i < len && text[i] != ',' && text[i] != '\n')
+					{
+						if (text[i] == '\r')
+						{
+							i++;
+							continue;
+						}
+						if (text[i] == '"')
+						{
+							i++;
+							while (i < len)
+							{
+								if (text[i] == '"')
+								{
+									if (i + 1 < len && text[i + 1] == '"')
+									{
+										field.Append('"');
+										i += 2;
+										continue;
+									}
+									i++;
+									break;
+								}
+								if (text[i] == '\n')
+								{
+									line++;
+								}
+								field.Append(text[i]);
+								i++;
+							}
+						}
+						else
+						{
+							field.Append(text[i]);
+							i++;
+						}
+					}
+					value = field.ToString();
 					field.Clear();
+				}
+				fields.Add(value);
+				if (i < len && text[i] == '\r')
+				{
+					i++;
+				}
+				if (i < len && text[i] == ',')
+				{
+					i++;
+					if (i == len || text[i] == '\n' || (text[i] == '\r' && (i + 1 == len || text[i + 1] == '\n')))
+					{
+						fields.Add("");
+					}
+				}
+				else if (i < len && text[i] == '\n')
+				{
+					i++;
 					rows.Add((rowStart, fields));
-					fields = new();
+					fields = new List<string>(fields.Count);
 					any = false;
 					line++;
 					rowStart = line;
-					break;
-				default:
-					field.Append(ch);
-					any = true;
-					break;
+				}
+			}
+			else if (ch == '\r')
+			{
+				i++;
+			}
+			else if (ch == '\n')
+			{
+				if (!any)
+				{
+					fields.Add("");
+				}
+				rows.Add((rowStart, fields));
+				fields = new List<string>(fields.Count);
+				any = false;
+				line++;
+				rowStart = line;
+				i++;
+			}
+			else if (ch == ',')
+			{
+				any = true;
+				fields.Add("");
+				i++;
+				if (i == len || text[i] == '\n' || (text[i] == '\r' && (i + 1 == len || text[i + 1] == '\n')))
+				{
+					fields.Add("");
+				}
+			}
+			else
+			{
+				any = true;
+				int start = i;
+				while (i < len && text[i] != ',' && text[i] != '\n' && text[i] != '\r' && text[i] != '"')
+				{
+					i++;
+				}
+				string value;
+				if (i < len && (text[i] == '"' || (text[i] == '\r' && i + 1 < len && text[i + 1] != '\n')))
+				{
+					field ??= new StringBuilder();
+					field.Append(text, start, i - start);
+					while (i < len && text[i] != ',' && text[i] != '\n')
+					{
+						if (text[i] == '\r')
+						{
+							i++;
+							continue;
+						}
+						if (text[i] == '"')
+						{
+							i++;
+							while (i < len)
+							{
+								if (text[i] == '"')
+								{
+									if (i + 1 < len && text[i + 1] == '"')
+									{
+										field.Append('"');
+										i += 2;
+										continue;
+									}
+									i++;
+									break;
+								}
+								if (text[i] == '\n')
+								{
+									line++;
+								}
+								field.Append(text[i]);
+								i++;
+							}
+						}
+						else
+						{
+							field.Append(text[i]);
+							i++;
+						}
+					}
+					value = field.ToString();
+					field.Clear();
+				}
+				else
+				{
+					value = text.Substring(start, i - start);
+				}
+				fields.Add(value);
+				if (i < len && text[i] == '\r')
+				{
+					i++;
+				}
+				if (i < len && text[i] == ',')
+				{
+					i++;
+					if (i == len || text[i] == '\n' || (text[i] == '\r' && (i + 1 == len || text[i + 1] == '\n')))
+					{
+						fields.Add("");
+					}
+				}
+				else if (i < len && text[i] == '\n')
+				{
+					i++;
+					rows.Add((rowStart, fields));
+					fields = new List<string>(fields.Count);
+					any = false;
+					line++;
+					rowStart = line;
+				}
 			}
 		}
-		if (any || field.Length > 0)
+		if (any && fields.Count > 0)
 		{
-			fields.Add(field.ToString());
 			rows.Add((rowStart, fields));
 		}
 		return rows;

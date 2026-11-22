@@ -8,11 +8,13 @@ public sealed class LambertConformalConic : MapProjection
 {
 	private readonly double _lonOrigin;
 	private readonly double _e;
-	private readonly double _a;
+	private readonly double _halfE;
 	private readonly double _n;
-	private readonly double _f;
+	private readonly double _invN;
+	private readonly double _sign;
+	private readonly double _aFk;
+	private readonly double _invAfk;
 	private readonly double _rOrigin;
-	private readonly double _k;
 	private readonly double _fe;
 	private readonly double _fn;
 
@@ -22,11 +24,13 @@ public sealed class LambertConformalConic : MapProjection
 		MethodName = method;
 		_lonOrigin = lonOrigin * DegToRad;
 		_e = ellipsoid.Eccentricity;
-		_a = ellipsoid.SemiMajorAxis;
+		_halfE = _e * 0.5;
 		_n = n;
-		_f = f;
+		_invN = 1.0 / n;
+		_sign = n < 0 ? -1.0 : 1.0;
+		_aFk = ellipsoid.SemiMajorAxis * f * k;
+		_invAfk = 1.0 / _aFk;
 		_rOrigin = rOrigin;
-		_k = k;
 		_fe = fe;
 		_fn = fn;
 	}
@@ -92,25 +96,25 @@ public sealed class LambertConformalConic : MapProjection
 	public override (double X, double Y) Forward(double longitude, double latitude)
 	{
 		double phi = latitude * DegToRad;
-		double t = T(phi, _e);
-		double r = _a * _f * Math.Pow(t, _n) * _k;
+		double t = T(phi, _e, _halfE);
+		double r = _aFk * Math.Pow(t, _n);
 		double theta = _n * WrapRadians(longitude * DegToRad - _lonOrigin);
-		return (_fe + r * Math.Sin(theta), _fn + _rOrigin - r * Math.Cos(theta));
+		(double sinTheta, double cosTheta) = Math.SinCos(theta);
+		return (_fe + r * sinTheta, _fn + _rOrigin - r * cosTheta);
 	}
 
 	public override (double Longitude, double Latitude) Inverse(double x, double y)
 	{
 		double dx = x - _fe;
 		double dy = _rOrigin - (y - _fn);
-		double sign = _n < 0 ? -1.0 : 1.0;
-		double r = sign * Math.Sqrt(dx * dx + dy * dy);
-		double t = Math.Pow(r / (_a * _k * _f), 1.0 / _n);
-		double theta = Math.Atan2(sign * dx, sign * dy);
+		double r = _sign * Math.Sqrt(dx * dx + dy * dy);
+		double t = Math.Pow(r * _invAfk, _invN);
+		double theta = Math.Atan2(_sign * dx, _sign * dy);
 		double phi = Math.PI / 2.0 - 2.0 * Math.Atan(t);
 		for (int i = 0; i < 20; i++)
 		{
 			double es = _e * Math.Sin(phi);
-			double next = Math.PI / 2.0 - 2.0 * Math.Atan(t * Math.Pow((1.0 - es) / (1.0 + es), _e / 2.0));
+			double next = Math.PI / 2.0 - 2.0 * Math.Atan(t * Math.Pow((1.0 - es) / (1.0 + es), _halfE));
 			bool done = Math.Abs(next - phi) < 1e-14;
 			phi = next;
 			if (done)
@@ -118,21 +122,24 @@ public sealed class LambertConformalConic : MapProjection
 				break;
 			}
 		}
-		double lambda = theta / _n + _lonOrigin;
+		double lambda = theta * _invN + _lonOrigin;
 		return (WrapDegrees(lambda * RadToDeg), phi * RadToDeg);
 	}
 
 	/// <summary>m = cos φ / (1 − e² sin² φ)^0.5.</summary>
 	private static double M(double phi, double e)
 	{
-		double s = e * Math.Sin(phi);
-		return Math.Cos(phi) / Math.Sqrt(1.0 - s * s);
+		(double sinPhi, double cosPhi) = Math.SinCos(phi);
+		double s = e * sinPhi;
+		return cosPhi / Math.Sqrt(1.0 - s * s);
 	}
 
 	/// <summary>t = tan(π/4 − φ/2) / [(1 − e sin φ)/(1 + e sin φ)]^(e/2).</summary>
-	private static double T(double phi, double e)
+	private static double T(double phi, double e) => T(phi, e, e * 0.5);
+
+	private static double T(double phi, double e, double halfE)
 	{
 		double s = e * Math.Sin(phi);
-		return Math.Tan(Math.PI / 4.0 - phi / 2.0) / Math.Pow((1.0 - s) / (1.0 + s), e / 2.0);
+		return Math.Tan(Math.PI / 4.0 - phi * 0.5) / Math.Pow((1.0 - s) / (1.0 + s), halfE);
 	}
 }

@@ -7,7 +7,7 @@ namespace Sde.App.ViewModels;
 /// <summary>The dashboard's field teams chart (C5): each team's structures, assessed and still to do, for the chosen event.</summary>
 public sealed partial class DashboardViewModel
 {
-	public ObservableCollection<BarRowViewModel> ByTeam { get; } = new();
+	public RangeObservableCollection<BarRowViewModel> ByTeam { get; } = new();
 
 	/// <summary>True when a team has something assigned in scope (the chart is hidden otherwise).</summary>
 	[ObservableProperty]

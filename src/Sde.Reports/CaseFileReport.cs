@@ -101,8 +101,11 @@ public static class CaseFileReport
 
 		Assessments(sec, cf);
 		Compliance(sec, cf);
-		Letters(sec, cf);
-		Appeals(sec, cf);
+		Dictionary<Guid, CaseFileAssessment> assessmentsById = (cf.Letters.Count > 0 || cf.Appeals.Count > 0)
+			? cf.Assessments.ToDictionary(a => a.Assessment.AssessmentID)
+			: null;
+		Letters(sec, cf, assessmentsById);
+		Appeals(sec, cf, assessmentsById);
 		Improvements(sec, cf);
 		Documents(sec, cf);
 		if (options.IncludeTimeline)
@@ -247,13 +250,12 @@ public static class CaseFileReport
 		}));
 	}
 
-	private static void Letters(Section sec, CaseFile cf)
+	private static void Letters(Section sec, CaseFile cf, Dictionary<Guid, CaseFileAssessment> byId)
 	{
 		if (cf.Letters.Count == 0)
 		{
 			return;
 		}
-		Dictionary<Guid, CaseFileAssessment> byId = cf.Assessments.ToDictionary(a => a.Assessment.AssessmentID);
 		Column[] columns =
 		{
 			new Column("Letter", 2.4),
@@ -271,13 +273,12 @@ public static class CaseFileReport
 		}));
 	}
 
-	private static void Appeals(Section sec, CaseFile cf)
+	private static void Appeals(Section sec, CaseFile cf, Dictionary<Guid, CaseFileAssessment> byId)
 	{
 		if (cf.Appeals.Count == 0)
 		{
 			return;
 		}
-		Dictionary<Guid, CaseFileAssessment> byId = cf.Assessments.ToDictionary(a => a.Assessment.AssessmentID);
 		List<string[]> rows = new();
 		foreach (CaseFileAppeal ap in cf.Appeals)
 		{
@@ -402,10 +403,13 @@ public static class CaseFileReport
 			Shorten(e.Detail, 240),
 			e.Who ?? "",
 		}));
-		if (!includeEdits && cf.Timeline.Any(e => e.IsEdit))
+		if (!includeEdits)
 		{
-			int edits = cf.Timeline.Count(e => e.IsEdit);
-			Kit.Note(sec, $"{Count(edits, "field change")} in the edit history {(edits == 1 ? "is" : "are")} not listed here.");
+			int edits = cf.Timeline.Count - entries.Count;
+			if (edits > 0)
+			{
+				Kit.Note(sec, $"{Count(edits, "field change")} in the edit history {(edits == 1 ? "is" : "are")} not listed here.");
+			}
 		}
 	}
 

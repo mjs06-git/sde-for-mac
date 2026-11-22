@@ -56,11 +56,78 @@ public sealed class ExchangeService
 	/// <summary>Only the given assessments, their structures, and structures listed in <paramref name="propertyIds"/>.</summary>
 	public SdeDataset ReadDataset(IEnumerable<Guid> assessmentIds, IEnumerable<Guid> propertyIds = null)
 	{
-		SdeDataset all = ReadDataset();
-		HashSet<Guid> aids = assessmentIds.ToHashSet();
-		HashSet<Guid> pids = all.Assessments.Where(a => aids.Contains(a.AssessmentID)).Select(a => a.PropertyID).ToHashSet();
-		pids.UnionWith(propertyIds ?? Enumerable.Empty<Guid>());
-		return all.Filter(pids, aids);
+		List<Guid> requestedAids = assessmentIds.Distinct().ToList();
+		List<Guid> requestedPids = propertyIds == null ? new List<Guid>() : propertyIds.Distinct().ToList();
+		if (requestedAids.Count == 0 && requestedPids.Count == 0)
+		{
+			return new SdeDataset();
+		}
+		return _store.Database.Read(c =>
+		{
+			using IDbTransaction tx = c.BeginTransaction(deferred: true);
+			List<AssessmentRecord> assessments = new List<AssessmentRecord>();
+			foreach (Guid[] chunk in requestedAids.Chunk(500))
+			{
+				assessments.AddRange(TableMap<AssessmentRecord>.Select(c, "Active = 1 AND AssessmentID IN @chunk", new { chunk = SdeStore.IdText(chunk) }, tx));
+			}
+			HashSet<Guid> wantedPids = new HashSet<Guid>(requestedPids);
+			foreach (AssessmentRecord a in assessments)
+			{
+				wantedPids.Add(a.PropertyID);
+			}
+			List<PropertyRecord> properties = new List<PropertyRecord>();
+			foreach (Guid[] chunk in wantedPids.Chunk(500))
+			{
+				properties.AddRange(TableMap<PropertyRecord>.Select(c, "Active = 1 AND PropertyID IN @chunk", new { chunk = SdeStore.IdText(chunk) }, tx));
+			}
+			HashSet<Guid> activePids = properties.Select(p => p.PropertyID).ToHashSet();
+			assessments.RemoveAll(a => !activePids.Contains(a.PropertyID));
+			List<Guid> activeAids = assessments.Select(a => a.AssessmentID).ToList();
+
+			List<AttachmentRecord> attachments = new List<AttachmentRecord>();
+			List<ElementPercentageRecord> elements = new List<ElementPercentageRecord>();
+			List<CostAdjustmentResultRecord> costs = new List<CostAdjustmentResultRecord>();
+			List<AdditionalAdjustmentRecord> additional = new List<AdditionalAdjustmentRecord>();
+			List<CustomFieldResultRecord> custom = new List<CustomFieldResultRecord>();
+			List<ShapeRecord> shapes = new List<ShapeRecord>();
+
+			foreach (Guid[] chunk in activeAids.Chunk(500))
+			{
+				object args = new { chunk = SdeStore.IdText(chunk) };
+				attachments.AddRange(TableMap<AttachmentRecord>.Select(c, "Active = 1 AND AssessmentID IN @chunk", args, tx, orderBy: "AttachmentID"));
+				elements.AddRange(TableMap<ElementPercentageRecord>.Select(c, "AssessmentID IN @chunk", args, tx));
+				costs.AddRange(TableMap<CostAdjustmentResultRecord>.Select(c, "AssessmentID IN @chunk", args, tx));
+				additional.AddRange(TableMap<AdditionalAdjustmentRecord>.Select(c, "AssessmentID IN @chunk", args, tx, orderBy: "zOrder"));
+			}
+			if (activeAids.Count > 500)
+			{
+				attachments.Sort((x, y) => x.AttachmentID.CompareTo(y.AttachmentID));
+				additional.Sort((x, y) => Nullable.Compare(x.zOrder, y.zOrder));
+			}
+			foreach (Guid[] chunk in activePids.Concat(activeAids).Distinct().Chunk(500))
+			{
+				custom.AddRange(TableMap<CustomFieldResultRecord>.Select(c, "ObjectIdentifier IN @chunk", new { chunk = SdeStore.IdText(chunk) }, tx));
+			}
+			foreach (Guid[] chunk in activePids.Chunk(500))
+			{
+				shapes.AddRange(TableMap<ShapeRecord>.Select(c, "PropertyID IN @chunk", new { chunk = SdeStore.IdText(chunk) }, tx, orderBy: "ShapeID"));
+			}
+			if (activePids.Count > 500)
+			{
+				shapes.Sort((x, y) => Nullable.Compare(x.ShapeID, y.ShapeID));
+			}
+			return new SdeDataset
+			{
+				Properties = properties,
+				Assessments = assessments,
+				Attachments = attachments,
+				ElementPercentages = elements,
+				CostAdjustments = costs,
+				AdditionalAdjustments = additional,
+				CustomFieldsResults = custom,
+				Shapes = shapes,
+			};
+		});
 	}
 
 	private static SdeDataset ReadDataset(SdeDatabase db) => db.Read(c =>
@@ -409,13 +476,5 @@ public sealed class ExchangeService
 	}
 
 	private static T Clone<T>(T source)
-		where T : class, new()
-	{
-		T copy = new T();
-		foreach (var p in TableMap<T>.Columns)
-		{
-			p.SetValue(copy, p.GetValue(source));
-		}
-		return copy;
-	}
+		where T : class, new() => TableMap<T>.Clone(source);
 }

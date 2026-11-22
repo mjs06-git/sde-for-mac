@@ -102,6 +102,7 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 
 	private const int IccInProgress = 1;
 	private static readonly CultureInfo Us = CultureInfo.GetCultureInfo("en-US");
+	private static readonly char[] InvalidFileNameChars = Path.GetInvalidFileNameChars();
 
 	private readonly AppServices _app;
 	private readonly MainViewModel _main;
@@ -118,7 +119,7 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 	/// <summary>Set by the window while this is the page showing (it then reloads when the data changes).</summary>
 	public bool IsActive { get; set; }
 
-	public ObservableCollection<ComplianceRowViewModel> Rows { get; } = new();
+	public RangeObservableCollection<ComplianceRowViewModel> Rows { get; } = new();
 
 	[ObservableProperty]
 	[NotifyCanExecuteChangedFor(nameof(OpenSelectedCommand), nameof(OpenSelectedAssessmentCommand))]
@@ -130,7 +131,7 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 	public bool HasSelection => Selected != null;
 
 	/// <summary>The selected case's timeline, newest first, for the inspector.</summary>
-	public ObservableCollection<ComplianceEntryViewModel> SelectedTimeline { get; } = new();
+	public RangeObservableCollection<ComplianceEntryViewModel> SelectedTimeline { get; } = new();
 
 	public bool HasTimeline => SelectedTimeline.Count > 0;
 
@@ -340,16 +341,41 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 		DueSoonCount = CountDueSoon(_app, DueSoonDays);
 		_missing = MissingCases(_app.Store.GetComplianceCases());
 
-		List<ComplianceCaseRecord> open = cases.Where(c => c.IsOpen).ToList();
-		OpenCount = open.Count;
-		int closed = cases.Count - open.Count;
+		int openCount = 0;
+		int overdueCount = 0;
+		int iccInProgress = 0;
+		int iccPaidCount = 0;
+		decimal iccPaidSum = 0m;
+		DateTime today = Today;
+		for (int i = 0; i < cases.Count; i++)
+		{
+			ComplianceCaseRecord c = cases[i];
+			if (c.IsOpen)
+			{
+				openCount++;
+				if (c.IsOverdue(today))
+				{
+					overdueCount++;
+				}
+			}
+			if (c.IccStatus is IccStatuses.Filed or IccStatuses.Approved)
+			{
+				iccInProgress++;
+			}
+			else if (c.IccStatus == IccStatuses.Paid)
+			{
+				iccPaidCount++;
+				iccPaidSum += c.IccAmount ?? 0m;
+			}
+		}
+		OpenCount = openCount;
+		int closed = cases.Count - openCount;
 		ClosedCaption = closed == 1 ? "1 closed" : $"{closed:N0} closed";
-		OverdueCount = open.Count(c => c.IsOverdue(Today));
-		IccInProgressCount = cases.Count(c => c.IccStatus is IccStatuses.Filed or IccStatuses.Approved);
-		List<ComplianceCaseRecord> paid = cases.Where(c => c.IccStatus == IccStatuses.Paid).ToList();
-		_iccPaidCount = paid.Count;
-		IccPaidText = paid.Sum(c => c.IccAmount ?? 0m).ToString("C0", Us);
-		IccPaidCaption = paid.Count == 1 ? "1 claim paid" : $"{paid.Count:N0} claims paid";
+		OverdueCount = overdueCount;
+		IccInProgressCount = iccInProgress;
+		_iccPaidCount = iccPaidCount;
+		IccPaidText = iccPaidSum.ToString("C0", Us);
+		IccPaidCaption = iccPaidCount == 1 ? "1 claim paid" : $"{iccPaidCount:N0} claims paid";
 		Fill();
 		Selected = selected is Guid id ? Rows.FirstOrDefault(r => r.Case.CaseID == id) : null;
 		OnPropertyChanged(nameof(Subtitle));
@@ -378,11 +404,7 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 
 	private void Fill()
 	{
-		Rows.Clear();
-		foreach (ComplianceRowViewModel r in _all.Where(Matches))
-		{
-			Rows.Add(r);
-		}
+		Rows.ReplaceAll(_all.Where(Matches));
 		OnPropertyChanged(nameof(HasRows));
 		OnPropertyChanged(nameof(IsEmpty));
 		OnPropertyChanged(nameof(NoMatches));
@@ -423,18 +445,25 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 	/// <summary>The selected case's timeline, newest first.</summary>
 	private void LoadTimeline()
 	{
-		SelectedTimeline.Clear();
-		if (Selected != null)
+		if (Selected == null)
+		{
+			SelectedTimeline.Clear();
+		}
+		else
 		{
 			try
 			{
-				foreach (ComplianceEntryRecord e in _app.Store.GetComplianceEntries(Selected.Case.CaseID).AsEnumerable().Reverse())
+				List<ComplianceEntryRecord> raw = _app.Store.GetComplianceEntries(Selected.Case.CaseID);
+				List<ComplianceEntryViewModel> entries = new List<ComplianceEntryViewModel>(raw.Count);
+				for (int i = raw.Count - 1; i >= 0; i--)
 				{
-					SelectedTimeline.Add(new ComplianceEntryViewModel(e));
+					entries.Add(new ComplianceEntryViewModel(raw[i]));
 				}
+				SelectedTimeline.ReplaceAll(entries);
 			}
 			catch (Exception ex) when (ex is not OutOfMemoryException)
 			{
+				SelectedTimeline.Clear();
 				AppLog.Write("Couldn't read a compliance case's timeline", ex);
 			}
 		}
@@ -670,6 +699,6 @@ public sealed partial class ComplianceViewModel : ViewModelBase
 	private string FileName(string extension)
 	{
 		string name = _app.Scope.IsAll ? "Compliance" : "Compliance (" + _app.Scope.Event.Label + ")";
-		return string.Concat((name + extension).Split(Path.GetInvalidFileNameChars())).Replace(':', '-');
+		return string.Concat((name + extension).Split(InvalidFileNameChars)).Replace(':', '-');
 	}
 }

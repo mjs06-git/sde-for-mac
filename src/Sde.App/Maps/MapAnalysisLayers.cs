@@ -41,6 +41,21 @@ public sealed class MapClusterRenderer : ISkiaStyleRenderer
 
 	private static int _registered;
 
+	[ThreadStatic]
+	private static SKPaint _paint;
+
+	[ThreadStatic]
+	private static SKFont _fontSmall;
+
+	[ThreadStatic]
+	private static SKFontMetrics _metricsSmall;
+
+	[ThreadStatic]
+	private static SKFont _fontLarge;
+
+	[ThreadStatic]
+	private static SKFontMetrics _metricsLarge;
+
 	public bool Draw(SKCanvas canvas, Viewport viewport, ILayer layer, IFeature feature, IStyle style, RenderService renderService, long iteration)
 	{
 		if (style is not MapClusterStyle cluster || feature.Extent?.Centroid is not MPoint at)
@@ -50,16 +65,37 @@ public sealed class MapClusterRenderer : ISkiaStyleRenderer
 		(double sx, double sy) = viewport.WorldToScreenXY(at.X, at.Y);
 		float radius = (float)(MapClusterStyle.DiameterFor(cluster.Count) / 2);
 		float opacity = (float)layer.Opacity * cluster.Opacity;
-		using SKPaint ring = new SKPaint { IsAntialias = true, Color = ToSkia(cluster.Ring, opacity) };
-		canvas.DrawCircle((float)sx, (float)sy, radius + 2.5f, ring);
-		using SKPaint fill = new SKPaint { IsAntialias = true, Color = ToSkia(cluster.Fill, opacity) };
-		canvas.DrawCircle((float)sx, (float)sy, radius, fill);
+		SKPaint paint = _paint ??= new SKPaint { IsAntialias = true };
+		paint.Color = ToSkia(cluster.Ring, opacity);
+		canvas.DrawCircle((float)sx, (float)sy, radius + 2.5f, paint);
+		paint.Color = ToSkia(cluster.Fill, opacity);
+		canvas.DrawCircle((float)sx, (float)sy, radius, paint);
 		string text = cluster.Count.ToString(System.Globalization.CultureInfo.InvariantCulture);
-		using SKFont font = new SKFont(MapLabelRenderer.Typeface, radius > 20 ? 13 : 12) { Embolden = true };
+		SKFont font;
+		SKFontMetrics m;
+		if (radius > 20)
+		{
+			if (_fontLarge == null)
+			{
+				_fontLarge = new SKFont(MapLabelRenderer.Typeface, 13) { Embolden = true };
+				_fontLarge.GetFontMetrics(out _metricsLarge);
+			}
+			font = _fontLarge;
+			m = _metricsLarge;
+		}
+		else
+		{
+			if (_fontSmall == null)
+			{
+				_fontSmall = new SKFont(MapLabelRenderer.Typeface, 12) { Embolden = true };
+				_fontSmall.GetFontMetrics(out _metricsSmall);
+			}
+			font = _fontSmall;
+			m = _metricsSmall;
+		}
 		float width = font.MeasureText(text);
-		font.GetFontMetrics(out SKFontMetrics m);
-		using SKPaint ink = new SKPaint { IsAntialias = true, Color = ToSkia(cluster.Ink, opacity) };
-		canvas.DrawText(text, (float)sx - width / 2, (float)sy - (m.Ascent + m.Descent) / 2, font, ink);
+		paint.Color = ToSkia(cluster.Ink, opacity);
+		canvas.DrawText(text, (float)sx - width / 2, (float)sy - (m.Ascent + m.Descent) / 2, font, paint);
 		return true;
 	}
 
@@ -76,19 +112,26 @@ internal static class AnalysisLayers
 	/// </summary>
 	public static List<IFeature> Clusters(IReadOnlyList<MapClusterMark> clusters, IReadOnlyList<MapMarker> markers, MapTheme theme)
 	{
-		Dictionary<Guid, MapMarker> byId = new Dictionary<Guid, MapMarker>();
-		foreach (MapMarker m in markers)
-		{
-			byId[m.Id] = m;
-		}
+		Dictionary<Guid, MapMarker> byId = null;
 		List<MapMarker> singles = new List<MapMarker>();
-		List<IFeature> circles = new List<IFeature>();
+		List<IFeature> circles = new List<IFeature>(clusters.Count);
 		foreach (MapClusterMark c in clusters)
 		{
-			if (c.Count == 1 && c.Single is Guid id && byId.TryGetValue(id, out MapMarker single))
+			if (c.Count == 1 && c.Single is Guid id)
 			{
-				singles.Add(single);
-				continue;
+				if (byId == null)
+				{
+					byId = new Dictionary<Guid, MapMarker>(markers.Count);
+					foreach (MapMarker m in markers)
+					{
+						byId[m.Id] = m;
+					}
+				}
+				if (byId.TryGetValue(id, out MapMarker single))
+				{
+					singles.Add(single);
+					continue;
+				}
 			}
 			PointFeature f = new PointFeature(c.X, c.Y);
 			f.Styles.Add(new MapClusterStyle
@@ -100,8 +143,11 @@ internal static class AnalysisLayers
 			});
 			circles.Add(f);
 		}
-		List<IFeature> features = StructureDots.Dots(singles, theme);
-		features.AddRange(circles);
+		List<IFeature> features = singles.Count == 0 ? circles : StructureDots.Dots(singles, theme);
+		if (singles.Count > 0)
+		{
+			features.AddRange(circles);
+		}
 		return features;
 	}
 

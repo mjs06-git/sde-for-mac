@@ -20,13 +20,21 @@ public abstract class ChartBase : Control
 	protected const double LabelGap = 6;
 
 	protected static readonly CultureInfo Us = CultureInfo.GetCultureInfo("en-US");
+	private static readonly int[] ScaleMultiples = { 1, 2, 5 };
 
 	/// <summary>The name this chart last gave itself, so a name set in a view is never overwritten.</summary>
 	private string _spokenName;
+	private Dictionary<string, IBrush> _brushCache;
+	private double _cachedCaptionSize;
 
 	protected ChartBase()
 	{
-		ActualThemeVariantChanged += (_, _) => InvalidateVisual();
+		ActualThemeVariantChanged += (_, _) =>
+		{
+			_brushCache?.Clear();
+			_cachedCaptionSize = 0;
+			InvalidateVisual();
+		};
 	}
 
 	/// <summary>The chart's data in words, for a screen reader.</summary>
@@ -47,13 +55,25 @@ public abstract class ChartBase : Control
 	}
 
 	/// <summary>The theme's brush for <paramref name="key"/>, in the theme now showing.</summary>
-	protected IBrush Brush(string key, IBrush fallback) =>
-		this.TryFindResource(key, ActualThemeVariant, out object value) && value is IBrush b ? b : fallback;
+	protected IBrush Brush(string key, IBrush fallback)
+	{
+		if (_brushCache != null && _brushCache.TryGetValue(key, out IBrush cached))
+		{
+			return cached ?? fallback;
+		}
+		IBrush found = this.TryFindResource(key, ActualThemeVariant, out object value) && value is IBrush b ? b : null;
+		(_brushCache ??= new Dictionary<string, IBrush>(StringComparer.Ordinal))[key] = found;
+		return found ?? fallback;
+	}
 
 	/// <summary>A caption (FontSizeCaption) in the app's typeface.</summary>
-	protected FormattedText Caption(string text, IBrush brush, FontWeight weight = FontWeight.Normal) =>
-		new FormattedText(text, Us, FlowDirection.LeftToRight, new Typeface(TextElement.GetFontFamily(this), FontStyle.Normal, weight),
-			this.TryFindResource("FontSizeCaption", out object size) && size is double d ? d : 11, brush);
+	protected FormattedText Caption(string text, IBrush brush, FontWeight weight = FontWeight.Normal)
+	{
+		double fontSize = _cachedCaptionSize > 0
+			? _cachedCaptionSize
+			: (_cachedCaptionSize = this.TryFindResource("FontSizeCaption", out object size) && size is double d ? d : 11);
+		return new FormattedText(text, Us, FlowDirection.LeftToRight, new Typeface(TextElement.GetFontFamily(this), FontStyle.Normal, weight), fontSize, brush);
+	}
 
 	/// <summary>
 	/// A round top for the scale: the smallest of 1, 2, 5, 10, 20, 50 ... times a power of ten that leaves at most
@@ -62,12 +82,11 @@ public abstract class ChartBase : Control
 	protected static (int Step, int Top) NiceScale(int max, int lines = 4)
 	{
 		max = Math.Max(1, max);
-		int[] multiples = { 1, 2, 5 };
 		for (int power = 1; ; power *= 10)
 		{
-			foreach (int m in multiples)
+			for (int i = 0; i < ScaleMultiples.Length; i++)
 			{
-				int step = m * power;
+				int step = ScaleMultiples[i] * power;
 				int top = (int)Math.Ceiling(max / (double)step) * step;
 				if (top / step <= lines)
 				{

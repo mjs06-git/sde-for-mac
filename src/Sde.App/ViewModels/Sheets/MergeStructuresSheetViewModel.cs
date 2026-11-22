@@ -21,8 +21,8 @@ public sealed class MergeSideViewModel
 		string owner = string.Join(" ", new[] { p.OwnerFirstName, p.OwnerLastName }.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()));
 		Owner = owner.Length == 0 ? "No owner recorded" : owner;
 		Parcel = string.IsNullOrWhiteSpace(p.ParcelNumber) ? "No parcel number" : "Parcel " + p.ParcelNumber.Trim();
-		List<StructureSummary> assessments = store.ListStructures().Where(s => s.PropertyID == propertyId && s.AssessmentID != null).ToList();
-		StructureSummary latest = assessments.OrderByDescending(s => s.DateofInspection).ThenByDescending(s => s.LastUpdate).FirstOrDefault();
+		List<AssessmentRecord> assessments = store.GetAssessmentsForProperty(propertyId);
+		AssessmentRecord latest = assessments.OrderByDescending(s => s.DateofInspection).ThenByDescending(s => s.LastUpdate).FirstOrDefault();
 		string count = assessments.Count == 1 ? "1 assessment" : $"{assessments.Count:N0} assessments";
 		Assessments = latest?.DateofInspection is DateTime on ? $"{count}, latest {on.ToString("MMM d, yyyy", Us)}" : count;
 	}

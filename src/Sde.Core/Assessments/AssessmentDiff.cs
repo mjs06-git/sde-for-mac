@@ -24,6 +24,10 @@ public static class AssessmentDiff
 		List<FieldDiff> diffs = new();
 		void Add(string key, string label, object oldValue, object newValue)
 		{
+			if (Equals(oldValue, newValue))
+			{
+				return;
+			}
 			string o = FieldCatalog.Canonical(oldValue);
 			string n = FieldCatalog.Canonical(newValue);
 			if (o != n)
@@ -74,46 +78,52 @@ public static class AssessmentDiff
 		}
 
 		// Custom fields, labelled with their current names.
-		Dictionary<Guid, string> oldCustom = before.CustomFields.GroupBy(c => c.CustomFieldID).ToDictionary(g => g.Key, g => g.First().Result);
-		Dictionary<Guid, string> newCustom = after.CustomFields.GroupBy(c => c.CustomFieldID).ToDictionary(g => g.Key, g => g.First().Result);
-		foreach (Guid id in oldCustom.Keys.Union(newCustom.Keys))
+		if (before.CustomFields.Count > 0 || after.CustomFields.Count > 0)
 		{
-			CustomFieldRecord cf = reference.CustomFields.FirstOrDefault(c => c.CustomFieldID == id);
-			Add("Custom." + (cf?.zOrder ?? 0).ToString(CultureInfo.InvariantCulture), cf?.CustomField ?? "Custom field",
-				oldCustom.GetValueOrDefault(id), newCustom.GetValueOrDefault(id));
+			Dictionary<Guid, string> oldCustom = before.CustomFields.GroupBy(c => c.CustomFieldID).ToDictionary(g => g.Key, g => g.First().Result);
+			Dictionary<Guid, string> newCustom = after.CustomFields.GroupBy(c => c.CustomFieldID).ToDictionary(g => g.Key, g => g.First().Result);
+			foreach (Guid id in oldCustom.Keys.Union(newCustom.Keys))
+			{
+				CustomFieldRecord cf = reference.CustomField(id);
+				Add("Custom." + (cf?.zOrder ?? 0).ToString(CultureInfo.InvariantCulture), cf?.CustomField ?? "Custom field",
+					oldCustom.GetValueOrDefault(id), newCustom.GetValueOrDefault(id));
+			}
 		}
 
 		// Photos, matched by their stored file name.
-		Dictionary<string, AttachmentRecord> oldPhotos = before.Attachments.Where(a => a.Active).GroupBy(a => a.FileName ?? "").ToDictionary(g => g.Key, g => g.First());
-		Dictionary<string, AttachmentRecord> newPhotos = after.Attachments.Where(a => a.Active).GroupBy(a => a.FileName ?? "").ToDictionary(g => g.Key, g => g.First());
-		foreach (string file in oldPhotos.Keys.Union(newPhotos.Keys))
+		if (before.Attachments.Count > 0 || after.Attachments.Count > 0)
 		{
-			oldPhotos.TryGetValue(file, out AttachmentRecord o);
-			newPhotos.TryGetValue(file, out AttachmentRecord n);
-			if (o == null)
+			Dictionary<string, AttachmentRecord> oldPhotos = before.Attachments.Where(a => a.Active).GroupBy(a => a.FileName ?? "").ToDictionary(g => g.Key, g => g.First());
+			Dictionary<string, AttachmentRecord> newPhotos = after.Attachments.Where(a => a.Active).GroupBy(a => a.FileName ?? "").ToDictionary(g => g.Key, g => g.First());
+			foreach (string file in oldPhotos.Keys.Union(newPhotos.Keys))
 			{
-				diffs.Add(new FieldDiff(PhotoKey, "Photo added", null, PhotoName(n)));
-			}
-			else if (n == null)
-			{
-				diffs.Add(new FieldDiff(PhotoKey, "Photo removed", PhotoName(o), null));
-			}
-			else
-			{
-				Add(PhotoKey + ".Description", "Photo description", o.Description, n.Description);
-				if (n.DefaultImage && !o.DefaultImage)
+				oldPhotos.TryGetValue(file, out AttachmentRecord o);
+				newPhotos.TryGetValue(file, out AttachmentRecord n);
+				if (o == null)
 				{
-					diffs.Add(new FieldDiff(PhotoKey + ".Report", "Report photo", null, PhotoName(n)));
+					diffs.Add(new FieldDiff(PhotoKey, "Photo added", null, PhotoName(n)));
+				}
+				else if (n == null)
+				{
+					diffs.Add(new FieldDiff(PhotoKey, "Photo removed", PhotoName(o), null));
+				}
+				else
+				{
+					Add(PhotoKey + ".Description", "Photo description", o.Description, n.Description);
+					if (n.DefaultImage && !o.DefaultImage)
+					{
+						diffs.Add(new FieldDiff(PhotoKey + ".Report", "Report photo", null, PhotoName(n)));
+					}
 				}
 			}
-		}
 
-		// The order of the photos both versions have (the order reports print them in).
-		List<AttachmentRecord> oldOrder = before.Attachments.Where(a => a.Active && newPhotos.ContainsKey(a.FileName ?? "")).ToList();
-		List<AttachmentRecord> newOrder = after.Attachments.Where(a => a.Active && oldPhotos.ContainsKey(a.FileName ?? "")).ToList();
-		if (!oldOrder.Select(a => a.FileName).SequenceEqual(newOrder.Select(a => a.FileName)))
-		{
-			diffs.Add(new FieldDiff(PhotoKey + ".Order", "Photo order", string.Join(", ", oldOrder.Select(PhotoName)), string.Join(", ", newOrder.Select(PhotoName))));
+			// The order of the photos both versions have (the order reports print them in).
+			List<AttachmentRecord> oldOrder = before.Attachments.Where(a => a.Active && newPhotos.ContainsKey(a.FileName ?? "")).ToList();
+			List<AttachmentRecord> newOrder = after.Attachments.Where(a => a.Active && oldPhotos.ContainsKey(a.FileName ?? "")).ToList();
+			if (!oldOrder.Select(a => a.FileName).SequenceEqual(newOrder.Select(a => a.FileName)))
+			{
+				diffs.Add(new FieldDiff(PhotoKey + ".Order", "Photo order", string.Join(", ", oldOrder.Select(PhotoName)), string.Join(", ", newOrder.Select(PhotoName))));
+			}
 		}
 		return diffs;
 	}
@@ -122,20 +132,33 @@ public static class AssessmentDiff
 	public static List<FieldDiff> CompareProperty(PropertyRecord before, PropertyRecord after)
 	{
 		List<FieldDiff> diffs = new();
-		foreach (FieldInfo f in FieldCatalog.All.Where(f => f.Model == FieldModel.Property))
+		foreach (FieldInfo f in FieldCatalog.All)
 		{
-			string o = FieldCatalog.Canonical(f.RecordProperty.GetValue(before));
-			string n = FieldCatalog.Canonical(f.RecordProperty.GetValue(after));
+			if (f.Model != FieldModel.Property)
+			{
+				continue;
+			}
+			object oldValue = f.ReadFrom(before);
+			object newValue = f.ReadFrom(after);
+			if (Equals(oldValue, newValue))
+			{
+				continue;
+			}
+			string o = FieldCatalog.Canonical(oldValue);
+			string n = FieldCatalog.Canonical(newValue);
 			if (o != n)
 			{
 				diffs.Add(new FieldDiff(f.Key, f.Label, o, n));
 			}
 		}
-		string os = FieldCatalog.Canonical(before.SquareFootage);
-		string ns = FieldCatalog.Canonical(after.SquareFootage);
-		if (os != ns)
+		if (before.SquareFootage != after.SquareFootage)
 		{
-			diffs.Add(new FieldDiff("Property." + nameof(PropertyRecord.SquareFootage), "Square footage", os, ns));
+			string os = FieldCatalog.Canonical(before.SquareFootage);
+			string ns = FieldCatalog.Canonical(after.SquareFootage);
+			if (os != ns)
+			{
+				diffs.Add(new FieldDiff("Property." + nameof(PropertyRecord.SquareFootage), "Square footage", os, ns));
+			}
 		}
 		return diffs;
 	}

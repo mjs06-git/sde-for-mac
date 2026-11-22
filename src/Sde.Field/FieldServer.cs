@@ -1,5 +1,6 @@
 using System.Net;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Sde.Core;
 using Sde.Core.Assessments;
 using Sde.Data;
 
@@ -69,6 +71,8 @@ public sealed class FieldServer : IAsyncDisposable
 	};
 
 	private static readonly IReadOnlyDictionary<string, (byte[] Body, string Type)> Assets = LoadAssets();
+	private static readonly JsonSerializerOptions WebJsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+	private static readonly ConditionalWeakTable<ReferenceData, byte[]> LookupsJsonCache = new ConditionalWeakTable<ReferenceData, byte[]>();
 
 	private readonly Func<SdeStore> _store;
 	private readonly IFieldWriter _writer;
@@ -364,7 +368,11 @@ public sealed class FieldServer : IAsyncDisposable
 
 		app.MapPost("/api/pair", (HttpContext ctx, PairRequest req) => Pair(ctx, req)).WithMetadata(OpenToUnpaired.Yes);
 		app.MapGet("/api/session", (HttpContext ctx) => Results.Json(new { paired = true, name = PhoneOf(ctx).Name }));
-		app.MapGet("/api/lookups", () => Results.Json(FieldApi.Lookups(_store().Reference)));
+		app.MapGet("/api/lookups", () =>
+		{
+			byte[] json = LookupsJsonCache.GetValue(_store().Reference, static r => JsonSerializer.SerializeToUtf8Bytes(FieldApi.Lookups(r), WebJsonOptions));
+			return Results.Bytes(json, "application/json; charset=utf-8");
+		});
 		app.MapGet("/api/structures", (HttpContext ctx) => Results.Json(FieldApi.Search(_store(), ctx.Request.Query["q"].ToString())));
 		app.MapPost("/api/structures", AddStructure);
 		app.MapGet("/api/teams", () => Results.Json(FieldApi.Teams(_store())));
@@ -533,7 +541,7 @@ public sealed class FieldServer : IAsyncDisposable
 	private async Task<IResult> SetStatus(HttpContext ctx, Guid id, StatusRequest req)
 	{
 		SdeStore store = _store();
-		if (Load(store, id) == null)
+		if (!store.AssessmentExistsActive(id))
 		{
 			return NotFound();
 		}
@@ -574,7 +582,7 @@ public sealed class FieldServer : IAsyncDisposable
 	private async Task<IResult> UploadPhoto(HttpContext ctx, Guid id)
 	{
 		SdeStore store = _store();
-		if (Load(store, id) == null)
+		if (!store.AssessmentExistsActive(id))
 		{
 			return NotFound();
 		}
@@ -618,14 +626,11 @@ public sealed class FieldServer : IAsyncDisposable
 		string converted = null;
 		try
 		{
-			await using (FileStream f = File.Create(upload))
-			{
-				await photo.CopyToAsync(f, ctx.RequestAborted);
-			}
 			// Checked on the copy (by content, not name), then named for its kind, which the converter goes by.
 			string extension;
-			using (FileStream f = File.OpenRead(upload))
+			await using (FileStream f = new FileStream(upload, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
 			{
+				await photo.CopyToAsync(f, ctx.RequestAborted);
 				extension = PhotoUpload.Detect(f);
 			}
 			if (extension == null)

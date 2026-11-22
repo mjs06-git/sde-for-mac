@@ -40,18 +40,38 @@ public static class ExcelExport
 	{
 		using XLWorkbook wb = new XLWorkbook();
 		IXLWorksheet ws = wb.Worksheets.Add("Sheet1");
-		SheetWriter.WriteText(ws, Headers, Rows(assessments, reference));
-		SheetWriter.Finish(ws, Headers.Count);
+		int[] longest = SheetWriter.WriteText(ws, Headers, StreamRows(assessments, reference));
+		SheetWriter.Finish(ws, Headers.Count, longestData: longest);
 		wb.SaveAs(xlsxPath);
 	}
 
 	/// <summary>The display text of every cell, one list per assessment, in <see cref="Headers"/> order.</summary>
-	public static List<IReadOnlyList<string>> Rows(IEnumerable<AssessmentFile> assessments, ReferenceData reference) =>
-		assessments.Select(f =>
+	public static List<IReadOnlyList<string>> Rows(IEnumerable<AssessmentFile> assessments, ReferenceData reference)
+	{
+		List<IReadOnlyList<string>> result = assessments is ICollection<AssessmentFile> coll
+			? new List<IReadOnlyList<string>>(coll.Count)
+			: new List<IReadOnlyList<string>>();
+		foreach (IReadOnlyList<string> row in StreamRows(assessments, reference))
+		{
+			result.Add(row);
+		}
+		return result;
+	}
+
+	private static IEnumerable<IReadOnlyList<string>> StreamRows(IEnumerable<AssessmentFile> assessments, ReferenceData reference)
+	{
+		int colCount = Columns.Count;
+		foreach (AssessmentFile f in assessments)
 		{
 			Row row = new Row(f, reference);
-			return (IReadOnlyList<string>)Columns.Select(c => c.Value(row) ?? "").ToList();
-		}).ToList();
+			string[] cells = new string[colCount];
+			for (int i = 0; i < colCount; i++)
+			{
+				cells[i] = Columns[i].Value(row) ?? "";
+			}
+			yield return cells;
+		}
+	}
 
 	// ───────────────────────── Column definitions (ucExcelExport.xaml:38-687) ─────────────────────────
 
@@ -225,8 +245,35 @@ public static class ExcelExport
 		{
 			return "";
 		}
-		string digits = new string(zip.Where(char.IsDigit).ToArray());
-		return digits.Length == 9 && zip.Trim().All(ch => char.IsDigit(ch) || ch == '-') ? digits[..5] + "-" + digits[5..] : zip.Trim();
+		ReadOnlySpan<char> trimmed = zip.AsSpan().Trim();
+		Span<char> digits = stackalloc char[10];
+		int count = 0;
+		bool onlyDigitsOrDash = true;
+		for (int i = 0; i < trimmed.Length; i++)
+		{
+			char ch = trimmed[i];
+			if (char.IsDigit(ch))
+			{
+				if (count < digits.Length)
+				{
+					digits[count] = ch;
+				}
+				count++;
+			}
+			else if (ch != '-')
+			{
+				onlyDigitsOrDash = false;
+			}
+		}
+		if (count == 9 && onlyDigitsOrDash)
+		{
+			Span<char> formatted = stackalloc char[10];
+			digits.Slice(0, 5).CopyTo(formatted);
+			formatted[5] = '-';
+			digits.Slice(5, 4).CopyTo(formatted.Slice(6));
+			return new string(formatted);
+		}
+		return trimmed.Length == zip.Length ? zip : trimmed.ToString();
 	}
 
 	// ───────────────────────── One assessment ─────────────────────────
@@ -243,14 +290,43 @@ public static class ExcelExport
 			R = reference;
 			P = file.Property ?? new PropertyRecord();
 			A = file.Assessment ?? new AssessmentRecord();
-			List<CostAdjustmentResultRecord> costs = file.CostAdjustments ?? new();
-			List<AdditionalAdjustmentRecord> extras = (file.AdditionalAdjustments ?? new()).OrderBy(x => x.zOrder ?? int.MaxValue).ToList();
+			List<CostAdjustmentResultRecord> costs = file.CostAdjustments;
+			List<AdditionalAdjustmentRecord> rawExtras = file.AdditionalAdjustments;
+			List<AdditionalAdjustmentRecord> extras = rawExtras == null || rawExtras.Count == 0
+				? null
+				: rawExtras.Count == 1 ? rawExtras : rawExtras.OrderBy(x => x.zOrder ?? int.MaxValue).ToList();
 			// AssessmentService.cs:177-212 summed the adjustments it showed; all rows are summed here.
-			TotalAdjustments = costs.Sum(x => x.TotalCost ?? 0m) + extras.Sum(x => x.TotalCost ?? 0m);
-			_costs = Fit(costs, 7, x => (x.Quantity ?? 0m) != 0m || (x.UnitCost ?? 0m) != 0m || (x.TotalCost ?? 0m) != 0m);
-			_extras = Fit(extras, 5, x => !string.IsNullOrWhiteSpace(x.AdjustmentName) || (x.Quantity ?? 0m) != 0m || (x.UnitCost ?? 0m) != 0m || (x.TotalCost ?? 0m) != 0m);
-			_elements = (file.ElementPercentages ?? new()).Take(12).ToList();
-			_attachments = (file.Attachments ?? new()).Where(x => x.Active).Take(4).ToList();
+			decimal sum = 0m;
+			if (costs != null)
+			{
+				for (int i = 0; i < costs.Count; i++)
+				{
+					sum += costs[i].TotalCost ?? 0m;
+				}
+			}
+			if (extras != null)
+			{
+				for (int i = 0; i < extras.Count; i++)
+				{
+					sum += extras[i].TotalCost ?? 0m;
+				}
+			}
+			TotalAdjustments = sum;
+			_costs = costs == null || costs.Count == 0 ? null : Fit(costs, 7, static x => (x.Quantity ?? 0m) != 0m || (x.UnitCost ?? 0m) != 0m || (x.TotalCost ?? 0m) != 0m);
+			_extras = extras == null || extras.Count == 0 ? null : Fit(extras, 5, static x => !string.IsNullOrWhiteSpace(x.AdjustmentName) || (x.Quantity ?? 0m) != 0m || (x.UnitCost ?? 0m) != 0m || (x.TotalCost ?? 0m) != 0m);
+			_elements = file.ElementPercentages;
+			if (file.Attachments != null && file.Attachments.Count > 0)
+			{
+				List<AttachmentRecord> active = new List<AttachmentRecord>(Math.Min(4, file.Attachments.Count));
+				for (int i = 0; i < file.Attachments.Count && active.Count < 4; i++)
+				{
+					if (file.Attachments[i].Active)
+					{
+						active.Add(file.Attachments[i]);
+					}
+				}
+				_attachments = active;
+			}
 		}
 
 		public ReferenceData R { get; }
@@ -260,15 +336,19 @@ public static class ExcelExport
 
 		public string Lookup(int? id) => R.LookupName(id) ?? "";
 
-		public CostAdjustmentResultRecord Cost(int i) => i < _costs.Count ? _costs[i] : null;
-		public AdditionalAdjustmentRecord Extra(int i) => i < _extras.Count ? _extras[i] : null;
-		public ElementPercentageRecord Element(int i) => i < _elements.Count ? _elements[i] : null;
-		public AttachmentRecord Attachment(int i) => i < _attachments.Count ? _attachments[i] : null;
+		public CostAdjustmentResultRecord Cost(int i) => _costs != null && i < _costs.Count ? _costs[i] : null;
+		public AdditionalAdjustmentRecord Extra(int i) => _extras != null && i < _extras.Count ? _extras[i] : null;
+		public ElementPercentageRecord Element(int i) => _elements != null && i < _elements.Count && i < 12 ? _elements[i] : null;
+		public AttachmentRecord Attachment(int i) => _attachments != null && i < _attachments.Count ? _attachments[i] : null;
 
 		/// <summary>Keeps the rows' order; when there are more rows than columns, empty rows go first.</summary>
 		private static List<T> Fit<T>(List<T> rows, int max, Func<T, bool> hasData)
 		{
-			List<T> list = new(rows);
+			if (rows.Count <= max)
+			{
+				return rows;
+			}
+			List<T> list = new List<T>(rows);
 			for (int i = list.Count - 1; i >= 0 && list.Count > max; i--)
 			{
 				if (!hasData(list[i]))
@@ -276,7 +356,11 @@ public static class ExcelExport
 					list.RemoveAt(i);
 				}
 			}
-			return list.Take(max).ToList();
+			if (list.Count > max)
+			{
+				list.RemoveRange(max, list.Count - max);
+			}
+			return list;
 		}
 	}
 }

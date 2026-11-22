@@ -110,13 +110,13 @@ public sealed class ArcGisRestClient
 		options ??= new ArcGisQueryOptions();
 		ArcGisLayerInfo info = await GetLayerInfoAsync(layerUrl, ct).ConfigureAwait(false);
 		FeatureLayer layer = new FeatureLayer(info.Name ?? "ArcGIS layer", info.GeometryKind);
-		List<(string Name, FieldType Type)> fields = new List<(string, FieldType)>();
+		Dictionary<string, (int Index, FieldType Type)> fieldMap = new Dictionary<string, (int, FieldType)>(info.Fields.Count, StringComparer.OrdinalIgnoreCase);
 		foreach (ArcGisField f in info.Fields)
 		{
 			if (f.Type is FieldType type && !layer.Fields.Contains(f.Name))
 			{
 				layer.AddField(f.Name, type, string.Equals(f.Alias, f.Name, StringComparison.Ordinal) ? null : f.Alias);
-				fields.Add((f.Name, type));
+				fieldMap[f.Name] = (layer.Fields.Count - 1, type);
 			}
 		}
 		ArcGisDownload download = new ArcGisDownload { Info = info, Layer = layer };
@@ -125,7 +125,7 @@ public sealed class ArcGisRestClient
 
 		List<KeyValuePair<string, string>> Base()
 		{
-			List<KeyValuePair<string, string>> q = new List<KeyValuePair<string, string>>
+			List<KeyValuePair<string, string>> q = new List<KeyValuePair<string, string>>(10)
 			{
 				new("where", string.IsNullOrWhiteSpace(options.Where) ? "1=1" : options.Where),
 				new("outFields", "*"),
@@ -135,7 +135,7 @@ public sealed class ArcGisRestClient
 			};
 			if (extent != null && !extent.IsNull)
 			{
-				q.Add(new("geometry", string.Join(",", new[] { extent.MinX, extent.MinY, extent.MaxX, extent.MaxY }.Select(v => v.ToString("R", CultureInfo.InvariantCulture)))));
+				q.Add(new("geometry", string.Create(CultureInfo.InvariantCulture, $"{extent.MinX:R},{extent.MinY:R},{extent.MaxX:R},{extent.MaxY:R}")));
 				q.Add(new("geometryType", "esriGeometryEnvelope"));
 				q.Add(new("inSR", "4326"));
 				q.Add(new("spatialRel", "esriSpatialRelIntersects"));
@@ -160,7 +160,7 @@ public sealed class ArcGisRestClient
 				{
 					q.Add(new("orderByFields", info.ObjectIdField));
 				}
-				(int count, bool exceeded) = await PageAsync(queryUrl, q, info, layer, fields, seen, download, ct).ConfigureAwait(false);
+				(int count, bool exceeded) = await PageAsync(queryUrl, q, info, layer, fieldMap, seen, download, ct).ConfigureAwait(false);
 				options.Progress?.Report(layer.Features.Count);
 				if (!exceeded || count == 0)
 				{
@@ -171,7 +171,7 @@ public sealed class ArcGisRestClient
 		}
 		else
 		{
-			(_, bool exceeded) = await PageAsync(queryUrl, Base(), info, layer, fields, seen, download, ct).ConfigureAwait(false);
+			(_, bool exceeded) = await PageAsync(queryUrl, Base(), info, layer, fieldMap, seen, download, ct).ConfigureAwait(false);
 			options.Progress?.Report(layer.Features.Count);
 			if (exceeded)
 			{
@@ -186,6 +186,7 @@ public sealed class ArcGisRestClient
 					ids = new List<long>();
 					if (idDoc.RootElement.TryGetProperty("objectIds", out JsonElement array) && array.ValueKind == JsonValueKind.Array)
 					{
+						ids.Capacity = array.GetArrayLength();
 						foreach (JsonElement id in array.EnumerateArray())
 						{
 							if (id.TryGetInt64(out long v))
@@ -196,7 +197,15 @@ public sealed class ArcGisRestClient
 					}
 				}
 				ids.Sort();
-				List<long> missing = ids.Where(id => !seen.Contains(id)).ToList();
+				List<long> missing = new List<long>(ids.Count);
+				for (int i = 0; i < ids.Count; i++)
+				{
+					if (!seen.Contains(ids[i]))
+					{
+						missing.Add(ids[i]);
+					}
+				}
+				StringBuilder idBatch = new StringBuilder();
 				for (int start = 0; start < missing.Count; start += pageSize)
 				{
 					if (download.Requests >= options.MaxPages)
@@ -206,8 +215,18 @@ public sealed class ArcGisRestClient
 					}
 					List<KeyValuePair<string, string>> q = Base();
 					q.RemoveAll(p => p.Key is "where" or "geometry" or "geometryType" or "inSR" or "spatialRel");
-					q.Add(new("objectIds", string.Join(",", missing.Skip(start).Take(pageSize).Select(i => i.ToString(CultureInfo.InvariantCulture)))));
-					await PageAsync(queryUrl, q, info, layer, fields, seen, download, ct).ConfigureAwait(false);
+					idBatch.Clear();
+					int end = Math.Min(start + pageSize, missing.Count);
+					for (int i = start; i < end; i++)
+					{
+						if (i > start)
+						{
+							idBatch.Append(',');
+						}
+						idBatch.Append(missing[i].ToString(CultureInfo.InvariantCulture));
+					}
+					q.Add(new("objectIds", idBatch.ToString()));
+					await PageAsync(queryUrl, q, info, layer, fieldMap, seen, download, ct).ConfigureAwait(false);
 					options.Progress?.Report(layer.Features.Count);
 				}
 			}
@@ -225,7 +244,7 @@ public sealed class ArcGisRestClient
 
 	/// <summary>One page of features: adds the new ones to the layer and says how many came and whether there are more.</summary>
 	private async Task<(int Count, bool Exceeded)> PageAsync(string url, List<KeyValuePair<string, string>> query, ArcGisLayerInfo info, FeatureLayer layer,
-		List<(string Name, FieldType Type)> fields, HashSet<long> seen, ArcGisDownload download, CancellationToken ct)
+		Dictionary<string, (int Index, FieldType Type)> fieldMap, HashSet<long> seen, ArcGisDownload download, CancellationToken ct)
 	{
 		download.Requests++;
 		using JsonDocument doc = await RequestAsync(url, query, ct).ConfigureAwait(false);
@@ -242,12 +261,6 @@ public sealed class ArcGisRestClient
 		{
 			count++;
 			JsonElement attributes = geoJson ? Prop(f, "properties") : Prop(f, "attributes");
-			Geometry geometry = null;
-			JsonElement g = Prop(f, "geometry");
-			if (g.ValueKind == JsonValueKind.Object)
-			{
-				geometry = geoJson ? GeoJsonFormat.ReadGeometry(g, CoordinateSystem.Wgs84) : EsriJson.ReadGeometry(g);
-			}
 			long id = 0;
 			JsonElement idElement = Prop(f, "id");
 			if (geoJson && idElement.ValueKind == JsonValueKind.Number && idElement.TryGetInt64(out long fid))
@@ -263,14 +276,20 @@ public sealed class ArcGisRestClient
 			{
 				continue;
 			}
+			Geometry geometry = null;
+			JsonElement g = Prop(f, "geometry");
+			if (g.ValueKind == JsonValueKind.Object)
+			{
+				geometry = geoJson ? GeoJsonFormat.ReadGeometry(g, CoordinateSystem.Wgs84) : EsriJson.ReadGeometry(g);
+			}
 			Feature feature = layer.NewFeature(geometry, id);
 			if (attributes.ValueKind == JsonValueKind.Object)
 			{
-				for (int i = 0; i < fields.Count; i++)
+				foreach (JsonProperty p in attributes.EnumerateObject())
 				{
-					if (TryGetProperty(attributes, fields[i].Name, out JsonElement value))
+					if (fieldMap.TryGetValue(p.Name, out (int Index, FieldType Type) target))
 					{
-						feature.SetRaw(layer.Fields.IndexOf(fields[i].Name), Value(value, fields[i].Type));
+						feature.SetRaw(target.Index, Value(p.Value, target.Type));
 					}
 				}
 			}
@@ -328,16 +347,18 @@ public sealed class ArcGisRestClient
 						? new HttpRequestMessage(HttpMethod.Post, url) { Content = new StringContent(body, Encoding.UTF8, "application/x-www-form-urlencoded") }
 						: new HttpRequestMessage(HttpMethod.Get, getUrl);
 					using HttpResponseMessage response = await _http.SendAsync(request, limit.Token).ConfigureAwait(false);
-					string text = await response.Content.ReadAsStringAsync(limit.Token).ConfigureAwait(false);
+					byte[] bytes = await response.Content.ReadAsByteArrayAsync(limit.Token).ConfigureAwait(false);
 					int status = (int)response.StatusCode;
 					if (status >= 500 || response.StatusCode == HttpStatusCode.TooManyRequests)
 					{
+						string text = Encoding.UTF8.GetString(bytes);
 						retryAfter = response.Headers.RetryAfter?.Delta;
 						problem = $"The ArcGIS server had a problem and couldn't answer (error {status}). Try again in a few minutes.";
 						detail = $"{(post ? "POST" : "GET")} {getUrl} returned {status}: {Truncate(text)}";
 					}
 					else if (!response.IsSuccessStatusCode)
 					{
+						string text = Encoding.UTF8.GetString(bytes);
 						throw new GisException(status is 401 or 403
 							? "This ArcGIS layer isn't public: the server asked for a sign-in. SDE can only read public layers."
 							: $"The ArcGIS server couldn't find or answer this layer (error {status}). Check the address.",
@@ -348,10 +369,11 @@ public sealed class ArcGisRestClient
 						JsonDocument doc;
 						try
 						{
-							doc = JsonDocument.Parse(text);
+							doc = JsonDocument.Parse(bytes);
 						}
 						catch (JsonException ex)
 						{
+							string text = Encoding.UTF8.GetString(bytes);
 							throw new GisException("The ArcGIS server sent back something SDE couldn't read. Check the address, or try again later.", $"{getUrl}: {Truncate(text)}", ex);
 						}
 						if (doc.RootElement.ValueKind == JsonValueKind.Object && doc.RootElement.TryGetProperty("error", out JsonElement error) && error.ValueKind == JsonValueKind.Object)

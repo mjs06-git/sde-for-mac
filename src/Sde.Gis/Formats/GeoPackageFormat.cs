@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using NetTopologySuite.Geometries;
 using Sde.Gis.Features;
 using Sde.Gis.Projections;
 
@@ -25,14 +26,13 @@ public static class GeoPackageFormat
 	public static FeatureLayer Read(string path, string table = null)
 	{
 		using SqliteConnection c = OpenExisting(path);
-		List<GeoPackageTableInfo> tables = GeoPackageDb.ListFeatureTables(c);
-		GeoPackageTableInfo info = table == null
-			? tables.FirstOrDefault()
-			: tables.FirstOrDefault(t => string.Equals(t.Name, table, StringComparison.OrdinalIgnoreCase));
+		List<GeoPackageTableInfo> tables = GeoPackageDb.ListFeatureTables(c, onlyTable: table, counts: false);
+		GeoPackageTableInfo info = tables.Count > 0 ? tables[0] : null;
 		if (info == null)
 		{
+			List<GeoPackageTableInfo> all = table == null ? tables : GeoPackageDb.ListFeatureTables(c, counts: false);
 			throw new GisException(table == null ? "This GeoPackage has no map layers in it." : $"This GeoPackage has no layer called {table}.",
-				$"{path}: feature tables {string.Join(", ", tables.Select(t => t.Name))}.");
+				$"{path}: feature tables {string.Join(", ", all.Select(t => t.Name))}.");
 		}
 		CoordinateSystem cs = GeoPackageDb.CoordinateSystemOf(c, info.SrsId);
 		FeatureLayer layer = GeoPackageDb.ReadFeatures(c, null, info, cs);
@@ -83,11 +83,31 @@ public static class GeoPackageFormat
 		string geometryType = GeoPackageDb.TypeNameFor(layer);
 		List<string> columns = GeoPackageDb.ColumnNames(layer.Fields);
 		GeoPackageDb.CreateFeatureTable(c, tx, table, layer.Fields, columns, geometryType, UniqueIdentifier(c, tx, layer.Name ?? table), description);
-		bool keepIds = layer.Features.Count > 0 && layer.Features.All(f => f.Id > 0) && layer.Features.Select(f => f.Id).Distinct().Count() == layer.Features.Count;
-		GeoPackageDb.InsertFeatures(c, tx, table, layer.Fields, columns, geometryType, layer.Features, keepIds);
-		GeoPackageDb.CreateSpatialIndex(c, tx, table);
-		GeoPackageDb.UpdateContents(c, tx, table);
+		bool keepIds = CanKeepIds(layer.Features);
+		List<GeoPackageDb.RtreeEntry> entries = new List<GeoPackageDb.RtreeEntry>(layer.Features.Count);
+		Envelope extent = new Envelope();
+		GeoPackageDb.InsertFeatures(c, tx, table, layer.Fields, columns, geometryType, layer.Features, keepIds, entries, extent);
+		GeoPackageDb.CreateSpatialIndex(c, tx, table, entries);
+		GeoPackageDb.UpdateContents(c, tx, table, extent);
 		return geometryType;
+	}
+
+	private static bool CanKeepIds(List<Feature> features)
+	{
+		if (features.Count == 0)
+		{
+			return false;
+		}
+		HashSet<long> seen = new HashSet<long>(features.Count);
+		for (int i = 0; i < features.Count; i++)
+		{
+			long id = features[i].Id;
+			if (id <= 0 || !seen.Add(id))
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/// <summary>gpkg_contents.identifier must be unique: the name, or the name with " (2)" and so on.</summary>

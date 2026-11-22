@@ -304,8 +304,11 @@ public sealed partial class SdeStore
 				TableMap<DeletedItemRecord>.Delete(c, "ItemKey = @ItemKey", new { item.ItemKey }, tx);
 			}
 			// A photo file another (active) attachment still uses is kept: an import can share file names.
-			HashSet<string> inUse = c.Query<string>("SELECT FileName FROM Attachment WHERE FileName IS NOT NULL", transaction: tx).ToHashSet(StringComparer.Ordinal);
-			files.RemoveAll(inUse.Contains);
+			if (files.Count > 0)
+			{
+				HashSet<string> inUse = c.Query<string>("SELECT FileName FROM Attachment WHERE FileName IS NOT NULL", transaction: tx).ToHashSet(StringComparer.Ordinal);
+				files.RemoveAll(inUse.Contains);
+			}
 			return items.Count;
 		});
 		DeleteFiles(files);
@@ -366,6 +369,10 @@ public sealed partial class SdeStore
 
 	internal void DeletePendingFiles()
 	{
+		if (_pendingFileDeletes.Count == 0)
+		{
+			return;
+		}
 		HashSet<string> inUse = Database.Read(c => c.Query<string>("SELECT FileName FROM Attachment WHERE FileName IS NOT NULL").ToHashSet(StringComparer.Ordinal));
 		DeleteFiles(_pendingFileDeletes.Where(f => !inUse.Contains(f)).ToList());
 		_pendingFileDeletes.Clear();

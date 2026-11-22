@@ -103,7 +103,22 @@ public sealed class AttributeQuery
 	{
 		ArgumentNullException.ThrowIfNull(layer);
 		Validate(layer.Fields);
-		return layer.Features.Where(Matches).ToList();
+		if (Conditions.Count == 0)
+		{
+			return new List<Feature>(layer.Features);
+		}
+		CompiledCondition[] compiled = Compile(layer.Fields);
+		List<Feature> matched = new List<Feature>();
+		bool requireAll = Combine == AttributeCombine.And;
+		for (int i = 0; i < layer.Features.Count; i++)
+		{
+			Feature f = layer.Features[i];
+			if (MatchesCompiled(f, compiled, requireAll))
+			{
+				matched.Add(f);
+			}
+		}
+		return matched;
 	}
 
 	/// <summary>Throws <see cref="GisException"/> when a condition names a field that isn't there or a value that can't be read as the field's type.</summary>
@@ -131,12 +146,186 @@ public sealed class AttributeQuery
 	/// <summary>True when the feature meets the conditions (an empty query matches everything).</summary>
 	public bool Matches(Feature feature)
 	{
-		if (Conditions.Count == 0)
+		int count = Conditions.Count;
+		if (count == 0)
 		{
 			return true;
 		}
-		return Combine == AttributeCombine.And ? Conditions.All(c => Test(feature, c)) : Conditions.Any(c => Test(feature, c));
+		if (Combine == AttributeCombine.And)
+		{
+			for (int i = 0; i < count; i++)
+			{
+				if (!Test(feature, Conditions[i]))
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+		for (int i = 0; i < count; i++)
+		{
+			if (Test(feature, Conditions[i]))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
+
+	private CompiledCondition[] Compile(FieldList fields)
+	{
+		CompiledCondition[] result = new CompiledCondition[Conditions.Count];
+		for (int i = 0; i < Conditions.Count; i++)
+		{
+			AttributeCondition c = Conditions[i];
+			int index = fields.IndexOf(c.Field);
+			FieldType type = index >= 0 ? fields[index].Type : FieldType.Text;
+			bool ordering = c.Operator is not (AttributeOperator.Equals or AttributeOperator.NotEquals);
+			double? num = null;
+			bool? flag = null;
+			DateTime? dt = null;
+			string raw = c.Value ?? "";
+			string trimmed = raw.Trim();
+			double? textNum = null;
+			switch (type)
+			{
+				case FieldType.Integer:
+				case FieldType.Real:
+					if (FieldValues.TryConvert(FieldType.Real, c.Value, out object n) && n != null)
+					{
+						num = (double)n;
+					}
+					break;
+				case FieldType.Boolean:
+					if (FieldValues.TryConvert(FieldType.Boolean, c.Value, out object b) && b != null)
+					{
+						flag = (bool)b;
+					}
+					break;
+				case FieldType.Date:
+				case FieldType.DateTime:
+					if (FieldValues.TryConvert(type, c.Value, out object d) && d != null)
+					{
+						dt = (DateTime)d;
+					}
+					break;
+				default:
+					if (ordering && double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out double y))
+					{
+						textNum = y;
+					}
+					break;
+			}
+			result[i] = new CompiledCondition(index, type, c.Operator, ordering, raw, trimmed, num, flag, dt, textNum);
+		}
+		return result;
+	}
+
+	private static bool MatchesCompiled(Feature feature, CompiledCondition[] conditions, bool requireAll)
+	{
+		if (requireAll)
+		{
+			for (int i = 0; i < conditions.Length; i++)
+			{
+				if (!TestCompiled(feature, conditions[i]))
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+		for (int i = 0; i < conditions.Length; i++)
+		{
+			if (TestCompiled(feature, conditions[i]))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static bool TestCompiled(Feature feature, in CompiledCondition c)
+	{
+		if (c.FieldIndex < 0)
+		{
+			return false;
+		}
+		object value = feature[c.FieldIndex];
+		bool empty = value == null || (value is string s && string.IsNullOrWhiteSpace(s));
+		switch (c.Operator)
+		{
+			case AttributeOperator.IsEmpty:
+				return empty;
+			case AttributeOperator.IsNotEmpty:
+				return !empty;
+			case AttributeOperator.Contains:
+				return !empty && FieldValues.Format(value).Contains(c.RawValue, StringComparison.OrdinalIgnoreCase);
+			case AttributeOperator.StartsWith:
+				return !empty && FieldValues.Format(value).StartsWith(c.RawValue, StringComparison.OrdinalIgnoreCase);
+		}
+		if (empty)
+		{
+			return c.Operator == AttributeOperator.NotEquals && c.RawValue.Length > 0;
+		}
+		int? order = CompareCompiled(c, value);
+		if (order == null)
+		{
+			return c.Operator == AttributeOperator.NotEquals;
+		}
+		return c.Operator switch
+		{
+			AttributeOperator.Equals => order == 0,
+			AttributeOperator.NotEquals => order != 0,
+			AttributeOperator.LessThan => order < 0,
+			AttributeOperator.LessOrEqual => order <= 0,
+			AttributeOperator.GreaterThan => order > 0,
+			_ => order >= 0,
+		};
+	}
+
+	private static int? CompareCompiled(in CompiledCondition c, object value)
+	{
+		switch (c.Type)
+		{
+			case FieldType.Integer:
+			case FieldType.Real:
+				if (c.NumberValue is not double rightNum)
+				{
+					return null;
+				}
+				double leftNum = value switch
+				{
+					double d => d,
+					long l => l,
+					int i => i,
+					float f => f,
+					decimal m => (double)m,
+					_ => Convert.ToDouble(value, CultureInfo.InvariantCulture),
+				};
+				return leftNum.CompareTo(rightNum);
+			case FieldType.Boolean:
+				return c.BoolValue is bool rightBool ? ((bool)value).CompareTo(rightBool) : null;
+			case FieldType.Date:
+			case FieldType.DateTime:
+				if (c.DateValue is not DateTime rightDate)
+				{
+					return null;
+				}
+				DateTime leftDate = (DateTime)value;
+				return c.Type == FieldType.Date || rightDate.TimeOfDay == TimeSpan.Zero ? leftDate.Date.CompareTo(rightDate.Date) : leftDate.CompareTo(rightDate);
+			default:
+				string text = value is string sv ? sv.Trim() : FieldValues.Format(value).Trim();
+				if (c.Ordering && c.TextNumberValue is double y && double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double x))
+				{
+					return x.CompareTo(y);
+				}
+				return string.Compare(text, c.TrimmedValue, StringComparison.OrdinalIgnoreCase);
+		}
+	}
+
+	private readonly record struct CompiledCondition(
+		int FieldIndex, FieldType Type, AttributeOperator Operator, bool Ordering,
+		string RawValue, string TrimmedValue, double? NumberValue, bool? BoolValue, DateTime? DateValue, double? TextNumberValue);
 
 	public override string ToString() => string.Join(Combine == AttributeCombine.And ? " AND " : " OR ", Conditions);
 

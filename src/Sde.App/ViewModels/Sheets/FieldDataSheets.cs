@@ -116,8 +116,13 @@ public sealed partial class AutoFillSheetViewModel : SheetViewModel
 	/// <summary>Starts (or restarts) the look-up.</summary>
 	public void Start()
 	{
-		_cancel?.Cancel();
+		CancellationTokenSource previous = _cancel;
 		_cancel = new CancellationTokenSource();
+		if (previous != null)
+		{
+			previous.Cancel();
+			previous.Dispose();
+		}
 		Lookup = RunAsync(_cancel.Token);
 	}
 
@@ -292,14 +297,14 @@ public sealed partial class BulkAutoFillSheetViewModel : SheetViewModel
 			_app.Writes.Write(ids, () =>
 			{
 				// One batch; the event says where the values came from, so structures are grouped by it.
+				Dictionary<Guid, AssessmentFile> loaded = _app.Store.LoadAssessments(ids).ToDictionary(f => f.Assessment.AssessmentID);
 				foreach (IGrouping<string, (StructureProposalsViewModel Structure, List<ProposalRowViewModel> Rows)> group in chosen.GroupBy(c =>
 					OnlineLookup.EventLabel(c.Rows.Any(r => r.Proposal.Source == OnlineSource.FemaNfhl), c.Rows.Any(r => r.Proposal.Source == OnlineSource.CensusGeocoder), c.Structure.RetrievedOn)))
 				{
 					List<AssessmentFile> files = new List<AssessmentFile>();
 					foreach ((StructureProposalsViewModel s, List<ProposalRowViewModel> rows) in group)
 					{
-						AssessmentFile f = _app.Store.LoadAssessment(s.AssessmentId);
-						if (f != null)
+						if (loaded.TryGetValue(s.AssessmentId, out AssessmentFile f))
 						{
 							FieldRules.Apply(f, rows.Select(r => OnlineLookup.Change(r.Proposal.Value)).ToList(), _app.Store.Calculator);
 							files.Add(f);

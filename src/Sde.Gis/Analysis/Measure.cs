@@ -11,12 +11,16 @@ namespace Sde.Gis.Analysis;
 public sealed class LocalProjection
 {
 	private readonly TransverseMercator _tm;
+	private readonly Func<double, double, (double, double)> _forward;
+	private readonly Func<double, double, (double, double)> _inverse;
 
 	public LocalProjection(double centreLongitude, double centreLatitude)
 	{
 		CentreLongitude = centreLongitude;
 		CentreLatitude = centreLatitude;
 		_tm = new TransverseMercator(Ellipsoid.Wgs84, centreLatitude, centreLongitude, 1.0, 0.0, 0.0);
+		_forward = _tm.Forward;
+		_inverse = _tm.Inverse;
 	}
 
 	/// <summary>A projection centred on a WGS 84 envelope.</summary>
@@ -34,10 +38,10 @@ public sealed class LocalProjection
 	public double CentreLatitude { get; }
 
 	/// <summary>A WGS 84 geometry in metres east and north of the centre.</summary>
-	public Geometry Project(Geometry wgs84) => Reproject.Transform(wgs84, (lon, lat) => _tm.Forward(lon, lat));
+	public Geometry Project(Geometry wgs84) => Reproject.Transform(wgs84, _forward);
 
 	/// <summary>A geometry in metres back to WGS 84.</summary>
-	public Geometry Unproject(Geometry metres) => Reproject.Transform(metres, (x, y) => _tm.Inverse(x, y));
+	public Geometry Unproject(Geometry metres) => Reproject.Transform(metres, _inverse);
 
 	public Coordinate Project(Coordinate wgs84)
 	{
@@ -85,13 +89,14 @@ public static class Measure
 		double l = (lon2 - lon1) * d2r;
 		double u1 = Math.Atan((1 - F) * Math.Tan(lat1 * d2r));
 		double u2 = Math.Atan((1 - F) * Math.Tan(lat2 * d2r));
-		double sinU1 = Math.Sin(u1), cosU1 = Math.Cos(u1), sinU2 = Math.Sin(u2), cosU2 = Math.Cos(u2);
+		(double sinU1, double cosU1) = Math.SinCos(u1);
+		(double sinU2, double cosU2) = Math.SinCos(u2);
 		double lambda = l;
 		double sinSigma = 0, cosSigma = 0, sigma = 0, cos2Alpha = 0, cos2SigmaM = 0;
 		bool converged = false;
 		for (int i = 0; i < 200; i++)
 		{
-			double sinLambda = Math.Sin(lambda), cosLambda = Math.Cos(lambda);
+			(double sinLambda, double cosLambda) = Math.SinCos(lambda);
 			double t1 = cosU2 * sinLambda;
 			double t2 = cosU1 * sinU2 - sinU1 * cosU2 * cosLambda;
 			sinSigma = Math.Sqrt(t1 * t1 + t2 * t2);
@@ -169,8 +174,30 @@ public static class Measure
 		double sp1 = e.MinY + span / 6.0;
 		double sp2 = e.MaxY - span / 6.0;
 		AlbersEqualArea albers = new AlbersEqualArea(Ellipsoid.Wgs84, e.MinY, e.Centre.X, sp1, Math.Abs(sp2 - sp1) < 1e-9 ? sp1 + 1e-6 : sp2, 0, 0);
-		Geometry dense = Densifier.Densify(geometry, 0.001);
-		return Reproject.Transform(dense, (lon, lat) => albers.Forward(lon, lat)).Area;
+		Geometry projected = Densifier.Densify(geometry, 0.001).Copy();
+		projected.Apply(new AlbersForwardFilter(albers));
+		return projected.Area;
+	}
+
+	private sealed class AlbersForwardFilter : ICoordinateSequenceFilter
+	{
+		private readonly AlbersEqualArea _albers;
+
+		public AlbersForwardFilter(AlbersEqualArea albers)
+		{
+			_albers = albers;
+		}
+
+		public bool Done => false;
+
+		public bool GeometryChanged => true;
+
+		public void Filter(CoordinateSequence seq, int i)
+		{
+			(double x, double y) = _albers.Forward(seq.GetX(i), seq.GetY(i));
+			seq.SetX(i, x);
+			seq.SetY(i, y);
+		}
 	}
 
 	public static double MetresToFeet(double metres) => metres / MetresPerFoot;

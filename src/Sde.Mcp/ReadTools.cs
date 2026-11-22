@@ -68,13 +68,16 @@ public sealed partial class ReadTools(SdeMcpContext sde)
 		pageSize = Math.Clamp(pageSize, 1, MaxStructurePage);
 		page = Math.Max(page, 1);
 
-		HashSet<Guid> located = store.GetPropertyPositions()
-			.Where(p => p.Latitude is decimal lat && p.Longitude is decimal lon && (lat != 0m || lon != 0m))
-			.Select(p => p.PropertyID).ToHashSet();
-		string q = (query ?? "").Trim().ToLowerInvariant();
+		HashSet<Guid> located = wantCoordinates != null
+			? store.GetPropertyPositions()
+				.Where(p => p.Latitude is decimal lat && p.Longitude is decimal lon && (lat != 0m || lon != 0m))
+				.Select(p => p.PropertyID).ToHashSet()
+			: null;
+		string q = (query ?? "").Trim();
+		string qLower = q.Length > 0 && q.Contains('|') ? q.ToLowerInvariant() : null;
 		List<StructureSummary> rows = store.ListStructures().Where(s =>
 		{
-			if (q.Length > 0 && !SearchText(s).Contains(q))
+			if (q.Length > 0 && !MatchesQuery(s, q, qLower))
 			{
 				return false;
 			}
@@ -118,7 +121,9 @@ public sealed partial class ReadTools(SdeMcpContext sde)
 		}).ToList();
 
 		int pages = Math.Max(1, (rows.Count + pageSize - 1) / pageSize);
-		List<StructureItem> items = rows.Skip((page - 1) * pageSize).Take(pageSize).Select(s =>
+		List<StructureSummary> pageRows = rows.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+		HashSet<Guid> pageLocated = located ?? store.GetPropertyIdsWithCoordinates(pageRows.Select(s => s.PropertyID));
+		List<StructureItem> items = pageRows.Select(s =>
 		{
 			DeterminationClass state = Determinations.Classify(s.DamageMessage, s.PercentDamage);
 			bool hasPercent = s.AssessmentID != null && state is DeterminationClass.Substantial or DeterminationClass.Close or DeterminationClass.NotSubstantial;
@@ -127,7 +132,7 @@ public sealed partial class ReadTools(SdeMcpContext sde)
 				s.AssessmentID == null ? null : AssessmentStatuses.Label(AssessmentStatuses.Parse(s.Status)),
 				hasPercent ? s.PercentDamage : null,
 				s.AssessmentID == null ? "No assessment" : Determinations.Label(state),
-				Describe.Date(s.DateofInspection), located.Contains(s.PropertyID));
+				Describe.Date(s.DateofInspection), pageLocated.Contains(s.PropertyID));
 		}).ToList();
 		string next = page < pages ? $"Showing page {page} of {pages}. For more, call find_structures again with page = {page + 1} and the same filters." : null;
 		return new StructurePage(sde.DatabasePath, rows.Count, page, pageSize, pages, items, next);
@@ -157,7 +162,7 @@ public sealed partial class ReadTools(SdeMcpContext sde)
 		[Description("The page to return, starting at 1.")] int page = 1,
 		[Description("Rows per page, 1 to 100 (default 50).")] int pageSize = 50)
 	{
-		AssessmentFile file = sde.LoadAssessment(sde.Reader, assessmentId);
+		AssessmentFile file = sde.LoadAssessmentHeader(sde.Reader, assessmentId);
 		pageSize = Math.Clamp(pageSize, 1, MaxHistoryPage);
 		page = Math.Max(page, 1);
 		List<EditHistoryRecord> rows = sde.Reader.GetHistory(file.Assessment.AssessmentID);
@@ -195,32 +200,56 @@ public sealed partial class ReadTools(SdeMcpContext sde)
 		[Description("A field key such as \"Assessment.DepthOfFloodAboveFFE\". Leave out for every field.")] string fieldKey = null,
 		[Description("Only fields on this editor step, 1 to 8 (1 Location & owner, 2 Building, 3 Inspection, 4 Flood zone, 5 Cost & depreciation, 7 Result).")] int? step = null)
 	{
-		IEnumerable<FieldHelpItem> items = FieldHelpCatalog.All;
-		if (!string.IsNullOrWhiteSpace(fieldKey))
-		{
-			FieldInfo f = RequireField(fieldKey);
-			items = items.Where(e => e.Key == f.Key);
-		}
+		string stepName = null;
 		if (step is int s)
 		{
 			if (s < 1 || s > FieldCatalog.Steps.Count)
 			{
 				throw new McpException($"step must be 1 to {FieldCatalog.Steps.Count}.");
 			}
-			string name = FieldCatalog.Steps[s - 1];
-			items = items.Where(e => e.Step == name);
+			stepName = FieldCatalog.Steps[s - 1];
 		}
-		return new FieldHelpList(sde.DatabasePath, items.ToList());
+		if (!string.IsNullOrWhiteSpace(fieldKey))
+		{
+			FieldInfo f = RequireField(fieldKey);
+			FieldHelpItem found = FieldHelpCatalog.Get(f.Key);
+			List<FieldHelpItem> single = found != null && (stepName == null || found.Step == stepName)
+				? new List<FieldHelpItem> { found }
+				: new List<FieldHelpItem>();
+			return new FieldHelpList(sde.DatabasePath, single);
+		}
+		List<FieldHelpItem> list = stepName == null
+			? FieldHelpCatalog.All.ToList()
+			: FieldHelpCatalog.All.Where(e => e.Step == stepName).ToList();
+		return new FieldHelpList(sde.DatabasePath, list);
 	}
+
+	private static readonly Dictionary<string, FieldInfo> FieldsIgnoreCase = FieldCatalog.All.ToDictionary(f => f.Key, StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>A catalog field by key (any case), or a tool error saying where keys come from.</summary>
 	internal static FieldInfo RequireField(string key)
 	{
 		string wanted = key?.Trim();
-		return FieldCatalog.Get(wanted)
-			?? FieldCatalog.All.FirstOrDefault(f => string.Equals(f.Key, wanted, StringComparison.OrdinalIgnoreCase))
-			?? throw new McpException($"There's no field called \"{Describe.Shorten(wanted, 80)}\". Field keys look like \"Assessment.InspectorName\" or \"Property.FIRMZone\"; get_assessment lists them.");
+		if (wanted != null && FieldsIgnoreCase.TryGetValue(wanted, out FieldInfo f))
+		{
+			return f;
+		}
+		throw new McpException($"There's no field called \"{Describe.Shorten(wanted, 80)}\". Field keys look like \"Assessment.InspectorName\" or \"Property.FIRMZone\"; get_assessment lists them.");
 	}
+
+	private static bool MatchesQuery(StructureSummary s, string q, string qLower)
+	{
+		if (qLower != null)
+		{
+			return SearchText(s).Contains(qLower, StringComparison.Ordinal);
+		}
+		return Contains(s.Address, q) || Contains(s.Owner, q) || Contains(s.City, q) || Contains(s.NFIPCID, q)
+			|| Contains(s.NFIPCommunityName, q) || Contains(s.InspectorName, q) || Contains(s.DamageMessage, q)
+			|| Contains(s.ExternalId, q) || Contains(s.ParcelNumber, q) || Contains(s.ZipCode, q);
+	}
+
+	private static bool Contains(string haystack, string needle) =>
+		haystack != null && haystack.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0;
 
 	/// <summary>What the Structures list's search box looks in (StructureRowViewModel.SearchText).</summary>
 	private static string SearchText(StructureSummary s) => string.Join(" | ", s.Address, s.Owner, s.City, s.NFIPCID, s.NFIPCommunityName, s.InspectorName,

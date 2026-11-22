@@ -71,13 +71,11 @@ internal static class GeoPackageDb
 	public static void RegisterFunctions(SqliteConnection c)
 	{
 		c.CreateFunction("ST_IsEmpty", (byte[] blob) => blob == null ? (long?)null : GeoPackageGeometry.IsEmpty(blob) ? 1L : 0L, isDeterministic: true);
-		c.CreateFunction("ST_MinX", (byte[] blob) => Env(blob)?.MinX, isDeterministic: true);
-		c.CreateFunction("ST_MaxX", (byte[] blob) => Env(blob)?.MaxX, isDeterministic: true);
-		c.CreateFunction("ST_MinY", (byte[] blob) => Env(blob)?.MinY, isDeterministic: true);
-		c.CreateFunction("ST_MaxY", (byte[] blob) => Env(blob)?.MaxY, isDeterministic: true);
+		c.CreateFunction("ST_MinX", (byte[] blob) => GeoPackageGeometry.TryGetEnvelopeValue(blob, 0, out double v) ? v : (double?)null, isDeterministic: true);
+		c.CreateFunction("ST_MaxX", (byte[] blob) => GeoPackageGeometry.TryGetEnvelopeValue(blob, 1, out double v) ? v : (double?)null, isDeterministic: true);
+		c.CreateFunction("ST_MinY", (byte[] blob) => GeoPackageGeometry.TryGetEnvelopeValue(blob, 2, out double v) ? v : (double?)null, isDeterministic: true);
+		c.CreateFunction("ST_MaxY", (byte[] blob) => GeoPackageGeometry.TryGetEnvelopeValue(blob, 3, out double v) ? v : (double?)null, isDeterministic: true);
 	}
-
-	private static Envelope Env(byte[] blob) => GeoPackageGeometry.TryGetEnvelope(blob, out Envelope e) ? e : null;
 
 	public static string Quote(string identifier) => "\"" + identifier.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
 
@@ -397,11 +395,13 @@ internal static class GeoPackageDb
 			("$t", table), ("$c", GeometryColumn), ("$g", geometryType), ("$s", srsId));
 	}
 
+	internal readonly record struct RtreeEntry(long Id, double MinX, double MaxX, double MinY, double MaxY);
+
 	/// <summary>Inserts features; returns their new fids in order. Geometries are coerced to the declared type.</summary>
 	public static List<long> InsertFeatures(SqliteConnection c, SqliteTransaction tx, string table, IReadOnlyList<LayerField> columnsFields,
-		IReadOnlyList<string> columns, string geometryType, IEnumerable<Feature> features, bool keepIds = false)
+		IReadOnlyList<string> columns, string geometryType, IEnumerable<Feature> features, bool keepIds = false, List<RtreeEntry> rtreeEntries = null, Envelope extent = null)
 	{
-		List<long> ids = new List<long>();
+		List<long> ids = features is ICollection<Feature> coll ? new List<long>(coll.Count) : new List<long>();
 		using SqliteCommand cmd = c.CreateCommand();
 		cmd.Transaction = tx;
 		StringBuilder sql = new StringBuilder("INSERT INTO ").Append(Quote(table)).Append(" (");
@@ -429,24 +429,46 @@ internal static class GeoPackageDb
 		SqliteParameter fid = keepIds ? cmd.Parameters.Add("$fid", SqliteType.Integer) : null;
 		SqliteParameter geom = cmd.Parameters.Add("$geom", SqliteType.Blob);
 		SqliteParameter[] values = new SqliteParameter[columns.Count];
+		FieldType[] fieldTypes = new FieldType[columns.Count];
 		for (int i = 0; i < columns.Count; i++)
 		{
-			values[i] = cmd.Parameters.Add("$c" + i.ToString(CultureInfo.InvariantCulture), SqliteTypeFor(columnsFields[i].Type));
+			fieldTypes[i] = columnsFields[i].Type;
+			values[i] = cmd.Parameters.Add("$c" + i.ToString(CultureInfo.InvariantCulture), SqliteTypeFor(fieldTypes[i]));
 		}
 		cmd.Prepare();
+		string normalizedType = (geometryType ?? "GEOMETRY").ToUpperInvariant();
+		FieldList cachedFields = null;
+		int[] fieldIndices = null;
 		foreach (Feature feature in features)
 		{
+			if (!ReferenceEquals(feature.Fields, cachedFields))
+			{
+				cachedFields = feature.Fields;
+				fieldIndices = new int[columns.Count];
+				for (int i = 0; i < columns.Count; i++)
+				{
+					fieldIndices[i] = cachedFields.IndexOf(columnsFields[i].Name);
+				}
+			}
 			if (fid != null)
 			{
 				fid.Value = feature.Id > 0 ? feature.Id : DBNull.Value;
 			}
-			Geometry g = Coerce(feature.Geometry, geometryType);
+			Geometry g = Coerce(feature.Geometry, normalizedType);
 			geom.Value = g == null ? DBNull.Value : GeoPackageGeometry.Write(g);
 			for (int i = 0; i < columns.Count; i++)
 			{
-				values[i].Value = ToDb(columnsFields[i].Type, feature[columnsFields[i].Name]);
+				int idx = fieldIndices[i];
+				values[i].Value = ToDb(fieldTypes[i], idx >= 0 ? feature[idx] : null);
 			}
-			ids.Add(Convert.ToInt64(cmd.ExecuteScalar(), CultureInfo.InvariantCulture));
+			long insertedId = Convert.ToInt64(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
+			ids.Add(insertedId);
+			if (g != null && !g.IsEmpty && (rtreeEntries != null || extent != null))
+			{
+				Envelope e = g.EnvelopeInternal;
+				rtreeEntries?.Add(new RtreeEntry(insertedId, e.MinX, e.MaxX, e.MinY, e.MaxY));
+				extent?.ExpandToInclude(e);
+			}
 		}
 		return ids;
 	}
@@ -465,7 +487,7 @@ internal static class GeoPackageDb
 	/// Creates the GeoPackage R-tree spatial index (extension gpkg_rtree_index) for a table, fills it, and adds the
 	/// triggers that keep it current (the GeoPackage 1.3 trigger set).
 	/// </summary>
-	public static void CreateSpatialIndex(SqliteConnection c, SqliteTransaction tx, string table)
+	public static void CreateSpatialIndex(SqliteConnection c, SqliteTransaction tx, string table, IReadOnlyList<RtreeEntry> entries = null)
 	{
 		string t = Quote(table);
 		string r = RtreeName(table);
@@ -473,7 +495,35 @@ internal static class GeoPackageDb
 		string g = Quote(GeometryColumn);
 		string i = Quote(FidColumn);
 		Execute(c, tx, $"CREATE VIRTUAL TABLE {rq} USING rtree(id, minx, maxx, miny, maxy)");
-		Execute(c, tx, $"INSERT OR REPLACE INTO {rq} SELECT {i}, ST_MinX({g}), ST_MaxX({g}), ST_MinY({g}), ST_MaxY({g}) FROM {t} WHERE {g} NOT NULL AND NOT ST_IsEmpty({g})");
+		if (entries != null)
+		{
+			if (entries.Count > 0)
+			{
+				using SqliteCommand insert = c.CreateCommand();
+				insert.Transaction = tx;
+				insert.CommandText = $"INSERT OR REPLACE INTO {rq} (id, minx, maxx, miny, maxy) VALUES ($id, $minx, $maxx, $miny, $maxy)";
+				SqliteParameter pId = insert.Parameters.Add("$id", SqliteType.Integer);
+				SqliteParameter pMinX = insert.Parameters.Add("$minx", SqliteType.Real);
+				SqliteParameter pMaxX = insert.Parameters.Add("$maxx", SqliteType.Real);
+				SqliteParameter pMinY = insert.Parameters.Add("$miny", SqliteType.Real);
+				SqliteParameter pMaxY = insert.Parameters.Add("$maxy", SqliteType.Real);
+				insert.Prepare();
+				for (int k = 0; k < entries.Count; k++)
+				{
+					RtreeEntry e = entries[k];
+					pId.Value = e.Id;
+					pMinX.Value = e.MinX;
+					pMaxX.Value = e.MaxX;
+					pMinY.Value = e.MinY;
+					pMaxY.Value = e.MaxY;
+					insert.ExecuteNonQuery();
+				}
+			}
+		}
+		else
+		{
+			Execute(c, tx, $"INSERT OR REPLACE INTO {rq} SELECT {i}, ST_MinX({g}), ST_MaxX({g}), ST_MinY({g}), ST_MaxY({g}) FROM {t} WHERE {g} NOT NULL AND NOT ST_IsEmpty({g})");
+		}
 		string values = $"NEW.{i}, ST_MinX(NEW.{g}), ST_MaxX(NEW.{g}), ST_MinY(NEW.{g}), ST_MaxY(NEW.{g})";
 		Execute(c, tx, $"CREATE TRIGGER {Quote(r + "_insert")} AFTER INSERT ON {t} WHEN (new.{g} NOT NULL AND NOT ST_IsEmpty(NEW.{g})) BEGIN INSERT OR REPLACE INTO {rq} VALUES ({values}); END");
 		Execute(c, tx, $"CREATE TRIGGER {Quote(r + "_update1")} AFTER UPDATE OF {g} ON {t} WHEN OLD.{i} = NEW.{i} AND (NEW.{g} NOTNULL AND NOT ST_IsEmpty(NEW.{g})) BEGIN INSERT OR REPLACE INTO {rq} VALUES ({values}); END");
@@ -498,6 +548,18 @@ internal static class GeoPackageDb
 			? $"SELECT MIN(minx), MIN(miny), MAX(maxx), MAX(maxy) FROM {rq}"
 			: $"SELECT MIN(ST_MinX({Quote(GeometryColumn)})), MIN(ST_MinY({Quote(GeometryColumn)})), MAX(ST_MaxX({Quote(GeometryColumn)})), MAX(ST_MaxY({Quote(GeometryColumn)})) FROM {Quote(table)}";
 		Execute(c, tx, $"UPDATE gpkg_contents SET (min_x, min_y, max_x, max_y) = ({source}), last_change = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE table_name = $t", ("$t", table));
+	}
+
+	/// <summary>Sets gpkg_contents' extent from a known envelope and updates last_change.</summary>
+	public static void UpdateContents(SqliteConnection c, SqliteTransaction tx, string table, Envelope extent)
+	{
+		if (extent == null || extent.IsNull)
+		{
+			Execute(c, tx, "UPDATE gpkg_contents SET min_x = NULL, min_y = NULL, max_x = NULL, max_y = NULL, last_change = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE table_name = $t", ("$t", table));
+			return;
+		}
+		Execute(c, tx, "UPDATE gpkg_contents SET min_x = $minx, min_y = $miny, max_x = $maxx, max_y = $maxy, last_change = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE table_name = $t",
+			("$minx", extent.MinX), ("$miny", extent.MinY), ("$maxx", extent.MaxX), ("$maxy", extent.MaxY), ("$t", table));
 	}
 
 	/// <summary>Removes a feature table, its index and its registrations.</summary>
@@ -689,7 +751,7 @@ internal static class GeoPackageDb
 				try
 				{
 					g = GeoPackageGeometry.Read((byte[])r.GetValue(1));
-					g = Reproject.ToWgs84(g, source);
+					g = Reproject.ToWgs84InPlace(g, source);
 				}
 				catch (FormatException)
 				{

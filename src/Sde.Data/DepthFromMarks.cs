@@ -52,7 +52,8 @@ public static class DepthFromMarks
 		HighWaterMarkOptions options = null, decimal? datumOffsetFt = null)
 	{
 		ArgumentNullException.ThrowIfNull(marks);
-		return Build(store, assessmentIds, (lat, lon) => HighWaterMarks.Estimate(marks, lat, lon, options), datumOffsetFt);
+		HighWaterMarkIndex index = HighWaterMarks.Index(marks, options);
+		return Build(store, assessmentIds, index.Estimate, datumOffsetFt);
 	}
 
 	/// <summary>
@@ -63,12 +64,41 @@ public static class DepthFromMarks
 	public static Dictionary<Guid, decimal> QaEstimates(SdeStore store, IReadOnlyCollection<Guid> assessmentIds, IReadOnlyList<HighWaterMark> marks,
 		HighWaterMarkOptions options = null)
 	{
-		Dictionary<Guid, decimal> estimates = new();
-		foreach (DepthRow row in Propose(store, assessmentIds, marks, options))
+		ArgumentNullException.ThrowIfNull(store);
+		ArgumentNullException.ThrowIfNull(marks);
+		List<AssessmentFile> files = store.LoadAssessmentHeaders(assessmentIds);
+		if (files.Count == 0)
 		{
-			if (row.CanApply && row.Proposal.FloodElevationFt is decimal elevation)
+			return new Dictionary<Guid, decimal>();
+		}
+		Dictionary<Guid, Guid> eventOf = store.GetEventMemberships();
+		Dictionary<Guid, decimal?> offsets = store.GetEvents().ToDictionary(e => e.EventID, e => e.DatumOffsetFt);
+		return QaEstimates(files, marks, eventOf, offsets, options);
+	}
+
+	internal static Dictionary<Guid, decimal> QaEstimates(IReadOnlyList<AssessmentFile> files, IReadOnlyList<HighWaterMark> marks,
+		IReadOnlyDictionary<Guid, Guid> eventOf, IReadOnlyDictionary<Guid, decimal?> eventOffsets, HighWaterMarkOptions options = null)
+	{
+		Dictionary<Guid, decimal> estimates = new();
+		HighWaterMarkIndex index = HighWaterMarks.Index(marks, options);
+		foreach (AssessmentFile f in files)
+		{
+			if (!FieldCatalog.IsFlood(f))
 			{
-				estimates[row.AssessmentID] = elevation;
+				continue;
+			}
+			if (f.Property.Latitude is not decimal lat || f.Property.Longitude is not decimal lon || (lat == 0m && lon == 0m))
+			{
+				continue;
+			}
+			WaterSurfaceEstimate estimate = index.Estimate((double)lat, (double)lon);
+			decimal? offset = eventOf != null && eventOf.TryGetValue(f.Assessment.AssessmentID, out Guid eventId)
+				&& eventOffsets != null && eventOffsets.TryGetValue(eventId, out decimal? o)
+				? o : null;
+			DepthProposal proposal = HighWaterMarks.Propose(estimate, f.Property, offset);
+			if (proposal.CanApply && proposal.FloodElevationFt is decimal elevation)
+			{
+				estimates[f.Assessment.AssessmentID] = elevation;
 			}
 		}
 		return estimates;
@@ -150,18 +180,30 @@ public static class DepthFromMarks
 			BatchId = context?.BatchId ?? Guid.NewGuid().ToString("N"),
 			Event = context?.Event,
 		};
+		List<DepthRow> applicable = rows.Where(x => x.CanApply).ToList();
 		DepthApplyResult result = new DepthApplyResult { BatchId = ctx.BatchId };
-		foreach (DepthRow row in rows.Where(x => x.CanApply))
+		if (applicable.Count == 0)
 		{
-			try
-			{
-				store.Apply(row.AssessmentID, f => FieldInput.Apply(f, row.Proposal.Changes, store.Reference, store.Calculator), ctx);
-			}
-			catch (Exception ex) when (ex is AssessmentLockedException or AssessmentCheckedOutException)
-			{
-				result.Refused.Add(row.AssessmentID);
-			}
+			return result;
 		}
+		ReferenceData reference = store.Reference;
+		AssessmentCalculator calc = store.Calculator;
+		store.Database.InTransaction((c, tx) =>
+		{
+			foreach (DepthRow row in applicable)
+			{
+				AssessmentFile file = SdeStore.LoadAssessment(c, tx, row.AssessmentID) ?? throw new ArgumentException("That assessment no longer exists.");
+				FieldInput.Apply(file, row.Proposal.Changes, reference, calc);
+				try
+				{
+					store.SaveTracked(c, tx, file, ctx);
+				}
+				catch (Exception ex) when (ex is AssessmentLockedException or AssessmentCheckedOutException)
+				{
+					result.Refused.Add(row.AssessmentID);
+				}
+			}
+		});
 		result.Changed = store.GetBatch(ctx.BatchId).Where(h => h.Field != null).Select(h => h.AssessmentID).Distinct().Count();
 		return result;
 	}

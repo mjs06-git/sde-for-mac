@@ -10,6 +10,10 @@ namespace Sde.Interop.Internal;
 /// </summary>
 internal sealed class PropertyRowParser
 {
+	private static readonly System.Text.RegularExpressions.Regex CountySuffixRegex = new System.Text.RegularExpressions.Regex(
+		@"\s+(County|Parish|Borough|Census Area|Municipality)$",
+		System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
 	private readonly EnterpriseMapping _m;
 	private readonly ReferenceData _ref;
 
@@ -42,7 +46,16 @@ internal sealed class PropertyRowParser
 		if (get(EnterpriseField.PhoneNumber) is string phone)
 		{
 			// GetNumbers: digits only.
-			p.PhoneNumber = new string(phone.Where(char.IsDigit).ToArray());
+			Span<char> buf = phone.Length <= 64 ? stackalloc char[phone.Length] : new char[phone.Length];
+			int n = 0;
+			for (int i = 0; i < phone.Length; i++)
+			{
+				if (char.IsDigit(phone[i]))
+				{
+					buf[n++] = phone[i];
+				}
+			}
+			p.PhoneNumber = new string(buf.Slice(0, n));
 		}
 		p.NFIPCID = get(EnterpriseField.NfipCommunityId);
 		p.NFIPCommunityName = get(EnterpriseField.NfipCommunityName);
@@ -251,19 +264,37 @@ internal sealed class PropertyRowParser
 		{
 			return null;
 		}
-		LookupRecord byName = _ref.Lookups.FirstOrDefault(l => l.LookupTypeID == LookupTypes.StreetSuffix && Same(l.LookupFieldName, s));
-		if (byName != null)
+		IReadOnlyList<LookupRecord> suffixLookups = _ref.OfType(LookupTypes.StreetSuffix);
+		for (int i = 0; i < suffixLookups.Count; i++)
 		{
-			return byName.LookupID;
+			if (Same(suffixLookups[i].LookupFieldName, s))
+			{
+				return suffixLookups[i].LookupID;
+			}
 		}
-		StreetSuffixRecord abbreviation = _ref.StreetSuffixes.FirstOrDefault(a => Same(a.StreetSuffixAbbreviation, s));
-		if (abbreviation != null)
+		for (int i = 0; i < _ref.StreetSuffixes.Count; i++)
 		{
-			return abbreviation.StreetSuffixID;
+			if (Same(_ref.StreetSuffixes[i].StreetSuffixAbbreviation, s))
+			{
+				return _ref.StreetSuffixes[i].StreetSuffixID;
+			}
 		}
-		LookupRecord byValue = _ref.Lookups.FirstOrDefault(l => l.LookupTypeID == LookupTypes.StreetSuffix
-			&& (l.LookupValue1 ?? "").Split(',').Any(v => Same(v, s)));
-		return byValue?.LookupID;
+		for (int i = 0; i < suffixLookups.Count; i++)
+		{
+			string val = suffixLookups[i].LookupValue1;
+			if (string.IsNullOrEmpty(val))
+			{
+				continue;
+			}
+			foreach (string part in val.Split(','))
+			{
+				if (Same(part, s))
+				{
+					return suffixLookups[i].LookupID;
+				}
+			}
+		}
+		return null;
 	}
 
 	// ── State and county ──
@@ -300,9 +331,16 @@ internal sealed class PropertyRowParser
 		}
 		if (!_counties.TryGetValue((s.StateID, county), out CountyRecord c))
 		{
-			string bare = System.Text.RegularExpressions.Regex.Replace(county, @"\s+(County|Parish|Borough|Census Area|Municipality)$", "",
-				System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-			c = _ref.Counties.FirstOrDefault(x => x.StateID == s.StateID && (Same(x.County, county) || Same(x.County, bare)));
+			string bare = CountySuffixRegex.Replace(county, "");
+			IReadOnlyList<CountyRecord> stateCounties = _ref.CountiesIn(s.StateID);
+			for (int i = 0; i < stateCounties.Count; i++)
+			{
+				if (Same(stateCounties[i].County, county) || Same(stateCounties[i].County, bare))
+				{
+					c = stateCounties[i];
+					break;
+				}
+			}
 			_counties[(s.StateID, county)] = c;
 		}
 		if (c == null)
@@ -347,7 +385,15 @@ internal sealed class PropertyRowParser
 		}
 		if (!_lookups.TryGetValue((lookupType, text), out LookupRecord l))
 		{
-			l = _ref.Lookups.FirstOrDefault(x => x.LookupTypeID == lookupType && Same(x.LookupFieldName, text));
+			IReadOnlyList<LookupRecord> choices = _ref.OfType(lookupType);
+			for (int i = 0; i < choices.Count; i++)
+			{
+				if (Same(choices[i].LookupFieldName, text))
+				{
+					l = choices[i];
+					break;
+				}
+			}
 			_lookups[(lookupType, text)] = l;
 		}
 		if (l == null)
@@ -391,5 +437,5 @@ internal sealed class PropertyRowParser
 	}
 
 	private static bool Same(string a, string b) =>
-		a != null && b != null && string.Equals(a.Trim(), b.Trim(), StringComparison.OrdinalIgnoreCase);
+		a != null && b != null && a.AsSpan().Trim().Equals(b.AsSpan().Trim(), StringComparison.OrdinalIgnoreCase);
 }

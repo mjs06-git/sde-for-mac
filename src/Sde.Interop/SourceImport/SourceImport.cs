@@ -321,8 +321,50 @@ public static class SourceImport
 			return preview;
 		}
 
+		Dictionary<Guid, List<ShapeRecord>> preloadedShapes = null;
+		if (columns.ContainsKey(nameof(EnterpriseField.TotalSquareFootage)) || !string.IsNullOrWhiteSpace(profile[nameof(EnterpriseField.TotalSquareFootage)]?.Constant))
+		{
+			preloadedShapes = null;
+		}
 		SourceRowBuilder builder = new SourceRowBuilder(profile, store, columns);
 		Matcher matcher = new Matcher(profile, store, builder, structures);
+		if (columns.ContainsKey(nameof(EnterpriseField.TotalSquareFootage)) || !string.IsNullOrWhiteSpace(profile[nameof(EnterpriseField.TotalSquareFootage)]?.Constant))
+		{
+			preloadedShapes = matcher.PropertiesById.Count > 0 ? store.GetShapes(matcher.PropertiesById.Keys) : new Dictionary<Guid, List<ShapeRecord>>();
+			builder = new SourceRowBuilder(profile, store, columns, preloadedShapes);
+		}
+		Dictionary<Guid, AssessmentFile> preloadedAssessments = null;
+		if (!structures && matcher.Links.Count > 0)
+		{
+			HashSet<Guid> needed = new HashSet<Guid>();
+			if (profile.SplitMode == SourceSplitMode.None)
+			{
+				foreach (SourceRow source in table.Rows)
+				{
+					string rid = recordColumn >= 0 ? Text.Clean(source[recordColumn]) : null;
+					if (rid == null)
+					{
+						continue;
+					}
+					string iid = inspectionColumn >= 0 ? Text.Clean(source[inspectionColumn]) ?? "" : "";
+					if (matcher.Links.TryGetValue(Key(rid, iid), out ExternalLinkRecord link))
+					{
+						needed.Add(link.AssessmentID);
+					}
+				}
+			}
+			else
+			{
+				foreach (ExternalLinkRecord link in matcher.Links.Values)
+				{
+					needed.Add(link.AssessmentID);
+				}
+			}
+			if (needed.Count > 0)
+			{
+				preloadedAssessments = store.LoadAssessments(needed).ToDictionary(f => f.Assessment.AssessmentID);
+			}
+		}
 		Dictionary<string, int> seenKeys = new(StringComparer.OrdinalIgnoreCase);
 		HashSet<string> produced = new(StringComparer.OrdinalIgnoreCase);
 		HashSet<string> splitBases = new(StringComparer.OrdinalIgnoreCase);
@@ -396,7 +438,7 @@ public static class SourceImport
 					}
 					else
 					{
-						BuildInspection(row, key, values, builder, matcher, store, allowMatch);
+						BuildInspection(row, key, values, builder, matcher, store, preloadedAssessments, allowMatch);
 					}
 				}
 				catch (Exception e) when (e is not OperationCanceledException)
@@ -492,19 +534,24 @@ public static class SourceImport
 	/// </summary>
 	private static void ReportMissingSplits(SourcePreview preview, Matcher matcher, SdeStore store, HashSet<string> bases, HashSet<string> produced)
 	{
+		HashSet<(Guid, string)> reported = new HashSet<(Guid, string)>();
 		foreach ((string linkId, Guid propertyId) in matcher.AllLinked())
 		{
 			if (produced.Contains(linkId))
 			{
 				continue;
 			}
-			string baseId = bases.FirstOrDefault(b => string.Equals(b, linkId, StringComparison.OrdinalIgnoreCase)
-				|| linkId.StartsWith(b + "#", StringComparison.OrdinalIgnoreCase));
-			if (baseId == null || preview.MissingSplitStructures.Any(m => m.PropertyId == propertyId && m.RecordId == linkId))
+			int hash = linkId.IndexOf('#');
+			string candidate = hash >= 0 ? linkId.Substring(0, hash) : linkId;
+			if (!bases.TryGetValue(candidate, out string baseId))
 			{
 				continue;
 			}
-			PropertyRecord p = store.GetProperty(propertyId);
+			if (!reported.Add((propertyId, linkId)))
+			{
+				continue;
+			}
+			PropertyRecord p = matcher.TryGetProperty(propertyId, out PropertyRecord cached) ? cached : store.GetProperty(propertyId);
 			string where = p == null ? "A structure" : Text.Clean(Text.Join(p.StreetNumber, p.StreetName)) ?? "A structure";
 			preview.MissingSplitStructures.Add(new MissingSplitStructure
 			{
@@ -525,10 +572,12 @@ public static class SourceImport
 
 	// ───────────────────────── Inspections ─────────────────────────
 
-	private static void BuildInspection(ImportRow row, string key, Dictionary<string, string> values, SourceRowBuilder builder, Matcher matcher, SdeStore store, bool allowMatch)
+	private static void BuildInspection(ImportRow row, string key, Dictionary<string, string> values, SourceRowBuilder builder, Matcher matcher, SdeStore store, Dictionary<Guid, AssessmentFile> preloadedAssessments, bool allowMatch)
 	{
 		string recordId = row.RecordId;
-		if (matcher.Links.TryGetValue(key, out ExternalLinkRecord link) && store.LoadAssessment(link.AssessmentID) is AssessmentFile existing)
+		if (matcher.Links.TryGetValue(key, out ExternalLinkRecord link)
+			&& ((preloadedAssessments != null && preloadedAssessments.TryGetValue(link.AssessmentID, out AssessmentFile existing))
+				|| (existing = store.LoadAssessment(link.AssessmentID)) != null))
 		{
 			BuildUpdate(row, existing, DeserializeValues(link.SourceValues), values, builder);
 			if (row.Status == ImportRowStatus.Update && matcher.IsLocked(existing.Assessment.AssessmentID))
@@ -542,7 +591,9 @@ public static class SourceImport
 			row.Status = ImportRowStatus.NewInspection;
 			builder.BuildNew(row, sameRecord, isNewStructure: false, values);
 		}
-		else if (matcher.LinkedRecords.TryGetValue(recordId, out Guid linkedProperty) && store.GetProperty(linkedProperty) is PropertyRecord linkedStructure)
+		else if (matcher.LinkedRecords.TryGetValue(recordId, out Guid linkedProperty)
+			&& ((matcher.TryGetProperty(linkedProperty, out PropertyRecord linkedStructure))
+				|| (linkedStructure = store.GetProperty(linkedProperty)) != null))
 		{
 			row.Status = ImportRowStatus.NewInspection;
 			matcher.FileRecords[recordId] = linkedStructure;
@@ -586,7 +637,7 @@ public static class SourceImport
 
 	private static void BuildStructure(ImportRow row, Dictionary<string, string> values, SourceRowBuilder builder, Matcher matcher, SdeStore store, bool allowMatch)
 	{
-		if (matcher.StructureLinks.TryGetValue(row.RecordId, out StructureLinkRecord link) && store.GetProperty(link.PropertyID) is PropertyRecord { Active: true } existing)
+		if (matcher.StructureLinks.TryGetValue(row.RecordId, out StructureLinkRecord link) && matcher.TryGetProperty(link.PropertyID, out PropertyRecord existing) && existing.Active)
 		{
 			HashSet<string> changed = Changed(row, DeserializeValues(link.SourceValues), values);
 			row.Property = existing;
@@ -742,6 +793,11 @@ public static class SourceImport
 				_excluded = profile.MatchBy == SourceMatchBy.RecordId ? store.LinkedPropertyIds() : new HashSet<Guid>();
 			}
 			List<PropertyRecord> properties = store.GetProperties();
+			PropertiesById = new Dictionary<Guid, PropertyRecord>(properties.Count);
+			for (int i = 0; i < properties.Count; i++)
+			{
+				PropertiesById[properties[i].PropertyID] = properties[i];
+			}
 			switch (profile.MatchBy)
 			{
 				case SourceMatchBy.RecordId when !structures:
@@ -757,6 +813,11 @@ public static class SourceImport
 					break;
 			}
 		}
+
+		/// <summary>Active properties indexed by ID.</summary>
+		public Dictionary<Guid, PropertyRecord> PropertiesById { get; }
+
+		public bool TryGetProperty(Guid id, out PropertyRecord property) => PropertiesById.TryGetValue(id, out property);
 
 		/// <summary>Inspections: links by record + inspection.</summary>
 		public Dictionary<string, ExternalLinkRecord> Links { get; } = new(StringComparer.OrdinalIgnoreCase);

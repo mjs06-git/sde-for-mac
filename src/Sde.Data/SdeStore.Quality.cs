@@ -88,8 +88,8 @@ public sealed partial class SdeStore
 			return null;
 		}
 		Dictionary<Guid, StoredHighWaterMarks> byEvent = new Dictionary<Guid, StoredHighWaterMarks>();
-		StoredHighWaterMarks forEvery = HighWaterMarksFor(null);
-		Dictionary<Guid, (StoredHighWaterMarks Marks, List<Guid> Ids)> bySet = new Dictionary<Guid, (StoredHighWaterMarks, List<Guid>)>();
+		StoredHighWaterMarks forEvery = GetHighWaterMarks(null);
+		Dictionary<Guid, (StoredHighWaterMarks Marks, List<AssessmentFile> Files)> bySet = new Dictionary<Guid, (StoredHighWaterMarks, List<AssessmentFile>)>();
 		foreach (AssessmentFile f in input.Assessments)
 		{
 			Guid id = f.Assessment.AssessmentID;
@@ -98,7 +98,7 @@ public sealed partial class SdeStore
 			{
 				if (!byEvent.TryGetValue(eventId, out marks))
 				{
-					marks = HighWaterMarksFor(eventId);
+					marks = GetHighWaterMarks(eventId) ?? forEvery;
 					byEvent[eventId] = marks;
 				}
 			}
@@ -107,26 +107,35 @@ public sealed partial class SdeStore
 				without.Add(id);
 				continue;
 			}
-			if (!bySet.TryGetValue(marks.Set.SetID, out (StoredHighWaterMarks Marks, List<Guid> Ids) group))
+			if (!bySet.TryGetValue(marks.Set.SetID, out (StoredHighWaterMarks Marks, List<AssessmentFile> Files) group))
 			{
-				group = (marks, new List<Guid>());
+				group = (marks, new List<AssessmentFile>());
 				bySet[marks.Set.SetID] = group;
 			}
-			group.Ids.Add(id);
+			group.Files.Add(f);
 		}
 		if (bySet.Count == 0)
 		{
 			return null;
 		}
+		Dictionary<Guid, decimal?> eventOffsets = byEvent.Count == 0
+			? new Dictionary<Guid, decimal?>()
+			: Database.Read(c => c.Query<EventOffsetRow>("SELECT EventID, DatumOffsetFt FROM Event").ToDictionary(r => r.EventID, r => r.DatumOffsetFt));
 		Dictionary<Guid, decimal> estimates = new Dictionary<Guid, decimal>();
-		foreach ((StoredHighWaterMarks marks, List<Guid> ids) in bySet.Values)
+		foreach ((StoredHighWaterMarks marks, List<AssessmentFile> groupFiles) in bySet.Values)
 		{
-			foreach (KeyValuePair<Guid, decimal> e in DepthFromMarks.QaEstimates(this, ids, marks.Marks))
+			foreach (KeyValuePair<Guid, decimal> e in DepthFromMarks.QaEstimates(groupFiles, marks.Marks, input.EventOf, eventOffsets))
 			{
 				estimates[e.Key] = e.Value;
 			}
 		}
 		return estimates;
+	}
+
+	private sealed class EventOffsetRow
+	{
+		public Guid EventID { get; set; }
+		public decimal? DatumOffsetFt { get; set; }
 	}
 
 	/// <summary>Every quality finding someone has set aside.</summary>

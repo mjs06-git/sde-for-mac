@@ -81,8 +81,9 @@ public static class LetterBatch
 		Directory.CreateDirectory(folder);
 		try
 		{
-			List<LetterBatchFile> files = new();
-			HashSet<string> used = new(StringComparer.OrdinalIgnoreCase);
+			List<LetterBatchFile> files = new List<LetterBatchFile>(items.Count);
+			HashSet<string> used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			Dictionary<string, byte[]> templateCache = new Dictionary<string, byte[]>(StringComparer.Ordinal);
 			for (int i = 0; i < items.Count; i++)
 			{
 				ct.ThrowIfCancellationRequested();
@@ -95,7 +96,16 @@ public static class LetterBatch
 				{
 					throw new InvalidOperationException($"There is no letter template for \"{Describe(item)}\".");
 				}
-				LetterMergeResult merged = LetterMerge.Merge(template, item.Fields, System.IO.Path.Combine(folder, name));
+				if (!templateCache.TryGetValue(template, out byte[] templateBytes))
+				{
+					if (!File.Exists(template))
+					{
+						throw new FileNotFoundException($"The letter template \"{System.IO.Path.GetFileName(template)}\" was not found.", template);
+					}
+					templateBytes = File.ReadAllBytes(template);
+					templateCache[template] = templateBytes;
+				}
+				LetterMergeResult merged = LetterMerge.Merge(templateBytes, template, item.Fields, System.IO.Path.Combine(folder, name));
 				files.Add(new LetterBatchFile { Item = item, Path = merged.OutputPath, Template = template, UnknownPlaceholders = merged.UnknownPlaceholders });
 			}
 			ct.ThrowIfCancellationRequested();

@@ -44,12 +44,19 @@ public static class Snapping
 		{
 			return new SnapResult(p, SnapKind.None);
 		}
-		Coordinate bestVertex = null;
-		double vertexDistance = double.MaxValue;
+		double px = p.X;
+		double py = p.Y;
+		double tol2 = tolerance * tolerance;
+		bool hasVertex = false;
+		double bestVertexX = 0;
+		double bestVertexY = 0;
+		double vertexDist2 = double.MaxValue;
 		int vertexCandidate = -1;
 		VertexRef vertexRef = default;
-		Coordinate bestEdge = null;
-		double edgeDistance = double.MaxValue;
+		bool hasEdge = false;
+		double bestEdgeX = 0;
+		double bestEdgeY = 0;
+		double edgeDist2 = double.MaxValue;
 		int edgeCandidate = -1;
 		int index = -1;
 		foreach (Geometry g in candidates)
@@ -60,44 +67,70 @@ public static class Snapping
 				continue;
 			}
 			Envelope near = g.EnvelopeInternal;
-			if (near.Distance(new Envelope(p)) > tolerance)
+			if (BoxDistanceSquared(near, px, py) > tol2)
 			{
 				continue;
 			}
-			foreach ((VertexRef v, Coordinate at) in GeometryEdit.Vertices(g))
+			GeometryEdit.ScanVertices(g, (VertexRef v, double x, double y) =>
 			{
-				double d = at.Distance(p);
-				if (d <= tolerance && d < vertexDistance)
+				double dx = x - px;
+				double dy = y - py;
+				double d2 = dx * dx + dy * dy;
+				if (d2 <= tol2 && d2 < vertexDist2)
 				{
-					bestVertex = at;
-					vertexDistance = d;
+					hasVertex = true;
+					bestVertexX = x;
+					bestVertexY = y;
+					vertexDist2 = d2;
 					vertexCandidate = index;
 					vertexRef = v;
 				}
-			}
-			if (bestVertex != null)
+			});
+			if (hasVertex)
 			{
 				// Once a corner is within reach, no edge can win; the other shapes may still have a nearer corner.
 				continue;
 			}
-			foreach ((VertexRef _, Coordinate a, Coordinate b) in GeometryEdit.Edges(g))
+			GeometryEdit.ScanEdges(g, (VertexRef _, double ax, double ay, double bx, double by) =>
 			{
-				Coordinate on = new LineSegment(a, b).ClosestPoint(p);
-				double d = on.Distance(p);
-				if (d <= tolerance && d < edgeDistance)
+				// Reject edges whose bounding box is outside tolerance.
+				double minX = ax < bx ? ax : bx;
+				double maxX = ax > bx ? ax : bx;
+				double minY = ay < by ? ay : by;
+				double maxY = ay > by ? ay : by;
+				double bdx = px < minX ? minX - px : px > maxX ? px - maxX : 0.0;
+				double bdy = py < minY ? minY - py : py > maxY ? py - maxY : 0.0;
+				if (bdx * bdx + bdy * bdy > tol2)
 				{
-					bestEdge = on;
-					edgeDistance = d;
+					return;
+				}
+				GeometryEdit.ClosestPointOnSegment(ax, ay, bx, by, px, py, out double ox, out double oy);
+				double dx = ox - px;
+				double dy = oy - py;
+				double d2 = dx * dx + dy * dy;
+				if (d2 <= tol2 && d2 < edgeDist2)
+				{
+					hasEdge = true;
+					bestEdgeX = ox;
+					bestEdgeY = oy;
+					edgeDist2 = d2;
 					edgeCandidate = index;
 				}
-			}
+			});
 		}
-		if (bestVertex != null)
+		if (hasVertex)
 		{
-			return new SnapResult(new Coordinate(bestVertex.X, bestVertex.Y), SnapKind.Vertex, vertexCandidate, vertexRef);
+			return new SnapResult(new Coordinate(bestVertexX, bestVertexY), SnapKind.Vertex, vertexCandidate, vertexRef);
 		}
-		return bestEdge != null
-			? new SnapResult(new Coordinate(bestEdge.X, bestEdge.Y), SnapKind.Edge, edgeCandidate)
+		return hasEdge
+			? new SnapResult(new Coordinate(bestEdgeX, bestEdgeY), SnapKind.Edge, edgeCandidate)
 			: new SnapResult(p, SnapKind.None);
+	}
+
+	private static double BoxDistanceSquared(Envelope box, double px, double py)
+	{
+		double dx = px < box.MinX ? box.MinX - px : px > box.MaxX ? px - box.MaxX : 0.0;
+		double dy = py < box.MinY ? box.MinY - py : py > box.MaxY ? py - box.MaxY : 0.0;
+		return dx * dx + dy * dy;
 	}
 }

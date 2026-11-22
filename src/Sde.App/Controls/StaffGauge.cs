@@ -76,6 +76,9 @@ public sealed class StaffGauge : Control
 
 	/// <summary>The name this control last gave itself, so a name set in a view is never overwritten.</summary>
 	private string _spokenName;
+	private Dictionary<string, IBrush> _brushCache;
+	private double _cachedCaptionSize;
+	private double _cachedLabelHeight;
 
 	static StaffGauge()
 	{
@@ -86,7 +89,13 @@ public sealed class StaffGauge : Control
 
 	public StaffGauge()
 	{
-		ActualThemeVariantChanged += (_, _) => InvalidateVisual();
+		ActualThemeVariantChanged += (_, _) =>
+		{
+			_brushCache?.Clear();
+			_cachedCaptionSize = 0;
+			_cachedLabelHeight = 0;
+			InvalidateVisual();
+		};
 		UpdateSpokenName();
 	}
 
@@ -347,13 +356,23 @@ public sealed class StaffGauge : Control
 		new FormattedText(text, Us, FlowDirection.LeftToRight, new Typeface(TextElement.GetFontFamily(this), FontStyle.Normal, weight),
 			CaptionSize(), brush);
 
-	private double LabelHeight() => Label("0%", Brushes.Black, FontWeight.Normal).Height;
+	private double LabelHeight() => _cachedLabelHeight > 0 ? _cachedLabelHeight : (_cachedLabelHeight = Label("0%", Brushes.Black, FontWeight.Normal).Height);
 
 	private double CaptionSize() =>
-		this.TryFindResource("FontSizeCaption", out object size) && size is double d ? d : 11;
+		_cachedCaptionSize > 0
+			? _cachedCaptionSize
+			: (_cachedCaptionSize = this.TryFindResource("FontSizeCaption", out object size) && size is double d ? d : 11);
 
-	private IBrush Brush(string key, IBrush fallback) =>
-		this.TryFindResource(key, ActualThemeVariant, out object value) && value is IBrush b ? b : fallback;
+	private IBrush Brush(string key, IBrush fallback)
+	{
+		if (_brushCache != null && _brushCache.TryGetValue(key, out IBrush cached))
+		{
+			return cached ?? fallback;
+		}
+		IBrush found = this.TryFindResource(key, ActualThemeVariant, out object value) && value is IBrush b ? b : null;
+		(_brushCache ??= new Dictionary<string, IBrush>(StringComparer.Ordinal))[key] = found;
+		return found ?? fallback;
+	}
 
 	/// <summary>Reads the gauge to assistive technology as one piece of text: its value and where it stands against the line.</summary>
 	private sealed class StaffGaugeAutomationPeer(StaffGauge owner) : ControlAutomationPeer(owner)

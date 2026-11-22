@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Sde.Core;
 using Sde.Core.Records;
 
@@ -40,15 +39,13 @@ public sealed class AddressMatcher
 		["northeast"] = "ne", ["northwest"] = "nw", ["southeast"] = "se", ["southwest"] = "sw",
 	};
 
+	private static readonly HashSet<string> DirectionAbbreviations = new(Directions.Values, StringComparer.Ordinal);
+
 	private static readonly Dictionary<string, string> Ordinals = new(StringComparer.Ordinal)
 	{
 		["first"] = "1st", ["second"] = "2nd", ["third"] = "3rd", ["fourth"] = "4th", ["fifth"] = "5th",
 		["sixth"] = "6th", ["seventh"] = "7th", ["eighth"] = "8th", ["ninth"] = "9th", ["tenth"] = "10th",
 	};
-
-	private static readonly Regex HouseNumber = new(@"^\d+[a-z]?$", RegexOptions.CultureInvariant);
-
-	private static readonly Regex NotWord = new(@"[^\p{L}\p{N}]+");
 
 	private readonly Dictionary<string, int> _suffixes = new(StringComparer.Ordinal);
 
@@ -84,25 +81,57 @@ public sealed class AddressMatcher
 	{
 		List<string> number = Tokens(streetNumber);
 		List<string> street = Tokens(streetName);
-		if (number.Count == 0 && street.Count > 0 && HouseNumber.IsMatch(street[0]))
+		if (number.Count == 0 && street.Count > 0 && IsHouseNumber(street[0]))
 		{
 			number.Add(street[0]);
 			street.RemoveAt(0);
 		}
-		string house = number.Count > 0 && HouseNumber.IsMatch(number[0]) ? ParcelNumbers.WithoutLeadingZeros(number[0]) : null;
-		List<string> unit = number.Skip(house == null ? 0 : 1).Where(t => !UnitWords.Contains(t)).ToList();
+		string house = number.Count > 0 && IsHouseNumber(number[0]) ? ParcelNumbers.WithoutLeadingZeros(number[0]) : null;
+		List<string> unit = null;
+		int unitStart = house == null ? 0 : 1;
+		for (int i = unitStart; i < number.Count; i++)
+		{
+			if (!UnitWords.Contains(number[i]))
+			{
+				unit ??= new List<string>();
+				unit.Add(ParcelNumbers.WithoutLeadingZeros(number[i]));
+			}
+		}
 
-		int cut = street.FindIndex(t => UnitWords.Contains(t));
+		int cut = -1;
+		for (int i = 0; i < street.Count; i++)
+		{
+			if (UnitWords.Contains(street[i]))
+			{
+				cut = i;
+				break;
+			}
+		}
 		if (cut >= 0)
 		{
-			unit.AddRange(street.Skip(cut + 1));
-			street = street.Take(cut).ToList();
+			for (int i = cut + 1; i < street.Count; i++)
+			{
+				unit ??= new List<string>();
+				unit.Add(ParcelNumbers.WithoutLeadingZeros(street[i]));
+			}
+			street.RemoveRange(cut, street.Count - cut);
 		}
-		street = street.Select(t => Directions.GetValueOrDefault(t) ?? Ordinals.GetValueOrDefault(t) ?? t).ToList();
+		for (int i = 0; i < street.Count; i++)
+		{
+			string t = street[i];
+			if (Directions.TryGetValue(t, out string dir))
+			{
+				street[i] = dir;
+			}
+			else if (Ordinals.TryGetValue(t, out string ord))
+			{
+				street[i] = ord;
+			}
+		}
 
 		// A trailing suffix ("Main St"), or a suffix before a trailing direction ("Main St N").
 		int? suffix = suffixId;
-		if (street.Count >= 3 && Directions.ContainsValue(street[^1]) && _suffixes.TryGetValue(street[^2], out int beforeDirection))
+		if (street.Count >= 3 && DirectionAbbreviations.Contains(street[^1]) && _suffixes.TryGetValue(street[^2], out int beforeDirection))
 		{
 			suffix ??= beforeDirection;
 			street.RemoveAt(street.Count - 2);
@@ -113,19 +142,21 @@ public sealed class AddressMatcher
 			street.RemoveAt(street.Count - 1);
 		}
 
-		string zip5 = new string((zip ?? "").Where(char.IsDigit).Take(5).ToArray());
+		string zip5 = FirstFiveDigits(zip);
 		return new AddressKey(
 			house,
 			street.Count == 0 ? null : string.Join(" ", street),
 			suffix,
-			unit.Count == 0 ? null : string.Join(" ", unit.Select(ParcelNumbers.WithoutLeadingZeros)),
-			zip5.Length == 5 ? zip5 : null);
+			unit == null ? null : string.Join(" ", unit),
+			zip5);
 	}
 
 	/// <summary>Whether two keys are the same building (see the class notes).</summary>
 	public bool Same(AddressKey a, AddressKey b)
 	{
-		if (a == null || b == null || !a.CanMatch || !b.CanMatch || a.IndexKey != b.IndexKey)
+		if (a == null || b == null || !a.CanMatch || !b.CanMatch
+			|| !string.Equals(a.HouseNumber, b.HouseNumber, StringComparison.Ordinal)
+			|| !string.Equals(a.Street, b.Street, StringComparison.Ordinal))
 		{
 			return false;
 		}
@@ -143,9 +174,109 @@ public sealed class AddressMatcher
 	/// <summary>An index of <paramref name="items"/> by address, for finding every item at an address quickly.</summary>
 	public AddressIndex<T> Index<T>(IEnumerable<T> items, Func<T, AddressKey> keyOf) => new AddressIndex<T>(this, items, keyOf);
 
+	/// <summary>Matches digits with an optional single trailing ASCII letter ("123", "123a").</summary>
+	private static bool IsHouseNumber(string token)
+	{
+		if (string.IsNullOrEmpty(token))
+		{
+			return false;
+		}
+		int end = token.Length;
+		char last = token[end - 1];
+		if (last is >= 'a' and <= 'z')
+		{
+			end--;
+			if (end == 0)
+			{
+				return false;
+			}
+		}
+		for (int i = 0; i < end; i++)
+		{
+			if (!char.IsDigit(token[i]))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private static string FirstFiveDigits(string zip)
+	{
+		if (string.IsNullOrEmpty(zip))
+		{
+			return null;
+		}
+		Span<char> buf = stackalloc char[5];
+		int count = 0;
+		for (int i = 0; i < zip.Length; i++)
+		{
+			if (char.IsDigit(zip[i]))
+			{
+				buf[count++] = zip[i];
+				if (count == 5)
+				{
+					return new string(buf);
+				}
+			}
+		}
+		return null;
+	}
+
 	/// <summary>Lower-case words of letters and digits, with "#" read as a unit ("N. Main St., #4" → n, main, st, unit, 4).</summary>
-	private static List<string> Tokens(string text) =>
-		NotWord.Split((text ?? "").Replace("#", " unit ").ToLowerInvariant()).Where(t => t.Length > 0).ToList();
+	private static List<string> Tokens(string text)
+	{
+		List<string> tokens = new List<string>();
+		if (string.IsNullOrEmpty(text))
+		{
+			return tokens;
+		}
+		Span<char> lowerBuf = stackalloc char[64];
+		int i = 0;
+		while (i < text.Length)
+		{
+			char c = text[i];
+			if (c == '#')
+			{
+				tokens.Add("unit");
+				i++;
+				continue;
+			}
+			if (!char.IsLetterOrDigit(c))
+			{
+				i++;
+				continue;
+			}
+			int start = i;
+			bool needsLower = false;
+			while (i < text.Length && char.IsLetterOrDigit(text[i]))
+			{
+				if (char.IsUpper(text[i]))
+				{
+					needsLower = true;
+				}
+				i++;
+			}
+			int len = i - start;
+			if (!needsLower)
+			{
+				tokens.Add(text.Substring(start, len));
+			}
+			else if (len <= lowerBuf.Length)
+			{
+				for (int j = 0; j < len; j++)
+				{
+					lowerBuf[j] = char.ToLowerInvariant(text[start + j]);
+				}
+				tokens.Add(new string(lowerBuf.Slice(0, len)));
+			}
+			else
+			{
+				tokens.Add(text.Substring(start, len).ToLowerInvariant());
+			}
+		}
+		return tokens;
+	}
 
 	private void Add(string text, int suffixId)
 	{
@@ -161,17 +292,45 @@ public sealed class AddressMatcher
 public sealed class AddressIndex<T>
 {
 	private readonly AddressMatcher _matcher;
-	private readonly ILookup<string, (T Item, AddressKey Key)> _byStreet;
+	private readonly Dictionary<(string HouseNumber, string Street), List<(T Item, AddressKey Key)>> _byStreet = new();
 
 	internal AddressIndex(AddressMatcher matcher, IEnumerable<T> items, Func<T, AddressKey> keyOf)
 	{
 		_matcher = matcher;
-		_byStreet = items.Select(i => (Item: i, Key: keyOf(i))).Where(x => x.Key.CanMatch).ToLookup(x => x.Key.IndexKey, StringComparer.Ordinal);
+		foreach (T item in items)
+		{
+			AddressKey key = keyOf(item);
+			if (key == null || !key.CanMatch)
+			{
+				continue;
+			}
+			(string, string) streetKey = (key.HouseNumber, key.Street);
+			if (!_byStreet.TryGetValue(streetKey, out List<(T Item, AddressKey Key)> list))
+			{
+				list = new List<(T Item, AddressKey Key)>();
+				_byStreet[streetKey] = list;
+			}
+			list.Add((item, key));
+		}
 	}
 
 	/// <summary>Every item at the address (none, one, or several when the match is ambiguous).</summary>
-	public IReadOnlyList<T> Find(AddressKey key) =>
-		key == null || !key.CanMatch ? Array.Empty<T>() : _byStreet[key.IndexKey].Where(x => _matcher.Same(key, x.Key)).Select(x => x.Item).ToList();
+	public IReadOnlyList<T> Find(AddressKey key)
+	{
+		if (key == null || !key.CanMatch || !_byStreet.TryGetValue((key.HouseNumber, key.Street), out List<(T Item, AddressKey Key)> bucket))
+		{
+			return Array.Empty<T>();
+		}
+		List<T> found = new List<T>(bucket.Count);
+		for (int i = 0; i < bucket.Count; i++)
+		{
+			if (_matcher.Same(key, bucket[i].Key))
+			{
+				found.Add(bucket[i].Item);
+			}
+		}
+		return found;
+	}
 }
 
 /// <summary>Parcel numbers written in different ways: "0123-0045.67 00", "0123004567 00" and "0123004567-00" are one parcel.</summary>
@@ -183,12 +342,33 @@ public static class ParcelNumbers
 	/// </summary>
 	public static string Normalize(string parcel, bool ignoreLeadingZeros = false)
 	{
-		string s = new string((parcel ?? "").Where(c => !char.IsWhiteSpace(c) && c is not '-' and not '.').ToArray()).ToUpperInvariant();
-		if (ignoreLeadingZeros && s.Length > 0)
+		if (string.IsNullOrEmpty(parcel))
 		{
-			s = WithoutLeadingZeros(s);
+			return null;
 		}
-		return s.Length == 0 ? null : s;
+		Span<char> buffer = parcel.Length <= 128 ? stackalloc char[parcel.Length] : new char[parcel.Length];
+		int length = 0;
+		for (int i = 0; i < parcel.Length; i++)
+		{
+			char c = parcel[i];
+			if (!char.IsWhiteSpace(c) && c is not '-' and not '.')
+			{
+				buffer[length++] = char.ToUpperInvariant(c);
+			}
+		}
+		if (length == 0)
+		{
+			return null;
+		}
+		int start = 0;
+		if (ignoreLeadingZeros)
+		{
+			while (start < length - 1 && buffer[start] == '0')
+			{
+				start++;
+			}
+		}
+		return new string(buffer.Slice(start, length - start));
 	}
 
 	/// <summary>"007" → "7", "000" → "0".</summary>

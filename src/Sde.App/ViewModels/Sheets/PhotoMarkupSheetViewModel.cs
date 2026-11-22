@@ -257,7 +257,15 @@ public sealed partial class PhotoMarkupSheetViewModel : SheetViewModel
 	private void Redraw()
 	{
 		byte[] drawn = PhotoMarkupRenderer.DrawOnto(_picture, _markup);
-		Picture = drawn == null ? null : new Bitmap(new MemoryStream(drawn));
+		Bitmap next = null;
+		if (drawn != null)
+		{
+			using MemoryStream stream = new MemoryStream(drawn);
+			next = new Bitmap(stream);
+		}
+		Bitmap previous = Picture;
+		Picture = next;
+		previous?.Dispose();
 	}
 
 	private static double Clamp(double v) => double.IsFinite(v) ? Math.Clamp(v, 0, 1) : 0;

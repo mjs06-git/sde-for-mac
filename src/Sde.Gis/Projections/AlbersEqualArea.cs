@@ -16,6 +16,18 @@ public sealed class AlbersEqualArea : MapProjection
 	private readonly double _fe;
 	private readonly double _fn;
 	private readonly double _qPole;
+	private readonly double _aOverN;
+	private readonly double _invN;
+	private readonly double _nOverASq;
+	private readonly double _invQPole;
+	private readonly double _oneMinusE2;
+	private readonly double _invOneMinusE2;
+	private readonly double _inv2E;
+	private readonly double _fnPlusRho0;
+	private readonly double _sign;
+	private readonly double _b2;
+	private readonly double _b4;
+	private readonly double _b6;
 
 	/// <param name="ellipsoid">The ellipsoid.</param>
 	/// <param name="latitudeOfOrigin">φO, the latitude of the false origin, degrees.</param>
@@ -32,6 +44,9 @@ public sealed class AlbersEqualArea : MapProjection
 		_a = ellipsoid.SemiMajorAxis;
 		_e = ellipsoid.Eccentricity;
 		_e2 = ellipsoid.EccentricitySquared;
+		_oneMinusE2 = 1.0 - _e2;
+		_invOneMinusE2 = 1.0 / _oneMinusE2;
+		_inv2E = _e < 1e-12 ? 0.0 : 1.0 / (2.0 * _e);
 		_fe = falseEasting;
 		_fn = falseNorthing;
 		double phi1 = standardParallel1 * DegToRad;
@@ -49,8 +64,19 @@ public sealed class AlbersEqualArea : MapProjection
 			_n = (m1 * m1 - m2 * m2) / (a2 - a1);
 		}
 		_c = m1 * m1 + _n * a1;
-		_rho0 = _a * Math.Sqrt(_c - _n * Alpha(latitudeOfOrigin * DegToRad)) / _n;
-		_qPole = _e < 1e-12 ? 2.0 : 1.0 - (1.0 - _e2) / (2.0 * _e) * Math.Log((1.0 - _e) / (1.0 + _e));
+		_aOverN = _a / _n;
+		_invN = 1.0 / _n;
+		_nOverASq = _n / (_a * _a);
+		_rho0 = _aOverN * Math.Sqrt(_c - _n * Alpha(latitudeOfOrigin * DegToRad));
+		_fnPlusRho0 = _fn + _rho0;
+		_sign = _n < 0 ? -1.0 : 1.0;
+		_qPole = _e < 1e-12 ? 2.0 : 1.0 - _oneMinusE2 * _inv2E * Math.Log((1.0 - _e) / (1.0 + _e));
+		_invQPole = 1.0 / _qPole;
+		double e4 = _e2 * _e2;
+		double e6 = e4 * _e2;
+		_b2 = _e2 / 3.0 + 31.0 * e4 / 180.0 + 517.0 * e6 / 5040.0;
+		_b4 = 23.0 * e4 / 360.0 + 251.0 * e6 / 3780.0;
+		_b6 = 761.0 * e6 / 45360.0;
 	}
 
 	public override string MethodName => "Albers Equal Area";
@@ -58,36 +84,37 @@ public sealed class AlbersEqualArea : MapProjection
 	public override (double X, double Y) Forward(double longitude, double latitude)
 	{
 		double theta = _n * WrapRadians(longitude * DegToRad - _lon0);
-		double rho = _a * Math.Sqrt(Math.Max(0.0, _c - _n * Alpha(latitude * DegToRad))) / _n;
-		return (_fe + rho * Math.Sin(theta), _fn + _rho0 - rho * Math.Cos(theta));
+		double rho = _aOverN * Math.Sqrt(Math.Max(0.0, _c - _n * Alpha(latitude * DegToRad)));
+		(double sinTheta, double cosTheta) = Math.SinCos(theta);
+		return (_fe + rho * sinTheta, _fnPlusRho0 - rho * cosTheta);
 	}
 
 	public override (double Longitude, double Latitude) Inverse(double x, double y)
 	{
 		double dx = x - _fe;
-		double dy = _rho0 - (y - _fn);
-		double sign = _n < 0 ? -1.0 : 1.0;
-		double rho = Math.Sqrt(dx * dx + dy * dy);
-		double theta = Math.Atan2(sign * dx, sign * dy);
-		double alpha = (_c - rho * rho * _n * _n / (_a * _a)) / _n;
-		double beta = Math.Asin(Math.Clamp(alpha / _qPole, -1.0, 1.0));
-		double e4 = _e2 * _e2, e6 = e4 * _e2;
-		double phi = beta
-			+ (_e2 / 3.0 + 31.0 * e4 / 180.0 + 517.0 * e6 / 5040.0) * Math.Sin(2.0 * beta)
-			+ (23.0 * e4 / 360.0 + 251.0 * e6 / 3780.0) * Math.Sin(4.0 * beta)
-			+ 761.0 * e6 / 45360.0 * Math.Sin(6.0 * beta);
+		double dy = _fnPlusRho0 - y;
+		double rho2 = dx * dx + dy * dy;
+		double theta = Math.Atan2(_sign * dx, _sign * dy);
+		double alpha = _c * _invN - rho2 * _nOverASq;
+		double beta = Math.Asin(Math.Clamp(alpha * _invQPole, -1.0, 1.0));
+		(double sin2, double cos2) = Math.SinCos(2.0 * beta);
+		double sin4 = 2.0 * sin2 * cos2;
+		double cos4 = 2.0 * cos2 * cos2 - 1.0;
+		double sin6 = sin4 * cos2 + cos4 * sin2;
+		double phi = beta + _b2 * sin2 + _b4 * sin4 + _b6 * sin6;
 		// GN 7-2's series leaves about a millimetre; two Newton steps on α (Snyder eq. 3-16) take it to the micrometre.
 		if (_e > 1e-12)
 		{
+			double alphaScaled = alpha * _invOneMinusE2;
 			for (int i = 0; i < 2; i++)
 			{
-				double sin = Math.Sin(phi);
+				(double sin, double cos) = Math.SinCos(phi);
 				double es = _e * sin;
 				double w = 1.0 - es * es;
-				phi += w * w / (2.0 * Math.Cos(phi)) * (alpha / (1.0 - _e2) - sin / w + 1.0 / (2.0 * _e) * Math.Log((1.0 - es) / (1.0 + es)));
+				phi += w * w / (2.0 * cos) * (alphaScaled - sin / w + _inv2E * Math.Log((1.0 - es) / (1.0 + es)));
 			}
 		}
-		double lambda = _lon0 + theta / _n;
+		double lambda = _lon0 + theta * _invN;
 		return (WrapDegrees(lambda * RadToDeg), phi * RadToDeg);
 	}
 
@@ -106,6 +133,6 @@ public sealed class AlbersEqualArea : MapProjection
 			return 2.0 * sin;
 		}
 		double es = _e * sin;
-		return (1.0 - _e2) * (sin / (1.0 - es * es) - 1.0 / (2.0 * _e) * Math.Log((1.0 - es) / (1.0 + es)));
+		return _oneMinusE2 * (sin / (1.0 - es * es) - _inv2E * Math.Log((1.0 - es) / (1.0 + es)));
 	}
 }

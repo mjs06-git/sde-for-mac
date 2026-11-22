@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using Sde.Core;
 using Sde.Core.Assessments;
 using Sde.Core.Records;
@@ -103,17 +104,37 @@ public static class FieldApi
 		_ => kind.ToString().ToLowerInvariant(),
 	};
 
-	public static LookupsDto Lookups(ReferenceData reference)
+	private static readonly ConditionalWeakTable<ReferenceData, LookupsDto> LookupsCache = new ConditionalWeakTable<ReferenceData, LookupsDto>();
+
+	private static readonly IReadOnlyList<OptionDto> PhoneStatusOptions = new[]
+	{
+		new OptionDto(AssessmentStatus.Draft.ToString(), AssessmentStatuses.Label(AssessmentStatus.Draft)),
+		new OptionDto(AssessmentStatus.Reviewed.ToString(), AssessmentStatuses.Label(AssessmentStatus.Reviewed)),
+	};
+
+	public static LookupsDto Lookups(ReferenceData reference) => LookupsCache.GetValue(reference, static r =>
 	{
 		// Choices for a blank residential assessment; counties depend on the state, so they come with each assessment.
 		AssessmentFile template = AssessmentFile.CreateNew(new PropertyRecord { StructureTypeID = 1 });
 		List<FieldDto> fields = FieldCatalog.All.Select(f => new FieldDto(f.Key, f.Label, f.Step, KindName(f.Kind), f.Unit, null,
-			f.Kind == FieldKind.County ? Array.Empty<OptionDto>() : OptionsOf(f, template, reference))).ToList();
+			f.Kind == FieldKind.County ? Array.Empty<OptionDto>() : OptionsOf(f, template, r))).ToList();
 		return new LookupsDto(FieldCatalog.Steps, fields);
-	}
+	});
 
-	private static IReadOnlyList<OptionDto> OptionsOf(FieldInfo f, AssessmentFile file, ReferenceData reference) =>
-		FieldCatalog.Options(f, file, reference).Select(o => new OptionDto(o.Id.ToString(CultureInfo.InvariantCulture), o.Name)).ToList();
+	private static IReadOnlyList<OptionDto> OptionsOf(FieldInfo f, AssessmentFile file, ReferenceData reference)
+	{
+		IReadOnlyList<(int Id, string Name)> opts = FieldCatalog.Options(f, file, reference);
+		if (opts.Count == 0)
+		{
+			return Array.Empty<OptionDto>();
+		}
+		OptionDto[] result = new OptionDto[opts.Count];
+		for (int i = 0; i < opts.Count; i++)
+		{
+			result[i] = new OptionDto(opts[i].Id.ToString(CultureInfo.InvariantCulture), opts[i].Name);
+		}
+		return result;
+	}
 
 	/// <summary>
 	/// Structures whose address, city, ZIP, owner, parcel number or record ID contain every word of
@@ -124,26 +145,53 @@ public static class FieldApi
 	{
 		string[] words = (query ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 		List<StructureSummary> structures = store.ListStructures();
-		List<StructureDto> results = new();
+		List<StructureDto> results = new List<StructureDto>(Math.Min(MaxResults, structures.Count));
 		// A field worksheet's code (typed, or read from its QR code) finds its structure first.
 		AssignmentRecord coded = words.Length == 0 ? null : store.FindAssignmentByCode(query);
-		if (coded != null && structures.FirstOrDefault(x => x.PropertyID == coded.PropertyID) is StructureSummary codedStructure)
+		Guid codedPropertyId = coded?.PropertyID ?? Guid.Empty;
+		if (coded != null)
 		{
-			results.Add(Dto(codedStructure));
+			for (int i = 0; i < structures.Count; i++)
+			{
+				if (structures[i].PropertyID == codedPropertyId)
+				{
+					results.Add(Dto(structures[i]));
+					break;
+				}
+			}
 		}
-		foreach (StructureSummary s in structures)
+		for (int i = 0; i < structures.Count && results.Count < MaxResults; i++)
 		{
-			string haystack = string.Join(" ", s.Address, s.City, s.ZipCode, s.Owner, s.ParcelNumber, s.ExternalId);
-			if (words.All(w => haystack.Contains(w, StringComparison.OrdinalIgnoreCase)) && s.PropertyID != coded?.PropertyID)
+			StructureSummary s = structures[i];
+			if (s.PropertyID == codedPropertyId)
+			{
+				continue;
+			}
+			if (MatchesAllWords(s, words))
 			{
 				results.Add(Dto(s));
 			}
-			if (results.Count >= MaxResults)
-			{
-				break;
-			}
 		}
 		return results;
+	}
+
+	private static bool MatchesAllWords(StructureSummary s, string[] words)
+	{
+		for (int i = 0; i < words.Length; i++)
+		{
+			string w = words[i];
+			bool hit = (s.Address != null && s.Address.Contains(w, StringComparison.OrdinalIgnoreCase))
+				|| (s.City != null && s.City.Contains(w, StringComparison.OrdinalIgnoreCase))
+				|| (s.ZipCode != null && s.ZipCode.Contains(w, StringComparison.OrdinalIgnoreCase))
+				|| (s.Owner != null && s.Owner.Contains(w, StringComparison.OrdinalIgnoreCase))
+				|| (s.ParcelNumber != null && s.ParcelNumber.Contains(w, StringComparison.OrdinalIgnoreCase))
+				|| (s.ExternalId != null && s.ExternalId.Contains(w, StringComparison.OrdinalIgnoreCase));
+			if (!hit)
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private static StructureDto Dto(StructureSummary s) => new StructureDto(s.PropertyID, s.AssessmentID, Blank(s.Address, "(no address)"), s.City, s.Owner,
@@ -193,7 +241,7 @@ public static class FieldApi
 		PropertyRecord p = file.Property;
 		AssessmentRecord a = file.Assessment;
 		string address = string.Join(" ", new[] { p.StreetNumber, p.StreetName, r.LookupName(p.StreetSuffixID) }.Where(x => !string.IsNullOrWhiteSpace(x)));
-		string locked = LockedMessage(store, a.AssessmentID);
+		string locked = LockedMessage(store, a.AssessmentID, status);
 		List<ElementDto> elements = file.ElementPercentages.Select(e => new ElementDto(e.CalcID, e.ElementName ?? r.LookupName(e.CalcID), e.ElementPercentage,
 			e.UserDamage, ParseMoney(e.DamageValues))).ToList();
 		List<CostAdjustmentDto> costs = file.CostAdjustments.Select(c => new CostAdjustmentDto(c.CostAdjustmentLookupID, r.LookupName(c.CostAdjustmentLookupID),
@@ -202,7 +250,7 @@ public static class FieldApi
 			.OrderBy(x => x.zOrder).Select(x => new AdditionalAdjustmentDto(x.zOrder.Value, x.AdjustmentName, x.Quantity, x.UnitCost, x.TotalCost)).ToList();
 		TotalsDto totals = new TotalsDto(a.TotalAdjustments, a.TotalReplacementCost, a.ComputedActualCashValue, a.ComputedDamages);
 		IReadOnlyList<OptionDto> choices = locked == null && PhoneStatuses.Contains(status.Value)
-			? PhoneStatuses.Select(s => new OptionDto(s.ToString(), AssessmentStatuses.Label(s))).ToList()
+			? PhoneStatusOptions
 			: Array.Empty<OptionDto>();
 		string note = locked != null ? null
 			: choices.Count == 0 ? $"This assessment is {AssessmentStatuses.Label(status.Value)}. Its status is changed on the Mac."
@@ -210,7 +258,7 @@ public static class FieldApi
 		return new AssessmentDto(a.AssessmentID, p.PropertyID, Blank(address, "(no address)"), TypeName(p.StructureTypeID),
 			AssessmentStatuses.Label(status.Value), locked != null, locked, ResultText(a.PercentDamage, a.DamageMessage),
 			GaugePercent(a), a.DamageMessage ?? "", file.Attachments.Count, steps, status.Value.ToString(), choices, note, a.PhysicalDamage,
-			elements, costs, extras, totals, Siblings(store, p.PropertyID, a.AssessmentID));
+			elements, costs, extras, totals, Siblings(store, p.PropertyID, a.AssessmentID, status));
 	}
 
 	/// <summary>
@@ -237,14 +285,16 @@ public static class FieldApi
 	}
 
 	/// <summary>Every active assessment of the structure, newest inspection first, labelled as the Mac's switcher labels them.</summary>
-	private static IReadOnlyList<SiblingDto> Siblings(SdeStore store, Guid propertyId, Guid current)
+	private static IReadOnlyList<SiblingDto> Siblings(SdeStore store, Guid propertyId, Guid current, AssessmentStatusRecord currentStatus)
 	{
-		List<SiblingDto> list = new();
-		foreach (AssessmentRecord a in store.GetAssessmentsForProperty(propertyId))
+		List<AssessmentRecord> assessments = store.GetAssessmentsForProperty(propertyId);
+		List<SiblingDto> list = new List<SiblingDto>(assessments.Count);
+		foreach (AssessmentRecord a in assessments)
 		{
 			string label = (a.DateofInspection?.ToString("MMM d, yyyy", CultureInfo.InvariantCulture) ?? "No date")
 				+ (GaugePercent(a) is decimal pd ? ", " + pd.ToString("0.0", CultureInfo.InvariantCulture) + "%" : ", not worked out yet");
-			list.Add(new SiblingDto(a.AssessmentID, label, AssessmentStatuses.Label(store.GetStatus(a.AssessmentID).Value), a.AssessmentID == current));
+			AssessmentStatus statusValue = a.AssessmentID == current ? currentStatus.Value : store.GetStatus(a.AssessmentID).Value;
+			list.Add(new SiblingDto(a.AssessmentID, label, AssessmentStatuses.Label(statusValue), a.AssessmentID == current));
 		}
 		return list;
 	}
@@ -331,9 +381,10 @@ public static class FieldApi
 	/// Why the phone can't change an assessment (Final or Letter sent, or checked out to another Mac in a work
 	/// package), or null when it can.
 	/// </summary>
-	public static string LockedMessage(SdeStore store, Guid assessmentId)
+	public static string LockedMessage(SdeStore store, Guid assessmentId) => LockedMessage(store, assessmentId, store.GetStatus(assessmentId));
+
+	private static string LockedMessage(SdeStore store, Guid assessmentId, AssessmentStatusRecord status)
 	{
-		AssessmentStatusRecord status = store.GetStatus(assessmentId);
 		if (status.IsLocked)
 		{
 			return $"This assessment is {AssessmentStatuses.Label(status.Value)}, so it can't be changed here. It can be reopened on the Mac.";

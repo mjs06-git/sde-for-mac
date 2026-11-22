@@ -62,19 +62,25 @@ public static class MarkerClusterer
 		}
 
 		bool single = !(radius > 0) || !double.IsFinite(radius);
-		Dictionary<(long, long), List<int>> cells = new Dictionary<(long, long), List<int>>();
-		if (!single)
+		if (single)
 		{
+			List<MarkerCluster> singles = new List<MarkerCluster>(n);
 			for (int i = 0; i < n; i++)
 			{
-				(long, long) key = Cell(sorted[i].X, sorted[i].Y, radius);
-				if (!cells.TryGetValue(key, out List<int> list))
-				{
-					list = new List<int>();
-					cells[key] = list;
-				}
-				list.Add(i);
+				singles.Add(BuildSingle(sorted[i]));
 			}
+			return singles;
+		}
+		Dictionary<(long, long), List<int>> cells = new Dictionary<(long, long), List<int>>();
+		for (int i = 0; i < n; i++)
+		{
+			(long, long) key = Cell(sorted[i].X, sorted[i].Y, radius);
+			if (!cells.TryGetValue(key, out List<int> list))
+			{
+				list = new List<int>();
+				cells[key] = list;
+			}
+			list.Add(i);
 		}
 
 		bool[] taken = new bool[n];
@@ -89,39 +95,69 @@ public static class MarkerClusterer
 			taken[i] = true;
 			members.Clear();
 			members.Add(i);
-			if (!single)
+			ClusterPoint seed = sorted[i];
+			(long cx, long cy) = Cell(seed.X, seed.Y, radius);
+			for (long dx = -1; dx <= 1; dx++)
 			{
-				ClusterPoint seed = sorted[i];
-				(long cx, long cy) = Cell(seed.X, seed.Y, radius);
-				for (long dx = -1; dx <= 1; dx++)
+				for (long dy = -1; dy <= 1; dy++)
 				{
-					for (long dy = -1; dy <= 1; dy++)
+					(long, long) cellKey = (cx + dx, cy + dy);
+					if (!cells.TryGetValue(cellKey, out List<int> list))
 					{
-						if (!cells.TryGetValue((cx + dx, cy + dy), out List<int> list))
+						continue;
+					}
+					for (int k = list.Count - 1; k >= 0; k--)
+					{
+						int j = list[k];
+						if (taken[j])
 						{
+							list[k] = list[^1];
+							list.RemoveAt(list.Count - 1);
 							continue;
 						}
-						foreach (int j in list)
+						double ex = sorted[j].X - seed.X;
+						double ey = sorted[j].Y - seed.Y;
+						if (ex * ex + ey * ey <= r2)
 						{
-							if (taken[j])
-							{
-								continue;
-							}
-							double ex = sorted[j].X - seed.X;
-							double ey = sorted[j].Y - seed.Y;
-							if (ex * ex + ey * ey <= r2)
-							{
-								taken[j] = true;
-								members.Add(j);
-							}
+							taken[j] = true;
+							members.Add(j);
+							list[k] = list[^1];
+							list.RemoveAt(list.Count - 1);
 						}
 					}
+					if (list.Count == 0)
+					{
+						cells.Remove(cellKey);
+					}
 				}
-				members.Sort();   // a fixed order for the sums below, whichever cell was looked at first
 			}
-			clusters.Add(Build(sorted, members));
+			if (members.Count == 1)
+			{
+				clusters.Add(BuildSingle(seed));
+			}
+			else
+			{
+				members.Sort();   // a fixed order for the sums below, whichever cell was looked at first
+				clusters.Add(Build(sorted, members));
+			}
 		}
 		return clusters;
+	}
+
+	private static MarkerCluster BuildSingle(ClusterPoint p)
+	{
+		SortedDictionary<string, int> counts = new SortedDictionary<string, int>(StringComparer.Ordinal) { [p.Category ?? ""] = 1 };
+		double val = double.IsNaN(p.Value) ? double.NaN : p.Value;
+		return new MarkerCluster
+		{
+			X = p.X,
+			Y = p.Y,
+			Count = 1,
+			MemberIds = new[] { p.Id },
+			CategoryCounts = counts,
+			MaxValue = val,
+			MeanValue = val,
+		};
 	}
 
 	private static (long, long) Cell(double x, double y, double size) => ((long)Math.Floor(x / size), (long)Math.Floor(y / size));

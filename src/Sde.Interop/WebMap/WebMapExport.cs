@@ -156,7 +156,7 @@ public static class WebMapExport
 			w.WriteEndArray();
 			w.WriteEndObject();
 		}
-		return Encoding.UTF8.GetString(buffer.ToArray());
+		return Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int)buffer.Length);
 	}
 
 	/// <summary>Grid squares of about <see cref="WebMapOptions.CellMeters"/> with how many structures of each result they hold, drawn at the square's centre.</summary>
@@ -174,17 +174,37 @@ public static class WebMapExport
 			w.WriteStartObject();
 			w.WriteString("type", "FeatureCollection");
 			w.WriteStartArray("features");
+			int[] counts = new int[5];
+			StringBuilder popup = new StringBuilder();
 			foreach (IGrouping<(long Row, long Col), AssessmentFile> cell in cells.OrderBy(g => g.Key.Row).ThenBy(g => g.Key.Col))
 			{
-				Dictionary<DeterminationClass, int> counts = cell.GroupBy(f => Determinations.Classify(f.Assessment, options.SubstantialPercent, options.ClosePercent))
-					.ToDictionary(g => g.Key, g => g.Count());
-				DeterminationClass worst = LegendOrder.First(c => counts.ContainsKey(c));
-				StringBuilder popup = new StringBuilder();
-				int n = cell.Count();
-				popup.Append("<strong>").Append(n.ToString(Us)).Append(n == 1 ? " structure" : " structures").Append("</strong>");
-				foreach (DeterminationClass c in LegendOrder.Where(counts.ContainsKey))
+				Array.Clear(counts);
+				int n = 0;
+				foreach (AssessmentFile f in cell)
 				{
-					popup.Append("<br>").Append(Html(Determinations.Label(c))).Append(": ").Append(counts[c].ToString(Us));
+					DeterminationClass cls = Determinations.Classify(f.Assessment, options.SubstantialPercent, options.ClosePercent);
+					counts[(int)cls]++;
+					n++;
+				}
+				DeterminationClass worst = LegendOrder[0];
+				for (int i = 0; i < LegendOrder.Length; i++)
+				{
+					if (counts[(int)LegendOrder[i]] > 0)
+					{
+						worst = LegendOrder[i];
+						break;
+					}
+				}
+				popup.Clear();
+				popup.Append("<strong>").Append(n.ToString(Us)).Append(n == 1 ? " structure" : " structures").Append("</strong>");
+				for (int i = 0; i < LegendOrder.Length; i++)
+				{
+					DeterminationClass c = LegendOrder[i];
+					int cnt = counts[(int)c];
+					if (cnt > 0)
+					{
+						popup.Append("<br>").Append(Html(Determinations.Label(c))).Append(": ").Append(cnt.ToString(Us));
+					}
 				}
 				if (options.AddressDetail == PublicAddressDetail.Block)
 				{
@@ -201,7 +221,7 @@ public static class WebMapExport
 			w.WriteEndArray();
 			w.WriteEndObject();
 		}
-		return Encoding.UTF8.GetString(buffer.ToArray());
+		return Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int)buffer.Length);
 	}
 
 	/// <summary>
@@ -216,18 +236,20 @@ public static class WebMapExport
 		{
 			return null;
 		}
-		string digits = new string((p.StreetNumber ?? "").TakeWhile(char.IsDigit).ToArray());
-		if (digits.Length == 0 && inName.Success)
+		ReadOnlySpan<char> num = (p.StreetNumber ?? "").AsSpan();
+		int digitLen = 0;
+		while (digitLen < num.Length && char.IsDigit(num[digitLen]))
 		{
-			digits = inName.Groups[1].Value;
+			digitLen++;
 		}
+		ReadOnlySpan<char> digits = digitLen > 0 ? num.Slice(0, digitLen) : inName.Success ? inName.Groups[1].ValueSpan : ReadOnlySpan<char>.Empty;
 		return long.TryParse(digits, NumberStyles.Integer, CultureInfo.InvariantCulture, out long number)
 			? $"{number / 100 * 100} block of {street}"
 			: street;
 	}
 
 	// "123 River St" or "123A River St", but not "1st Ave".
-	private static readonly Regex NumberInStreetName = new Regex(@"^\s*(\d+)[A-Za-z]?\s+(\S.*)$", RegexOptions.CultureInvariant);
+	private static readonly Regex NumberInStreetName = new Regex(@"^\s*(\d+)[A-Za-z]?\s+(\S.*)$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
 	private static void Point(Utf8JsonWriter w, double lon, double lat, DeterminationClass c, int count, string popup)
 	{
@@ -336,11 +358,13 @@ public static class WebMapExport
 			""";
 	}
 
-	private static string Asset(string name)
+	private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> AssetCache = new System.Collections.Concurrent.ConcurrentDictionary<string, string>(StringComparer.Ordinal);
+
+	private static string Asset(string name) => AssetCache.GetOrAdd(name, static n =>
 	{
-		using Stream s = typeof(WebMapExport).Assembly.GetManifestResourceStream("Sde.Interop.Leaflet." + name)
-			?? throw new InvalidOperationException("Missing embedded resource Sde.Interop.Leaflet." + name);
+		using Stream s = typeof(WebMapExport).Assembly.GetManifestResourceStream("Sde.Interop.Leaflet." + n)
+			?? throw new InvalidOperationException("Missing embedded resource Sde.Interop.Leaflet." + n);
 		using StreamReader r = new StreamReader(s);
 		return r.ReadToEnd();
-	}
+	});
 }

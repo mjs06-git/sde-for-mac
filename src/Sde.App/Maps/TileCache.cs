@@ -80,9 +80,9 @@ public sealed class TileCache
 	/// <summary>Gets one tile's bytes. An answer other than success throws HttpRequestException with its status code.</summary>
 	public static async Task<byte[]> DownloadAsync(HttpClient client, string url, CancellationToken cancel)
 	{
-		using HttpResponseMessage response = await client.GetAsync(url, cancel);
+		using HttpResponseMessage response = await client.GetAsync(url, cancel).ConfigureAwait(false);
 		response.EnsureSuccessStatusCode();
-		return await response.Content.ReadAsByteArrayAsync(cancel);
+		return await response.Content.ReadAsByteArrayAsync(cancel).ConfigureAwait(false);
 	}
 
 	/// <summary>Raised on the screen's thread when a tile has arrived or could not be had, so the map should redraw.</summary>
@@ -118,7 +118,7 @@ public sealed class TileCache
 		{
 			try
 			{
-				byte[] onDisk = await File.ReadAllBytesAsync(path, cancel);
+				byte[] onDisk = await File.ReadAllBytesAsync(path, cancel).ConfigureAwait(false);
 				if (DateTime.UtcNow - File.GetLastWriteTimeUtc(path) < MaxAge)
 				{
 					Interlocked.Increment(ref _diskReads);
@@ -134,18 +134,16 @@ public sealed class TileCache
 		using CancellationTokenSource both = CancellationTokenSource.CreateLinkedTokenSource(cancel, _stop.Token);
 		try
 		{
-			await _slots.WaitAsync(both.Token);
+			await _slots.WaitAsync(both.Token).ConfigureAwait(false);
 		}
 		catch (OperationCanceledException)
 		{
 			return new TileFetch(stale, null);
 		}
+		byte[] bytes;
 		try
 		{
-			byte[] bytes = await _download(basemap.TileUrl(z, x, y, factor), both.Token);
-			Interlocked.Increment(ref _downloads);
-			Save(path, bytes);
-			return new TileFetch(bytes, null);
+			bytes = await _download(basemap.TileUrl(z, x, y, factor), both.Token).ConfigureAwait(false);
 		}
 		catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException && !both.IsCancellationRequested)
 		{
@@ -159,6 +157,9 @@ public sealed class TileCache
 		{
 			_slots.Release();
 		}
+		Interlocked.Increment(ref _downloads);
+		Save(path, bytes);
+		return new TileFetch(bytes, null);
 	}
 
 	/// <summary>Tells the page a tile couldn't be had (from any thread): counted, and <see cref="DownloadFailed"/> raised on the screen's thread.</summary>
@@ -273,7 +274,11 @@ public sealed class TileCache
 
 	private static string Key(Basemap b, int z, int x, int y) => $"{b.Id}/{z}/{x}/{y}";
 
-	private string PathOf(string key) => System.IO.Path.Combine(_folder, key.Replace('/', System.IO.Path.DirectorySeparatorChar) + ".tile");
+	private string PathOf(string key)
+	{
+		string rel = System.IO.Path.DirectorySeparatorChar == '/' ? key : key.Replace('/', System.IO.Path.DirectorySeparatorChar);
+		return System.IO.Path.Combine(_folder, rel + ".tile");
+	}
 
 	private async Task LoadAsync(Basemap basemap, int z, int x, int y, string key)
 	{
@@ -281,7 +286,7 @@ public sealed class TileCache
 		string error;
 		try
 		{
-			TileFetch fetch = await FetchAsync(basemap, z, x, y, 1, _stop.Token);
+			TileFetch fetch = await FetchAsync(basemap, z, x, y, 1, _stop.Token).ConfigureAwait(false);
 			error = fetch.Problem;
 			if (fetch.Bytes != null)
 			{

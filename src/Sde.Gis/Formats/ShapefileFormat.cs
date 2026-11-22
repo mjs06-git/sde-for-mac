@@ -44,7 +44,7 @@ public static class ShapefileFormat
 			using FileStream dbf = File.OpenRead(dbfPath);
 			ShapefileReaderOptions options = new ShapefileReaderOptions
 			{
-				Factory = new GeometryFactory(new PrecisionModel(), 0),
+				Factory = GisSetup.Factory,
 				Encoding = encoding,
 				GeometryBuilderMode = GeometryBuilderMode.FixInvalidShapes,
 			};
@@ -85,7 +85,7 @@ public static class ShapefileFormat
 				{
 					g = null;
 				}
-				g = g == null ? null : GisSetup.Factory.CreateGeometry(Reproject.ToWgs84(g, cs));
+				g = g == null ? null : Reproject.ToWgs84InPlace(g, cs);
 				Feature feature = layer.NewFeature(g, record);
 				foreach ((DbfField dbfField, int index) in columns)
 				{
@@ -137,10 +137,11 @@ public static class ShapefileFormat
 			_ => throw new GisException("A Shapefile holds one kind of feature (points, lines or polygons), and this layer has a mix or none.", layer.Name),
 		};
 
-		List<DbfField> dbfFields = new List<DbfField>();
+		List<DbfField> dbfFields = new List<DbfField>(layer.Fields.Count);
 		HashSet<string> used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-		foreach (LayerField field in layer.Fields)
+		for (int i = 0; i < layer.Fields.Count; i++)
 		{
+			LayerField field = layer.Fields[i];
 			string name = DbfName(field.Name, used);
 			dbfFields.Add(field.Type switch
 			{
@@ -148,7 +149,7 @@ public static class ShapefileFormat
 				FieldType.Real => new DbfNumericDoubleField(name),
 				FieldType.Boolean => new DbfLogicalField(name),
 				FieldType.Date or FieldType.DateTime => new DbfDateField(name),
-				_ => new DbfCharacterField(name, TextLength(layer, field)),
+				_ => new DbfCharacterField(name, TextLength(layer, i)),
 			});
 		}
 
@@ -290,16 +291,24 @@ public static class ShapefileFormat
 		return candidate;
 	}
 
-	private static int TextLength(FeatureLayer layer, LayerField field)
+	private static int TextLength(FeatureLayer layer, int fieldIndex)
 	{
 		int longest = 1;
-		foreach (Feature f in layer.Features)
+		for (int i = 0; i < layer.Features.Count; i++)
 		{
-			if (f[field.Name] is string s)
+			if (layer.Features[i][fieldIndex] is string s)
 			{
-				longest = Math.Max(longest, Encoding.UTF8.GetByteCount(s));
+				int bytes = Encoding.UTF8.GetByteCount(s);
+				if (bytes >= 254)
+				{
+					return 254;
+				}
+				if (bytes > longest)
+				{
+					longest = bytes;
+				}
 			}
 		}
-		return Math.Min(254, longest);
+		return longest;
 	}
 }

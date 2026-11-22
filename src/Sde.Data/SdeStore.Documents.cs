@@ -46,6 +46,21 @@ public sealed partial class SdeStore
 	/// <summary>A structure's documents, newest first.</summary>
 	public List<DocumentRecord> GetDocuments(Guid propertyId) => Database.Read(c => GetDocuments(c, propertyId));
 
+	/// <summary>The documents of several structures, newest first, read in chunks over one connection.</summary>
+	public List<DocumentRecord> GetDocuments(IEnumerable<Guid> propertyIds) => Database.Read(c =>
+	{
+		List<DocumentRecord> found = new List<DocumentRecord>();
+		foreach (Guid[] chunk in propertyIds.Distinct().Chunk(500))
+		{
+			found.AddRange(TableMap<DocumentRecord>.Select(c, "PropertyID IN @chunk", new { chunk = IdText(chunk) }, orderBy: "AddedOn DESC"));
+		}
+		if (found.Count > 1)
+		{
+			found.Sort((a, b) => Nullable.Compare(b.AddedOn, a.AddedOn));
+		}
+		return found;
+	});
+
 	internal static List<DocumentRecord> GetDocuments(System.Data.IDbConnection c, Guid propertyId) =>
 		TableMap<DocumentRecord>.Select(c, "PropertyID = @propertyId", new { propertyId }, orderBy: "AddedOn DESC").ToList();
 

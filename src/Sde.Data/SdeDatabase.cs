@@ -26,12 +26,16 @@ public sealed class SdeDatabase
 	/// <summary>The per-database setting holding <see cref="DatabaseId"/>.</summary>
 	public const string DatabaseIdKey = "DatabaseId";
 
+	private static readonly string SchemaSql = ReadResource("Schema.sql");
+
 	/// <summary>A hash of Schema.sql. When a database's stored hash differs, Schema.sql runs again on opening it.</summary>
-	public static readonly string SchemaHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(ReadResource("Schema.sql")))).ToLowerInvariant();
+	public static readonly string SchemaHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(SchemaSql))).ToLowerInvariant();
 
 	private long _commits;
 
 	private long _connections;
+
+	private Guid _databaseId;
 
 	/// <summary>Reference tables copied from FEMA's SDEDatabase.mdb into every new database (src/Sde.Data/Seed).</summary>
 	public static readonly string[] SeedTables =
@@ -92,7 +96,23 @@ public sealed class SdeDatabase
 	/// This database's own ID, made when it is created or first opened by v2.5. Copied into side files (the layers
 	/// GeoPackage, work packages) so a side file that belongs to another database is noticed.
 	/// </summary>
-	public Guid DatabaseId => Read(c => ReadDatabaseId(c, null));
+	public Guid DatabaseId
+	{
+		get
+		{
+			Guid id = _databaseId;
+			if (id != Guid.Empty)
+			{
+				return id;
+			}
+			id = Read(c => ReadDatabaseId(c, null));
+			if (id != Guid.Empty)
+			{
+				_databaseId = id;
+			}
+			return id;
+		}
+	}
 
 	/// <summary>
 	/// The default location: ~/Library/Application Support/SDE/sde.sqlite. SDE_HOME, when set, names a folder to use
@@ -119,6 +139,7 @@ public sealed class SdeDatabase
 		}
 		SdeDatabase db = new SdeDatabase(path);
 		using SqliteConnection c = db.Connect();
+		c.Execute("PRAGMA journal_mode = WAL;");
 		int version = c.ExecuteScalar<int?>("SELECT CAST(Value AS INTEGER) FROM SchemaInfo WHERE Key = 'SchemaVersion'") ?? 0;
 		if (version > SchemaVersion)
 		{
@@ -154,7 +175,7 @@ public sealed class SdeDatabase
 			return;
 		}
 		using SqliteTransaction tx = c.BeginTransaction(deferred: false);
-		c.Execute(ReadResource("Schema.sql"), transaction: tx);
+		c.Execute(SchemaSql, transaction: tx);
 		WriteMacSchemaVersion(c, tx);
 		tx.Commit();
 	}
@@ -206,8 +227,9 @@ public sealed class SdeDatabase
 		SdeDatabase db = new SdeDatabase(path);
 		Directory.CreateDirectory(db.AttachmentsFolder);
 		using SqliteConnection c = db.Connect();
+		c.Execute("PRAGMA journal_mode = WAL;");
 		using SqliteTransaction tx = c.BeginTransaction(deferred: false);
-		c.Execute(ReadResource("Schema.sql"), transaction: tx);
+		c.Execute(SchemaSql, transaction: tx);
 		foreach (string table in SeedTables)
 		{
 			using StreamReader csv = new StreamReader(Resource($"Seed.{table}.csv"));
@@ -225,7 +247,7 @@ public sealed class SdeDatabase
 		SqliteConnection c = new SqliteConnection(_connectionString);
 		c.Open();
 		Interlocked.Increment(ref _connections);
-		c.Execute(IsReadOnly ? "PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;" : "PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
+		c.Execute("PRAGMA busy_timeout = 5000;");
 		return c;
 	}
 

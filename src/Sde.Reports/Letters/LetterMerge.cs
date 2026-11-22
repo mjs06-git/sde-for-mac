@@ -50,16 +50,30 @@ public static class LetterMerge
 		{
 			throw new FileNotFoundException($"The letter template \"{Path.GetFileName(templatePath)}\" was not found.", templatePath);
 		}
+		byte[] templateBytes = File.ReadAllBytes(templatePath);
+		return Merge(templateBytes, templatePath, fields, outputPath);
+	}
+
+	/// <summary>
+	/// Merges from already-read template bytes (used by <see cref="LetterBatch"/> to avoid reading the same template file
+	/// from disk for every letter). Writes atomically via a temporary file beside <paramref name="outputPath"/>.
+	/// </summary>
+	internal static LetterMergeResult Merge(byte[] templateBytes, string templateName, IReadOnlyDictionary<string, string> fields, string outputPath)
+	{
+		ArgumentNullException.ThrowIfNull(templateBytes);
+		ArgumentException.ThrowIfNullOrEmpty(outputPath);
 		string dir = Path.GetDirectoryName(Path.GetFullPath(outputPath));
 		Directory.CreateDirectory(dir);
 		string temp = Path.Combine(dir, "." + Guid.NewGuid().ToString("N") + ".docx.tmp");
-		File.Copy(templatePath, temp);
 		try
 		{
 			MergeState state = new MergeState(fields);
-			using (WordprocessingDocument doc = OpenForEditing(temp, templatePath))
+			using MemoryStream buffer = new MemoryStream(templateBytes.Length + 4096);
+			buffer.Write(templateBytes, 0, templateBytes.Length);
+			buffer.Position = 0;
+			using (WordprocessingDocument doc = OpenForEditing(buffer, templateName))
 			{
-				MainDocumentPart main = doc.MainDocumentPart ?? throw new InvalidDataException($"\"{Path.GetFileName(templatePath)}\" has no document body.");
+				MainDocumentPart main = doc.MainDocumentPart ?? throw new InvalidDataException($"\"{Path.GetFileName(templateName)}\" has no document body.");
 				Process(main.Document, state);
 				foreach (HeaderPart h in main.HeaderParts)
 				{
@@ -72,6 +86,7 @@ public static class LetterMerge
 				Process(main.FootnotesPart?.Footnotes, state);
 				Process(main.EndnotesPart?.Endnotes, state);
 			}
+			File.WriteAllBytes(temp, buffer.GetBuffer().AsSpan(0, (int)buffer.Length));
 			File.Move(temp, outputPath, overwrite: true);
 			return new LetterMergeResult { OutputPath = outputPath, FieldsUsed = state.Used, UnknownPlaceholders = state.Unknown };
 		}
@@ -118,9 +133,9 @@ public static class LetterMerge
 		return found;
 	}
 
-	private static WordprocessingDocument OpenForEditing(string path, string originalName)
+	private static WordprocessingDocument OpenForEditing(Stream stream, string originalName)
 	{
-		WordprocessingDocument doc = WordprocessingDocument.Open(path, true);
+		WordprocessingDocument doc = WordprocessingDocument.Open(stream, true);
 		if (string.Equals(Path.GetExtension(originalName), ".dotx", StringComparison.OrdinalIgnoreCase))
 		{
 			doc.ChangeDocumentType(WordprocessingDocumentType.Document);
@@ -176,30 +191,42 @@ public static class LetterMerge
 
 	private static void ProcessParagraph(Paragraph p, MergeState state)
 	{
-		int from = 0;
-		while (true)
+		List<Text> texts = TextsOf(p);
+		if (texts.Count == 0)
 		{
-			List<Text> texts = TextsOf(p);
-			int[] starts = new int[texts.Count];
-			StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < texts.Count; i++)
-			{
-				starts[i] = sb.Length;
-				sb.Append(texts[i].Text);
-			}
-			string all = sb.ToString();
-			if (!NextPlaceholder(all, from, out int open, out int close))
-			{
-				return;
-			}
+			return;
+		}
+		int[] starts = new int[texts.Count];
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < texts.Count; i++)
+		{
+			starts[i] = sb.Length;
+			sb.Append(texts[i].Text);
+		}
+		string all = sb.ToString();
+
+		// Scan every placeholder left-to-right first (preserving Used / Unknown discovery order),
+		// then apply replacements right-to-left so earlier starts[] and run boundaries stay valid.
+		List<(int Open, int Close, string Value)> replacements = null;
+		int from = 0;
+		while (NextPlaceholder(all, from, out int open, out int close))
+		{
 			string raw = all.Substring(open + 1, close - open - 1);
-			if (!state.TryGet(raw, out string value))
+			if (state.TryGet(raw, out string value))
 			{
-				from = close + 1;
-				continue;
+				replacements ??= new List<(int, int, string)>();
+				replacements.Add((open, close + 1, value));
 			}
-			Replace(texts, starts, open, close + 1, value);
-			from = open + value.Replace("\r", "").Replace("\n", "").Length;
+			from = close + 1;
+		}
+		if (replacements == null)
+		{
+			return;
+		}
+		for (int i = replacements.Count - 1; i >= 0; i--)
+		{
+			(int open, int end, string value) = replacements[i];
+			Replace(texts, starts, open, end, value);
 		}
 	}
 
@@ -282,15 +309,20 @@ public static class LetterMerge
 	{
 		private readonly Dictionary<string, string> _fields = new(StringComparer.OrdinalIgnoreCase);
 		private readonly List<string> _used = new();
+		private readonly HashSet<string> _usedSet = new(StringComparer.OrdinalIgnoreCase);
 		private readonly List<string> _unknown = new();
+		private readonly HashSet<string> _unknownSet = new(StringComparer.Ordinal);
 
 		public MergeState(IReadOnlyDictionary<string, string> fields)
 		{
-			foreach (KeyValuePair<string, string> kv in fields ?? new Dictionary<string, string>())
+			if (fields != null)
 			{
-				if (!string.IsNullOrWhiteSpace(kv.Key))
+				foreach (KeyValuePair<string, string> kv in fields)
 				{
-					_fields[kv.Key.Trim()] = kv.Value ?? "";
+					if (!string.IsNullOrWhiteSpace(kv.Key))
+					{
+						_fields[kv.Key.Trim()] = kv.Value ?? "";
+					}
 				}
 			}
 		}
@@ -304,13 +336,13 @@ public static class LetterMerge
 			string name = raw.Trim();
 			if (_fields.TryGetValue(name, out value))
 			{
-				if (!_used.Contains(name, StringComparer.OrdinalIgnoreCase))
+				if (_usedSet.Add(name))
 				{
 					_used.Add(name);
 				}
 				return true;
 			}
-			if (!_unknown.Contains(name, StringComparer.Ordinal))
+			if (_unknownSet.Add(name))
 			{
 				_unknown.Add(name);
 			}

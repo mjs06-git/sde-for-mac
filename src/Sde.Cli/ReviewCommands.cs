@@ -90,8 +90,7 @@ public static class ReviewCommands
 		List<Guid> ids = null;
 		if (e != null)
 		{
-			HashSet<Guid> members = s.AssessmentsInEvent(e.EventID);
-			ids = s.ListStructures().Where(r => r.AssessmentID != null && members.Contains(r.AssessmentID.Value)).Select(r => r.AssessmentID.Value).ToList();
+			ids = s.ActiveAssessmentIdsInEvent(e.EventID);
 		}
 		QaInput input = s.LoadQaInput(ids);
 		if (!string.IsNullOrWhiteSpace(marksFile))
@@ -142,12 +141,13 @@ public static class ReviewCommands
 			DateTime last = today.AddDays(days);
 			cases = cases.Where(c => c.IsOpen && c.Deadline is DateTime d && d.Date >= today && d.Date <= last).ToList();
 		}
-		Dictionary<Guid, string> addresses = s.ListStructures().GroupBy(r => r.PropertyID).ToDictionary(g => g.Key, g => g.First().Address);
+		Dictionary<Guid, PropertyRecord> properties = s.GetProperties(cases.Select(c => c.PropertyID));
 		Console.WriteLine($"{"Case",-36}  {"Kind",-4} {"Status",-7} {"Deadline",-10} {"Left",9}  Address");
 		foreach (ComplianceCaseRecord c in cases)
 		{
 			string left = c.Deadline is DateTime d && c.IsOpen ? (d.Date < today ? $"{(today - d.Date).Days} late" : $"{(d.Date - today).Days} days") : "";
-			Console.WriteLine($"{c.CaseID,-36}  {c.Kind,-4} {c.Status,-7} {Date(c.Deadline),-10} {left,9}  {Trunc(addresses.GetValueOrDefault(c.PropertyID), 40)}");
+			string address = properties.TryGetValue(c.PropertyID, out PropertyRecord p) ? QaRules.Address(p, s.Reference) : "";
+			Console.WriteLine($"{c.CaseID,-36}  {c.Kind,-4} {c.Status,-7} {Date(c.Deadline),-10} {left,9}  {Trunc(address, 40)}");
 		}
 		Console.WriteLine($"{cases.Count} cases");
 		return 0;
@@ -189,7 +189,7 @@ public static class ReviewCommands
 			HashSet<Guid> members = s.AssessmentsInEvent(e.EventID);
 			rows = s.ListMapPoints(members.Contains);
 		}
-		List<AssessmentFile> files = s.LoadAssessments(rows.Where(r => r.AssessmentID != null).Select(r => r.AssessmentID.Value).ToList());
+		List<AssessmentFile> files = s.LoadAssessmentHeaders(rows.Where(r => r.AssessmentID != null).Select(r => r.AssessmentID.Value).ToList());
 		EventSummary summary = EventSummary.Build(files, e == null ? s.GetProperties() : null, e?.Label, s.Reference, details: e?.ToDetails());
 		EventSummaryReport.RenderToFile(summary, new EventSummaryOptions(), path);
 		Console.WriteLine($"Wrote the event summary for {(e == null ? "the whole database" : e.Label)} ({files.Count} assessments) to {path}");

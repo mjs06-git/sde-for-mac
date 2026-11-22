@@ -69,7 +69,7 @@ internal static class Lookups
 			throw new McpException($"One call takes at most {max.ToString("N0", CultureInfo.InvariantCulture)} assessments.");
 		}
 		List<Guid> parsed = ids.Select(SdeMcpContext.ParseAssessmentId).Distinct().ToList();
-		HashSet<Guid> inUse = ActiveIds(store);
+		HashSet<Guid> inUse = store.FilterActiveAssessmentIds(parsed);
 		List<Guid> found = parsed.Where(inUse.Contains).ToList();
 		List<string> skipped = parsed.Where(id => !inUse.Contains(id)).Select(id => id.ToString()).ToList();
 		return (found, skipped);

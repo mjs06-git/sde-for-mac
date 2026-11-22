@@ -117,8 +117,18 @@ public sealed partial class SourceTable
 		}
 
 		// Base columns keep their names; each distinct item (in order of first appearance) adds a column.
-		List<int> baseColumns = Enumerable.Range(0, raw.Columns.Count).Where(i => i != item && i != value).ToList();
-		List<string> columns = baseColumns.Select(i => raw.Columns[i]).ToList();
+		List<int> baseColumns = new List<int>(raw.Columns.Count);
+		List<string> columns = new List<string>(raw.Columns.Count);
+		HashSet<string> columnSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		for (int i = 0; i < raw.Columns.Count; i++)
+		{
+			if (i != item && i != value)
+			{
+				baseColumns.Add(i);
+				columns.Add(raw.Columns[i]);
+				columnSet.Add(raw.Columns[i]);
+			}
+		}
 		Dictionary<string, int> itemColumn = new(StringComparer.OrdinalIgnoreCase);
 		foreach (SourceRow r in rows)
 		{
@@ -129,12 +139,13 @@ public sealed partial class SourceTable
 			}
 			string column = ChecklistPrefix + name;
 			string unique = column;
-			for (int n = 2; columns.Contains(unique, StringComparer.OrdinalIgnoreCase); n++)
+			for (int n = 2; columnSet.Contains(unique); n++)
 			{
 				unique = $"{column} ({n})";
 			}
 			itemColumn[name] = columns.Count;
 			columns.Add(unique);
+			columnSet.Add(unique);
 		}
 
 		// Group by record + inspection, in order of first appearance. Rows with neither ID stay on their own.
@@ -160,13 +171,24 @@ public sealed partial class SourceTable
 		}
 
 		List<string> warnings = new();
-		List<SourceRow> output = new();
+		List<SourceRow> output = new List<SourceRow>(groups.Count);
 		foreach (List<SourceRow> g in groups)
 		{
 			string[] values = new string[columns.Count];
 			for (int c = 0; c < baseColumns.Count; c++)
 			{
-				values[c] = g.Select(r => r[baseColumns[c]]).FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? "";
+				int srcCol = baseColumns[c];
+				string first = "";
+				for (int k = 0; k < g.Count; k++)
+				{
+					string cell = g[k][srcCol];
+					if (!string.IsNullOrWhiteSpace(cell))
+					{
+						first = cell;
+						break;
+					}
+				}
+				values[c] = first;
 			}
 			Dictionary<int, List<string>> seen = new();
 			foreach (SourceRow r in g)

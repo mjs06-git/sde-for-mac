@@ -132,35 +132,66 @@ public sealed partial class SdeStore
 	/// </summary>
 	public int SetEvent(IReadOnlyCollection<Guid> assessmentIds, Guid? eventId, SaveContext context = null)
 	{
+		List<Guid> ids = assessmentIds.Distinct().ToList();
+		if (ids.Count == 0)
+		{
+			return 0;
+		}
 		SaveContext ctx = (context ?? SaveContext.Batch(SaveVia.App)).AsBatch();
 		return Database.InTransaction((c, tx) =>
 		{
 			EventRecord target = eventId is Guid id ? TableMap<EventRecord>.Get(c, new { EventID = id }, tx) ?? throw new ArgumentException("That event no longer exists.") : null;
-			int changed = 0;
-			foreach (Guid aid in assessmentIds.Distinct())
+			Dictionary<Guid, EventRecord> eventsById = TableMap<EventRecord>.Select(c, tx: tx).ToDictionary(e => e.EventID);
+			Dictionary<Guid, (Guid PropertyID, Guid? EventID)> existing = new Dictionary<Guid, (Guid, Guid?)>(ids.Count);
+			foreach (Guid[] chunk in ids.Chunk(500))
 			{
-				Guid? propertyId = c.ExecuteScalar<Guid?>("SELECT PropertyID FROM Assessment WHERE AssessmentID = @aid", new { aid }, tx);
-				if (propertyId == null)
+				foreach (AssessmentEventRow row in c.Query<AssessmentEventRow>("""
+					SELECT a.AssessmentID, a.PropertyID, ea.EventID
+					FROM Assessment a
+					LEFT JOIN EventAssessment ea ON ea.AssessmentID = a.AssessmentID
+					WHERE a.AssessmentID IN @chunk
+					""", new { chunk = IdText(chunk) }, tx))
+				{
+					existing[row.AssessmentID] = (row.PropertyID, row.EventID);
+				}
+			}
+			int changed = 0;
+			foreach (Guid aid in ids)
+			{
+				if (!existing.TryGetValue(aid, out (Guid PropertyID, Guid? EventID) info))
 				{
 					continue;
 				}
-				Guid? current = c.ExecuteScalar<Guid?>("SELECT EventID FROM EventAssessment WHERE AssessmentID = @aid", new { aid }, tx);
-				if (current == eventId)
+				if (info.EventID == eventId)
 				{
 					continue;
 				}
-				string before = current is Guid was ? TableMap<EventRecord>.Get(c, new { EventID = was }, tx)?.Label : null;
-				TableMap<EventAssessmentRecord>.Delete(c, "AssessmentID = @aid", new { aid }, tx);
+				string before = info.EventID is Guid was && eventsById.TryGetValue(was, out EventRecord prev) ? prev.Label : null;
 				if (target != null)
 				{
-					TableMap<EventAssessmentRecord>.Insert(c, new EventAssessmentRecord { AssessmentID = aid, EventID = target.EventID, AddedOn = Clock() }, tx);
+					c.Execute("""
+						INSERT INTO EventAssessment (AssessmentID, EventID, AddedOn)
+						VALUES (@aid, @targetId, @addedOn)
+						ON CONFLICT(AssessmentID) DO UPDATE SET EventID = excluded.EventID, AddedOn = excluded.AddedOn
+						""", new { aid, targetId = target.EventID, addedOn = Clock() }, tx);
 				}
-				WriteEvent(c, tx, propertyId.Value, aid, target == null ? "Taken out of event " + before : "Added to event " + target.Label, ctx,
+				else
+				{
+					TableMap<EventAssessmentRecord>.Delete(c, "AssessmentID = @aid", new { aid }, tx);
+				}
+				WriteEvent(c, tx, info.PropertyID, aid, target == null ? "Taken out of event " + before : "Added to event " + target.Label, ctx,
 					"Event", before, target?.Label);
 				changed++;
 			}
 			return changed;
 		});
+	}
+
+	private sealed class AssessmentEventRow
+	{
+		public Guid AssessmentID { get; set; }
+		public Guid PropertyID { get; set; }
+		public Guid? EventID { get; set; }
 	}
 
 	/// <summary>

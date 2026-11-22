@@ -15,6 +15,8 @@ public static class GeoPackageGeometry
 	private static readonly NetTopologySuite.NtsGeometryServices DefaultServices =
 		new NetTopologySuite.NtsGeometryServices(GisSetup.Factory.CoordinateSequenceFactory, GisSetup.Factory.PrecisionModel, GisSetup.Factory.SRID);
 
+	[ThreadStatic] private static WKBReader _defaultReader;
+
 	/// <summary>A blob for a geometry (in the coordinates of <paramref name="srsId"/>). Empty geometries get the empty flag and no envelope.</summary>
 	public static byte[] Write(Geometry geometry, int srsId = 4326)
 	{
@@ -55,10 +57,9 @@ public static class GeoPackageGeometry
 		}
 		int wkbStart = ParseHeader(blob, out srsId, out bool empty, out _);
 		factory ??= GisSetup.Factory;
-		NetTopologySuite.NtsGeometryServices services = ReferenceEquals(factory, GisSetup.Factory)
-			? DefaultServices
-			: new NetTopologySuite.NtsGeometryServices(factory.CoordinateSequenceFactory, factory.PrecisionModel, factory.SRID);
-		WKBReader reader = new WKBReader(services) { HandleOrdinates = Ordinates.XY };
+		WKBReader reader = ReferenceEquals(factory, GisSetup.Factory)
+			? (_defaultReader ??= new WKBReader(DefaultServices) { HandleOrdinates = Ordinates.XY })
+			: new WKBReader(new NetTopologySuite.NtsGeometryServices(factory.CoordinateSequenceFactory, factory.PrecisionModel, factory.SRID)) { HandleOrdinates = Ordinates.XY };
 		Geometry geometry;
 		try
 		{
@@ -74,6 +75,42 @@ public static class GeoPackageGeometry
 			geometry = factory.CreateGeometryCollection();
 		}
 		return geometry;
+	}
+
+	/// <summary>Reads one ordinate (0=MinX, 1=MaxX, 2=MinY, 3=MaxY) without allocating an <see cref="Envelope"/> when the header has one.</summary>
+	internal static bool TryGetEnvelopeValue(byte[] blob, int ordinateIndex, out double value)
+	{
+		value = 0;
+		if (blob == null)
+		{
+			return false;
+		}
+		ParseHeader(blob, out _, out bool empty, out int envelopeType);
+		if (empty)
+		{
+			return false;
+		}
+		if (envelopeType >= 1)
+		{
+			bool little = (blob[3] & 0x01) != 0;
+			ReadOnlySpan<byte> span = blob.AsSpan(8 + ordinateIndex * 8, 8);
+			value = little ? BinaryPrimitives.ReadDoubleLittleEndian(span) : BinaryPrimitives.ReadDoubleBigEndian(span);
+			return true;
+		}
+		Geometry g = Read(blob);
+		if (g == null || g.IsEmpty)
+		{
+			return false;
+		}
+		Envelope e = g.EnvelopeInternal;
+		value = ordinateIndex switch
+		{
+			0 => e.MinX,
+			1 => e.MaxX,
+			2 => e.MinY,
+			_ => e.MaxY,
+		};
+		return true;
 	}
 
 	/// <summary>The blob's envelope from its header, or computed from the WKB when the header has none. False for null and empty geometries.</summary>

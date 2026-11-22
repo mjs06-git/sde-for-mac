@@ -134,22 +134,44 @@ public sealed class LayerStyle
 	public static LayerStyle Categorized(string field, IEnumerable<object> values, Symbol baseSymbol = null)
 	{
 		baseSymbol ??= new Symbol();
-		List<object> distinct = values.Where(v => v != null && FieldValues.Format(v).Trim().Length > 0)
-			.GroupBy(FieldValues.Format, StringComparer.Ordinal).Select(g => g.First()).ToList();
-		bool numeric = distinct.All(v => v is long or double);
-		IEnumerable<object> ordered = numeric
-			? distinct.OrderBy(v => Convert.ToDouble(v, CultureInfo.InvariantCulture))
-			: distinct.OrderBy(v => FieldValues.Format(v), StringComparer.OrdinalIgnoreCase);
-		LayerStyle style = new LayerStyle { Kind = StyleKind.Categorized, Field = field, Symbol = baseSymbol.Clone() };
-		int n = 0;
-		foreach (object v in ordered)
+		Dictionary<string, object> distinctByText = new Dictionary<string, object>(StringComparer.Ordinal);
+		bool hasEmpty = false;
+		bool allNumeric = true;
+		foreach (object v in values)
 		{
-			string text = FieldValues.Format(v);
+			if (v == null)
+			{
+				hasEmpty = true;
+				continue;
+			}
+			string formatted = FieldValues.Format(v);
+			if (formatted.AsSpan().Trim().Length == 0)
+			{
+				hasEmpty = true;
+				continue;
+			}
+			if (distinctByText.TryAdd(formatted, v) && v is not (long or double))
+			{
+				allNumeric = false;
+			}
+		}
+		List<KeyValuePair<string, object>> ordered = new List<KeyValuePair<string, object>>(distinctByText);
+		if (allNumeric)
+		{
+			ordered.Sort(static (a, b) => Convert.ToDouble(a.Value, CultureInfo.InvariantCulture).CompareTo(Convert.ToDouble(b.Value, CultureInfo.InvariantCulture)));
+		}
+		else
+		{
+			ordered.Sort(static (a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Key, b.Key));
+		}
+		LayerStyle style = new LayerStyle { Kind = StyleKind.Categorized, Field = field, Symbol = baseSymbol.Clone() };
+		for (int n = 0; n < ordered.Count; n++)
+		{
+			string text = ordered[n].Key;
 			Rgba color = Rgba.Parse(ColorRamp.Categories[n % ColorRamp.Categories.Count], new Rgba(128, 128, 128));
 			style.Categories.Add(new StyleCategory { Value = text, Label = text, Symbol = baseSymbol.WithFill(color) });
-			n++;
 		}
-		if (values.Any(v => v == null || FieldValues.Format(v).Trim().Length == 0))
+		if (hasEmpty)
 		{
 			style.Categories.Add(new StyleCategory { Value = "", Label = "(no value)", Symbol = baseSymbol.WithFill(new Rgba(0xB8, 0xBC, 0xC2)) });
 		}
@@ -160,17 +182,50 @@ public sealed class LayerStyle
 	public static LayerStyle Graduated(FeatureLayer layer, string field, int classCount, ColorRamp ramp = null, Symbol baseSymbol = null)
 	{
 		ArgumentNullException.ThrowIfNull(layer);
-		LayerField f = layer.Fields[field] ?? throw new GisException($"This layer has no field called {field}.", field);
+		int index = layer.Fields.IndexOf(field);
+		if (index < 0)
+		{
+			throw new GisException($"This layer has no field called {field}.", field);
+		}
+		LayerField f = layer.Fields[index];
 		if (f.Type is not (FieldType.Integer or FieldType.Real))
 		{
 			throw new GisException($"{f.DisplayName} doesn't hold numbers, so it can't be shown in graduated colours.", field);
 		}
-		List<double> values = layer.Features.Select(x => x[field]).Where(v => v != null).Select(v => Convert.ToDouble(v, CultureInfo.InvariantCulture)).ToList();
-		if (values.Count == 0)
+		double min = double.PositiveInfinity;
+		double max = double.NegativeInfinity;
+		bool any = false;
+		for (int i = 0; i < layer.Features.Count; i++)
+		{
+			object v = layer.Features[i][index];
+			if (v == null)
+			{
+				continue;
+			}
+			double d = v is double dd ? dd : v is long ll ? ll : Convert.ToDouble(v, CultureInfo.InvariantCulture);
+			if (!any)
+			{
+				min = d;
+				max = d;
+				any = true;
+			}
+			else
+			{
+				if (d < min)
+				{
+					min = d;
+				}
+				if (d > max)
+				{
+					max = d;
+				}
+			}
+		}
+		if (!any)
 		{
 			throw new GisException($"{f.DisplayName} has no values to colour by.", field);
 		}
-		return Graduated(field, values.Min(), values.Max(), classCount, ramp, baseSymbol, f.Type == FieldType.Integer);
+		return Graduated(field, min, max, classCount, ramp, baseSymbol, f.Type == FieldType.Integer);
 	}
 
 	/// <summary>A graduated style of equal intervals from <paramref name="min"/> to <paramref name="max"/>.</summary>
@@ -216,17 +271,49 @@ public sealed class LayerStyle
 		{
 			case StyleKind.Categorized:
 			{
-				string text = value == null ? "" : FieldValues.Format(value).Trim();
-				StyleCategory c = Categories.FirstOrDefault(x => string.Equals(x.Value ?? "", text, StringComparison.Ordinal));
+				ReadOnlySpan<char> text = value == null ? ReadOnlySpan<char>.Empty : FieldValues.Format(value).AsSpan().Trim();
+				StyleCategory c = null;
+				for (int i = 0; i < Categories.Count; i++)
+				{
+					StyleCategory candidate = Categories[i];
+					if ((candidate.Value ?? "").AsSpan().Equals(text, StringComparison.Ordinal))
+					{
+						c = candidate;
+						break;
+					}
+				}
 				return c == null ? OtherSymbol : c.Visible ? c.Symbol : null;
 			}
 			case StyleKind.Graduated:
 			{
-				if (value == null || !FieldValues.TryConvert(FieldType.Real, value, out object n) || n == null)
+				double v;
+				switch (value)
 				{
-					return OtherSymbol;
+					case null:
+						return OtherSymbol;
+					case double d:
+						v = d;
+						break;
+					case long l:
+						v = l;
+						break;
+					case int i:
+						v = i;
+						break;
+					case float fl:
+						v = fl;
+						break;
+					case decimal m:
+						v = (double)m;
+						break;
+					default:
+						if (!FieldValues.TryConvert(FieldType.Real, value, out object n) || n == null)
+						{
+							return OtherSymbol;
+						}
+						v = (double)n;
+						break;
 				}
-				double v = (double)n;
 				for (int i = 0; i < Classes.Count; i++)
 				{
 					StyleClass k = Classes[i];

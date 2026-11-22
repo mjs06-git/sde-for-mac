@@ -20,6 +20,8 @@ public static class PhotoFolderMatcher
 {
 	private const double AmbiguousMeters = 10;
 
+	private readonly record struct KeyEntry(PhotoMatchCandidate Candidate, string Key);
+
 	/// <summary>
 	/// Matches each photo, in the order given. A file name that contains a candidate's record ID wins, then its parcel
 	/// number, then its house number and street name (ignoring case, spaces and punctuation). Otherwise the nearest
@@ -28,33 +30,56 @@ public static class PhotoFolderMatcher
 	/// </summary>
 	public static IReadOnlyList<PhotoMatch> Match(IReadOnlyList<string> photoPaths, IReadOnlyList<PhotoMatchCandidate> candidates, double toleranceMeters = 40)
 	{
-		List<PhotoMatch> matches = new List<PhotoMatch>();
-		// Each structure's keys are worked out once, not again for every photo.
-		string[] recordIds = candidates.Select(c => Normalize(c.RecordId)).ToArray();
-		string[] parcels = candidates.Select(c => Normalize(c.Parcel)).ToArray();
-		string[] addresses = candidates.Select(AddressKey).ToArray();
-		foreach (string path in photoPaths)
+		List<PhotoMatch> matches = new List<PhotoMatch>(photoPaths.Count);
+		// Each structure's keys are worked out once, sorted longest-first so name matching stops as soon as a shorter key can't win.
+		KeyEntry[] recordIds = BuildKeys(candidates, static c => Normalize(c.RecordId));
+		KeyEntry[] parcels = BuildKeys(candidates, static c => Normalize(c.Parcel));
+		KeyEntry[] addresses = BuildKeys(candidates, AddressKey);
+		List<PhotoMatchCandidate> located = new List<PhotoMatchCandidate>(candidates.Count);
+		for (int i = 0; i < candidates.Count; i++)
 		{
-			matches.Add(MatchOne(path, candidates, recordIds, parcels, addresses, toleranceMeters));
+			if (candidates[i].Latitude != null && candidates[i].Longitude != null)
+			{
+				located.Add(candidates[i]);
+			}
+		}
+		for (int i = 0; i < photoPaths.Count; i++)
+		{
+			matches.Add(MatchOne(photoPaths[i], located, recordIds, parcels, addresses, toleranceMeters));
 		}
 		return matches;
 	}
 
-	private static PhotoMatch MatchOne(string path, IReadOnlyList<PhotoMatchCandidate> candidates, string[] recordIds, string[] parcels, string[] addresses, double toleranceMeters)
+	private static KeyEntry[] BuildKeys(IReadOnlyList<PhotoMatchCandidate> candidates, Func<PhotoMatchCandidate, string> selector)
+	{
+		List<KeyEntry> list = new List<KeyEntry>(candidates.Count);
+		for (int i = 0; i < candidates.Count; i++)
+		{
+			string key = selector(candidates[i]);
+			if (key.Length > 0)
+			{
+				list.Add(new KeyEntry(candidates[i], key));
+			}
+		}
+		list.Sort(static (a, b) => b.Key.Length.CompareTo(a.Key.Length));
+		return list.ToArray();
+	}
+
+	private static PhotoMatch MatchOne(string path, List<PhotoMatchCandidate> located, KeyEntry[] recordIds, KeyEntry[] parcels, KeyEntry[] addresses, double toleranceMeters)
 	{
 		string name = Normalize(Path.GetFileNameWithoutExtension(path));
 
-		PhotoMatchCandidate byName = FindByName(name, candidates, recordIds, out _);
+		PhotoMatchCandidate byName = FindByName(name, recordIds);
 		if (byName != null)
 		{
 			return new PhotoMatch(path, byName, "file name has the record ID", null);
 		}
-		byName = FindByName(name, candidates, parcels, out _);
+		byName = FindByName(name, parcels);
 		if (byName != null)
 		{
 			return new PhotoMatch(path, byName, "file name has the parcel number", null);
 		}
-		byName = FindByName(name, candidates, addresses, out _);
+		byName = FindByName(name, addresses);
 		if (byName != null)
 		{
 			return new PhotoMatch(path, byName, "file name has the address", null);
@@ -69,64 +94,91 @@ public static class PhotoFolderMatcher
 		{
 			info = new PhotoInfo(null, null, null);
 		}
-		if (info.Latitude == null || info.Longitude == null)
+		if (info.Latitude == null || info.Longitude == null || located.Count == 0)
 		{
 			return new PhotoMatch(path, null, "no match", null);
 		}
 
-		List<(PhotoMatchCandidate Candidate, double Distance)> near = new List<(PhotoMatchCandidate, double)>();
-		foreach (PhotoMatchCandidate c in candidates)
+		double pLat = info.Latitude.Value;
+		double pLon = info.Longitude.Value;
+		double maxLatDelta = (toleranceMeters / 111_000.0) + 1e-4;
+		double cosLat = Math.Max(0.01, Math.Cos(pLat * (Math.PI / 180.0)));
+		double maxLonDelta = (toleranceMeters / (111_000.0 * cosLat)) + 1e-4;
+
+		PhotoMatchCandidate best1 = null;
+		double bestDist1 = double.PositiveInfinity;
+		PhotoMatchCandidate best2 = null;
+		double bestDist2 = double.PositiveInfinity;
+
+		for (int i = 0; i < located.Count; i++)
 		{
-			if (c.Latitude == null || c.Longitude == null)
+			PhotoMatchCandidate c = located[i];
+			double cLat = c.Latitude.Value;
+			double cLon = c.Longitude.Value;
+			if (Math.Abs(cLat - pLat) > maxLatDelta || Math.Abs(cLon - pLon) > maxLonDelta)
 			{
 				continue;
 			}
-			double d = DistanceMeters(info.Latitude.Value, info.Longitude.Value, c.Latitude.Value, c.Longitude.Value);
-			if (d <= toleranceMeters)
+			double d = DistanceMeters(pLat, pLon, cLat, cLon);
+			if (d > toleranceMeters)
 			{
-				near.Add((c, d));
+				continue;
+			}
+			if (d < bestDist1)
+			{
+				best2 = best1;
+				bestDist2 = bestDist1;
+				best1 = c;
+				bestDist1 = d;
+			}
+			else if (d < bestDist2)
+			{
+				best2 = c;
+				bestDist2 = d;
 			}
 		}
-		if (near.Count == 0)
+		if (best1 == null)
 		{
 			return new PhotoMatch(path, null, "no match", null);
 		}
-		near.Sort((a, b) => a.Distance.CompareTo(b.Distance));
-		if (near.Count > 1)
+		if (best2 != null)
 		{
-			double between = DistanceMeters(near[0].Candidate.Latitude.Value, near[0].Candidate.Longitude.Value,
-				near[1].Candidate.Latitude.Value, near[1].Candidate.Longitude.Value);
+			double between = DistanceMeters(best1.Latitude.Value, best1.Longitude.Value,
+				best2.Latitude.Value, best2.Longitude.Value);
 			if (between <= AmbiguousMeters)
 			{
-				return new PhotoMatch(path, null, "ambiguous: two structures within 10 m", near[0].Distance);
+				return new PhotoMatch(path, null, "ambiguous: two structures within 10 m", bestDist1);
 			}
 		}
-		return new PhotoMatch(path, near[0].Candidate, string.Format(CultureInfo.InvariantCulture, "GPS, {0:0} m from the structure", near[0].Distance), near[0].Distance);
+		return new PhotoMatch(path, best1, string.Format(CultureInfo.InvariantCulture, "GPS, {0:0} m from the structure", bestDist1), bestDist1);
 	}
 
 	/// <summary>The one candidate whose key is in the file name (the longest key wins; a tie at the longest length matches nothing).</summary>
-	private static PhotoMatchCandidate FindByName(string name, IReadOnlyList<PhotoMatchCandidate> candidates, string[] keys, out bool tie)
+	private static PhotoMatchCandidate FindByName(string name, KeyEntry[] entries)
 	{
-		tie = false;
 		PhotoMatchCandidate best = null;
 		int bestLength = 0;
-		for (int i = 0; i < candidates.Count; i++)
+		bool tie = false;
+		for (int i = 0; i < entries.Length; i++)
 		{
-			PhotoMatchCandidate c = candidates[i];
-			string k = keys[i];
-			if (k.Length == 0 || !name.Contains(k, StringComparison.Ordinal))
+			string k = entries[i].Key;
+			if (k.Length < bestLength)
+			{
+				break;
+			}
+			if (k.Length > name.Length || !name.Contains(k, StringComparison.Ordinal))
 			{
 				continue;
 			}
-			if (k.Length > bestLength)
+			if (best == null)
 			{
-				best = c;
+				best = entries[i].Candidate;
 				bestLength = k.Length;
-				tie = false;
 			}
-			else if (k.Length == bestLength && !ReferenceEquals(best, c))
+			else if (!ReferenceEquals(best, entries[i].Candidate))
 			{
 				tie = true;
+				break;
 			}
 		}
 		return tie ? null : best;
@@ -154,15 +206,17 @@ public static class PhotoFolderMatcher
 		{
 			return "";
 		}
-		StringBuilder sb = new StringBuilder();
-		foreach (char ch in text)
+		Span<char> buf = text.Length <= 128 ? stackalloc char[text.Length] : new char[text.Length];
+		int n = 0;
+		for (int i = 0; i < text.Length; i++)
 		{
+			char ch = text[i];
 			if (char.IsLetterOrDigit(ch))
 			{
-				sb.Append(char.ToLowerInvariant(ch));
+				buf[n++] = char.ToLowerInvariant(ch);
 			}
 		}
-		return sb.ToString();
+		return n == 0 ? "" : new string(buf.Slice(0, n));
 	}
 
 	/// <summary>Great-circle distance in meters (haversine).</summary>
