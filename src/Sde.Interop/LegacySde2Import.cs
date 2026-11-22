@@ -86,7 +86,13 @@ public static class LegacySde2Import
 	internal const string StagingPrefix = "sde-legacy-";
 
 	/// <summary>The undetermined-damage codes SDE 2.x stored in tblDepreciation.DepreciationValue (IsPhysicalDamage).</summary>
-	private static readonly string[] PhysicalDamageCodes = { "1.00001", "1.00002", "1.00003", "1.00004", "1.00005", "1.00006" };
+	private static readonly HashSet<string> PhysicalDamageCodes = new HashSet<string>(StringComparer.Ordinal) { "1.00001", "1.00002", "1.00003", "1.00004", "1.00005", "1.00006" };
+
+	private static readonly XmlReaderSettings DefaultReaderSettings = new XmlReaderSettings { ConformanceLevel = ConformanceLevel.Auto };
+	private static readonly XmlReaderSettings IgnoreWhitespaceReaderSettings = new XmlReaderSettings { ConformanceLevel = ConformanceLevel.Auto, IgnoreWhitespace = true, CheckCharacters = false };
+	private static readonly XmlSerializer SummarySerializer = new XmlSerializer(typeof(XmlSummaryData.NewDataSet));
+	private static readonly XmlSerializer PropertySerializer = new XmlSerializer(typeof(XmlPropertyData.NewDataSet));
+	private static readonly XmlSerializer AssessmentSerializer = new XmlSerializer(typeof(XmlAssessmentData.NewDataSet));
 
 	public static LegacyReadResult Read(string folder, ReferenceData reference)
 	{
@@ -152,50 +158,57 @@ public static class LegacySde2Import
 		}
 
 		// Links (to files or folders) are left out: one could point at any file on the Mac.
-		List<FileInfo> allFiles = new DirectoryInfo(folder).GetFiles("*", new EnumerationOptions
+		ILookup<string, FileInfo> filesByName = new DirectoryInfo(folder).GetFiles("*", new EnumerationOptions
 		{
 			RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = false, MatchType = MatchType.Win32,
-		}).ToList();
+		}).ToLookup(f => f.Name, StringComparer.OrdinalIgnoreCase);
+		Dictionary<Guid, XmlAssessmentData.NewDataSet> firstAssessmentByProperty = new Dictionary<Guid, XmlAssessmentData.NewDataSet>(properties.Count);
+		foreach ((string _, string _, XmlAssessmentData.NewDataSet a) in assessments)
+		{
+			Guid pid = Guid.Parse(a.tblAssessment.PropertyID);
+			firstAssessmentByProperty.TryAdd(pid, a);
+		}
+		Dictionary<Guid, PropertyRecord> propertiesById = new Dictionary<Guid, PropertyRecord>(properties.Count);
 		foreach ((string sub, XmlPropertyData.NewDataSet p) in properties)
 		{
 			Guid id = new Guid(p.tblProperty.PropertyID);
-			XmlAssessmentData.NewDataSet first = assessments.Select(x => x.Assessment)
-				.FirstOrDefault(a => Guid.Parse(a.tblAssessment.PropertyID) == id);
+			firstAssessmentByProperty.TryGetValue(id, out XmlAssessmentData.NewDataSet first);
 			PropertyRecord property = map.Property(p, first);
 			result.Data.Properties.Add(property);
+			propertiesById.TryAdd(property.PropertyID, property);
 			if (p.tblSquareFoot_Property != null)
 			{
 				result.Data.Shapes.Add(new ShapeRecord { PropertyID = id, ShapeType = "c", TotalSqFt = p.tblSquareFoot_Property.TotalSquareFoot });
 			}
 		}
-		HashSet<Guid> propertyIds = result.Data.Properties.Select(p => p.PropertyID).ToHashSet();
+		HashSet<Guid> seenAssessments = new HashSet<Guid>(assessments.Count);
 		foreach ((string sub, string file, XmlAssessmentData.NewDataSet a) in assessments)
 		{
-			PropertyRecord property = result.Data.Properties.FirstOrDefault(p => p.PropertyID == Guid.Parse(a.tblAssessment.PropertyID));
-			if (property == null)
+			if (!propertiesById.TryGetValue(Guid.Parse(a.tblAssessment.PropertyID), out PropertyRecord property))
 			{
 				result.Warnings.Add($"'{Relative(folder, file)}' belongs to structure {a.tblAssessment.PropertyID}, which is not in the export; skipped.");
 				continue;
 			}
-			if (result.Data.Assessments.Any(x => x.AssessmentID == Guid.Parse(a.tblAssessment.AssessmentID)))
+			Guid aid = Guid.Parse(a.tblAssessment.AssessmentID);
+			if (!seenAssessments.Add(aid))
 			{
 				result.Warnings.Add($"'{Relative(folder, file)}' repeats assessment {a.tblAssessment.AssessmentID}; skipped.");
 				continue;
 			}
-			map.Assessment(a, property, sub, allFiles);
+			map.Assessment(a, property, sub, filesByName);
 		}
 
 		// Cross-check against the SummaryData.xml index the original showed in its grid.
 		foreach (XmlSummaryData.NewDataSetProperties s in result.Summary?.Properties ?? Array.Empty<XmlSummaryData.NewDataSetProperties>())
 		{
-			if (!Guid.TryParse(s.PropertyID, out Guid sid) || !propertyIds.Contains(sid))
+			if (!Guid.TryParse(s.PropertyID, out Guid sid) || !propertiesById.ContainsKey(sid))
 			{
 				result.Warnings.Add($"SummaryData.xml lists structure {s.PropertyID} ({s.StreetAddress}) but its PropertyData.xml was not found.");
 			}
 		}
 		foreach (XmlSummaryData.NewDataSetAssessments s in result.Summary?.Assessments ?? Array.Empty<XmlSummaryData.NewDataSetAssessments>())
 		{
-			if (!Guid.TryParse(s.AssessmentID, out Guid aid) || result.Data.Assessments.All(a => a.AssessmentID != aid))
+			if (!Guid.TryParse(s.AssessmentID, out Guid aid) || !seenAssessments.Contains(aid))
 			{
 				result.Warnings.Add($"SummaryData.xml lists assessment {s.AssessmentID} but its assessment file was not found.");
 			}
@@ -213,17 +226,16 @@ public static class LegacySde2Import
 		string text = File.ReadAllText(path);
 		if (removeLineBreaks)
 		{
-			text = text.Replace("\r\n", "");
+			text = text.Replace("\r\n", "", StringComparison.Ordinal);
 		}
-		XmlReaderSettings settings = new XmlReaderSettings { ConformanceLevel = ConformanceLevel.Auto };
-		if (ignoreWhitespace)
-		{
-			settings.IgnoreWhitespace = true;
-			settings.CheckCharacters = false;
-		}
+		XmlReaderSettings settings = ignoreWhitespace ? IgnoreWhitespaceReaderSettings : DefaultReaderSettings;
+		XmlSerializer serializer = typeof(T) == typeof(XmlSummaryData.NewDataSet) ? SummarySerializer
+			: typeof(T) == typeof(XmlPropertyData.NewDataSet) ? PropertySerializer
+			: typeof(T) == typeof(XmlAssessmentData.NewDataSet) ? AssessmentSerializer
+			: new XmlSerializer(typeof(T));
 		using StringReader sr = new StringReader(text);
 		using XmlReader reader = XmlReader.Create(sr, settings);
-		return new XmlSerializer(typeof(T)).Deserialize(reader) as T;
+		return serializer.Deserialize(reader) as T;
 	}
 
 	private static string Relative(string root, string path) => Path.GetRelativePath(root, path);
@@ -235,11 +247,51 @@ public static class LegacySde2Import
 	{
 		private readonly ReferenceData _ref;
 		private readonly LegacyReadResult _result;
+		private readonly Dictionary<(int Type, int OldId), int> _byOldId = new Dictionary<(int, int), int>();
+		private readonly Dictionary<(int Type, string Name), int> _byName = new Dictionary<(int, string), int>();
+		private readonly Dictionary<int, List<LookupRecord>> _storiesByOldId = new Dictionary<int, List<LookupRecord>>();
+		private readonly Dictionary<string, int> _undeterminedByCode = new Dictionary<string, int>(StringComparer.Ordinal);
+		private readonly HashSet<int> _stateIds;
+		private readonly HashSet<int> _countyIds;
 
 		public Mapper(ReferenceData reference, LegacyReadResult result)
 		{
 			_ref = reference;
 			_result = result;
+			foreach (LookupRecord l in reference.Lookups)
+			{
+				if (l.OldID is int oldId)
+				{
+					_byOldId.TryAdd((l.LookupTypeID, oldId), l.LookupID);
+					if (l.LookupTypeID == LookupTypes.Stories)
+					{
+						if (!_storiesByOldId.TryGetValue(oldId, out List<LookupRecord> list))
+						{
+							list = new List<LookupRecord>();
+							_storiesByOldId[oldId] = list;
+						}
+						list.Add(l);
+					}
+				}
+				if (l.LookupFieldName != null)
+				{
+					_byName.TryAdd((l.LookupTypeID, l.LookupFieldName.ToLowerInvariant()), l.LookupID);
+				}
+				if (l.LookupTypeID == LookupTypes.UndeterminedDamageType && l.LookupValue1 != null)
+				{
+					_undeterminedByCode.TryAdd(l.LookupValue1, l.LookupID);
+				}
+			}
+			_stateIds = new HashSet<int>(reference.States.Count);
+			foreach (StateRecord s in reference.States)
+			{
+				_stateIds.Add(s.StateID);
+			}
+			_countyIds = new HashSet<int>(reference.Counties.Count);
+			foreach (CountyRecord c in reference.Counties)
+			{
+				_countyIds.Add(c.CountyID);
+			}
 		}
 
 		private SdeDataset Data => _result.Data;
@@ -255,7 +307,7 @@ public static class LegacySde2Import
 			{
 				old = 19;
 			}
-			return _ref.Lookups.FirstOrDefault(l => l.LookupTypeID == lookupType && l.OldID == old)?.LookupID;
+			return _byOldId.TryGetValue((lookupType, old), out int id) ? id : null;
 		}
 
 		/// <summary>
@@ -265,20 +317,30 @@ public static class LegacySde2Import
 		/// </summary>
 		private int? Story(int? oldId, int structureTypeId)
 		{
+			if (oldId is not int old || !_storiesByOldId.TryGetValue(old, out List<LookupRecord> rows))
+			{
+				return null;
+			}
 			string kind = structureTypeId == 1 ? "Residential" : "NonResidential";
-			List<LookupRecord> rows = _ref.Lookups.Where(l => l.LookupTypeID == LookupTypes.Stories && l.OldID == oldId).ToList();
-			return (rows.FirstOrDefault(l => l.LookupValue1 == kind) ?? rows.FirstOrDefault())?.LookupID;
+			for (int i = 0; i < rows.Count; i++)
+			{
+				if (rows[i].LookupValue1 == kind)
+				{
+					return rows[i].LookupID;
+				}
+			}
+			return rows.Count > 0 ? rows[0].LookupID : null;
 		}
 
 		/// <summary>LookupViewService.GetSingleLookupByName, ignoring case.</summary>
 		private int? ByName(string name, int lookupType) =>
 			string.IsNullOrWhiteSpace(name) ? null
-			: _ref.Lookups.FirstOrDefault(l => l.LookupTypeID == lookupType && string.Equals(l.LookupFieldName, name.Trim(), StringComparison.OrdinalIgnoreCase))?.LookupID;
+			: _byName.TryGetValue((lookupType, name.Trim().ToLowerInvariant()), out int id) ? id : null;
 
 		/// <summary>VerifyStateID / VerifyCountyID: the ID if it exists (SDE 2 and 3 share the State and County tables).</summary>
-		private int? State(int? id) => _ref.States.Any(s => s.StateID == id) ? id : null;
+		private int? State(int? id) => id is int s && _stateIds.Contains(s) ? id : null;
 
-		private int? County(int? id) => _ref.Counties.Any(c => c.CountyID == id) ? id : null;
+		private int? County(int? id) => id is int c && _countyIds.Contains(c) ? id : null;
 
 		public PropertyRecord Property(XmlPropertyData.NewDataSet p, XmlAssessmentData.NewDataSet firstAssessment)
 		{
@@ -352,7 +414,7 @@ public static class LegacySde2Import
 			};
 		}
 
-		public void Assessment(XmlAssessmentData.NewDataSet x, PropertyRecord property, string propertyFolder, List<FileInfo> allFiles)
+		public void Assessment(XmlAssessmentData.NewDataSet x, PropertyRecord property, string propertyFolder, ILookup<string, FileInfo> filesByName)
 		{
 			XmlAssessmentData.NewDataSetTblAssessment t = x.tblAssessment;
 			XmlAssessmentData.NewDataSetTblAssessmentPreview preview = x.tblAssessmentPreview ?? new();
@@ -403,7 +465,7 @@ public static class LegacySde2Import
 				RepairReconstructPercent = Text.ParseDecimal(t.RepairRecon),
 				TotalReplacementCost = output.ReplacementCost,
 				TotalEstimatedDamages = output.ComputedDamages,
-				UndeterminedDamageTypeID = _ref.Lookups.FirstOrDefault(l => l.LookupTypeID == LookupTypes.UndeterminedDamageType && l.LookupValue1 == code)?.LookupID,
+				UndeterminedDamageTypeID = _undeterminedByCode.TryGetValue(code, out int undeterminedId) ? undeterminedId : null,
 				PhysicalDamage = physicalDamage,
 			};
 			Data.Assessments.Add(a);
@@ -459,7 +521,7 @@ public static class LegacySde2Import
 
 			foreach (XmlAssessmentData.NewDataSetTblAttachment att in x.tblAttachment ?? Array.Empty<XmlAssessmentData.NewDataSetTblAttachment>())
 			{
-				Data.Attachments.Add(Photo(aid, att, propertyFolder, allFiles));
+				Data.Attachments.Add(Photo(aid, att, propertyFolder, filesByName));
 			}
 		}
 
@@ -502,7 +564,7 @@ public static class LegacySde2Import
 		/// The attachment row, and a staged copy of the photo. The file is looked for by name (ignoring case) in the
 		/// structure's folder first, then anywhere under the export, as the original searched.
 		/// </summary>
-		private AttachmentRecord Photo(Guid aid, XmlAssessmentData.NewDataSetTblAttachment att, string propertyFolder, List<FileInfo> allFiles)
+		private AttachmentRecord Photo(Guid aid, XmlAssessmentData.NewDataSetTblAttachment att, string propertyFolder, ILookup<string, FileInfo> filesByName)
 		{
 			string original = FileNameOf(att.thePath);
 			AttachmentRecord r = new AttachmentRecord
@@ -517,9 +579,17 @@ public static class LegacySde2Import
 			{
 				return r;
 			}
-			FileInfo found = allFiles.FirstOrDefault(f => string.Equals(f.Name, original, StringComparison.OrdinalIgnoreCase)
-					&& f.FullName.StartsWith(propertyFolder + Path.DirectorySeparatorChar, StringComparison.Ordinal))
-				?? allFiles.FirstOrDefault(f => string.Equals(f.Name, original, StringComparison.OrdinalIgnoreCase));
+			string folderPrefix = propertyFolder + Path.DirectorySeparatorChar;
+			FileInfo found = null;
+			foreach (FileInfo f in filesByName[original])
+			{
+				if (f.FullName.StartsWith(folderPrefix, StringComparison.Ordinal))
+				{
+					found = f;
+					break;
+				}
+				found ??= f;
+			}
 			r.FileName = StagedName(aid, original);
 			if (found == null)
 			{

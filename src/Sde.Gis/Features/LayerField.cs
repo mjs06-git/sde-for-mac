@@ -175,18 +175,24 @@ public static class FieldValues
 						result = (long)m;
 						return true;
 					case string s:
-						s = s.Trim().Replace(",", "", StringComparison.Ordinal);
-						if (long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsed))
+					{
+						ReadOnlySpan<char> span = s.AsSpan().Trim();
+						if (span.Contains(','))
+						{
+							span = s.Trim().Replace(",", "", StringComparison.Ordinal).AsSpan();
+						}
+						if (long.TryParse(span, NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsed))
 						{
 							result = parsed;
 							return true;
 						}
-						if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out double whole) && whole == Math.Floor(whole) && Math.Abs(whole) < 9.2e18)
+						if (double.TryParse(span, NumberStyles.Float, CultureInfo.InvariantCulture, out double whole) && whole == Math.Floor(whole) && Math.Abs(whole) < 9.2e18)
 						{
 							result = (long)whole;
 							return true;
 						}
 						return false;
+					}
 					default:
 						return false;
 				}
@@ -214,9 +220,20 @@ public static class FieldValues
 					case byte by:
 						result = (double)by;
 						return true;
-					case string s when double.TryParse(s.Trim().Replace(",", "", StringComparison.Ordinal), NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed):
-						result = parsed;
-						return true;
+					case string s:
+					{
+						ReadOnlySpan<char> span = s.AsSpan().Trim();
+						if (span.Contains(','))
+						{
+							span = s.Trim().Replace(",", "", StringComparison.Ordinal).AsSpan();
+						}
+						if (double.TryParse(span, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed))
+						{
+							result = parsed;
+							return true;
+						}
+						return false;
+					}
 					default:
 						return false;
 				}
@@ -236,25 +253,28 @@ public static class FieldValues
 						result = d == 1;
 						return true;
 					case string s:
-						switch (s.Trim().ToLowerInvariant())
+					{
+						ReadOnlySpan<char> span = s.AsSpan().Trim();
+						if (span.Equals("true", StringComparison.OrdinalIgnoreCase)
+							|| span.Equals("t", StringComparison.OrdinalIgnoreCase)
+							|| span.Equals("yes", StringComparison.OrdinalIgnoreCase)
+							|| span.Equals("y", StringComparison.OrdinalIgnoreCase)
+							|| span.Equals("1", StringComparison.Ordinal))
 						{
-							case "true":
-							case "t":
-							case "yes":
-							case "y":
-							case "1":
-								result = true;
-								return true;
-							case "false":
-							case "f":
-							case "no":
-							case "n":
-							case "0":
-								result = false;
-								return true;
-							default:
-								return false;
+							result = true;
+							return true;
 						}
+						if (span.Equals("false", StringComparison.OrdinalIgnoreCase)
+							|| span.Equals("f", StringComparison.OrdinalIgnoreCase)
+							|| span.Equals("no", StringComparison.OrdinalIgnoreCase)
+							|| span.Equals("n", StringComparison.OrdinalIgnoreCase)
+							|| span.Equals("0", StringComparison.Ordinal))
+						{
+							result = false;
+							return true;
+						}
+						return false;
+					}
 					default:
 						return false;
 				}
@@ -272,18 +292,20 @@ public static class FieldValues
 						result = day.ToDateTime(TimeOnly.MinValue);
 						return true;
 					case string s:
-						s = s.Trim();
-						if (DateTime.TryParseExact(s, DateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime exact))
+					{
+						ReadOnlySpan<char> span = s.AsSpan().Trim();
+						if (DateTime.TryParseExact(span, DateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime exact))
 						{
 							result = exact;
 							return true;
 						}
-						if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out DateTime parsed))
+						if (DateTime.TryParse(span, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out DateTime parsed))
 						{
 							result = type == FieldType.Date ? parsed.Date : parsed;
 							return true;
 						}
 						return false;
+					}
 					default:
 						return false;
 				}

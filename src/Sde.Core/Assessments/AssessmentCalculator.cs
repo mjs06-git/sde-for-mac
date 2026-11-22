@@ -56,44 +56,147 @@ public sealed class AssessmentCalculator
 	{
 		Guid aid = file.Assessment.AssessmentID;
 
-		Dictionary<int, ElementPercentageRecord> existing = file.ElementPercentages
-			.GroupBy(e => e.CalcID).ToDictionary(g => g.Key, g => g.First());
-		file.ElementPercentages = VisibleElements(file.Property).Select(calcId =>
+		int[] visibleElements = VisibleElements(file.Property);
+		if (ElementsAlreadyNormalized(file.ElementPercentages, visibleElements))
 		{
-			if (!existing.TryGetValue(calcId, out ElementPercentageRecord row))
+			for (int i = 0; i < visibleElements.Length; i++)
 			{
-				row = new ElementPercentageRecord { ElementID = Guid.NewGuid(), CalcID = calcId, UserDamage = 0m };
+				ElementPercentageRecord row = file.ElementPercentages[i];
+				row.AssessmentID = aid;
+				row.ElementName = _ref.LookupName(visibleElements[i]);
 			}
-			row.AssessmentID = aid;
-			row.ElementName = _ref.LookupName(calcId);
-			return row;
-		}).ToList();
+		}
+		else
+		{
+			Dictionary<int, ElementPercentageRecord> existing = new Dictionary<int, ElementPercentageRecord>(file.ElementPercentages.Count);
+			foreach (ElementPercentageRecord e in file.ElementPercentages)
+			{
+				existing.TryAdd(e.CalcID, e);
+			}
+			List<ElementPercentageRecord> normalized = new List<ElementPercentageRecord>(visibleElements.Length);
+			for (int i = 0; i < visibleElements.Length; i++)
+			{
+				int calcId = visibleElements[i];
+				if (!existing.TryGetValue(calcId, out ElementPercentageRecord row))
+				{
+					row = new ElementPercentageRecord { ElementID = Guid.NewGuid(), CalcID = calcId, UserDamage = 0m };
+				}
+				row.AssessmentID = aid;
+				row.ElementName = _ref.LookupName(calcId);
+				normalized.Add(row);
+			}
+			file.ElementPercentages = normalized;
+		}
 
-		Dictionary<int, CostAdjustmentResultRecord> costs = file.CostAdjustments
-			.GroupBy(c => c.CostAdjustmentLookupID).ToDictionary(g => g.Key, g => g.First());
-		file.CostAdjustments = _ref.CostAdjustmentsFor(file.Property.StructureTypeID, file.Property.ResidenceTypeID).Select(type =>
+		IReadOnlyList<LookupRecord> costTypes = _ref.CostAdjustmentsFor(file.Property.StructureTypeID, file.Property.ResidenceTypeID);
+		if (CostsAlreadyNormalized(file.CostAdjustments, costTypes))
 		{
-			if (!costs.TryGetValue(type.LookupID, out CostAdjustmentResultRecord row))
+			for (int i = 0; i < costTypes.Count; i++)
 			{
-				row = new CostAdjustmentResultRecord { ResultID = Guid.NewGuid(), CostAdjustmentLookupID = type.LookupID };
+				CostAdjustmentResultRecord row = file.CostAdjustments[i];
+				row.AssessmentID = aid;
+				row.Units = costTypes[i].LookupValue1;
 			}
-			row.AssessmentID = aid;
-			row.Units = type.LookupValue1;
-			return row;
-		}).ToList();
+		}
+		else
+		{
+			Dictionary<int, CostAdjustmentResultRecord> costs = new Dictionary<int, CostAdjustmentResultRecord>(file.CostAdjustments.Count);
+			foreach (CostAdjustmentResultRecord c in file.CostAdjustments)
+			{
+				costs.TryAdd(c.CostAdjustmentLookupID, c);
+			}
+			List<CostAdjustmentResultRecord> normalized = new List<CostAdjustmentResultRecord>(costTypes.Count);
+			for (int i = 0; i < costTypes.Count; i++)
+			{
+				LookupRecord type = costTypes[i];
+				if (!costs.TryGetValue(type.LookupID, out CostAdjustmentResultRecord row))
+				{
+					row = new CostAdjustmentResultRecord { ResultID = Guid.NewGuid(), CostAdjustmentLookupID = type.LookupID };
+				}
+				row.AssessmentID = aid;
+				row.Units = type.LookupValue1;
+				normalized.Add(row);
+			}
+			file.CostAdjustments = normalized;
+		}
 
-		Dictionary<int, AdditionalAdjustmentRecord> extras = file.AdditionalAdjustments
-			.Where(a => a.zOrder is >= 1 and <= AdditionalAdjustmentRows)
-			.GroupBy(a => a.zOrder.Value).ToDictionary(g => g.Key, g => g.First());
-		file.AdditionalAdjustments = Enumerable.Range(1, AdditionalAdjustmentRows).Select(z =>
+		if (ExtrasAlreadyNormalized(file.AdditionalAdjustments))
 		{
-			if (!extras.TryGetValue(z, out AdditionalAdjustmentRecord row))
+			for (int i = 0; i < AdditionalAdjustmentRows; i++)
 			{
-				row = new AdditionalAdjustmentRecord { AdditionalAdjustmentID = Guid.NewGuid(), zOrder = z };
+				file.AdditionalAdjustments[i].AssessmentID = aid;
 			}
-			row.AssessmentID = aid;
-			return row;
-		}).ToList();
+		}
+		else
+		{
+			Dictionary<int, AdditionalAdjustmentRecord> extras = new Dictionary<int, AdditionalAdjustmentRecord>(AdditionalAdjustmentRows);
+			foreach (AdditionalAdjustmentRecord a in file.AdditionalAdjustments)
+			{
+				if (a.zOrder is >= 1 and <= AdditionalAdjustmentRows)
+				{
+					extras.TryAdd(a.zOrder.Value, a);
+				}
+			}
+			List<AdditionalAdjustmentRecord> normalized = new List<AdditionalAdjustmentRecord>(AdditionalAdjustmentRows);
+			for (int z = 1; z <= AdditionalAdjustmentRows; z++)
+			{
+				if (!extras.TryGetValue(z, out AdditionalAdjustmentRecord row))
+				{
+					row = new AdditionalAdjustmentRecord { AdditionalAdjustmentID = Guid.NewGuid(), zOrder = z };
+				}
+				row.AssessmentID = aid;
+				normalized.Add(row);
+			}
+			file.AdditionalAdjustments = normalized;
+		}
+	}
+
+	private static bool ElementsAlreadyNormalized(List<ElementPercentageRecord> rows, int[] expected)
+	{
+		if (rows.Count != expected.Length)
+		{
+			return false;
+		}
+		for (int i = 0; i < expected.Length; i++)
+		{
+			if (rows[i].CalcID != expected[i])
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private static bool CostsAlreadyNormalized(List<CostAdjustmentResultRecord> rows, IReadOnlyList<LookupRecord> expected)
+	{
+		if (rows.Count != expected.Count)
+		{
+			return false;
+		}
+		for (int i = 0; i < expected.Count; i++)
+		{
+			if (rows[i].CostAdjustmentLookupID != expected[i].LookupID)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private static bool ExtrasAlreadyNormalized(List<AdditionalAdjustmentRecord> rows)
+	{
+		if (rows.Count != AdditionalAdjustmentRows)
+		{
+			return false;
+		}
+		for (int i = 0; i < AdditionalAdjustmentRows; i++)
+		{
+			if (rows[i].zOrder != i + 1)
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/// <summary>Builds the engine input exactly as the original screens did.</summary>
@@ -207,14 +310,20 @@ public sealed class AssessmentCalculator
 		a.ReplacementCostSqFt = Money(r.ReplacementCostPerSqFt);
 		a.TotalReplacementCost = Money(r.TotalReplacementCost) ?? 0m;
 		a.ReplacementCost = Money(r.TotalReplacementCost) ?? 0m;
-		foreach (CostAdjustmentResultRecord row in file.CostAdjustments)
+		for (int i = 0; i < file.CostAdjustments.Count; i++)
 		{
-			CostAdjustment calc = r.CostAdjustments.FirstOrDefault(x => x.CostAdjustmentLookupID == row.CostAdjustmentLookupID);
+			CostAdjustmentResultRecord row = file.CostAdjustments[i];
+			CostAdjustment calc = i < r.CostAdjustments.Count && r.CostAdjustments[i].CostAdjustmentLookupID == row.CostAdjustmentLookupID
+				? r.CostAdjustments[i]
+				: FindCostAdjustment(r.CostAdjustments, row.CostAdjustmentLookupID);
 			row.TotalCost = Money(calc?.TotalCost);
 		}
-		foreach (AdditionalAdjustmentRecord row in file.AdditionalAdjustments)
+		for (int i = 0; i < file.AdditionalAdjustments.Count; i++)
 		{
-			AdditionalAdjustment calc = r.AdditionalAdjustments.FirstOrDefault(x => x.zOrder == row.zOrder);
+			AdditionalAdjustmentRecord row = file.AdditionalAdjustments[i];
+			AdditionalAdjustment calc = i < r.AdditionalAdjustments.Count && r.AdditionalAdjustments[i].zOrder == row.zOrder
+				? r.AdditionalAdjustments[i]
+				: FindAdditionalAdjustment(r.AdditionalAdjustments, row.zOrder);
 			row.TotalCost = Money(calc?.TotalCost);
 		}
 
@@ -228,9 +337,12 @@ public sealed class AssessmentCalculator
 		a.TotalReplacementCost = Money(r.TotalReplacementCost) ?? 0m;
 		a.TotalEstimatedDamages = Money(r.ElementTotalEstimatedDamage) ?? 0m;
 		a.ComputedDamages = a.TotalEstimatedDamages;
-		foreach (ElementPercentageRecord row in file.ElementPercentages)
+		for (int i = 0; i < file.ElementPercentages.Count; i++)
 		{
-			ElementPercentage calc = r.ElementPercentages.FirstOrDefault(x => x.CalcID == row.CalcID);
+			ElementPercentageRecord row = file.ElementPercentages[i];
+			ElementPercentage calc = i < r.ElementPercentages.Count && r.ElementPercentages[i].CalcID == row.CalcID
+				? r.ElementPercentages[i]
+				: FindElement(r.ElementPercentages, row.CalcID);
 			if (calc == null)
 			{
 				continue;
@@ -241,6 +353,42 @@ public sealed class AssessmentCalculator
 		}
 	}
 
+	private static CostAdjustment FindCostAdjustment(List<CostAdjustment> list, int lookupId)
+	{
+		for (int i = 0; i < list.Count; i++)
+		{
+			if (list[i].CostAdjustmentLookupID == lookupId)
+			{
+				return list[i];
+			}
+		}
+		return null;
+	}
+
+	private static AdditionalAdjustment FindAdditionalAdjustment(List<AdditionalAdjustment> list, int? zOrder)
+	{
+		for (int i = 0; i < list.Count; i++)
+		{
+			if (list[i].zOrder == zOrder)
+			{
+				return list[i];
+			}
+		}
+		return null;
+	}
+
+	private static ElementPercentage FindElement(List<ElementPercentage> list, int calcId)
+	{
+		for (int i = 0; i < list.Count; i++)
+		{
+			if (list[i].CalcID == calcId)
+			{
+				return list[i];
+			}
+		}
+		return null;
+	}
+
 	/// <summary>"{0:C}" then parse: 2 decimals, midpoint away from zero; null stays null.</summary>
 	public static decimal? Money(decimal? v) => v is decimal d ? Math.Round(d, 2, MidpointRounding.AwayFromZero) : null;
 
@@ -249,6 +397,13 @@ public sealed class AssessmentCalculator
 
 	private static string MoneyText(decimal? v) => (Money(v) ?? 0m).ToString("0.00", CultureInfo.InvariantCulture);
 
-	private static decimal ParseMoney(string s) =>
-		decimal.TryParse(s?.Replace("$", ""), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal d) ? d : 0m;
+	private static decimal ParseMoney(string s)
+	{
+		if (string.IsNullOrEmpty(s))
+		{
+			return 0m;
+		}
+		ReadOnlySpan<char> span = s.Contains('$') ? s.Replace("$", "").AsSpan() : s.AsSpan();
+		return decimal.TryParse(span, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal d) ? d : 0m;
+	}
 }

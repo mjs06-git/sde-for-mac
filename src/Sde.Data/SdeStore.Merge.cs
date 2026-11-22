@@ -698,7 +698,10 @@ public sealed partial class SdeStore
 		return column == nameof(PropertyRecord.SquareFootage) || column.EndsWith("ID", StringComparison.Ordinal);
 	}
 
-	private static object FieldValue(PropertyRecord p, string column) => typeof(PropertyRecord).GetProperty(column)!.GetValue(p);
+	private static readonly Dictionary<string, System.Reflection.PropertyInfo> PropertyColumns =
+		TableMap<PropertyRecord>.Columns.ToDictionary(p => p.Name, StringComparer.Ordinal);
+
+	private static object FieldValue(PropertyRecord p, string column) => PropertyColumns[column].GetValue(p);
 
 	private static string FieldLabel(string column)
 	{

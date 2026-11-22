@@ -251,10 +251,17 @@ public static class MapAnalysis
 	public static byte[] Png(byte[] rgba, int width, int height)
 	{
 		SKImageInfo info = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
-		using SKBitmap bitmap = new SKBitmap(info);
-		System.Runtime.InteropServices.Marshal.Copy(rgba, 0, bitmap.GetPixels(), Math.Min(rgba.Length, info.BytesSize));
-		using SKData data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
-		return data.ToArray();
+		System.Runtime.InteropServices.GCHandle pin = System.Runtime.InteropServices.GCHandle.Alloc(rgba, System.Runtime.InteropServices.GCHandleType.Pinned);
+		try
+		{
+			using SKPixmap pixmap = new SKPixmap(info, pin.AddrOfPinnedObject(), width * 4);
+			using SKData data = pixmap.Encode(SKEncodedImageFormat.Png, 100);
+			return data.ToArray();
+		}
+		finally
+		{
+			pin.Free();
+		}
 	}
 
 	/// <summary>The cluster count's colour: whichever of the two inks has more contrast with the circle's fill.</summary>

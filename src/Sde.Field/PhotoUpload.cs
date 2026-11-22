@@ -15,6 +15,8 @@ public static class PhotoUpload
 	/// </summary>
 	public const long MaxPixels = 100_000_000;
 
+	private static ReadOnlySpan<byte> PngMagic => new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A };
+
 	private static readonly string[] HeifBrands = { "heic", "heix", "hevc", "hevx", "heim", "heis", "mif1", "msf1" };
 
 	/// <summary>
@@ -26,14 +28,15 @@ public static class PhotoUpload
 	/// </summary>
 	public static string Detect(Stream s)
 	{
-		byte[] head = new byte[24];
+		Span<byte> head = stackalloc byte[24];
 		s.Position = 0;
 		int read = s.ReadAtLeast(head, head.Length, throwOnEndOfStream: false);
-		string extension = DetectExtension(head.AsSpan(0, read));
+		ReadOnlySpan<byte> slice = head.Slice(0, read);
+		string extension = DetectExtension(slice);
 		return extension switch
 		{
 			".jpg" => IsJpeg(s) ? extension : null,
-			".png" => IsPng(head.AsSpan(0, read)) ? extension : null,
+			".png" => IsPng(slice) ? extension : null,
 			_ => extension,
 		};
 	}
@@ -80,13 +83,18 @@ public static class PhotoUpload
 	}
 
 	/// <summary>A PNG's first chunk must be its header (IHDR, 13 bytes) with a width and height.</summary>
-	private static bool IsPng(ReadOnlySpan<byte> head) =>
-		head.Length >= 24
-		&& BinaryPrimitives.ReadUInt32BigEndian(head[8..12]) == 13
-		&& Encoding.ASCII.GetString(head[12..16]) == "IHDR"
-		&& BinaryPrimitives.ReadUInt32BigEndian(head[16..20]) > 0
-		&& BinaryPrimitives.ReadUInt32BigEndian(head[20..24]) > 0
-		&& (ulong)BinaryPrimitives.ReadUInt32BigEndian(head[16..20]) * BinaryPrimitives.ReadUInt32BigEndian(head[20..24]) <= MaxPixels;
+	private static bool IsPng(ReadOnlySpan<byte> head)
+	{
+		if (head.Length < 24
+			|| BinaryPrimitives.ReadUInt32BigEndian(head[8..12]) != 13
+			|| !head[12..16].SequenceEqual("IHDR"u8))
+		{
+			return false;
+		}
+		uint width = BinaryPrimitives.ReadUInt32BigEndian(head[16..20]);
+		uint height = BinaryPrimitives.ReadUInt32BigEndian(head[20..24]);
+		return width > 0 && height > 0 && (ulong)width * height <= MaxPixels;
+	}
 
 	private static int ReadUInt16(Stream s)
 	{
@@ -105,17 +113,24 @@ public static class PhotoUpload
 		{
 			return ".jpg";
 		}
-		if (head.Length >= 8 && head[..8].SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }))
+		if (head.Length >= 8 && head[..8].SequenceEqual(PngMagic))
 		{
 			return ".png";
 		}
 		// ISO base media: a box size, then "ftyp" and the major brand.
-		if (head.Length >= 12 && Encoding.ASCII.GetString(head[4..8]) == "ftyp")
+		if (head.Length >= 12 && head[4..8].SequenceEqual("ftyp"u8))
 		{
-			string brand = Encoding.ASCII.GetString(head[8..12]).ToLowerInvariant();
-			if (HeifBrands.Contains(brand))
+			Span<char> brand = stackalloc char[4];
+			for (int i = 0; i < 4; i++)
 			{
-				return ".heic";
+				brand[i] = char.ToLowerInvariant((char)head[8 + i]);
+			}
+			for (int i = 0; i < HeifBrands.Length; i++)
+			{
+				if (brand.Equals(HeifBrands[i].AsSpan(), StringComparison.Ordinal))
+				{
+					return ".heic";
+				}
 			}
 		}
 		return null;

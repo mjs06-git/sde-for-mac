@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using NetTopologySuite.Geometries;
 
 namespace Sde.Gis.Projections;
 
@@ -11,6 +12,9 @@ namespace Sde.Gis.Projections;
 /// </summary>
 public sealed class CoordinateSystem
 {
+	private readonly double _metresPerUnit;
+	private readonly bool _isMetre;
+
 	private CoordinateSystem(string name, string datum, Ellipsoid ellipsoid, ProjectionDefinition definition, LinearUnit unit, int? epsg, string wkt)
 	{
 		Name = name;
@@ -19,9 +23,19 @@ public sealed class CoordinateSystem
 		Definition = definition;
 		Projection = definition?.Create(ellipsoid);
 		Unit = definition == null ? null : unit ?? LinearUnit.Metre;
+		_metresPerUnit = Unit?.MetresPerUnit ?? 1.0;
+		_isMetre = _metresPerUnit == 1.0;
 		EpsgCode = epsg;
 		Wkt = wkt;
+		if (Projection != null)
+		{
+			ToWgs84Filter = new ProjectionFilter(this, forward: false);
+			FromWgs84Filter = new ProjectionFilter(this, forward: true);
+		}
 	}
+
+	internal ICoordinateSequenceFilter ToWgs84Filter { get; }
+	internal ICoordinateSequenceFilter FromWgs84Filter { get; }
 
 	/// <summary>WGS 84 longitude and latitude (EPSG 4326), the system every layer is stored in.</summary>
 	public static CoordinateSystem Wgs84 { get; } = new CoordinateSystem("WGS 84", "WGS 84", Ellipsoid.Wgs84, null, null, 4326, null);
@@ -83,8 +97,7 @@ public sealed class CoordinateSystem
 		{
 			return (x, y);
 		}
-		double m = Unit.MetresPerUnit;
-		return Projection.Inverse(x * m, y * m);
+		return _isMetre ? Projection.Inverse(x, y) : Projection.Inverse(x * _metresPerUnit, y * _metresPerUnit);
 	}
 
 	/// <summary>WGS 84 longitude and latitude to easting and northing (in <see cref="Unit"/>), or longitude and latitude.</summary>
@@ -95,8 +108,27 @@ public sealed class CoordinateSystem
 			return (longitude, latitude);
 		}
 		(double x, double y) = Projection.Forward(longitude, latitude);
-		double m = Unit.MetresPerUnit;
-		return (x / m, y / m);
+		return _isMetre ? (x, y) : (x / _metresPerUnit, y / _metresPerUnit);
+	}
+
+	private sealed class ProjectionFilter(CoordinateSystem cs, bool forward) : ICoordinateSequenceFilter
+	{
+		public bool Done => false;
+
+		public bool GeometryChanged => true;
+
+		public void Filter(CoordinateSequence seq, int i)
+		{
+			double x = seq.GetX(i);
+			double y = seq.GetY(i);
+			if (double.IsNaN(x) || double.IsNaN(y))
+			{
+				return;
+			}
+			(double nx, double ny) = forward ? cs.FromWgs84(x, y) : cs.ToWgs84(x, y);
+			seq.SetX(i, nx);
+			seq.SetY(i, ny);
+		}
 	}
 
 	/// <summary>

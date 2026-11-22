@@ -61,7 +61,7 @@ public sealed partial class ReadTools
 	internal static Core.Events.EventSummary BuildSummary(SdeStore store, EventRecord e, out List<Guid> ids)
 	{
 		ids = Lookups.LatestAssessments(store, e);
-		List<AssessmentFile> files = store.LoadAssessments(ids);
+		List<AssessmentFile> files = store.LoadAssessmentHeaders(ids);
 		return Core.Events.EventSummary.Build(files, e == null ? store.GetProperties() : null, e?.Label, store.Reference, details: e?.ToDetails());
 	}
 

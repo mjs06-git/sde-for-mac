@@ -125,7 +125,7 @@ public sealed class StructureDetail
 
 	public static StructureDetail Read(SdeStore store, StructureRowViewModel row)
 	{
-		AssessmentFile file = row.AssessmentID is Guid id ? store.LoadAssessment(id) : null;
+		AssessmentFile file = row.AssessmentID is Guid id ? store.LoadAssessmentHeader(id) : null;
 		PropertyRecord property = file?.Property ?? store.GetProperty(row.Summary.PropertyID);
 		ReferenceData reference = store.Reference;
 		string kind = property == null ? row.Type
@@ -237,10 +237,12 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	/// <summary>Every structure in the database, whatever event is chosen (the sidebar's pinned rows read their results from it).</summary>
 	public IReadOnlyList<StructureSummary> Everything { get; private set; } = Array.Empty<StructureSummary>();
 
+	private static readonly AssessmentStatus[] AllStatuses = Enum.GetValues<AssessmentStatus>();
+
 	/// <summary>Raised after the list is read again from the database.</summary>
 	public event Action Reloaded;
 
-	public ObservableCollection<StructureRowViewModel> Rows { get; } = new();
+	public RangeObservableCollection<StructureRowViewModel> Rows { get; } = new();
 
 	public ObservableCollection<ColumnChoice> Columns { get; } = new();
 
@@ -502,17 +504,47 @@ public sealed partial class StructuresViewModel : ViewModelBase
 				IsChecked = s.AssessmentID is Guid id && checkedIds.Contains(id),
 				Tags = tags[s.PropertyID].ToList(),
 			}).ToList();
-		foreach (StructureRowViewModel r in _all)
+		int substantial = 0;
+		int close = 0;
+		int below = 0;
+		int incomplete = 0;
+		int checkedCount = 0;
+		bool hasImported = false;
+		for (int i = 0; i < _all.Count; i++)
 		{
+			StructureRowViewModel r = _all[i];
 			r.PropertyChanged += RowChanged;
+			switch (r.State)
+			{
+				case ResultState.Substantial:
+					substantial++;
+					break;
+				case ResultState.Close:
+					close++;
+					break;
+				case ResultState.NotSubstantial:
+					below++;
+					break;
+				default:
+					incomplete++;
+					break;
+			}
+			if (r.IsChecked)
+			{
+				checkedCount++;
+			}
+			if (!hasImported && r.Summary.ExternalId != null)
+			{
+				hasImported = true;
+			}
 		}
 		TotalCount = _all.Count;
-		SubstantialCount = _all.Count(r => r.State == ResultState.Substantial);
-		CloseCount = _all.Count(r => r.State == ResultState.Close);
-		BelowCount = _all.Count(r => r.State == ResultState.NotSubstantial);
-		IncompleteCount = _all.Count(r => r.State is ResultState.Incomplete or ResultState.Undetermined);
-		CheckedCount = _all.Count(r => r.IsChecked);
-		HasImported = _all.Any(r => r.Summary.ExternalId != null);
+		SubstantialCount = substantial;
+		CloseCount = close;
+		BelowCount = below;
+		IncompleteCount = incomplete;
+		CheckedCount = checkedCount;
+		HasImported = hasImported;
 		Apply();
 		ReselectAfterReload(previous);
 		OnPropertyChanged(nameof(SelectedIsPinned));
@@ -653,7 +685,7 @@ public sealed partial class StructuresViewModel : ViewModelBase
 		}
 		if (StatusFilter > 0)
 		{
-			AssessmentStatus status = Enum.GetValues<AssessmentStatus>()[StatusFilter - 1];
+			AssessmentStatus status = AllStatuses[StatusFilter - 1];
 			rows = rows.Where(r => r.AssessmentID != null && AssessmentStatuses.Parse(r.Summary.Status) == status);
 		}
 		if (Blank(InspectorFilter) is string inspector)
@@ -662,11 +694,7 @@ public sealed partial class StructuresViewModel : ViewModelBase
 		}
 		rows = FilterByTags(rows);
 		rows = Sort(rows);
-		Rows.Clear();
-		foreach (StructureRowViewModel r in rows)
-		{
-			Rows.Add(r);
-		}
+		Rows.ReplaceAll(rows);
 		OnPropertyChanged(nameof(IsEmpty));
 		OnPropertyChanged(nameof(CanOpenSample));
 		OnPropertyChanged(nameof(EmptyTitle));
@@ -723,8 +751,19 @@ public sealed partial class StructuresViewModel : ViewModelBase
 	};
 
 	/// <summary>The house number at the start of an address, so 9 Elm sorts before 10 Elm.</summary>
-	private static int ParseNumber(string address) =>
-		int.TryParse(new string((address ?? "").TakeWhile(char.IsDigit).ToArray()), out int n) ? n : int.MaxValue;
+	private static int ParseNumber(string address)
+	{
+		if (string.IsNullOrEmpty(address))
+		{
+			return int.MaxValue;
+		}
+		int len = 0;
+		while (len < address.Length && char.IsDigit(address[len]))
+		{
+			len++;
+		}
+		return len > 0 && int.TryParse(address.AsSpan(0, len), out int n) ? n : int.MaxValue;
+	}
 
 	private static string SortHeader(string key) => key switch
 	{

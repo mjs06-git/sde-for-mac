@@ -195,13 +195,13 @@ public sealed partial class SdeStore
 	{
 		GetTag(c, tx, tagId);
 		int added = 0;
-		foreach (Guid propertyId in propertyIds.Distinct())
+		foreach (Guid[] chunk in propertyIds.Distinct().Chunk(500))
 		{
 			added += c.Execute("""
 				INSERT INTO PropertyTag (PropertyID, TagID)
-				SELECT @propertyId, @tagId WHERE EXISTS (SELECT 1 FROM Property WHERE PropertyID = @propertyId)
+				SELECT PropertyID, @tagId FROM Property WHERE PropertyID IN @chunk
 				ON CONFLICT DO NOTHING
-				""", new { propertyId, tagId }, tx);
+				""", new { chunk = IdText(chunk), tagId }, tx);
 		}
 		return added;
 	});
@@ -210,9 +210,9 @@ public sealed partial class SdeStore
 	public int RemoveTag(long tagId, IEnumerable<Guid> propertyIds) => Database.InTransaction((c, tx) =>
 	{
 		int removed = 0;
-		foreach (Guid propertyId in propertyIds.Distinct())
+		foreach (Guid[] chunk in propertyIds.Distinct().Chunk(500))
 		{
-			removed += c.Execute("DELETE FROM PropertyTag WHERE PropertyID = @propertyId AND TagID = @tagId", new { propertyId, tagId }, tx);
+			removed += c.Execute("DELETE FROM PropertyTag WHERE TagID = @tagId AND PropertyID IN @chunk", new { chunk = IdText(chunk), tagId }, tx);
 		}
 		return removed;
 	});

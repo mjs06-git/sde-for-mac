@@ -207,31 +207,38 @@ public static class EventSummaryReport
 		const double maxWidth = Kit.PortraitWidth;
 		const double maxHeight = 3.3;
 		byte[] png = null;
+		int imgWidth = 0;
+		int imgHeight = 0;
 		string mapPath = null;
 		if (!string.IsNullOrWhiteSpace(o.MapImagePath) && File.Exists(o.MapImagePath))
 		{
 			mapPath = o.MapImagePath;
-			png = PngBytes(mapPath);
+			(byte[] Png, int Width, int Height)? loaded = PngBytes(mapPath);
+			if (loaded is (byte[] loadedPng, int w, int h))
+			{
+				png = loadedPng;
+				imgWidth = w;
+				imgHeight = h;
+			}
 		}
 		else
 		{
-			png = DotPlot(s.Points, 1500, 750);
+			imgWidth = 1500;
+			imgHeight = 750;
+			png = DotPlot(s.Points, imgWidth, imgHeight);
 		}
 		if (png == null)
 		{
 			return;
 		}
-		using (SKBitmap bmp = SKBitmap.Decode(png))
-		{
-			double scale = Math.Min(maxWidth / bmp.Width, maxHeight / bmp.Height);
-			Paragraph title = sec.AddParagraph(mapPath == null ? "Where the structures are" : "Map");
-			title.Style = Theme.TitleStyle;
-			Paragraph p = sec.AddParagraph();
-			p.Format.SpaceBefore = 3;
-			MigraDoc.DocumentObjectModel.Shapes.Image img = p.AddImage("base64:" + Convert.ToBase64String(png));
-			img.LockAspectRatio = true;
-			img.Width = Unit.FromInch(bmp.Width * scale);
-		}
+		double scale = Math.Min(maxWidth / imgWidth, maxHeight / imgHeight);
+		Paragraph title = sec.AddParagraph(mapPath == null ? "Where the structures are" : "Map");
+		title.Style = Theme.TitleStyle;
+		Paragraph p = sec.AddParagraph();
+		p.Format.SpaceBefore = 3;
+		MigraDoc.DocumentObjectModel.Shapes.Image img = p.AddImage("base64:" + Convert.ToBase64String(png));
+		img.LockAspectRatio = true;
+		img.Width = Unit.FromInch(imgWidth * scale);
 		if (mapPath == null)
 		{
 			Kit.Note(sec, "Each dot is one assessed structure, placed by latitude and longitude. There is no basemap.", 3);
@@ -239,16 +246,15 @@ public static class EventSummaryReport
 	}
 
 	/// <summary>Re-encodes any image Skia can read as PNG (PDFsharp is happiest with PNG and JPEG), or null.</summary>
-	private static byte[] PngBytes(string path)
+	private static (byte[] Png, int Width, int Height)? PngBytes(string path)
 	{
 		using SKBitmap bmp = SKBitmap.Decode(path);
 		if (bmp == null)
 		{
 			return null;
 		}
-		using SKImage image = SKImage.FromBitmap(bmp);
-		using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
-		return data?.ToArray();
+		using SKData data = bmp.Encode(SKEncodedImageFormat.Png, 100);
+		return data == null ? null : (data.ToArray(), bmp.Width, bmp.Height);
 	}
 
 	/// <summary>The fill used for a result class in the dot plot: the app's result dots (light theme).</summary>
@@ -270,12 +276,57 @@ public static class EventSummaryReport
 		{
 			return null;
 		}
-		double meanLat = points.Average(p => (double)p.Latitude);
+		double sumLat = 0;
+		double minLon = double.PositiveInfinity;
+		double maxLon = double.NegativeInfinity;
+		double minY = double.PositiveInfinity;
+		double maxY = double.NegativeInfinity;
+		int countSubstantial = 0;
+		int countClose = 0;
+		int countNotSubstantial = 0;
+		int countOther = 0;
+		for (int i = 0; i < points.Count; i++)
+		{
+			EventPoint p = points[i];
+			double lat = (double)p.Latitude;
+			double lon = (double)p.Longitude;
+			sumLat += lat;
+			if (lon < minLon)
+			{
+				minLon = lon;
+			}
+			if (lon > maxLon)
+			{
+				maxLon = lon;
+			}
+			if (lat < minY)
+			{
+				minY = lat;
+			}
+			if (lat > maxY)
+			{
+				maxY = lat;
+			}
+			switch (p.Class)
+			{
+				case DeterminationClass.Substantial:
+					countSubstantial++;
+					break;
+				case DeterminationClass.Close:
+					countClose++;
+					break;
+				case DeterminationClass.NotSubstantial:
+					countNotSubstantial++;
+					break;
+				default:
+					countOther++;
+					break;
+			}
+		}
+		double meanLat = sumLat / points.Count;
 		double kx = Math.Cos(meanLat * Math.PI / 180.0);
-		double minX = points.Min(p => (double)p.Longitude) * kx;
-		double maxX = points.Max(p => (double)p.Longitude) * kx;
-		double minY = points.Min(p => (double)p.Latitude);
-		double maxY = points.Max(p => (double)p.Latitude);
+		double minX = minLon * kx;
+		double maxX = maxLon * kx;
 		double spanX = Math.Max(maxX - minX, 1e-5);
 		double spanY = Math.Max(maxY - minY, 1e-5);
 
@@ -297,24 +348,39 @@ public static class EventSummaryReport
 		using SKPaint fill = new SKPaint { Style = SKPaintStyle.Fill, IsAntialias = true };
 		using SKPaint edge = new SKPaint { Style = SKPaintStyle.Stroke, Color = SKColors.White, StrokeWidth = 1.5f, IsAntialias = true };
 		// Least important first so substantial structures are never hidden under other dots.
-		foreach (EventPoint p in points.OrderBy(p => Rank(p.Class)))
+		for (int rank = 0; rank <= 4; rank++)
 		{
-			float x = offX + (float)(((double)p.Longitude * kx - minX) * scale);
-			float y = offY + (float)((maxY - (double)p.Latitude) * scale);
-			fill.Color = DotColor(p.Class);
-			canvas.DrawCircle(x, y, radius, fill);
-			canvas.DrawCircle(x, y, radius, edge);
+			for (int i = 0; i < points.Count; i++)
+			{
+				EventPoint p = points[i];
+				if (Rank(p.Class) != rank)
+				{
+					continue;
+				}
+				float x = offX + (float)(((double)p.Longitude * kx - minX) * scale);
+				float y = offY + (float)((maxY - (double)p.Latitude) * scale);
+				fill.Color = DotColor(p.Class);
+				canvas.DrawCircle(x, y, radius, fill);
+				canvas.DrawCircle(x, y, radius, edge);
+			}
 		}
 
-		// Legend along the bottom.
-		using SKTypeface face = SKTypeface.Default;
-		using SKFont font = new SKFont(face, 22f);
+		// Legend along the bottom. Do not dispose SKTypeface.Default (it is a process-wide singleton).
+		using SKFont font = new SKFont(SKTypeface.Default, 22f);
 		using SKPaint text = new SKPaint { Color = StaffGauge.Sk(Theme.Ink), IsAntialias = true };
 		float lx = margin;
 		float ly = height - margin - 6f;
-		foreach (DeterminationClass c in new[] { DeterminationClass.Substantial, DeterminationClass.Close, DeterminationClass.NotSubstantial, DeterminationClass.Undetermined })
+		(DeterminationClass Class, int Count)[] legend =
 		{
-			int n = points.Count(p => c == DeterminationClass.Undetermined ? p.Class is DeterminationClass.Undetermined or DeterminationClass.Incomplete : p.Class == c);
+			(DeterminationClass.Substantial, countSubstantial),
+			(DeterminationClass.Close, countClose),
+			(DeterminationClass.NotSubstantial, countNotSubstantial),
+			(DeterminationClass.Undetermined, countOther),
+		};
+		for (int i = 0; i < legend.Length; i++)
+		{
+			DeterminationClass c = legend[i].Class;
+			int n = legend[i].Count;
 			string label = (c == DeterminationClass.Undetermined ? "Incomplete or undetermined" : Determinations.Label(c)) + " (" + n.ToString("N0", Us) + ")";
 			fill.Color = DotColor(c);
 			canvas.DrawCircle(lx + 9, ly - 8, 9, fill);
@@ -322,8 +388,7 @@ public static class EventSummaryReport
 			lx += 26 + font.MeasureText(label) + 36;
 		}
 
-		using SKImage image = SKImage.FromBitmap(bitmap);
-		using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+		using SKData data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
 		return data.ToArray();
 	}
 

@@ -90,7 +90,7 @@ public sealed partial class EditTools(SdeMcpContext sde, ILogger<EditTools> log)
 			_ => throw new McpException("status must be Draft, Reviewed or Appeal."),
 		};
 		SdeStore store = sde.Writer;
-		AssessmentFile file = sde.LoadAssessment(store, assessmentId);
+		AssessmentFile file = sde.LoadAssessmentHeader(store, assessmentId);
 		Guid id = file.Assessment.AssessmentID;
 		AssessmentStatusRecord current = RefuseLocked(store, id);
 		string address = Describe.Address(file.Property, store.Reference);

@@ -93,9 +93,14 @@ public sealed class StnClient
 	{
 		string url = Url("events/");
 		using JsonDocument doc = await OnlineHttp.GetJsonAsync(_http, url, ServiceName, Timeout, ct, Retries, RetryDelay).ConfigureAwait(false);
-		List<StnEvent> events = new List<StnEvent>();
-		foreach (JsonElement e in Items(doc.RootElement, url))
+		JsonElement array = RequireArray(doc.RootElement, url);
+		List<StnEvent> events = new List<StnEvent>(array.GetArrayLength());
+		foreach (JsonElement e in array.EnumerateArray())
 		{
+			if (e.ValueKind != JsonValueKind.Object)
+			{
+				continue;
+			}
 			double? id = OnlineHttp.Number(e, "id") ?? OnlineHttp.Number(e, "event_id");
 			string name = OnlineHttp.Text(e, "event_name") ?? OnlineHttp.Text(e, "name");
 			if (id == null || name == null)
@@ -110,7 +115,12 @@ public sealed class StnClient
 				NameOrNull(OnlineHttp.Text(e, "event_type_name") ?? OnlineHttp.Text(e, "event_type")),
 				NameOrNull(OnlineHttp.Text(e, "event_status_name") ?? OnlineHttp.Text(e, "event_status"))));
 		}
-		return events.OrderByDescending(e => e.StartDate ?? DateTime.MinValue).ThenByDescending(e => e.Id).ToList();
+		events.Sort(static (a, b) =>
+		{
+			int cmp = (b.StartDate ?? DateTime.MinValue).CompareTo(a.StartDate ?? DateTime.MinValue);
+			return cmp != 0 ? cmp : b.Id.CompareTo(a.Id);
+		});
+		return events;
 	}
 
 	/// <summary>
@@ -131,10 +141,15 @@ public sealed class StnClient
 		}
 		string url = Url("hwms/filteredhwms/") + "?event=" + eventId.ToString(CultureInfo.InvariantCulture) + "&states=" + string.Join(",", codes);
 		using JsonDocument doc = await OnlineHttp.GetJsonAsync(_http, url, ServiceName, Timeout, ct, Retries, RetryDelay).ConfigureAwait(false);
-		List<HighWaterMark> marks = new List<HighWaterMark>();
+		JsonElement array = RequireArray(doc.RootElement, url);
+		List<HighWaterMark> marks = new List<HighWaterMark>(array.GetArrayLength());
 		int skipped = 0;
-		foreach (JsonElement e in Items(doc.RootElement, url))
+		foreach (JsonElement e in array.EnumerateArray())
 		{
+			if (e.ValueKind != JsonValueKind.Object)
+			{
+				continue;
+			}
 			HighWaterMark mark = ToMark(e);
 			if (mark == null)
 			{
@@ -180,15 +195,15 @@ public sealed class StnClient
 
 	private string Url(string path) => (BaseUrl ?? DefaultBaseUrl).TrimEnd('/') + "/" + path;
 
-	/// <summary>The objects in an answer that should be a JSON array.</summary>
-	private static List<JsonElement> Items(JsonElement root, string url)
+	/// <summary>Ensures the response root is a JSON array.</summary>
+	private static JsonElement RequireArray(JsonElement root, string url)
 	{
 		if (root.ValueKind != JsonValueKind.Array)
 		{
 			throw new OnlineServiceException($"The {ServiceName} sent back something SDE couldn't read. Try again later.",
 				$"Unexpected response shape for {url}: expected an array, got {root.ValueKind}.");
 		}
-		return root.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.Object).ToList();
+		return root;
 	}
 
 	/// <summary>A date from STN's text ("2011-08-26T04:00:00Z" or "2011-08-26"), as a calendar date; null when it isn't one.</summary>

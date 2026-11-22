@@ -64,7 +64,7 @@ public sealed partial class TrashViewModel(AppServices app) : ViewModelBase
 {
 	private readonly List<DeletedItemViewModel> _selection = new();
 
-	public ObservableCollection<DeletedItemViewModel> Items { get; } = new();
+	public RangeObservableCollection<DeletedItemViewModel> Items { get; } = new();
 
 	public bool IsEmpty => Items.Count == 0;
 
@@ -130,11 +130,7 @@ public sealed partial class TrashViewModel(AppServices app) : ViewModelBase
 	public void Reload()
 	{
 		HashSet<string> keep = _selection.Select(s => s.Item.ItemKey).ToHashSet();
-		Items.Clear();
-		foreach (DeletedItemRecord r in app.Store.GetDeletedItems())
-		{
-			Items.Add(new DeletedItemViewModel(r));
-		}
+		Items.ReplaceAll(app.Store.GetDeletedItems().Select(r => new DeletedItemViewModel(r)));
 		_selection.Clear();
 		_selection.AddRange(Items.Where(i => keep.Contains(i.Item.ItemKey)));
 		Selected = _selection.FirstOrDefault();

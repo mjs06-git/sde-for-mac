@@ -94,30 +94,65 @@ public sealed partial class SdeStore
 	/// <summary>The versions of an assessment and its structure as they are now, or null when the assessment doesn't exist.</summary>
 	public VersionStamp GetStamp(Guid assessmentId) => Database.Read(c =>
 	{
-		Guid? propertyId = c.ExecuteScalar<Guid?>("SELECT PropertyID FROM Assessment WHERE AssessmentID = @assessmentId", new { assessmentId });
-		return propertyId == null ? null : GetStamp(c, null, assessmentId, propertyId.Value);
+		StampRow row = c.QueryFirstOrDefault<StampRow>("""
+			SELECT a.AssessmentID,
+			       COALESCE(rva.Version, 0) AS AssessmentVersion,
+			       COALESCE(rvp.Version, 0) AS PropertyVersion,
+			       a.LastUpdate AS AssessmentLastUpdate,
+			       p.LastUpdate AS PropertyLastUpdate
+			FROM Assessment a
+			LEFT JOIN Property p ON p.PropertyID = a.PropertyID
+			LEFT JOIN RowVersion rva ON rva.ObjectID = a.AssessmentID
+			LEFT JOIN RowVersion rvp ON rvp.ObjectID = a.PropertyID
+			WHERE a.AssessmentID = @assessmentId
+			""", new { assessmentId });
+		return row == null ? null : new VersionStamp(row.AssessmentVersion, row.PropertyVersion, row.AssessmentLastUpdate, row.PropertyLastUpdate);
 	});
 
 	/// <summary>The versions of several assessments, over one connection; IDs that don't exist are left out.</summary>
 	public Dictionary<Guid, VersionStamp> GetStamps(IEnumerable<Guid> assessmentIds) => Database.Read(c =>
 	{
 		Dictionary<Guid, VersionStamp> stamps = new Dictionary<Guid, VersionStamp>();
-		foreach (Guid assessmentId in assessmentIds.Distinct())
+		foreach (Guid[] chunk in assessmentIds.Distinct().Chunk(500))
 		{
-			Guid? propertyId = c.ExecuteScalar<Guid?>("SELECT PropertyID FROM Assessment WHERE AssessmentID = @assessmentId", new { assessmentId });
-			if (propertyId != null)
+			foreach (StampRow row in c.Query<StampRow>("""
+				SELECT a.AssessmentID,
+				       COALESCE(rva.Version, 0) AS AssessmentVersion,
+				       COALESCE(rvp.Version, 0) AS PropertyVersion,
+				       a.LastUpdate AS AssessmentLastUpdate,
+				       p.LastUpdate AS PropertyLastUpdate
+				FROM Assessment a
+				LEFT JOIN Property p ON p.PropertyID = a.PropertyID
+				LEFT JOIN RowVersion rva ON rva.ObjectID = a.AssessmentID
+				LEFT JOIN RowVersion rvp ON rvp.ObjectID = a.PropertyID
+				WHERE a.AssessmentID IN @chunk
+				""", new { chunk = IdText(chunk) }))
 			{
-				stamps[assessmentId] = GetStamp(c, null, assessmentId, propertyId.Value);
+				stamps[row.AssessmentID] = new VersionStamp(row.AssessmentVersion, row.PropertyVersion, row.AssessmentLastUpdate, row.PropertyLastUpdate);
 			}
 		}
 		return stamps;
 	});
 
-	internal static VersionStamp GetStamp(IDbConnection c, IDbTransaction tx, Guid assessmentId, Guid propertyId) => new VersionStamp(
-		GetVersion(c, tx, assessmentId),
-		GetVersion(c, tx, propertyId),
-		c.ExecuteScalar<DateTime?>("SELECT LastUpdate FROM Assessment WHERE AssessmentID = @assessmentId", new { assessmentId }, tx),
-		c.ExecuteScalar<DateTime?>("SELECT LastUpdate FROM Property WHERE PropertyID = @propertyId", new { propertyId }, tx));
+	internal static VersionStamp GetStamp(IDbConnection c, IDbTransaction tx, Guid assessmentId, Guid propertyId)
+	{
+		StampRow row = c.QuerySingle<StampRow>("""
+			SELECT COALESCE((SELECT Version FROM RowVersion WHERE ObjectID = @assessmentId), 0) AS AssessmentVersion,
+			       COALESCE((SELECT Version FROM RowVersion WHERE ObjectID = @propertyId), 0) AS PropertyVersion,
+			       (SELECT LastUpdate FROM Assessment WHERE AssessmentID = @assessmentId) AS AssessmentLastUpdate,
+			       (SELECT LastUpdate FROM Property WHERE PropertyID = @propertyId) AS PropertyLastUpdate
+			""", new { assessmentId, propertyId }, tx);
+		return new VersionStamp(row.AssessmentVersion, row.PropertyVersion, row.AssessmentLastUpdate, row.PropertyLastUpdate);
+	}
+
+	private sealed class StampRow
+	{
+		public Guid AssessmentID { get; set; }
+		public long AssessmentVersion { get; set; }
+		public long PropertyVersion { get; set; }
+		public DateTime? AssessmentLastUpdate { get; set; }
+		public DateTime? PropertyLastUpdate { get; set; }
+	}
 
 	/// <summary>The newest sequence number in the database (0 when nothing has been versioned yet).</summary>
 	public long LastSeq() => Database.Read(c => c.ExecuteScalar<long?>("SELECT MAX(Seq) FROM RowVersion") ?? 0);
@@ -242,6 +277,10 @@ public sealed partial class SdeStore
 		{
 			b = null;
 		}
+		if (Equals(a, b))
+		{
+			return true;
+		}
 		if (a is DateTime da && b is DateTime db)
 		{
 			return Math.Abs((da - db).TotalSeconds) < 1;
@@ -251,6 +290,6 @@ public sealed partial class SdeStore
 		{
 			return na == nb;
 		}
-		return Equals(a, b);
+		return false;
 	}
 }

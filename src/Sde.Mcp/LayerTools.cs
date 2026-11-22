@@ -127,9 +127,10 @@ public sealed class LayerTools(SdeMcpContext sde)
 		}
 		List<LayerField> shown = Fields(features.Fields, fields);
 		Geometry box = area == null ? null : new GeometryFactory(new PrecisionModel(), 4326).ToGeometry(area);
+		NetTopologySuite.Geometries.Prepared.IPreparedGeometry preparedBox = box == null ? null : NetTopologySuite.Geometries.Prepared.PreparedGeometryFactory.Prepare(box);
 		List<Feature> matches = features.Features.Where(f =>
-			(box == null || (f.Geometry != null && f.Geometry.EnvelopeInternal.Intersects(area) && f.Geometry.Intersects(box)))
-			&& query.Matches(f)).ToList();
+			query.Matches(f)
+			&& (preparedBox == null || (f.Geometry != null && f.Geometry.EnvelopeInternal.Intersects(area) && preparedBox.Intersects(f.Geometry)))).ToList();
 
 		int pages = Math.Max(1, (matches.Count + pageSize - 1) / pageSize);
 		List<Feature> onPage = matches.Skip((page - 1) * pageSize).Take(pageSize).ToList();
@@ -337,7 +338,7 @@ public sealed class LayerTools(SdeMcpContext sde)
 		{
 			Write(w, g);
 		}
-		using JsonDocument doc = JsonDocument.Parse(buffer.ToArray());
+		using JsonDocument doc = JsonDocument.Parse(buffer.GetBuffer().AsMemory(0, (int)buffer.Length));
 		return doc.RootElement.Clone();
 	}
 

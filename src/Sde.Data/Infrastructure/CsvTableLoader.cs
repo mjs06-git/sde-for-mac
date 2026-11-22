@@ -34,6 +34,7 @@ internal static class CsvTableLoader
 		cmd.CommandText = sql;
 		cmd.Transaction = (SqliteTransaction)tx;
 		SqliteParameter[] parameters = keep.Select(i => cmd.Parameters.Add(new SqliteParameter("$p" + i, DBNull.Value))).ToArray();
+		cmd.Prepare();
 		int count = 0;
 		while (rows.MoveNext())
 		{
@@ -56,10 +57,11 @@ internal static class CsvTableLoader
 		{
 			return DBNull.Value;
 		}
-		if (JetGuid.IsMatch(cell.Text))
+		string text = cell.Text;
+		if ((text.Length == 37 || text.Length == 38) && text[0] == '{' && text[^1] == '}' && JetGuid.IsMatch(text))
 		{
-			return SqliteTypeHandlers.ParseGuid(cell.Text).ToString("D");
+			return SqliteTypeHandlers.ParseGuid(text).ToString("D");
 		}
-		return cell.Text;
+		return text;
 	}
 }

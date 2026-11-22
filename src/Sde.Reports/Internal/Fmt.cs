@@ -48,8 +48,24 @@ internal static class Fmt
 		{
 			return zip ?? "";
 		}
-		string z = zip.Trim();
-		return z.Length == 9 && z.All(char.IsAsciiDigit) ? z[..5] + "-" + z[5..] : z;
+		ReadOnlySpan<char> z = zip.AsSpan().Trim();
+		if (z.Length == 9)
+		{
+			bool allDigits = true;
+			for (int i = 0; i < 9; i++)
+			{
+				if (!char.IsAsciiDigit(z[i]))
+				{
+					allDigits = false;
+					break;
+				}
+			}
+			if (allDigits)
+			{
+				return string.Concat(z.Slice(0, 5), "-", z.Slice(5));
+			}
+		}
+		return z.Length == zip.Length ? zip : z.ToString();
 	}
 
 	/// <summary>"Last, First" as the RDLC owner textboxes concatenated it, without a dangling comma when one part is empty.</summary>
@@ -64,10 +80,72 @@ internal static class Fmt
 		return string.IsNullOrEmpty(first) ? last : last + ", " + first;
 	}
 
-	/// <summary>Joins the non-empty parts with a separator.</summary>
-	public static string Join(string separator, params string[] parts) =>
-		string.Join(separator, parts.Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => p.Trim()));
+	/// <summary>Joins two non-empty parts with a separator without allocating a params array.</summary>
+	public static string Join(string separator, string a, string b)
+	{
+		ReadOnlySpan<char> sa = a.AsSpan().Trim();
+		ReadOnlySpan<char> sb = b.AsSpan().Trim();
+		if (sa.IsEmpty)
+		{
+			return sb.IsEmpty ? "" : (sb.Length == b.Length ? b : sb.ToString());
+		}
+		if (sb.IsEmpty)
+		{
+			return sa.Length == a.Length ? a : sa.ToString();
+		}
+		return string.Concat(sa, separator, sb);
+	}
 
-	public static decimal? ParseDecimal(string s) =>
-		decimal.TryParse(s?.Replace("$", "").Replace(",", "").Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal d) ? d : null;
+	/// <summary>Joins three non-empty parts with a separator without allocating a params array.</summary>
+	public static string Join(string separator, string a, string b, string c) =>
+		Join(separator, Join(separator, a, b), c);
+
+	/// <summary>Joins the non-empty parts with a separator.</summary>
+	public static string Join(string separator, params string[] parts)
+	{
+		if (parts == null || parts.Length == 0)
+		{
+			return "";
+		}
+		string first = null;
+		System.Text.StringBuilder sb = null;
+		for (int i = 0; i < parts.Length; i++)
+		{
+			string part = parts[i];
+			if (string.IsNullOrWhiteSpace(part))
+			{
+				continue;
+			}
+			ReadOnlySpan<char> trimmed = part.AsSpan().Trim();
+			if (first == null)
+			{
+				first = trimmed.Length == part.Length ? part : trimmed.ToString();
+			}
+			else
+			{
+				if (sb == null)
+				{
+					sb = new System.Text.StringBuilder(first.Length + separator.Length + trimmed.Length);
+					sb.Append(first);
+				}
+				sb.Append(separator);
+				sb.Append(trimmed);
+			}
+		}
+		return sb != null ? sb.ToString() : first ?? "";
+	}
+
+	public static decimal? ParseDecimal(string s)
+	{
+		if (string.IsNullOrWhiteSpace(s))
+		{
+			return null;
+		}
+		ReadOnlySpan<char> span = s.AsSpan().Trim();
+		if (span.IndexOf('$') < 0 && span.IndexOf(',') < 0)
+		{
+			return decimal.TryParse(span, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal direct) ? direct : null;
+		}
+		return decimal.TryParse(s.Replace("$", "").Replace(",", "").Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal d) ? d : null;
+	}
 }

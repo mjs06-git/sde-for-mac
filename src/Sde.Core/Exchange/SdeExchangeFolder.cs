@@ -1,5 +1,5 @@
+using System.Globalization;
 using System.Text;
-using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Sde.Core.Records;
 
@@ -24,12 +24,14 @@ public static class SdeExchangeFolder
 	public const string LegacySummaryFileName = "SummaryData.xml";
 
 	private static readonly UTF8Encoding Utf8NoBom = new(false);
+	private static readonly JsonSerializerSettings WriteSettings = new() { Formatting = Formatting.Indented };
+	private static readonly JsonSerializerSettings ReadSettings = new() { DateParseHandling = DateParseHandling.None };
 
 	public static string Serialize(SdeDataset data)
 	{
 		ApplyScales(data);
-		using StringWriter sw = new StringWriter(System.Globalization.CultureInfo.InvariantCulture) { NewLine = "\r\n" };
-		JsonSerializer serializer = JsonSerializer.Create(new JsonSerializerSettings { Formatting = Formatting.Indented });
+		using StringWriter sw = new StringWriter(CultureInfo.InvariantCulture) { NewLine = "\r\n" };
+		JsonSerializer serializer = JsonSerializer.Create(WriteSettings);
 		serializer.Serialize(sw, data);
 		return sw.ToString();
 	}
@@ -37,8 +39,13 @@ public static class SdeExchangeFolder
 	public static SdeDataset Deserialize(string json)
 	{
 		// DateParseHandling.None, as the original importer used.
-		SdeDataset data = JsonConvert.DeserializeObject<SdeDataset>(json, new JsonSerializerSettings { DateParseHandling = DateParseHandling.None })
-			?? new SdeDataset();
+		SdeDataset data = JsonConvert.DeserializeObject<SdeDataset>(json, ReadSettings) ?? new SdeDataset();
+		EnsureLists(data);
+		return data;
+	}
+
+	private static void EnsureLists(SdeDataset data)
+	{
 		data.Properties ??= new();
 		data.Assessments ??= new();
 		data.Attachments ??= new();
@@ -47,7 +54,6 @@ public static class SdeExchangeFolder
 		data.AdditionalAdjustments ??= new();
 		data.CustomFieldsResults ??= new();
 		data.Shapes ??= new();
-		return data;
 	}
 
 	/// <summary>
@@ -59,7 +65,12 @@ public static class SdeExchangeFolder
 	{
 		string folder = Path.Combine(parentFolder, NextFolderName(parentFolder));
 		Directory.CreateDirectory(folder);
-		File.WriteAllText(Path.Combine(folder, JsonFileName), Serialize(data), Utf8NoBom);
+		ApplyScales(data);
+		using (StreamWriter sw = new StreamWriter(Path.Combine(folder, JsonFileName), false, Utf8NoBom) { NewLine = "\r\n" })
+		{
+			JsonSerializer serializer = JsonSerializer.Create(WriteSettings);
+			serializer.Serialize(sw, data);
+		}
 		string photos = Path.Combine(folder, PhotosFolderName);
 		Directory.CreateDirectory(photos);
 		List<string> missing = new();
@@ -96,7 +107,12 @@ public static class SdeExchangeFolder
 				? $"{folder} is an SDE 2.x export (SummaryData.xml). Import it from the app's Import & Export page."
 				: $"{folder} does not contain a valid SDE data set (no {JsonFileName}).");
 		}
-		return Deserialize(File.ReadAllText(Path.Combine(folder, JsonFileName), Encoding.UTF8));
+		using StreamReader sr = new StreamReader(Path.Combine(folder, JsonFileName), Encoding.UTF8);
+		using JsonTextReader reader = new JsonTextReader(sr) { DateParseHandling = DateParseHandling.None };
+		JsonSerializer serializer = JsonSerializer.Create(ReadSettings);
+		SdeDataset data = serializer.Deserialize<SdeDataset>(reader) ?? new SdeDataset();
+		EnsureLists(data);
+		return data;
 	}
 
 	public static string PhotosFolder(string exchangeFolder) => Path.Combine(exchangeFolder, PhotosFolderName);
@@ -109,14 +125,28 @@ public static class SdeExchangeFolder
 		{
 			foreach (string dir in Directory.GetDirectories(parentFolder))
 			{
-				Match m = Regex.Match(Path.GetFileName(dir), @"^sde_(\d+)$", RegexOptions.IgnoreCase);
-				if (m.Success && int.TryParse(m.Groups[1].Value, out int n) && n > max)
+				string name = Path.GetFileName(dir);
+				if (name.Length > 4 && name.StartsWith("sde_", StringComparison.OrdinalIgnoreCase)
+					&& AllAsciiDigits(name.AsSpan(4))
+					&& int.TryParse(name.AsSpan(4), NumberStyles.None, CultureInfo.InvariantCulture, out int n) && n > max)
 				{
 					max = n;
 				}
 			}
 		}
 		return "SDE_" + (max + 1);
+	}
+
+	private static bool AllAsciiDigits(ReadOnlySpan<char> span)
+	{
+		for (int i = 0; i < span.Length; i++)
+		{
+			if (!char.IsAsciiDigit(span[i]))
+			{
+				return false;
+			}
+		}
+		return span.Length > 0;
 	}
 
 	private static void ApplyScales(SdeDataset d)

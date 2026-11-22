@@ -39,11 +39,13 @@ public sealed record StructureSummary(
 public sealed partial class SdeStore
 {
 	private readonly Lazy<ReferenceData> _reference;
+	private readonly Lazy<AssessmentCalculator> _calculator;
 
 	public SdeStore(SdeDatabase database)
 	{
 		Database = database;
 		_reference = new Lazy<ReferenceData>(LoadReferenceData);
+		_calculator = new Lazy<AssessmentCalculator>(() => new AssessmentCalculator(Reference));
 	}
 
 	public SdeDatabase Database { get; }
@@ -52,7 +54,7 @@ public sealed partial class SdeStore
 
 	public ReferenceData Reference => _reference.Value;
 
-	public AssessmentCalculator Calculator => new AssessmentCalculator(Reference);
+	public AssessmentCalculator Calculator => _calculator.Value;
 
 	private ReferenceData LoadReferenceData() => Database.Read(c => new ReferenceData(
 		TableMap<LookupRecord>.Select(c).ToList(),
@@ -86,6 +88,27 @@ public sealed partial class SdeStore
 	/// <summary>The active structures' positions only (ID, latitude, longitude), for finding which have one.</summary>
 	public List<PropertyRecord> GetPropertyPositions() => Database.Read(c =>
 		c.Query<PropertyRecord>("SELECT PropertyID, Latitude, Longitude FROM Property WHERE Active = 1").Select(JetScaling.Apply).ToList());
+
+	/// <summary>The active structures' positions for only the requested IDs.</summary>
+	public HashSet<Guid> GetPropertyIdsWithCoordinates(IEnumerable<Guid> propertyIds) => Database.Read(c =>
+	{
+		HashSet<Guid> withCoords = new HashSet<Guid>();
+		foreach (Guid[] chunk in propertyIds.Distinct().Chunk(500))
+		{
+			foreach (PropertyRecord p in c.Query<PropertyRecord>("SELECT PropertyID, Latitude, Longitude FROM Property WHERE Active = 1 AND PropertyID IN @chunk", new { chunk = IdText(chunk) }))
+			{
+				if (Sde.Core.Geo.GeoMath.IsPosition(p.Latitude, p.Longitude))
+				{
+					withCoords.Add(p.PropertyID);
+				}
+			}
+		}
+		return withCoords;
+	});
+
+	/// <summary>The active structures' address columns only, for duplicate-address checks without reading every column.</summary>
+	public List<PropertyRecord> GetPropertyAddresses() => Database.Read(c =>
+		c.Query<PropertyRecord>("SELECT PropertyID, StreetNumber, StreetName, StreetSuffixID, City, StateID, ZipCode, ParcelNumber FROM Property WHERE Active = 1").ToList());
 
 	public List<PropertyRecord> GetProperties(bool activeOnly = true) =>
 		Database.Read(c => TableMap<PropertyRecord>.Select(c, activeOnly ? "Active = 1" : null).ToList());
@@ -190,6 +213,82 @@ public sealed partial class SdeStore
 
 	public AssessmentFile LoadAssessment(Guid assessmentId) => Database.Read(c => LoadAssessment(c, null, assessmentId));
 
+	/// <summary>Loads only an assessment and its structure (no child rows), or null when it doesn't exist.</summary>
+	public AssessmentFile LoadAssessmentHeader(Guid assessmentId) => Database.Read(c =>
+	{
+		AssessmentRecord a = TableMap<AssessmentRecord>.Get(c, new { AssessmentID = assessmentId });
+		if (a == null)
+		{
+			return null;
+		}
+		return new AssessmentFile
+		{
+			Assessment = a,
+			Property = TableMap<PropertyRecord>.Get(c, new { a.PropertyID }),
+		};
+	});
+
+	/// <summary>Loads only the assessment and structure rows (no child rows) for several IDs, in the order given, over one connection.</summary>
+	public List<AssessmentFile> LoadAssessmentHeaders(IEnumerable<Guid> assessmentIds) => Database.Read(c =>
+	{
+		using IDbTransaction tx = c.BeginTransaction(deferred: true);
+		List<Guid> ids = assessmentIds.ToList();
+		List<AssessmentFile> files = new List<AssessmentFile>(ids.Count);
+		foreach (Guid[] chunk in ids.Chunk(500))
+		{
+			Dictionary<Guid, AssessmentRecord> assessments = TableMap<AssessmentRecord>.Select(c, "AssessmentID IN @ids", new { ids = IdText(chunk) }, tx).ToDictionary(a => a.AssessmentID);
+			if (assessments.Count == 0)
+			{
+				continue;
+			}
+			Dictionary<Guid, PropertyRecord> properties = TableMap<PropertyRecord>.Select(c, "PropertyID IN @ids", new { ids = IdText(assessments.Values.Select(a => a.PropertyID)) }, tx)
+				.ToDictionary(p => p.PropertyID);
+			HashSet<Guid> propertyUsed = new HashSet<Guid>();
+			foreach (Guid id in chunk)
+			{
+				if (!assessments.TryGetValue(id, out AssessmentRecord a))
+				{
+					continue;
+				}
+				PropertyRecord prop = properties.GetValueOrDefault(a.PropertyID);
+				files.Add(new AssessmentFile
+				{
+					Assessment = a,
+					Property = prop == null ? null : (propertyUsed.Add(a.PropertyID) ? prop : TableMap<PropertyRecord>.Clone(prop)),
+				});
+			}
+		}
+		return files;
+	});
+
+	/// <summary>True when the assessment and its structure both exist and are active (not in Recently deleted).</summary>
+	public bool AssessmentExistsActive(Guid assessmentId) => Database.Read(c =>
+		c.ExecuteScalar<int>("SELECT EXISTS(SELECT 1 FROM Assessment a JOIN Property p ON p.PropertyID = a.PropertyID WHERE a.AssessmentID = @id AND a.Active = 1 AND p.Active = 1)", new { id = assessmentId }) != 0);
+
+	/// <summary>Which of the given assessment IDs are active on an active structure.</summary>
+	public HashSet<Guid> FilterActiveAssessmentIds(IEnumerable<Guid> assessmentIds) => Database.Read(c =>
+	{
+		HashSet<Guid> active = new HashSet<Guid>();
+		foreach (Guid[] chunk in assessmentIds.Distinct().Chunk(500))
+		{
+			foreach (Guid id in c.Query<Guid>("SELECT a.AssessmentID FROM Assessment a JOIN Property p ON p.PropertyID = a.PropertyID WHERE a.AssessmentID IN @chunk AND a.Active = 1 AND p.Active = 1", new { chunk = IdText(chunk) }))
+			{
+				active.Add(id);
+			}
+		}
+		return active;
+	});
+
+	/// <summary>Active assessment IDs (on active structures) belonging to an event, newest first.</summary>
+	public List<Guid> ActiveAssessmentIdsInEvent(Guid eventId) => Database.Read(c => c.Query<Guid>("""
+		SELECT ea.AssessmentID
+		FROM EventAssessment ea
+		JOIN Assessment a ON a.AssessmentID = ea.AssessmentID AND a.Active = 1
+		JOIN Property p ON p.PropertyID = a.PropertyID AND p.Active = 1
+		WHERE ea.EventID = @eventId
+		ORDER BY COALESCE(a.LastUpdate, p.LastUpdate) DESC
+		""", new { eventId }).ToList());
+
 	/// <summary>An assessment with the versions it was loaded at (in one read, so they belong together), or null.</summary>
 	public (AssessmentFile File, VersionStamp Stamp) LoadAssessmentWithStamp(Guid assessmentId) => Database.Read(c =>
 	{
@@ -244,6 +343,10 @@ public sealed partial class SdeStore
 		{
 			object args = new { ids = IdText(chunk) };
 			Dictionary<Guid, AssessmentRecord> assessments = TableMap<AssessmentRecord>.Select(c, "AssessmentID IN @ids", args, tx).ToDictionary(a => a.AssessmentID);
+			if (assessments.Count == 0)
+			{
+				continue;
+			}
 			ILookup<Guid, CostAdjustmentResultRecord> costs = TableMap<CostAdjustmentResultRecord>.Select(c, "AssessmentID IN @ids", args, tx, orderBy: "rowid").ToLookup(r => r.AssessmentID);
 			ILookup<Guid, AdditionalAdjustmentRecord> additional = TableMap<AdditionalAdjustmentRecord>.Select(c, "AssessmentID IN @ids", args, tx, orderBy: "zOrder, rowid").ToLookup(r => r.AssessmentID);
 			ILookup<Guid, ElementPercentageRecord> elements = TableMap<ElementPercentageRecord>.Select(c, "AssessmentID IN @ids", args, tx, orderBy: "rowid").ToLookup(r => r.AssessmentID);
@@ -263,13 +366,12 @@ public sealed partial class SdeStore
 				{
 					continue;
 				}
+				PropertyRecord prop = properties.GetValueOrDefault(a.PropertyID);
 				files.Add(new AssessmentFile
 				{
 					Assessment = a,
 					// A second assessment of the same structure gets its own copy, as when loaded alone.
-					Property = propertyUsed.Add(a.PropertyID)
-						? properties.GetValueOrDefault(a.PropertyID)
-						: TableMap<PropertyRecord>.Get(c, new { a.PropertyID }, tx),
+					Property = prop == null ? null : (propertyUsed.Add(a.PropertyID) ? prop : TableMap<PropertyRecord>.Clone(prop)),
 					CostAdjustments = costs[id].ToList(),
 					AdditionalAdjustments = additional[id].ToList(),
 					ElementPercentages = elements[id].ToList(),
@@ -420,14 +522,15 @@ public sealed partial class SdeStore
 			       TRIM(COALESCE(p.StreetNumber, '') || ' ' || COALESCE(p.StreetName, '') || ' ' || COALESCE(s.LookupFieldName, '')) AS Address,
 			       p.City, p.NFIPCID, p.NFIPCommunityName, a.DateofInspection, a.InspectorName,
 			       a.PercentDamage, a.DamageMessage, COALESCE(a.LastUpdate, p.LastUpdate) AS LastUpdate,
-			       COALESCE(x.Source, (SELECT l.Source FROM StructureLink l WHERE l.PropertyID = p.PropertyID ORDER BY l.ImportedOn DESC LIMIT 1)) AS ExternalSource,
-			       COALESCE(x.RecordId, (SELECT l.RecordId FROM StructureLink l WHERE l.PropertyID = p.PropertyID ORDER BY l.ImportedOn DESC LIMIT 1)) AS ExternalId,
+			       COALESCE(x.Source, l.Source) AS ExternalSource,
+			       COALESCE(x.RecordId, l.RecordId) AS ExternalId,
 			       p.StreetName, p.ZipCode, p.ParcelNumber, p.FIRMZone, st.Status,
 			       EXISTS (SELECT 1 FROM CheckOut co WHERE co.AssessmentID = a.AssessmentID) AS CheckedOut
 			FROM Property p
 			LEFT JOIN Assessment a ON a.PropertyID = p.PropertyID AND a.Active = 1
 			LEFT JOIN Lookup s ON s.LookupID = p.StreetSuffixID
 			LEFT JOIN ExternalLink x ON x.AssessmentID = a.AssessmentID
+			LEFT JOIN StructureLink l ON x.AssessmentID IS NULL AND l.rowid = (SELECT l2.rowid FROM StructureLink l2 WHERE l2.PropertyID = p.PropertyID ORDER BY l2.ImportedOn DESC LIMIT 1)
 			LEFT JOIN AssessmentStatus st ON st.AssessmentID = a.AssessmentID
 			WHERE p.Active = 1
 			ORDER BY COALESCE(a.LastUpdate, p.LastUpdate) DESC
@@ -464,7 +567,9 @@ public sealed partial class SdeStore
 	}
 
 	public List<RecentAssessmentRecord> RecentAssessments(int count = 5) =>
-		Database.Read(c => TableMap<RecentAssessmentRecord>.Select(c, orderBy: "LastUpdate DESC").Take(count).ToList());
+		Database.Read(c => c.Query<RecentAssessmentRecord>(
+			"SELECT AssessmentID, PropertyID, StreetAddress, StructureType, LastUpdate FROM LastFiveAssesments ORDER BY LastUpdate DESC LIMIT @count",
+			new { count }).Select(JetScaling.Apply).ToList());
 
 	private static void RememberRecent(IDbConnection c, IDbTransaction tx, AssessmentFile f)
 	{
@@ -484,6 +589,50 @@ public sealed partial class SdeStore
 
 	public List<ShapeRecord> GetShapes(Guid propertyId) =>
 		Database.Read(c => TableMap<ShapeRecord>.Select(c, "PropertyID = @propertyId", new { propertyId }, orderBy: "ShapeID").ToList());
+
+	/// <summary>Shapes for several structures together, grouped by PropertyID in ShapeID order.</summary>
+	public Dictionary<Guid, List<ShapeRecord>> GetShapes(IEnumerable<Guid> propertyIds) => Database.Read(c =>
+	{
+		Dictionary<Guid, List<ShapeRecord>> found = new Dictionary<Guid, List<ShapeRecord>>();
+		foreach (Guid[] chunk in propertyIds.Distinct().Chunk(500))
+		{
+			foreach (ShapeRecord s in TableMap<ShapeRecord>.Select(c, "PropertyID IN @chunk", new { chunk = IdText(chunk) }, orderBy: "ShapeID"))
+			{
+				if (!found.TryGetValue(s.PropertyID, out List<ShapeRecord> list))
+				{
+					list = new List<ShapeRecord>();
+					found[s.PropertyID] = list;
+				}
+				list.Add(s);
+			}
+		}
+		return found;
+	});
+
+	/// <summary>Replaces shapes for many structures in one transaction (Enterprise Import).</summary>
+	public void SaveShapesBatch(IEnumerable<(Guid PropertyID, IReadOnlyList<ShapeRecord> Shapes)> items)
+	{
+		List<(Guid PropertyID, IReadOnlyList<ShapeRecord> Shapes)> list = items.ToList();
+		if (list.Count == 0)
+		{
+			return;
+		}
+		Database.InTransaction((c, tx) =>
+		{
+			foreach ((Guid propertyId, IReadOnlyList<ShapeRecord> shapes) in list)
+			{
+				decimal total = shapes.Sum(s => s.TotalSqFt ?? 0m);
+				decimal? stored = c.ExecuteScalar<decimal?>("SELECT SquareFootage FROM Property WHERE PropertyID = @propertyId", new { propertyId }, tx);
+				if (SameShapes(c, tx, propertyId, shapes) && stored == total)
+				{
+					continue;
+				}
+				ReplaceShapes(c, tx, propertyId, shapes);
+				c.Execute("UPDATE Property SET SquareFootage = @total, LastUpdate = @now WHERE PropertyID = @propertyId", new { total, now = Now(), propertyId }, tx);
+				BumpVersion(c, tx, propertyId, VersionKind.Property);
+			}
+		});
+	}
 
 	/// <summary>
 	/// Replaces a property's shapes and sets its SquareFootage to their total (ShapeViewService.UpdateTotalSquareFootage).

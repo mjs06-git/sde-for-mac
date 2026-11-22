@@ -315,7 +315,8 @@ public sealed partial class PhotoViewModel : ObservableObject
 				}
 				if (markup != null && !markup.IsEmpty && PhotoMarkupRenderer.Render(path, markup, 480) is (byte[] jpeg, _, _))
 				{
-					return new Bitmap(new MemoryStream(jpeg));
+					using MemoryStream ms = new MemoryStream(jpeg);
+					return new Bitmap(ms);
 				}
 				using FileStream s = File.OpenRead(path);
 				return Bitmap.DecodeToWidth(s, 360);
@@ -325,7 +326,9 @@ public sealed partial class PhotoViewModel : ObservableObject
 				return null; // not an image the decoder understands; still listed
 			}
 		});
+		Bitmap previous = Thumbnail;
 		Thumbnail = thumbnail;
+		previous?.Dispose();
 	}
 
 	public AttachmentRecord Attachment { get; }

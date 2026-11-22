@@ -35,6 +35,7 @@ public static class FieldInput
 	public static void Apply(AssessmentFile file, IEnumerable<FieldInputChange> changes, ReferenceData reference, AssessmentCalculator calculator,
 		string unknownFieldMessage = null)
 	{
+		bool applied = false;
 		foreach (FieldInputChange change in changes ?? Array.Empty<FieldInputChange>())
 		{
 			FieldInfo f = FieldCatalog.Get(change?.Key)
@@ -44,7 +45,13 @@ public static class FieldInput
 				throw new FieldInputException($"{f.Label} doesn't apply to this assessment.");
 			}
 			object value = Convert(f, change.Value, file, reference);
-			FieldRules.Apply(file, new[] { new FieldChange(f.Key, value) }, calculator);
+			FieldCatalog.SetValue(file, f, value);
+			FieldRules.AfterChange(file, f.Member, calculator);
+			applied = true;
+		}
+		if (applied)
+		{
+			calculator.Recalculate(file);
 		}
 	}
 
@@ -96,12 +103,19 @@ public static class FieldInput
 				}
 				return FieldCatalog.Convert(d.Date, type);
 			case FieldKind.YesNo:
-				bool yes = text.ToLowerInvariant() switch
+				bool yes;
+				if (text.Equals("true", StringComparison.OrdinalIgnoreCase) || text == "1" || text.Equals("yes", StringComparison.OrdinalIgnoreCase))
 				{
-					"true" or "1" or "yes" => true,
-					"false" or "0" or "no" => false,
-					_ => throw new FieldInputException($"{f.Label}: choose yes or no."),
-				};
+					yes = true;
+				}
+				else if (text.Equals("false", StringComparison.OrdinalIgnoreCase) || text == "0" || text.Equals("no", StringComparison.OrdinalIgnoreCase))
+				{
+					yes = false;
+				}
+				else
+				{
+					throw new FieldInputException($"{f.Label}: choose yes or no.");
+				}
 				return FieldCatalog.Convert(yes, type);
 			default:
 				// A choice: it must be one of the choices offered for this assessment right now.

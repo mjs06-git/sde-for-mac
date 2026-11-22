@@ -243,6 +243,7 @@ public static class WorkPackages
 				.ToDictionary(a => a.AssessmentID, a => a.PropertyID));
 			List<AssessmentRecord> packageRows = package.Database.Read(c => c.Query<AssessmentRecord>("SELECT AssessmentID, PropertyID, Active FROM Assessment").ToList());
 			Dictionary<Guid, Guid> structureThere = packageRows.ToDictionary(a => a.AssessmentID, a => a.PropertyID);
+			Dictionary<Guid, VersionStamp> currentStamps = office.GetStamps(manifest.Items.Where(i => checkedOut.ContainsKey(i.AssessmentID)).Select(i => i.AssessmentID));
 			List<Guid> accepted = new List<Guid>();
 			foreach (WorkPackageItem item in manifest.Items)
 			{
@@ -251,7 +252,7 @@ public static class WorkPackages
 					result.Refused.Add($"{item.Address}: already checked in, or taken back early.");
 					continue;
 				}
-				VersionStamp now = office.GetStamp(item.AssessmentID);
+				currentStamps.TryGetValue(item.AssessmentID, out VersionStamp now);
 				if (now == null)
 				{
 					result.Refused.Add($"{item.Address}: deleted here while it was out.");

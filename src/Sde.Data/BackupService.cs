@@ -82,20 +82,25 @@ public sealed class BackupService
 	private string Prefix => Path.GetFileNameWithoutExtension(_database.FilePath) + " ";
 
 	/// <summary>Backs up now and removes the oldest beyond <see cref="Keep"/>.</summary>
-	public BackupInfo BackUp(string reason)
+	public BackupInfo BackUp(string reason) => BackUpInternal(reason, List());
+
+	private BackupInfo BackUpInternal(string reason, List<BackupInfo> existing)
 	{
 		Directory.CreateDirectory(BackupsFolder);
 		DateTime now = Clock();
-		string folder = Path.Combine(BackupsFolder, Prefix + now.ToString(Stamp, CultureInfo.InvariantCulture) + (string.IsNullOrEmpty(reason) ? "" : " (" + reason + ")"));
+		DateTime takenOn = now;
+		string suffix = string.IsNullOrEmpty(reason) ? "" : " (" + reason + ")";
+		string folder = Path.Combine(BackupsFolder, Prefix + takenOn.ToString(Stamp, CultureInfo.InvariantCulture) + suffix);
 		for (int n = 2; Directory.Exists(folder); n++)
 		{
-			folder = Path.Combine(BackupsFolder, Prefix + now.AddSeconds(n - 1).ToString(Stamp, CultureInfo.InvariantCulture) + (string.IsNullOrEmpty(reason) ? "" : " (" + reason + ")"));
+			takenOn = now.AddSeconds(n - 1);
+			folder = Path.Combine(BackupsFolder, Prefix + takenOn.ToString(Stamp, CultureInfo.InvariantCulture) + suffix);
 		}
 		string partial = folder + ".partial";
 		Directory.CreateDirectory(partial);
 		try
 		{
-			BackupInfo previous = List().FirstOrDefault();
+			BackupInfo previous = existing.FirstOrDefault();
 			string dbCopy = Path.Combine(partial, "sde.sqlite");
 			_database.Read(c => c.Execute("VACUUM INTO @dbCopy", new { dbCopy }));
 			LinkFolder(_database.AttachmentsFolder, Path.Combine(partial, "attachments"));
@@ -108,9 +113,13 @@ public sealed class BackupService
 			TryDelete(partial);
 			throw;
 		}
-		Prune();
-		BackupInfo made = List().First(b => b.Folder == folder);
-		(int structures, int assessments) = Counts(Path.Combine(folder, "sde.sqlite"));
+		string finalDb = Path.Combine(folder, "sde.sqlite");
+		DateTime parsedTaken = new DateTime(takenOn.Year, takenOn.Month, takenOn.Day, takenOn.Hour, takenOn.Minute, takenOn.Second);
+		BackupInfo made = new BackupInfo(folder, parsedTaken, reason ?? "", new FileInfo(finalDb).Length);
+		existing.Insert(0, made);
+		existing.Sort((a, b) => b.TakenOn.CompareTo(a.TakenOn));
+		PruneList(existing);
+		(int structures, int assessments) = Counts(finalDb);
 		return made with { Structures = structures, Assessments = assessments };
 	}
 
@@ -155,16 +164,18 @@ public sealed class BackupService
 	/// <summary>The automatic backup when a database is opened: once a day.</summary>
 	public BackupInfo BackUpIfNoneToday()
 	{
-		BackupInfo newest = List().FirstOrDefault();
-		return newest != null && newest.TakenOn.Date == Clock().Date ? null : BackUp("opened");
+		List<BackupInfo> existing = List();
+		BackupInfo newest = existing.FirstOrDefault();
+		return newest != null && newest.TakenOn.Date == Clock().Date ? null : BackUpInternal("opened", existing);
 	}
 
 	/// <summary>The automatic backup on quitting: only when the database changed since the newest backup.</summary>
 	public BackupInfo BackUpIfChanged()
 	{
-		BackupInfo newest = List().FirstOrDefault();
+		List<BackupInfo> existing = List();
+		BackupInfo newest = existing.FirstOrDefault();
 		DateTime changed = LastWrite();
-		return newest != null && changed <= newest.TakenOn ? null : BackUp("quit");
+		return newest != null && changed <= newest.TakenOn ? null : BackUpInternal("quit", existing);
 	}
 
 	/// <summary>When the database (or its layers GeoPackage) was last written.</summary>
@@ -186,20 +197,22 @@ public sealed class BackupService
 	private static DateTime LastWrite(string path)
 	{
 		DateTime t = File.GetLastWriteTime(path);
-		string wal = path + "-wal";
-		if (File.Exists(wal) && new FileInfo(wal).Length > 0 && File.GetLastWriteTime(wal) > t)
+		FileInfo wal = new FileInfo(path + "-wal");
+		if (wal.Exists && wal.Length > 0 && wal.LastWriteTime > t)
 		{
-			t = File.GetLastWriteTime(wal);
+			t = wal.LastWriteTime;
 		}
 		return t;
 	}
 
 	/// <summary>Keeps the newest <see cref="Keep"/> backups.</summary>
-	public void Prune()
+	public void Prune() => PruneList(List());
+
+	private void PruneList(List<BackupInfo> list)
 	{
-		foreach (BackupInfo old in List().Skip(Keep))
+		for (int i = Keep; i < list.Count; i++)
 		{
-			TryDelete(old.Folder);
+			TryDelete(list[i].Folder);
 		}
 		if (Directory.Exists(BackupsFolder))
 		{

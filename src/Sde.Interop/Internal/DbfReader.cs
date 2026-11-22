@@ -133,7 +133,8 @@ internal static class DbfReader
 		}
 
 		List<Field> readable = fields.Where(f => IsReadable(f.Type)).ToList();
-		List<(int, List<string>)> records = new();
+		int maxPossible = recordSize > 0 && bytes.Length > headerSize ? (int)Math.Min(recordCount, (long)(bytes.Length - headerSize) / recordSize) : 0;
+		List<(int, List<string>)> records = new List<(int, List<string>)>(maxPossible);
 		for (long r = 0; r < recordCount; r++)
 		{
 			long start = headerSize + r * recordSize;
@@ -146,8 +147,9 @@ internal static class DbfReader
 				continue;
 			}
 			List<string> values = new(readable.Count);
-			foreach (Field f in readable)
+			for (int fi = 0; fi < readable.Count; fi++)
 			{
+				Field f = readable[fi];
 				int at = (int)start + f.Offset;
 				values.Add(Value(bytes, at, Math.Min(f.Length, bytes.Length - at), f, encoding));
 			}
@@ -164,21 +166,48 @@ internal static class DbfReader
 		switch (f.Type)
 		{
 			case 'C':
-				return encoding.GetString(bytes, at, length).TrimEnd(' ', '\0');
+			{
+				int end = at + length;
+				while (end > at && (bytes[end - 1] == (byte)' ' || bytes[end - 1] == 0))
+				{
+					end--;
+				}
+				return end == at ? "" : encoding.GetString(bytes, at, end - at);
+			}
 			case 'N':
 			case 'F':
-				return Number(encoding.GetString(bytes, at, length));
+				return Number(bytes, at, length, encoding);
 			case 'D':
-				string d = Encoding.ASCII.GetString(bytes, at, length).Trim();
-				return DateTime.TryParseExact(d, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime date)
+			{
+				int s = at;
+				int e = at + length;
+				while (s < e && (bytes[s] == (byte)' ' || bytes[s] == 0))
+				{
+					s++;
+				}
+				while (e > s && (bytes[e - 1] == (byte)' ' || bytes[e - 1] == 0))
+				{
+					e--;
+				}
+				if (e - s != 8)
+				{
+					return "";
+				}
+				Span<char> chars = stackalloc char[8];
+				for (int i = 0; i < 8; i++)
+				{
+					chars[i] = (char)bytes[s + i];
+				}
+				return DateTime.TryParseExact(chars, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime date)
 					? date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) : "";
+			}
 			case 'L':
-				return (char)bytes[at] switch
+				return length > 0 ? (char)bytes[at] switch
 				{
 					'Y' or 'y' or 'T' or 't' => "TRUE",
 					'N' or 'n' or 'F' or 'f' => "FALSE",
 					_ => "",
-				};
+				} : "";
 			case 'I':
 			case '+':
 				return length >= 4 ? BitConverter.ToInt32(bytes, at).ToString(CultureInfo.InvariantCulture) : "";
@@ -205,19 +234,56 @@ internal static class DbfReader
 	}
 
 	/// <summary>A numeric field's text in invariant form ("  39.1000" becomes "39.1"); blank and overflowed ("****") fields are empty.</summary>
-	private static string Number(string text)
+	private static string Number(byte[] bytes, int at, int length, Encoding encoding)
 	{
-		string t = text.Trim(' ', '\0');
-		if (t.Length == 0 || t.Contains('*'))
+		int s = at;
+		int e = at + length;
+		while (s < e && (bytes[s] == (byte)' ' || bytes[s] == 0))
+		{
+			s++;
+		}
+		while (e > s && (bytes[e - 1] == (byte)' ' || bytes[e - 1] == 0))
+		{
+			e--;
+		}
+		int len = e - s;
+		if (len == 0)
 		{
 			return "";
 		}
-		if (!decimal.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal n))
+		bool ascii = true;
+		for (int i = s; i < e; i++)
+		{
+			byte b = bytes[i];
+			if (b == (byte)'*')
+			{
+				return "";
+			}
+			if (b >= 128)
+			{
+				ascii = false;
+			}
+		}
+		if (ascii && len <= 64)
+		{
+			Span<char> chars = stackalloc char[len];
+			for (int i = 0; i < len; i++)
+			{
+				chars[i] = (char)bytes[s + i];
+			}
+			if (decimal.TryParse(chars, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal n))
+			{
+				// Dropping trailing zeros: dividing by 1.000…0 rescales the decimal to its shortest form.
+				return (n / 1.0000000000000000000000000000m).ToString(CultureInfo.InvariantCulture);
+			}
+			return new string(chars);
+		}
+		string t = encoding.GetString(bytes, s, len);
+		if (!decimal.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal parsed))
 		{
 			return t;
 		}
-		// Dropping trailing zeros: dividing by 1.000…0 rescales the decimal to its shortest form.
-		return (n / 1.0000000000000000000000000000m).ToString(CultureInfo.InvariantCulture);
+		return (parsed / 1.0000000000000000000000000000m).ToString(CultureInfo.InvariantCulture);
 	}
 
 	private static Encoding EncodingFor(string cpg, byte languageDriver)

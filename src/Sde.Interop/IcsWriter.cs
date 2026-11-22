@@ -151,12 +151,18 @@ public static class IcsWriter
 		return $"{item.Kind}-{id}@sde-for-mac".ToLowerInvariant().Replace(' ', '-');
 	}
 
+	private static readonly char[] EscapeChars = { '\\', ';', ',', '\r', '\n' };
+
 	/// <summary>Escapes backslashes, semicolons, commas and line breaks in a text value (RFC 5545 section 3.3.11).</summary>
 	public static string Escape(string text)
 	{
 		if (string.IsNullOrEmpty(text))
 		{
 			return "";
+		}
+		if (text.IndexOfAny(EscapeChars) < 0)
+		{
+			return text;
 		}
 		StringBuilder sb = new StringBuilder(text.Length + 8);
 		for (int i = 0; i < text.Length; i++)
@@ -184,21 +190,42 @@ public static class IcsWriter
 	/// <summary>Folds a line at 75 bytes. Continuation lines start with one space, which counts toward their 75 bytes.</summary>
 	public static string Fold(string line)
 	{
-		StringBuilder sb = new StringBuilder();
+		if (line.Length <= MaxLineBytes / 3 || Encoding.UTF8.GetByteCount(line) <= MaxLineBytes)
+		{
+			return line;
+		}
+		StringBuilder sb = new StringBuilder(line.Length + 16);
 		int bytes = 0;
 		for (int i = 0; i < line.Length; i++)
 		{
-			int length = char.IsHighSurrogate(line[i]) && i + 1 < line.Length ? 2 : 1;
-			string piece = line.Substring(i, length);
-			int size = Encoding.UTF8.GetByteCount(piece);
+			char c = line[i];
+			int length;
+			int size;
+			if (char.IsHighSurrogate(c) && i + 1 < line.Length && char.IsLowSurrogate(line[i + 1]))
+			{
+				length = 2;
+				size = 4;
+			}
+			else
+			{
+				length = 1;
+				size = c < 0x80 ? 1 : c < 0x800 ? 2 : 3;
+			}
 			if (bytes + size > MaxLineBytes)
 			{
 				sb.Append(Crlf).Append(' ');
 				bytes = 1;
 			}
-			sb.Append(piece);
+			if (length == 1)
+			{
+				sb.Append(c);
+			}
+			else
+			{
+				sb.Append(c).Append(line[i + 1]);
+				i++;
+			}
 			bytes += size;
-			i += length - 1;
 		}
 		return sb.ToString();
 	}

@@ -78,15 +78,15 @@ public sealed partial class DashboardViewModel : ViewModelBase
 	/// <summary>The numbers behind everything on the page; null until the first <see cref="Reload"/>.</summary>
 	public EventSummary Summary { get; private set; }
 
-	public ObservableCollection<BarRowViewModel> ByResult { get; } = new();
+	public RangeObservableCollection<BarRowViewModel> ByResult { get; } = new();
 
-	public ObservableCollection<BarRowViewModel> Progress { get; } = new();
+	public RangeObservableCollection<BarRowViewModel> Progress { get; } = new();
 
-	public ObservableCollection<BarRowViewModel> ByStreet { get; } = new();
+	public RangeObservableCollection<BarRowViewModel> ByStreet { get; } = new();
 
-	public ObservableCollection<BarRowViewModel> ByCommunity { get; } = new();
+	public RangeObservableCollection<BarRowViewModel> ByCommunity { get; } = new();
 
-	public ObservableCollection<BarRowViewModel> ByInspector { get; } = new();
+	public RangeObservableCollection<BarRowViewModel> ByInspector { get; } = new();
 
 	/// <summary>An optional name printed on the summary and kept in the GIS files' layer title.</summary>
 	[ObservableProperty]
@@ -190,7 +190,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
 				.ToList();
 			ids = inEvent.Select(r => r.AssessmentID!.Value).ToList();
 		}
-		_files = _app.Store.LoadAssessments(ids);
+		_files = _app.Store.LoadAssessmentHeaders(ids);
 		Summary = EventSummary.Build(_files, _app.Scope.IsAll ? _app.Store.GetProperties() : null, Title, _app.Store.Reference,
 			details: _app.Scope.Event?.ToDetails());
 		Show(Summary);
@@ -267,15 +267,16 @@ public sealed partial class DashboardViewModel : ViewModelBase
 		new[] { (g.Substantial, "StatusSubstantialDot"), (g.Close, "StatusCloseDot"), (g.NotSubstantial, "StatusNotSubstantialDot"), (g.Other, "StatusIncompleteDot") });
 
 	/// <summary>Replaces the rows of one chart. Every bar is drawn against the longest in its own chart.</summary>
-	private static void Fill(ObservableCollection<BarRowViewModel> rows, IEnumerable<(string Label, int Count, string Detail, (int Part, string Colour)[] Parts)> items)
+	private static void Fill(RangeObservableCollection<BarRowViewModel> rows, IEnumerable<(string Label, int Count, string Detail, (int Part, string Colour)[] Parts)> items)
 	{
 		List<(string Label, int Count, string Detail, (int Part, string Colour)[] Parts)> list = items.ToList();
 		double max = Math.Max(1, list.Count == 0 ? 1 : list.Max(i => i.Count));
-		rows.Clear();
+		List<BarRowViewModel> built = new List<BarRowViewModel>(list.Count);
 		foreach ((string label, int count, string detail, (int Part, string Colour)[] parts) in list)
 		{
-			rows.Add(new BarRowViewModel(label, count, detail, parts.Where(p => p.Part > 0).Select(p => new BarSegment(p.Part / max, p.Colour)).ToList()));
+			built.Add(new BarRowViewModel(label, count, detail, parts.Where(p => p.Part > 0).Select(p => new BarSegment(p.Part / max, p.Colour)).ToList()));
 		}
+		rows.ReplaceAll(built);
 	}
 
 	private static string DateText(EventSummary s)

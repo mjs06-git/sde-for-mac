@@ -165,29 +165,156 @@ public static class DepthSurface
 		{
 			double dx = (east - west) / width;
 			double dy = (north - south) / height;
+			int nearestLimit = Math.Max(1, o.NearestCount);
+			double radius = o.RadiusMeters;
+			double power = o.Power;
+			bool noDatumAtAll = datumName == null;
+			MarkEntry[] entries = new MarkEntry[near.Count];
+			for (int i = 0; i < near.Count; i++)
+			{
+				HighWaterMark m = near[i];
+				entries[i] = new MarkEntry(m.Latitude, m.Longitude, m.ElevationFt, (double)m.ElevationFt, HighWaterMarks.QualityWeight(m.Quality), i);
+			}
+			double radiusLatDeg = (radius + 1.0) / GeoMath.MetersPerDegreeLatitude;
 			Parallel.For(0, height, row =>
 			{
 				double lat = north - (row + 0.5) * dy;
-				// A mark further north or south than the radius is out of range of the whole row (the distance is never
-				// less than the north-south distance), so leave it out; the order of the rest, which settles ties, is kept.
-				List<HighWaterMark> rowMarks = near.Where(m => Math.Abs(m.Latitude - lat) * GeoMath.MetersPerDegreeLatitude <= o.RadiusMeters + 1).ToList();
+				List<MarkEntry> rowMarks = new List<MarkEntry>();
+				for (int i = 0; i < entries.Length; i++)
+				{
+					if (Math.Abs(entries[i].Latitude - lat) * GeoMath.MetersPerDegreeLatitude <= radius + 1.0)
+					{
+						rowMarks.Add(entries[i]);
+					}
+				}
 				if (rowMarks.Count == 0)
 				{
 					return;
 				}
+				rowMarks.Sort(static (a, b) => a.Longitude.CompareTo(b.Longitude));
+				double cosLat = Math.Cos((Math.Abs(lat) + radiusLatDeg) * Math.PI / 180.0);
+				bool useWindow = Math.Abs(lat) + radiusLatDeg < 89.0 && cosLat > 0.01;
+				double lonMargin = useWindow ? radiusLatDeg / cosLat + 1e-6 : 360.0;
+				if (useWindow && (west - lonMargin < -180.0 || east + lonMargin > 180.0))
+				{
+					useWindow = false;
+				}
+				MarkHit[] best = new MarkHit[nearestLimit];
+				double[] rawWeights = new double[nearestLimit];
+				int lo = 0;
+				int hi = 0;
+				int countMarks = rowMarks.Count;
+				int rowOffset = row * width;
 				for (int col = 0; col < width; col++)
 				{
-					WaterSurfaceEstimate e = HighWaterMarks.Estimate(rowMarks, lat, west + (col + 0.5) * dx, o);
-					if (e.ElevationFt is decimal ft)
+					double lon = west + (col + 0.5) * dx;
+					int scanStart;
+					int scanEnd;
+					if (useWindow)
 					{
-						elevation[row * width + col] = (float)ft;
-						confidence[row * width + col] = e.Confidence;
+						double minLon = lon - lonMargin;
+						double maxLon = lon + lonMargin;
+						while (lo < countMarks && rowMarks[lo].Longitude < minLon)
+						{
+							lo++;
+						}
+						if (hi < lo)
+						{
+							hi = lo;
+						}
+						while (hi < countMarks && rowMarks[hi].Longitude <= maxLon)
+						{
+							hi++;
+						}
+						scanStart = lo;
+						scanEnd = hi;
 					}
+					else
+					{
+						scanStart = 0;
+						scanEnd = countMarks;
+					}
+					int found = 0;
+					for (int i = scanStart; i < scanEnd; i++)
+					{
+						MarkEntry m = rowMarks[i];
+						double d = GeoMath.Meters(lat, lon, m.Latitude, m.Longitude);
+						if (d > radius)
+						{
+							continue;
+						}
+						if (found < nearestLimit)
+						{
+							int pos = found;
+							while (pos > 0 && IsCloser(d, m.Order, best[pos - 1]))
+							{
+								best[pos] = best[pos - 1];
+								pos--;
+							}
+							best[pos] = new MarkHit(m, d);
+							found++;
+						}
+						else if (IsCloser(d, m.Order, best[nearestLimit - 1]))
+						{
+							int pos = nearestLimit - 1;
+							while (pos > 0 && IsCloser(d, m.Order, best[pos - 1]))
+							{
+								best[pos] = best[pos - 1];
+								pos--;
+							}
+							best[pos] = new MarkHit(m, d);
+						}
+					}
+					if (found == 0)
+					{
+						continue;
+					}
+					double total = 0;
+					decimal minElev = best[0].Mark.ElevationFt;
+					decimal maxElev = minElev;
+					for (int i = 0; i < found; i++)
+					{
+						double dist = best[i].Meters < HighWaterMarks.MinimumDistanceMeters ? HighWaterMarks.MinimumDistanceMeters : best[i].Meters;
+						double w = power == 2.0
+							? best[i].Mark.QualityWeight / (dist * dist)
+							: best[i].Mark.QualityWeight / Math.Pow(dist, power);
+						rawWeights[i] = w;
+						total += w;
+						decimal elev = best[i].Mark.ElevationFt;
+						if (elev < minElev)
+						{
+							minElev = elev;
+						}
+						if (elev > maxElev)
+						{
+							maxElev = elev;
+						}
+					}
+					double est = 0;
+					for (int i = 0; i < found; i++)
+					{
+						est += best[i].Mark.ElevationDouble * rawWeights[i] / total;
+					}
+					decimal spread = maxElev - minElev;
+					double nearest = best[0].Meters;
+					EstimateConfidence conf =
+						found == 1 || nearest > 500 || spread > 2.0m || noDatumAtAll ? EstimateConfidence.Low
+						: found >= 3 && nearest <= 200 && spread <= 1.0m ? EstimateConfidence.High
+						: EstimateConfidence.Medium;
+					elevation[rowOffset + col] = (float)Math.Round((decimal)est, 2, MidpointRounding.AwayFromZero);
+					confidence[rowOffset + col] = conf;
 				}
 			});
 		}
 		return new WaterSurfaceGrid(width, height, west, south, east, north, elevation, confidence, datumName, near.Count, leftOut);
 	}
+
+	private static bool IsCloser(double meters, int order, MarkHit existing) =>
+		meters < existing.Meters || (meters == existing.Meters && order < existing.Mark.Order);
+
+	private readonly record struct MarkEntry(double Latitude, double Longitude, decimal ElevationFt, double ElevationDouble, double QualityWeight, int Order);
+
+	private readonly record struct MarkHit(MarkEntry Mark, double Meters);
 
 	/// <summary>The same test as for a single structure's marks: in range and not the 0, 0 placeholder (see <see cref="GeoMath.IsPosition"/>).</summary>
 	private static bool IsPosition(double latitude, double longitude) =>
@@ -219,6 +346,47 @@ public static class ClassBreaks
 		{
 			throw new ArgumentOutOfRangeException(nameof(classes), "There must be at least one class.");
 		}
+		if (method == ClassMethod.EqualInterval)
+		{
+			double loVal = double.PositiveInfinity;
+			double hiVal = double.NegativeInfinity;
+			bool any = false;
+			foreach (float v in values ?? Enumerable.Empty<float>())
+			{
+				if (float.IsNaN(v) || float.IsInfinity(v))
+				{
+					continue;
+				}
+				any = true;
+				if (v < loVal)
+				{
+					loVal = v;
+				}
+				if (v > hiVal)
+				{
+					hiVal = v;
+				}
+			}
+			if (!any)
+			{
+				return Array.Empty<double>();
+			}
+			if (loVal == hiVal)
+			{
+				return new[] { loVal, hiVal };
+			}
+			List<double> equalEdges = new List<double>(classes + 1) { loVal };
+			for (int i = 1; i < classes; i++)
+			{
+				double edge = loVal + (hiVal - loVal) * i / classes;
+				if (edge > equalEdges[^1] && edge < hiVal)
+				{
+					equalEdges.Add(edge);
+				}
+			}
+			equalEdges.Add(hiVal);
+			return equalEdges.ToArray();
+		}
 		float[] sorted = (values ?? Enumerable.Empty<float>()).Where(v => !float.IsNaN(v) && !float.IsInfinity(v)).ToArray();
 		if (sorted.Length == 0)
 		{
@@ -231,12 +399,10 @@ public static class ClassBreaks
 		{
 			return new[] { lo, hi };
 		}
-		List<double> edges = new List<double> { lo };
+		List<double> edges = new List<double>(classes + 1) { lo };
 		for (int i = 1; i < classes; i++)
 		{
-			double edge = method == ClassMethod.EqualInterval
-				? lo + (hi - lo) * i / classes
-				: Quantile(sorted, (double)i / classes);
+			double edge = Quantile(sorted, (double)i / classes);
 			if (edge > edges[^1] && edge < hi)
 			{
 				edges.Add(edge);

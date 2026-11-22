@@ -363,18 +363,29 @@ public static class SourceFields
 		}
 
 		// Element damage first, so "Checklist: Foundation" with numbers is damage, not the foundation type.
-		foreach (string column in table.Columns.Where(c => !used.Contains(c)))
+		(string Column, string BareName, bool Checklist)[] colInfos = new (string, string, bool)[table.Columns.Count];
+		for (int i = 0; i < table.Columns.Count; i++)
 		{
-			(string bare, bool checklist) = Bare(column);
-			foreach ((int calcId, string name) in Elements)
+			string col = table.Columns[i];
+			(string bare, bool checklist) = Bare(col);
+			colInfos[i] = (col, bare, checklist);
+		}
+		for (int i = 0; i < colInfos.Length; i++)
+		{
+			(string column, string bare, bool checklist) = colInfos[i];
+			if (used.Contains(column))
 			{
-				string key = ElementKey(calcId);
+				continue;
+			}
+			for (int e = 0; e < ElementMatchers.Length; e++)
+			{
+				(string key, HashSet<string> bareNames, HashSet<string> fullNames) = ElementMatchers[e];
 				if (profile.IsMapped(key))
 				{
 					continue;
 				}
-				bool named = ElementNames(name).Contains(bare);
-				bool plain = checklist && ElementBareNames(name).Contains(bare) && MostlyNumbers(table, column);
+				bool named = fullNames.Contains(bare);
+				bool plain = checklist && bareNames.Contains(bare) && MostlyNumbers(table, i);
 				if (named || plain)
 				{
 					Map(key, column);
@@ -382,39 +393,72 @@ public static class SourceFields
 				}
 			}
 		}
-		foreach (SourceFieldInfo field in All.Where(f => f.Kind != SourceFieldKind.Percent && f.CustomField == 0))
+		for (int f = 0; f < FieldMatchers.Length; f++)
 		{
-			if (profile.IsMapped(field.Key) || !Synonyms.TryGetValue(field.Key, out string[] names))
+			(string key, HashSet<string> wanted) = FieldMatchers[f];
+			if (profile.IsMapped(key))
 			{
 				continue;
 			}
-			HashSet<string> wanted = names.Append(field.Label).Select(Norm).ToHashSet();
-			string match = table.Columns.FirstOrDefault(c => !used.Contains(c) && wanted.Contains(Bare(c).Name));
-			if (match != null)
+			for (int i = 0; i < colInfos.Length; i++)
 			{
-				Map(field.Key, match);
+				if (!used.Contains(colInfos[i].Column) && wanted.Contains(colInfos[i].BareName))
+				{
+					Map(key, colInfos[i].Column);
+					break;
+				}
 			}
 		}
 
 		// Owner: one "Owner" / "Owner Name" column holds the whole name.
-		if (!profile.IsMapped("OwnerFirstName") && !profile.IsMapped("OwnerLastName")
-			&& table.Columns.FirstOrDefault(c => !used.Contains(c) && Bare(c).Name is "owner" or "ownername" or "ownerfullname" or "primaryowner" or "primaryownername") is string owner)
+		if (!profile.IsMapped("OwnerFirstName") && !profile.IsMapped("OwnerLastName"))
 		{
-			Map("OwnerFirstName", owner);
-			profile.Map("OwnerLastName").Column = owner;
-			// "Doe, John" when most names have a comma, otherwise "John Doe".
-			List<string> names = table.Rows.Select(r => r[table.IndexOf(owner)]).Where(v => !string.IsNullOrWhiteSpace(v)).Take(50).ToList();
-			profile.FirstNameParsing = profile.LastNameParsing =
-				names.Count > 0 && names.Count(v => v.Contains(',')) * 2 > names.Count ? NameParsing.LastCommaFirst : NameParsing.FirstLast;
+			for (int i = 0; i < colInfos.Length; i++)
+			{
+				if (!used.Contains(colInfos[i].Column) && colInfos[i].BareName is "owner" or "ownername" or "ownerfullname" or "primaryowner" or "primaryownername")
+				{
+					string owner = colInfos[i].Column;
+					Map("OwnerFirstName", owner);
+					profile.Map("OwnerLastName").Column = owner;
+					// "Doe, John" when most names have a comma, otherwise "John Doe".
+					int count = 0;
+					int commas = 0;
+					for (int r = 0; r < table.Rows.Count && count < 50; r++)
+					{
+						string v = table.Rows[r][i];
+						if (!string.IsNullOrWhiteSpace(v))
+						{
+							count++;
+							if (v.Contains(','))
+							{
+								commas++;
+							}
+						}
+					}
+					profile.FirstNameParsing = profile.LastNameParsing =
+						count > 0 && commas * 2 > count ? NameParsing.LastCommaFirst : NameParsing.FirstLast;
+					break;
+				}
+			}
 		}
 
 		// Address: one "Address" column holds the whole street address ("Full Address", "Site Address", "Address Line 1").
-		if (!profile.IsMapped("StreetNumber") && !profile.IsMapped("StreetName")
-			&& table.Columns.FirstOrDefault(c => !used.Contains(c) && Bare(c).Name is "address" or "fulladdress" or "siteaddress" or "situsaddress"
-				or "streetaddress" or "propertyaddress" or "addressline1" or "primaryaddress" or "locationaddress") is string whole)
+		if (!profile.IsMapped("StreetNumber") && !profile.IsMapped("StreetName"))
 		{
-			Map("StreetName", whole);
-			profile.StreetNameParsing = StreetNameParsing.NumberNameSuffix;
+			for (int i = 0; i < colInfos.Length; i++)
+			{
+				if (!used.Contains(colInfos[i].Column) && colInfos[i].BareName is "address" or "fulladdress" or "siteaddress" or "situsaddress"
+					or "streetaddress" or "propertyaddress" or "addressline1" or "primaryaddress" or "locationaddress")
+				{
+					Map("StreetName", colInfos[i].Column);
+					profile.StreetNameParsing = StreetNameParsing.NumberNameSuffix;
+					break;
+				}
+			}
+		}
+		if (!profile.IsMapped("StreetNumber") && profile.IsMapped("StreetName") && profile.StreetNameParsing == StreetNameParsing.None)
+		{
+			profile.StreetNameParsing = profile.IsMapped("StreetSuffix") ? StreetNameParsing.Name : StreetNameParsing.NameSuffix;
 		}
 		else if (profile.IsMapped("StreetName") && profile.StreetNameParsing == StreetNameParsing.None)
 		{
@@ -430,19 +474,27 @@ public static class SourceFields
 		}
 	}
 
+	private static readonly (string Key, HashSet<string> BareNames, HashSet<string> FullNames)[] ElementMatchers =
+		Elements.Select(e => (ElementKey(e.CalcId), ElementBareNames(e.Name), ElementNames(e.Name))).ToArray();
+
+	private static readonly (string Key, HashSet<string> Wanted)[] FieldMatchers =
+		All.Where(f => f.Kind != SourceFieldKind.Percent && f.CustomField == 0 && Synonyms.ContainsKey(f.Key))
+			.Select(f => (f.Key, Synonyms[f.Key].Append(f.Label).Select(Norm).ToHashSet(StringComparer.Ordinal)))
+			.ToArray();
+
 	/// <summary>The normalised header without a "Checklist:" prefix, and whether it had one.</summary>
 	private static (string Name, bool Checklist) Bare(string column)
 	{
 		if (column.StartsWith(SourceTable.ChecklistPrefix, StringComparison.OrdinalIgnoreCase))
 		{
-			return (Norm(column[SourceTable.ChecklistPrefix.Length..]), true);
+			return (Norm(column.AsSpan(SourceTable.ChecklistPrefix.Length)), true);
 		}
-		return (Norm(column), false);
+		return (Norm(column.AsSpan()), false);
 	}
 
 	private static HashSet<string> ElementBareNames(string element)
 	{
-		HashSet<string> names = new() { Norm(element), Norm(element.Replace(" and ", " ")) };
+		HashSet<string> names = new HashSet<string>(StringComparer.Ordinal) { Norm(element), Norm(element.Replace(" and ", " ")) };
 		if (element.StartsWith("Skirting", StringComparison.Ordinal))
 		{
 			names.Add("skirting");
@@ -452,7 +504,7 @@ public static class SourceFields
 
 	private static HashSet<string> ElementNames(string element)
 	{
-		HashSet<string> names = new();
+		HashSet<string> names = new HashSet<string>(StringComparer.Ordinal);
 		foreach (string e in ElementBareNames(element))
 		{
 			foreach (string pre in new[] { "damage", "damaged", "percentdamage", "percentdamaged", "pctdamage", "pctdamaged" })
@@ -467,13 +519,44 @@ public static class SourceFields
 		return names;
 	}
 
-	private static bool MostlyNumbers(SourceTable table, string column)
+	private static bool MostlyNumbers(SourceTable table, int columnIndex)
 	{
-		int i = table.IndexOf(column);
-		List<string> values = table.Rows.Select(r => r[i]).Where(v => !string.IsNullOrWhiteSpace(v)).Take(50).ToList();
-		return values.Count > 0 && values.Count(v => Internal.Text.TryParseDecimal(v, out _)) * 2 > values.Count;
+		int count = 0;
+		int numbers = 0;
+		for (int r = 0; r < table.Rows.Count && count < 50; r++)
+		{
+			string v = table.Rows[r][columnIndex];
+			if (!string.IsNullOrWhiteSpace(v))
+			{
+				count++;
+				if (Internal.Text.TryParseDecimal(v, out _))
+				{
+					numbers++;
+				}
+			}
+		}
+		return count > 0 && numbers * 2 > count;
 	}
 
 	/// <summary>Lower-case letters and digits only ("Foundation % Damage" → "foundationdamage").</summary>
-	internal static string Norm(string s) => new string((s ?? "").Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
+	internal static string Norm(string s) => string.IsNullOrEmpty(s) ? "" : Norm(s.AsSpan());
+
+	private static string Norm(ReadOnlySpan<char> s)
+	{
+		if (s.IsEmpty)
+		{
+			return "";
+		}
+		Span<char> buf = s.Length <= 128 ? stackalloc char[s.Length] : new char[s.Length];
+		int n = 0;
+		for (int i = 0; i < s.Length; i++)
+		{
+			char c = s[i];
+			if (char.IsLetterOrDigit(c))
+			{
+				buf[n++] = char.ToLowerInvariant(c);
+			}
+		}
+		return n == 0 ? "" : new string(buf.Slice(0, n));
+	}
 }

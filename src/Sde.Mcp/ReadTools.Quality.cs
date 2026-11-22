@@ -50,8 +50,7 @@ public sealed partial class ReadTools
 		else if (e != null)
 		{
 			// Every assessment in the event, not only the latest of each structure: the checks compare them all.
-			HashSet<Guid> active = Lookups.ActiveIds(store);
-			ids = store.AssessmentsInEvent(e.EventID).Where(active.Contains).ToList();
+			ids = store.ActiveAssessmentIdsInEvent(e.EventID);
 			scope = $"the event {e.Label}";
 		}
 		else
@@ -121,11 +120,16 @@ public sealed partial class ReadTools
 	[Description("Lists the review comments on one assessment (the Review page's threads), oldest first, each with its replies, who wrote it and whether it is resolved. Give a comment's ID to add_review_comment as replyTo to answer it." + Untrusted)]
 	public ReviewCommentList GetReviewComments([Description("The assessment's ID (find_structures lists them).")] string assessmentId)
 	{
-		AssessmentFile file = sde.LoadAssessment(sde.Reader, assessmentId);
+		AssessmentFile file = sde.LoadAssessmentHeader(sde.Reader, assessmentId);
 		Guid id = file.Assessment.AssessmentID;
 		List<ReviewCommentRecord> all = sde.Reader.GetReviewComments(id);
+		HashSet<Guid> commentIds = new HashSet<Guid>(all.Count);
+		foreach (ReviewCommentRecord c in all)
+		{
+			commentIds.Add(c.CommentID);
+		}
 		ILookup<Guid?, ReviewCommentRecord> replies = all.Where(c => c.ParentID != null).ToLookup(c => c.ParentID);
-		List<ReviewThreadItem> threads = all.Where(c => c.ParentID == null || all.All(p => p.CommentID != c.ParentID)).Select(c => new ReviewThreadItem(
+		List<ReviewThreadItem> threads = all.Where(c => c.ParentID is not Guid parentId || !commentIds.Contains(parentId)).Select(c => new ReviewThreadItem(
 			c.CommentID.ToString(), c.FieldKey, c.FieldKey == null ? null : FieldCatalog.Get(c.FieldKey)?.Label, Describe.Shorten(c.Body, 2000), c.Author, c.Via,
 			Describe.Time(c.CreatedOn), c.IsResolved, c.ResolvedBy,
 			replies[c.CommentID].Select(r => new ReviewReplyItem(r.CommentID.ToString(), Describe.Shorten(r.Body, 2000), r.Author, r.Via, Describe.Time(r.CreatedOn))).ToList())).ToList();
@@ -175,16 +179,14 @@ public sealed partial class ReadTools
 
 		DateTime today = store.Clock().Date;
 		// Only cases of structures that aren't in Recently deleted, as the Compliance page shows them.
-		List<ComplianceRow> rows = ComplianceReport.Rows(store, today, store.GetActiveComplianceCases()).Where(r =>
-		{
-			ComplianceCaseRecord c = r.Case;
-			return (wantOpen == null || c.IsOpen == wantOpen)
-				&& (!overdue || r.IsOverdue)
-				&& (wantPath == null || c.Path == wantPath)
-				&& (!wantNoPath || c.Path == null)
-				&& (wantIcc == null || (c.IccStatus ?? IccStatuses.NotFiled) == wantIcc)
-				&& (inEvent == null || (c.AssessmentID is Guid a && inEvent.Contains(a)));
-		}).ToList();
+		List<ComplianceCaseRecord> matching = store.GetActiveComplianceCases().Where(c =>
+			(wantOpen == null || c.IsOpen == wantOpen)
+			&& (!overdue || c.IsOverdue(today))
+			&& (wantPath == null || c.Path == wantPath)
+			&& (!wantNoPath || c.Path == null)
+			&& (wantIcc == null || (c.IccStatus ?? IccStatuses.NotFiled) == wantIcc)
+			&& (inEvent == null || (c.AssessmentID is Guid a && inEvent.Contains(a)))).ToList();
+		List<ComplianceRow> rows = ComplianceReport.Rows(store, today, matching);
 		int pages = Math.Max(1, (rows.Count + pageSize - 1) / pageSize);
 		List<ComplianceItem> items = rows.Skip((page - 1) * pageSize).Take(pageSize).Select(CaseItem).ToList();
 		string next = page < pages ? $"Showing page {page} of {pages}. For more, call list_compliance_cases again with page = {page + 1} and the same filters." : null;

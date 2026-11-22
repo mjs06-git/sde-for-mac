@@ -6,6 +6,8 @@ namespace Sde.App.ViewModels;
 
 public sealed partial class MainViewModel
 {
+	private static readonly char[] InvalidFileNameChars = Path.GetInvalidFileNameChars();
+
 	/// <summary>
 	/// Renders one of FEMA's reports to a PDF (via the save dialog) and opens it in Preview, where it can be printed.
 	/// <paramref name="kind"/> is a ReportKind name, optionally with "-NoPhotos" (the original's "without photos" layouts).
@@ -42,8 +44,7 @@ public sealed partial class MainViewModel
 					IncludePhotos = !noPhotos,
 					PhotosFolder = _app.Store.AttachmentsFolder,
 					// Photos print with their markup (water lines, arrows, labels); the photo files never change.
-					PhotoMarkups = noPhotos ? null : files.SelectMany(f => _app.Store.GetPhotoMarkups(f.Assessment.AssessmentID))
-						.GroupBy(kv => kv.Key).ToDictionary(g => g.Key, g => g.First().Value),
+					PhotoMarkups = noPhotos ? null : _app.Store.GetPhotoMarkups(assessmentIds),
 				};
 				ReportGenerator.RenderToFile(request, _app.Store.Reference, path);
 			});
@@ -66,10 +67,10 @@ public sealed partial class MainViewModel
 			ReportKind.PercentDamaged => "Percent damaged list",
 			_ => "Community report",
 		};
-		string what = ids.Count == 1 && _app.Store.LoadAssessment(ids[0]) is AssessmentFile f && AssessmentEditorViewModel.Address(f.Property, _app.Store.Reference, empty: null) is string a
+		string what = ids.Count == 1 && _app.Store.LoadAssessmentHeader(ids[0]) is AssessmentFile f && AssessmentEditorViewModel.Address(f.Property, _app.Store.Reference, empty: null) is string a
 			? a
 			: $"{ids.Count} assessment{(ids.Count == 1 ? "" : "s")}";
 		string file = $"{name} – {what}.pdf";
-		return string.Concat(file.Split(Path.GetInvalidFileNameChars())).Replace(':', '-');
+		return string.Concat(file.Split(InvalidFileNameChars)).Replace(':', '-');
 	}
 }

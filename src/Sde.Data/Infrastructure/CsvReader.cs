@@ -13,36 +13,92 @@ internal static class CsvReader
 {
 	public static IEnumerable<List<CsvCell>> Read(TextReader reader)
 	{
-		List<CsvCell> row = new();
-		StringBuilder cell = new();
+		char[] buffer = new char[4096];
+		int pos = 0;
+		int len = 0;
+		int prevCols = 8;
+		List<CsvCell> row = new List<CsvCell>(prevCols);
+		StringBuilder cell = new StringBuilder(64);
 		bool quoted = false;
 		bool inQuotes = false;
+		bool pendingQuote = false;
 		bool any = false;
-		int ch;
-		while ((ch = reader.Read()) != -1)
+		while (true)
 		{
-			char c = (char)ch;
-			any = true;
+			if (pos >= len)
+			{
+				len = reader.Read(buffer, 0, buffer.Length);
+				pos = 0;
+				if (len == 0)
+				{
+					break;
+				}
+			}
+			if (pendingQuote)
+			{
+				pendingQuote = false;
+				if (buffer[pos] == '"')
+				{
+					cell.Append('"');
+					pos++;
+					continue;
+				}
+				inQuotes = false;
+			}
 			if (inQuotes)
 			{
-				if (c == '"')
+				int start = pos;
+				while (pos < len && buffer[pos] != '"')
 				{
-					if (reader.Peek() == '"')
+					pos++;
+				}
+				if (pos > start)
+				{
+					cell.Append(buffer, start, pos - start);
+				}
+				if (pos < len)
+				{
+					pos++;
+					if (pos < len)
 					{
-						reader.Read();
-						cell.Append('"');
+						if (buffer[pos] == '"')
+						{
+							cell.Append('"');
+							pos++;
+						}
+						else
+						{
+							inQuotes = false;
+						}
 					}
 					else
 					{
-						inQuotes = false;
+						pendingQuote = true;
 					}
-				}
-				else
-				{
-					cell.Append(c);
 				}
 				continue;
 			}
+			int textStart = pos;
+			while (pos < len)
+			{
+				char ch = buffer[pos];
+				if (ch == '"' || ch == ',' || ch == '\r' || ch == '\n')
+				{
+					break;
+				}
+				pos++;
+			}
+			if (pos > textStart)
+			{
+				cell.Append(buffer, textStart, pos - textStart);
+				any = true;
+			}
+			if (pos >= len)
+			{
+				continue;
+			}
+			char c = buffer[pos++];
+			any = true;
 			switch (c)
 			{
 			case '"':
@@ -58,14 +114,12 @@ internal static class CsvReader
 				break;
 			case '\n':
 				row.Add(new CsvCell(cell.ToString(), quoted));
+				prevCols = row.Count;
 				yield return row;
-				row = new();
+				row = new List<CsvCell>(prevCols);
 				cell.Clear();
 				quoted = false;
 				any = false;
-				break;
-			default:
-				cell.Append(c);
 				break;
 			}
 		}

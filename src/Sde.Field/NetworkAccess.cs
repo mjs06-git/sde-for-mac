@@ -30,8 +30,8 @@ public static class NetworkAccess
 		{
 			return false;
 		}
-		byte[] b = address.GetAddressBytes();
-		return b[0] == 127 || IsPrivateIPv4(b);
+		Span<byte> b = stackalloc byte[4];
+		return address.TryWriteBytes(b, out int written) && written == 4 && (b[0] == 127 || IsPrivateIPv4(b));
 	}
 
 	/// <summary>True for 10.0.0.0/8, 172.16.0.0/12 and 192.168.0.0/16 (not loopback).</summary>
@@ -45,10 +45,15 @@ public static class NetworkAccess
 		{
 			address = address.MapToIPv4();
 		}
-		return address.AddressFamily == AddressFamily.InterNetwork && IsPrivateIPv4(address.GetAddressBytes());
+		if (address.AddressFamily != AddressFamily.InterNetwork)
+		{
+			return false;
+		}
+		Span<byte> b = stackalloc byte[4];
+		return address.TryWriteBytes(b, out int written) && written == 4 && IsPrivateIPv4(b);
 	}
 
-	private static bool IsPrivateIPv4(byte[] b) =>
+	private static bool IsPrivateIPv4(ReadOnlySpan<byte> b) =>
 		b[0] == 10 || (b[0] == 172 && b[1] >= 16 && b[1] <= 31) || (b[0] == 192 && b[1] == 168);
 
 	/// <summary>

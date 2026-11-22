@@ -191,11 +191,16 @@ public static class LatLongSpreadsheet
 	/// <summary>Saves the coordinates of the selected, valid rows in one transaction; returns how many structures were updated.</summary>
 	public static int Apply(SdeStore store, IEnumerable<LatLongRow> rows)
 	{
-		List<PropertyRecord> changed = new();
-		foreach (LatLongRow row in rows.Where(r => r.Selected && r.IsValid && r.PropertyID != null))
+		List<LatLongRow> selected = rows.Where(r => r.Selected && r.IsValid && r.PropertyID != null).ToList();
+		if (selected.Count == 0)
 		{
-			PropertyRecord p = store.GetProperty(row.PropertyID.Value);
-			if (p == null)
+			return 0;
+		}
+		Dictionary<Guid, PropertyRecord> byId = store.GetProperties(selected.Select(r => r.PropertyID.Value));
+		List<PropertyRecord> changed = new List<PropertyRecord>(selected.Count);
+		foreach (LatLongRow row in selected)
+		{
+			if (!byId.TryGetValue(row.PropertyID.Value, out PropertyRecord p))
 			{
 				continue;
 			}

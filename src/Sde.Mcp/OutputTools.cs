@@ -68,9 +68,7 @@ public sealed class OutputTools(SdeMcpContext sde, ILogger<OutputTools> log)
 			IncludePhotos = includePhotos,
 			PhotosFolder = store.AttachmentsFolder,
 			// Photos print with their markup (water lines, arrows, labels), as in the app; the photo files never change.
-			PhotoMarkups = includePhotos
-				? files.SelectMany(f => store.GetPhotoMarkups(f.Assessment.AssessmentID)).GroupBy(kv => kv.Key).ToDictionary(g => g.Key, g => g.First().Value)
-				: null,
+			PhotoMarkups = includePhotos ? store.GetPhotoMarkups(ids) : null,
 		};
 		FileStream pdf = AiOutputs.NewFile(sde.DatabasePath, fileName, $"{name} for {what}", ".pdf", out string path);
 		Write(path, pdf, output =>
@@ -105,7 +103,7 @@ public sealed class OutputTools(SdeMcpContext sde, ILogger<OutputTools> log)
 		}
 		EventRecord e = Lookups.OptionalEvent(store, @event);
 		(List<Guid> ids, List<string> skipped, _) = Lookups.Choose(store, assessmentIds, e, MaxMapAssessments);
-		List<AssessmentFile> files = Ordered(store, ids);
+		List<AssessmentFile> files = OrderedHeaders(store, ids);
 		ReferenceData reference = store.Reference;
 		List<GisRow> rows = GisRow.From(files, reference);
 		List<string> properties = new List<string> { "structure_id", "assessment_id", "address", "parcel", "damage_pct", GisExport.ClassField, "building_value", "repair_cost", "inspection_date", "firm_zone" };
@@ -168,8 +166,7 @@ public sealed class OutputTools(SdeMcpContext sde, ILogger<OutputTools> log)
 				w.WriteEndArray();
 				w.WriteEndObject();
 			}
-			buffer.Position = 0;
-			buffer.CopyTo(output);
+			output.Write(buffer.GetBuffer(), 0, (int)buffer.Length);
 		}, "the GeoJSON file");
 		log.LogInformation("export_geojson wrote {Path} ({Count} structures)", path, written);
 		string note = written == 0 ? "No structure had coordinates, so the file has no features." : null;
@@ -211,8 +208,13 @@ public sealed class OutputTools(SdeMcpContext sde, ILogger<OutputTools> log)
 		List<FieldInfo> popups = (popupFields ?? Array.Empty<string>()).Select(ReadTools.RequireField).Distinct().ToList();
 		EventRecord e = Lookups.OptionalEvent(store, @event);
 		(List<Guid> ids, List<string> skipped, _) = Lookups.Choose(store, assessmentIds, e, MaxMapAssessments);
-		List<AssessmentFile> files = Ordered(store, ids);
+		List<AssessmentFile> files = OrderedHeaders(store, ids);
 		string heading = string.IsNullOrWhiteSpace(title) ? e?.Label ?? "Damage assessments" : title.Trim();
+		Core.Events.EventSummary summary = e == null
+			? null
+			: (assessmentIds == null || assessmentIds.Length == 0)
+				? Core.Events.EventSummary.Build(files, null, e.Label, store.Reference, details: e.ToDetails())
+				: ReadTools.BuildSummary(store, e, out _);
 		WebMapOptions options = new WebMapOptions
 		{
 			Title = heading,
@@ -220,7 +222,7 @@ public sealed class OutputTools(SdeMcpContext sde, ILogger<OutputTools> log)
 			AddressDetail = detail,
 			PopupFields = who == WebMapPrivacy.Internal ? popups.Select(f => f.Key).ToList() : Array.Empty<string>(),
 			Basemap = background,
-			Summary = e == null ? null : ReadTools.BuildSummary(store, e, out _),
+			Summary = summary,
 		};
 		string folder = AiOutputs.NewFolder(sde.DatabasePath, heading + " web map", "Web map");
 		WebMapResult result = null;
@@ -246,11 +248,15 @@ public sealed class OutputTools(SdeMcpContext sde, ILogger<OutputTools> log)
 	internal static bool IsPersonal(FieldInfo f) => f.Model == FieldModel.Property
 		&& (f.Member.StartsWith("Owner", StringComparison.Ordinal) || f.Member.StartsWith("Mailing", StringComparison.Ordinal) || f.Member is "PhoneNumber" or "CellPhone");
 
-	/// <summary>The assessments loaded in the order given.</summary>
-	private static List<AssessmentFile> Ordered(SdeStore store, List<Guid> ids)
+	/// <summary>The assessments (Property + Assessment headers only) loaded in the order given.</summary>
+	private static List<AssessmentFile> OrderedHeaders(SdeStore store, List<Guid> ids)
 	{
-		Dictionary<Guid, int> order = ids.Select((id, i) => (id, i)).ToDictionary(x => x.id, x => x.i);
-		return store.LoadAssessments(ids).OrderBy(f => order[f.Assessment.AssessmentID]).ToList();
+		Dictionary<Guid, int> order = new Dictionary<Guid, int>(ids.Count);
+		for (int i = 0; i < ids.Count; i++)
+		{
+			order[ids[i]] = i;
+		}
+		return store.LoadAssessmentHeaders(ids).OrderBy(f => order[f.Assessment.AssessmentID]).ToList();
 	}
 
 	/// <summary>

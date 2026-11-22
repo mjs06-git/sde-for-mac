@@ -52,6 +52,21 @@ public sealed partial class SdeStore
 	/// <summary>An assessment's letters, newest first.</summary>
 	public List<LetterLogRecord> GetLetters(Guid assessmentId) => Database.Read(c => GetLetters(c, new[] { assessmentId }));
 
+	/// <summary>The letters of several assessments, newest first, read in chunks over one connection.</summary>
+	public List<LetterLogRecord> GetLetters(IEnumerable<Guid> assessmentIds) => Database.Read(c =>
+	{
+		List<LetterLogRecord> found = new List<LetterLogRecord>();
+		foreach (Guid[] chunk in assessmentIds.Distinct().Chunk(500))
+		{
+			found.AddRange(GetLetters(c, chunk));
+		}
+		if (found.Count > 1)
+		{
+			found.Sort((a, b) => Nullable.Compare(b.GeneratedOn, a.GeneratedOn));
+		}
+		return found;
+	});
+
 	/// <summary>The letters of several assessments, newest first, over a connection the caller holds.</summary>
 	internal static List<LetterLogRecord> GetLetters(System.Data.IDbConnection c, IReadOnlyCollection<Guid> assessmentIds) =>
 		TableMap<LetterLogRecord>.Select(c, "AssessmentID IN @assessmentIds", new { assessmentIds = IdText(assessmentIds) }, orderBy: "GeneratedOn DESC").ToList();

@@ -27,18 +27,7 @@ public static class GeometryEdit
 		{
 			return list;
 		}
-		Shape shape = Shape.Of(geometry);
-		for (int p = 0; p < shape.Parts.Count; p++)
-		{
-			for (int r = 0; r < shape.Parts[p].Count; r++)
-			{
-				Coordinate[] ring = shape.Parts[p][r];
-				for (int i = 0; i < ring.Length; i++)
-				{
-					list.Add((new VertexRef(p, r, i), ring[i]));
-				}
-			}
-		}
+		ScanVertices(geometry, (VertexRef v, double x, double y) => list.Add((v, new Coordinate(x, y))));
 		return list;
 	}
 
@@ -53,35 +42,237 @@ public static class GeometryEdit
 		{
 			return list;
 		}
-		Shape shape = Shape.Of(geometry);
-		if (shape.Kind == ShapeKind.Point)
-		{
-			return list;
-		}
-		for (int p = 0; p < shape.Parts.Count; p++)
-		{
-			for (int r = 0; r < shape.Parts[p].Count; r++)
-			{
-				Coordinate[] ring = shape.Parts[p][r];
-				int count = shape.Kind == ShapeKind.Polygon ? ring.Length : ring.Length - 1;
-				for (int i = 0; i < count; i++)
-				{
-					list.Add((new VertexRef(p, r, i), ring[i], ring[(i + 1) % ring.Length]));
-				}
-			}
-		}
+		ScanEdges(geometry, (VertexRef from, double ax, double ay, double bx, double by) => list.Add((from, new Coordinate(ax, ay), new Coordinate(bx, by))));
 		return list;
 	}
 
 	/// <summary>The coordinate of a corner, or null when the geometry has no such corner.</summary>
 	public static Coordinate VertexAt(Geometry geometry, VertexRef vertex)
 	{
-		if (geometry == null || geometry.IsEmpty)
+		if (geometry == null || geometry.IsEmpty || vertex.Part < 0 || vertex.Ring < 0 || vertex.Index < 0)
 		{
 			return null;
 		}
-		Shape shape = Shape.Of(geometry);
-		return shape.Has(vertex) ? shape.Parts[vertex.Part][vertex.Ring][vertex.Index].Copy() : null;
+		if (!TryGetRingSequence(geometry, vertex.Part, vertex.Ring, out CoordinateSequence seq, out int count))
+		{
+			return null;
+		}
+		return vertex.Index < count ? new Coordinate(seq.GetX(vertex.Index), seq.GetY(vertex.Index)) : null;
+	}
+
+	internal static void ScanVertices(Geometry g, Action<VertexRef, double, double> visit)
+	{
+		switch (g)
+		{
+			case Point p:
+				CoordinateSequence ps = p.CoordinateSequence;
+				visit(new VertexRef(0, 0, 0), ps.GetX(0), ps.GetY(0));
+				break;
+			case MultiPoint mp:
+				for (int part = 0; part < mp.NumGeometries; part++)
+				{
+					CoordinateSequence s = ((Point)mp.GetGeometryN(part)).CoordinateSequence;
+					visit(new VertexRef(part, 0, 0), s.GetX(0), s.GetY(0));
+				}
+				break;
+			case LineString line:
+				ScanSequenceVertices(0, 0, line.CoordinateSequence, closedRing: false, visit);
+				break;
+			case MultiLineString ml:
+				for (int part = 0; part < ml.NumGeometries; part++)
+				{
+					ScanSequenceVertices(part, 0, ((LineString)ml.GetGeometryN(part)).CoordinateSequence, closedRing: false, visit);
+				}
+				break;
+			case Polygon poly:
+				ScanPolygonVertices(0, poly, visit);
+				break;
+			case MultiPolygon mpoly:
+				for (int part = 0; part < mpoly.NumGeometries; part++)
+				{
+					ScanPolygonVertices(part, (Polygon)mpoly.GetGeometryN(part), visit);
+				}
+				break;
+			default:
+				throw new ArgumentException("Only points, lines and polygons can be edited.", nameof(g));
+		}
+	}
+
+	internal static void ScanEdges(Geometry g, Action<VertexRef, double, double, double, double> visit)
+	{
+		switch (g)
+		{
+			case Point:
+			case MultiPoint:
+				break;
+			case LineString line:
+				ScanSequenceEdges(0, 0, line.CoordinateSequence, closedRing: false, visit);
+				break;
+			case MultiLineString ml:
+				for (int part = 0; part < ml.NumGeometries; part++)
+				{
+					ScanSequenceEdges(part, 0, ((LineString)ml.GetGeometryN(part)).CoordinateSequence, closedRing: false, visit);
+				}
+				break;
+			case Polygon poly:
+				ScanPolygonEdges(0, poly, visit);
+				break;
+			case MultiPolygon mpoly:
+				for (int part = 0; part < mpoly.NumGeometries; part++)
+				{
+					ScanPolygonEdges(part, (Polygon)mpoly.GetGeometryN(part), visit);
+				}
+				break;
+			default:
+				throw new ArgumentException("Only points, lines and polygons can be edited.", nameof(g));
+		}
+	}
+
+	internal static void ClosestPointOnSegment(double ax, double ay, double bx, double by, double px, double py, out double ox, out double oy)
+	{
+		double dx = bx - ax;
+		double dy = by - ay;
+		double len2 = dx * dx + dy * dy;
+		if (len2 == 0.0)
+		{
+			ox = ax;
+			oy = ay;
+			return;
+		}
+		double t = ((px - ax) * dx + (py - ay) * dy) / len2;
+		if (t <= 0.0)
+		{
+			ox = ax;
+			oy = ay;
+		}
+		else if (t >= 1.0)
+		{
+			ox = bx;
+			oy = by;
+		}
+		else
+		{
+			ox = ax + t * dx;
+			oy = ay + t * dy;
+		}
+	}
+
+	private static int OpenRingCount(CoordinateSequence seq)
+	{
+		int n = seq.Count;
+		return n > 1 && seq.GetX(0) == seq.GetX(n - 1) && seq.GetY(0) == seq.GetY(n - 1) ? n - 1 : n;
+	}
+
+	private static void ScanPolygonVertices(int part, Polygon poly, Action<VertexRef, double, double> visit)
+	{
+		ScanSequenceVertices(part, 0, poly.ExteriorRing.CoordinateSequence, closedRing: true, visit);
+		for (int r = 0; r < poly.NumInteriorRings; r++)
+		{
+			ScanSequenceVertices(part, r + 1, poly.GetInteriorRingN(r).CoordinateSequence, closedRing: true, visit);
+		}
+	}
+
+	private static void ScanSequenceVertices(int part, int ring, CoordinateSequence seq, bool closedRing, Action<VertexRef, double, double> visit)
+	{
+		int count = closedRing ? OpenRingCount(seq) : seq.Count;
+		for (int i = 0; i < count; i++)
+		{
+			visit(new VertexRef(part, ring, i), seq.GetX(i), seq.GetY(i));
+		}
+	}
+
+	private static void ScanPolygonEdges(int part, Polygon poly, Action<VertexRef, double, double, double, double> visit)
+	{
+		ScanSequenceEdges(part, 0, poly.ExteriorRing.CoordinateSequence, closedRing: true, visit);
+		for (int r = 0; r < poly.NumInteriorRings; r++)
+		{
+			ScanSequenceEdges(part, r + 1, poly.GetInteriorRingN(r).CoordinateSequence, closedRing: true, visit);
+		}
+	}
+
+	private static void ScanSequenceEdges(int part, int ring, CoordinateSequence seq, bool closedRing, Action<VertexRef, double, double, double, double> visit)
+	{
+		int len = closedRing ? OpenRingCount(seq) : seq.Count;
+		int count = closedRing ? len : len - 1;
+		for (int i = 0; i < count; i++)
+		{
+			int next = i + 1 < len ? i + 1 : 0;
+			visit(new VertexRef(part, ring, i), seq.GetX(i), seq.GetY(i), seq.GetX(next), seq.GetY(next));
+		}
+	}
+
+	private static bool TryGetRingSequence(Geometry g, int part, int ring, out CoordinateSequence seq, out int count)
+	{
+		seq = null;
+		count = 0;
+		switch (g)
+		{
+			case Point p:
+				if (part == 0 && ring == 0)
+				{
+					seq = p.CoordinateSequence;
+					count = 1;
+					return true;
+				}
+				return false;
+			case MultiPoint mp:
+				if (part < mp.NumGeometries && ring == 0)
+				{
+					seq = ((Point)mp.GetGeometryN(part)).CoordinateSequence;
+					count = 1;
+					return true;
+				}
+				return false;
+			case LineString line:
+				if (part == 0 && ring == 0)
+				{
+					seq = line.CoordinateSequence;
+					count = seq.Count;
+					return true;
+				}
+				return false;
+			case MultiLineString ml:
+				if (part < ml.NumGeometries && ring == 0)
+				{
+					seq = ((LineString)ml.GetGeometryN(part)).CoordinateSequence;
+					count = seq.Count;
+					return true;
+				}
+				return false;
+			case Polygon poly:
+				if (part == 0)
+				{
+					return TryGetPolygonRing(poly, ring, out seq, out count);
+				}
+				return false;
+			case MultiPolygon mpoly:
+				if (part < mpoly.NumGeometries)
+				{
+					return TryGetPolygonRing((Polygon)mpoly.GetGeometryN(part), ring, out seq, out count);
+				}
+				return false;
+			default:
+				throw new ArgumentException("Only points, lines and polygons can be edited.", nameof(g));
+		}
+	}
+
+	private static bool TryGetPolygonRing(Polygon poly, int ring, out CoordinateSequence seq, out int count)
+	{
+		if (ring == 0)
+		{
+			seq = poly.ExteriorRing.CoordinateSequence;
+			count = OpenRingCount(seq);
+			return true;
+		}
+		if (ring <= poly.NumInteriorRings)
+		{
+			seq = poly.GetInteriorRingN(ring - 1).CoordinateSequence;
+			count = OpenRingCount(seq);
+			return true;
+		}
+		seq = null;
+		count = 0;
+		return false;
 	}
 
 	/// <summary>The geometry with one corner moved to <paramref name="to"/>.</summary>
@@ -121,20 +312,19 @@ public static class GeometryEdit
 	/// </summary>
 	public static bool CanDeleteVertex(Geometry geometry, VertexRef vertex)
 	{
-		if (geometry == null || geometry.IsEmpty)
+		if (geometry == null || geometry.IsEmpty || vertex.Part < 0 || vertex.Ring < 0 || vertex.Index < 0)
 		{
 			return false;
 		}
-		Shape shape = Shape.Of(geometry);
-		if (!shape.Has(vertex))
+		if (!TryGetRingSequence(geometry, vertex.Part, vertex.Ring, out CoordinateSequence _, out int count) || vertex.Index >= count)
 		{
 			return false;
 		}
-		int left = shape.Parts[vertex.Part][vertex.Ring].Length - 1;
-		return shape.Kind switch
+		int left = count - 1;
+		return geometry switch
 		{
-			ShapeKind.Line => left >= 2,
-			ShapeKind.Polygon => left >= 3,
+			LineString or MultiLineString => left >= 2,
+			Polygon or MultiPolygon => left >= 3,
 			_ => false,
 		};
 	}
@@ -159,7 +349,6 @@ public static class GeometryEdit
 		ArgumentNullException.ThrowIfNull(geometry);
 		Geometry copy = geometry.Copy();
 		copy.Apply(new Shift(dx, dy));
-		copy.GeometryChanged();
 		return copy;
 	}
 
@@ -169,18 +358,33 @@ public static class GeometryEdit
 	/// </summary>
 	public static (VertexRef From, Coordinate At, double Distance)? NearestEdge(Geometry geometry, Coordinate p)
 	{
-		(VertexRef From, Coordinate At, double Distance)? best = null;
-		foreach ((VertexRef from, Coordinate a, Coordinate b) in Edges(geometry))
+		if (geometry == null || geometry.IsEmpty)
 		{
-			LineSegment segment = new LineSegment(a, b);
-			Coordinate on = segment.ClosestPoint(p);
-			double d = on.Distance(p);
-			if (best == null || d < best.Value.Distance)
-			{
-				best = (from, on, d);
-			}
+			return null;
 		}
-		return best;
+		double px = p.X;
+		double py = p.Y;
+		bool found = false;
+		VertexRef bestFrom = default;
+		double bestX = 0;
+		double bestY = 0;
+		double bestDist2 = double.MaxValue;
+		ScanEdges(geometry, (VertexRef from, double ax, double ay, double bx, double by) =>
+		{
+			ClosestPointOnSegment(ax, ay, bx, by, px, py, out double ox, out double oy);
+			double dx = ox - px;
+			double dy = oy - py;
+			double d2 = dx * dx + dy * dy;
+			if (!found || d2 < bestDist2)
+			{
+				found = true;
+				bestFrom = from;
+				bestX = ox;
+				bestY = oy;
+				bestDist2 = d2;
+			}
+		});
+		return found ? (bestFrom, new Coordinate(bestX, bestY), Math.Sqrt(bestDist2)) : null;
 	}
 
 	private enum ShapeKind

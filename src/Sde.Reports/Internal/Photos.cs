@@ -73,6 +73,15 @@ internal sealed class PhotoLibrary
 	/// <summary>The detail report's "Additional Image": the next photo after the primary one.</summary>
 	public Photo Additional(AssessmentFile file) => At(file, 1);
 
+	/// <summary>Both the primary and additional photos for the detail report in a single pass over the attachments.</summary>
+	public (Photo Primary, Photo Additional) Pair(AssessmentFile file)
+	{
+		IReadOnlyList<AttachmentRecord> list = Ordered(file);
+		Photo primary = list.Count > 0 ? Load(list[0]) : Photo.NoPhoto;
+		Photo additional = list.Count > 1 ? Load(list[1]) : Photo.NoPhoto;
+		return (primary, additional);
+	}
+
 	private Photo At(AssessmentFile file, int index)
 	{
 		IReadOnlyList<AttachmentRecord> list = Ordered(file);
@@ -81,20 +90,27 @@ internal sealed class PhotoLibrary
 
 	private Photo Load(AttachmentRecord a)
 	{
-		string path = string.IsNullOrEmpty(_folder) ? null : System.IO.Path.Combine(_folder, System.IO.Path.GetFileName(a.FileName));
-		if (path == null || !File.Exists(path))
+		string fileName = System.IO.Path.GetFileName(a.FileName);
+		string path = string.IsNullOrEmpty(_folder) ? null : System.IO.Path.Combine(_folder, fileName);
+		if (path == null)
 		{
 			return new Photo { Status = PhotoStatus.Missing, Description = a.Description };
 		}
 		if (_cache.TryGetValue(path, out Photo cached))
 		{
-			return cached;
+			return string.Equals(cached.Description, a.Description, StringComparison.Ordinal)
+				? cached
+				: new Photo { Status = cached.Status, Path = cached.Path, PixelWidth = cached.PixelWidth, PixelHeight = cached.PixelHeight, Description = a.Description };
+		}
+		if (!File.Exists(path))
+		{
+			return new Photo { Status = PhotoStatus.Missing, Description = a.Description };
 		}
 		Photo photo;
 		try
 		{
 			// Upright and print-sized (see PhotoPrep); MigraDoc takes the bytes as a "base64:" image source.
-			PhotoMarkup markup = _markups != null && _markups.TryGetValue(System.IO.Path.GetFileName(a.FileName), out string json) ? PhotoMarkup.Parse(json) : null;
+			PhotoMarkup markup = _markups != null && _markups.TryGetValue(fileName, out string json) ? PhotoMarkup.Parse(json) : null;
 			photo = PhotoPrep.Prepare(path, markup) is (byte[] jpeg, int w, int h)
 				? new Photo { Status = PhotoStatus.Ok, Path = "base64:" + Convert.ToBase64String(jpeg), PixelWidth = w, PixelHeight = h, Description = a.Description }
 				: new Photo { Status = PhotoStatus.Unsupported, Description = a.Description };

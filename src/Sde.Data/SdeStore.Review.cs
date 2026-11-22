@@ -135,6 +135,22 @@ public sealed partial class SdeStore
 		"SELECT m.FileName, m.Markup, m.UpdatedOn, m.UpdatedBy FROM PhotoMarkup m WHERE m.FileName IN (SELECT FileName FROM Attachment WHERE AssessmentID = @assessmentId)",
 		new { assessmentId }).ToDictionary(m => m.FileName, m => m.Markup, StringComparer.Ordinal));
 
+	/// <summary>The markup of many assessments' photos, by file name, read in chunks over one connection.</summary>
+	public Dictionary<string, string> GetPhotoMarkups(IEnumerable<Guid> assessmentIds) => Database.Read(c =>
+	{
+		Dictionary<string, string> map = new Dictionary<string, string>(StringComparer.Ordinal);
+		foreach (Guid[] chunk in assessmentIds.Distinct().Chunk(500))
+		{
+			foreach (PhotoMarkupRecord m in c.Query<PhotoMarkupRecord>(
+				"SELECT m.FileName, m.Markup, m.UpdatedOn, m.UpdatedBy FROM PhotoMarkup m WHERE m.FileName IN (SELECT FileName FROM Attachment WHERE AssessmentID IN @chunk)",
+				new { chunk = IdText(chunk) }))
+			{
+				map[m.FileName] = m.Markup;
+			}
+		}
+		return map;
+	});
+
 	/// <summary>
 	/// Saves (or, with null or empty JSON, removes) a photo's markup. Refused when the photo belongs to a Final or Letter
 	/// sent assessment: its reports must not change.

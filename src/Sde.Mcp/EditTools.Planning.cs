@@ -77,7 +77,7 @@ public sealed partial class EditTools
 		ReferenceData r = store.Reference;
 		AddressMatcher matcher = new AddressMatcher(r);
 		AddressKey key = matcher.KeyFor(draft.Property);
-		List<PropertyRecord> same = key.CanMatch ? store.GetProperties().Where(p => matcher.Same(matcher.KeyFor(p), key)).ToList() : new List<PropertyRecord>();
+		List<PropertyRecord> same = key.CanMatch ? store.GetPropertyAddresses().Where(p => matcher.Same(matcher.KeyFor(p), key)).ToList() : new List<PropertyRecord>();
 
 		sde.EnsureBackup();
 		SaveContext ctx = Context(server);
@@ -123,7 +123,7 @@ public sealed partial class EditTools
 	{
 		sde.RequireEditsAllowed();
 		SdeStore store = sde.Writer;
-		AssessmentFile file = sde.LoadAssessment(store, assessmentId);
+		AssessmentFile file = sde.LoadAssessmentHeader(store, assessmentId);
 		Guid id = file.Assessment.AssessmentID;
 		if (store.GetCheckOut(id) is CheckOutRecord checkOut)
 		{
@@ -187,13 +187,28 @@ public sealed partial class EditTools
 		{
 			throw new McpException($"One call can assign at most {MaxAssign} structures.");
 		}
-		List<Guid> propertyIds = new List<Guid>();
+		List<Guid> parsedIds = new List<Guid>(structures.Length);
 		foreach (string text in structures)
 		{
 			Guid id = Guid.TryParse(text?.Trim(), out Guid parsed)
 				? parsed
 				: throw new McpException($"\"{Describe.Shorten(text, 60)}\" isn't a structure or assessment ID; find_structures lists them. Nothing was assigned.");
-			PropertyRecord p = store.GetProperty(id) ?? (store.LoadAssessment(id) is AssessmentFile f && f.Assessment.Active ? f.Property : null);
+			parsedIds.Add(id);
+		}
+		Dictionary<Guid, PropertyRecord> propsById = store.GetProperties(parsedIds);
+		List<Guid> missingIds = parsedIds.Where(id => !propsById.ContainsKey(id)).Distinct().ToList();
+		Dictionary<Guid, AssessmentFile> assessmentsById = missingIds.Count > 0
+			? store.LoadAssessmentHeaders(missingIds).ToDictionary(f => f.Assessment.AssessmentID)
+			: new Dictionary<Guid, AssessmentFile>();
+		List<Guid> propertyIds = new List<Guid>(parsedIds.Count);
+		HashSet<Guid> seenProperties = new HashSet<Guid>();
+		foreach (Guid id in parsedIds)
+		{
+			PropertyRecord p;
+			if (!propsById.TryGetValue(id, out p))
+			{
+				p = assessmentsById.TryGetValue(id, out AssessmentFile f) && f.Assessment.Active ? f.Property : null;
+			}
 			if (p == null)
 			{
 				throw new McpException($"There's no structure or assessment {id} in this database. find_structures lists them. Nothing was assigned.");
@@ -202,25 +217,34 @@ public sealed partial class EditTools
 			{
 				throw new McpException($"The structure at {Describe.Address(p, store.Reference)} is in Recently deleted, so it can't be assigned. Nothing was assigned.");
 			}
-			propertyIds.Add(p.PropertyID);
+			propsById[p.PropertyID] = p;
+			if (seenProperties.Add(p.PropertyID))
+			{
+				propertyIds.Add(p.PropertyID);
+			}
 		}
-		propertyIds = propertyIds.Distinct().ToList();
 		if (alsoSetFemaTeamName)
 		{
+			Dictionary<Guid, CheckOutRecord> checkOuts = new Dictionary<Guid, CheckOutRecord>();
+			foreach (CheckOutRecord co in store.GetCheckOuts())
+			{
+				checkOuts[co.AssessmentID] = co;
+			}
+			Dictionary<Guid, AssessmentStatusRecord> statuses = store.GetStatuses();
 			// Checking a work package back in replaces the structure's FEMA fields, so the team name would be lost.
 			foreach (Guid pid in propertyIds)
 			{
 				foreach (AssessmentRecord a in store.GetAssessmentsForProperty(pid))
 				{
-					if (store.GetCheckOut(a.AssessmentID) is CheckOutRecord checkOut)
+					if (checkOuts.TryGetValue(a.AssessmentID, out CheckOutRecord checkOut))
 					{
 						throw new McpException($"{new AssessmentCheckedOutException(a.AssessmentID, checkOut).Message} FEMA's Team name can't be set on it, so nothing was assigned.");
 					}
 					// Team name is one of the structure's own fields, which update_fields won't change under a locked assessment either.
-					AssessmentStatusRecord status = store.GetStatus(a.AssessmentID);
+					AssessmentStatusRecord status = statuses.TryGetValue(a.AssessmentID, out AssessmentStatusRecord s) ? s : new AssessmentStatusRecord { AssessmentID = a.AssessmentID, Value = AssessmentStatus.Draft };
 					if (status.IsLocked)
 					{
-						throw new McpException($"Assessment {a.AssessmentID} of {Describe.Address(store.GetProperty(pid), store.Reference)} is {AssessmentStatuses.Label(status.Value)}, so SDE won't let an AI assistant set FEMA's Team name on its structure. Assign it without alsoSetFemaTeamName, or a person can set it in SDE. Nothing was assigned.");
+						throw new McpException($"Assessment {a.AssessmentID} of {Describe.Address(propsById[pid], store.Reference)} is {AssessmentStatuses.Label(status.Value)}, so SDE won't let an AI assistant set FEMA's Team name on its structure. Assign it without alsoSetFemaTeamName, or a person can set it in SDE. Nothing was assigned.");
 					}
 				}
 			}
@@ -238,19 +262,19 @@ public sealed partial class EditTools
 		{
 			AssignmentRecord first = visited[0];
 			string more = visited.Count == 1 ? "" : $" ({visited.Count - 1} more of these structures are visited, done or skipped too)";
-			throw new McpException($"{Describe.Address(store.GetProperty(first.PropertyID), store.Reference)} is already marked {first.Status} by {teamNames.GetValueOrDefault(first.TeamID) ?? "its team"}{(e == null ? "" : " for " + e.Label)}{more}, so SDE won't let an AI assistant move it to another team: that would mark it Assigned again. A person can reassign it in SDE. Nothing was assigned.");
+			throw new McpException($"{Describe.Address(propsById[first.PropertyID], store.Reference)} is already marked {first.Status} by {teamNames.GetValueOrDefault(first.TeamID) ?? "its team"}{(e == null ? "" : " for " + e.Label)}{more}, so SDE won't let an AI assistant move it to another team: that would mark it Assigned again. A person can reassign it in SDE. Nothing was assigned.");
 		}
 
-		Dictionary<Guid, string> femaNames = alsoSetFemaTeamName ? moving.ToDictionary(pid => pid, pid => store.GetProperty(pid).TeamName) : null;
+		Dictionary<Guid, string> femaNames = alsoSetFemaTeamName ? moving.ToDictionary(pid => pid, pid => propsById[pid].TeamName) : null;
 		string batchId = null;
-		List<AssignmentRecord> assigned;
+		Dictionary<Guid, AssignmentRecord> now;
 		if (moving.Count > 0)
 		{
 			sde.EnsureBackup();
 			SaveContext ctx = Context(server);
-			assigned = store.AssignToTeam(propertyIds, t.TeamID, e?.EventID, due, alsoSetFemaTeamName, ctx);
+			List<AssignmentRecord> assigned = store.AssignToTeam(propertyIds, t.TeamID, e?.EventID, due, alsoSetFemaTeamName, ctx);
 			AiAssistantSettings.Record(store, ctx,
-				$"Assigned {(moving.Count == 1 ? Describe.Address(store.GetProperty(moving[0]), store.Reference) : $"{moving.Count} structures")} to {t.Name}{(e == null ? "" : " for " + e.Label)}",
+				$"Assigned {(moving.Count == 1 ? Describe.Address(propsById[moving[0]], store.Reference) : $"{moving.Count} structures")} to {t.Name}{(e == null ? "" : " for " + e.Label)}",
 				new AiChangeRecord
 				{
 					Kind = AiChangeKinds.Assignment,
@@ -266,13 +290,13 @@ public sealed partial class EditTools
 				});
 			batchId = ctx.BatchId;
 			log.LogInformation("assign_to_team by {User}: {Count} structure(s) to {Team} (batch {Batch})", ctx.User, moving.Count, t.Name, ctx.BatchId);
+			now = assigned.GroupBy(a => a.PropertyID).ToDictionary(g => g.Key, g => g.First());
 		}
 		else
 		{
-			assigned = store.GetAssignments(t.TeamID, e?.EventID).Where(a => a.EventID == e?.EventID && propertyIds.Contains(a.PropertyID)).ToList();
+			now = before;
 		}
-		Dictionary<Guid, AssignmentRecord> now = assigned.GroupBy(a => a.PropertyID).ToDictionary(g => g.Key, g => g.First());
-		List<AssignedStructure> rows = propertyIds.Select(pid => new AssignedStructure(pid.ToString(), Describe.Address(store.GetProperty(pid), store.Reference),
+		List<AssignedStructure> rows = propertyIds.Select(pid => new AssignedStructure(pid.ToString(), Describe.Address(propsById[pid], store.Reference),
 			now.TryGetValue(pid, out AssignmentRecord a) ? a.ShortCode : null,
 			before.TryGetValue(pid, out AssignmentRecord b) && b.TeamID != t.TeamID ? teamNames.GetValueOrDefault(b.TeamID) : null)).ToList();
 		string note = moving.Count == 0 ? $"Nothing changed: {t.Name} already had {(propertyIds.Count == 1 ? "it" : "them all")}." : null;

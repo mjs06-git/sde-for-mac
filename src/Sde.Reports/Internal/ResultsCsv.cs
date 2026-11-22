@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Globalization;
 using System.Text;
 using Sde.Core;
@@ -59,20 +60,68 @@ internal static class ResultsCsv
 	internal static string Amount(string printed) =>
 		decimal.TryParse(printed, NumberStyles.Currency, Fmt.Us, out decimal d) ? d.ToString("0.00", CultureInfo.InvariantCulture) : "";
 
+	private static readonly SearchValues<char> CsvSpecial = SearchValues.Create(",\"\r\n");
+
 	internal static void Line(StringBuilder sb, IEnumerable<string> values)
 	{
-		sb.Append(string.Join(",", values.Select(Quote)));
+		bool first = true;
+		foreach (string v in values)
+		{
+			if (!first)
+			{
+				sb.Append(',');
+			}
+			first = false;
+			AppendQuoted(sb, v);
+		}
 		sb.Append("\r\n");
 	}
+
+	private static void AppendQuoted(StringBuilder sb, string value)
+	{
+		string s = value ?? "";
+		bool prefix = s.Length > 0 && IsFormulaLead(s[0]) && !decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out _);
+		if (s.AsSpan().IndexOfAny(CsvSpecial) >= 0)
+		{
+			sb.Append('"');
+			if (prefix)
+			{
+				sb.Append('\'');
+			}
+			for (int i = 0; i < s.Length; i++)
+			{
+				char ch = s[i];
+				if (ch == '"')
+				{
+					sb.Append("\"\"");
+				}
+				else
+				{
+					sb.Append(ch);
+				}
+			}
+			sb.Append('"');
+		}
+		else
+		{
+			if (prefix)
+			{
+				sb.Append('\'');
+			}
+			sb.Append(s);
+		}
+	}
+
+	private static bool IsFormulaLead(char c) => c is '=' or '+' or '-' or '@';
 
 	/// <summary>RFC 4180 quoting; a leading = + - @ is prefixed with ' so a spreadsheet doesn't run it as a formula.</summary>
 	internal static string Quote(string value)
 	{
 		string s = value ?? "";
-		if (s.Length > 0 && "=+-@".Contains(s[0]) && !decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out _))
+		if (s.Length > 0 && IsFormulaLead(s[0]) && !decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out _))
 		{
 			s = "'" + s;
 		}
-		return s.IndexOfAny(new[] { ',', '"', '\r', '\n' }) >= 0 ? "\"" + s.Replace("\"", "\"\"") + "\"" : s;
+		return s.AsSpan().IndexOfAny(CsvSpecial) >= 0 ? "\"" + s.Replace("\"", "\"\"") + "\"" : s;
 	}
 }

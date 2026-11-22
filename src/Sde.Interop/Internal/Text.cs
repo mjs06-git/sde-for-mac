@@ -39,10 +39,37 @@ internal static class Text
 	public static string Plain(decimal? value) => value?.ToString(CultureInfo.InvariantCulture) ?? "";
 
 	/// <summary>Non-empty parts, trimmed, joined by single spaces (null-safe, unlike the original "+" concatenations).</summary>
+	public static string Join(string a, string b)
+	{
+		ReadOnlySpan<char> sa = a.AsSpan().Trim();
+		ReadOnlySpan<char> sb = b.AsSpan().Trim();
+		if (sa.IsEmpty)
+		{
+			return sb.IsEmpty ? "" : sb.Length == b.Length ? b : sb.ToString();
+		}
+		if (sb.IsEmpty)
+		{
+			return sa.Length == a.Length ? a : sa.ToString();
+		}
+		return string.Concat(sa, " ", sb);
+	}
+
+	/// <summary>Non-empty parts, trimmed, joined by single spaces (null-safe, unlike the original "+" concatenations).</summary>
+	public static string Join(string a, string b, string c) => Join(Join(a, b), c);
+
+	/// <summary>Non-empty parts, trimmed, joined by single spaces (null-safe, unlike the original "+" concatenations).</summary>
 	public static string Join(params string[] parts) =>
 		string.Join(" ", parts.Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => p.Trim()));
 
-	public static string Clean(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+	public static string Clean(string value)
+	{
+		if (string.IsNullOrEmpty(value))
+		{
+			return null;
+		}
+		ReadOnlySpan<char> trimmed = value.AsSpan().Trim();
+		return trimmed.IsEmpty ? null : trimmed.Length == value.Length ? value : trimmed.ToString();
+	}
 
 	/// <summary>
 	/// Parses a number as a US-English user would type it: thousands separators, a leading "$", a trailing "%",
@@ -55,7 +82,11 @@ internal static class Text
 		{
 			return false;
 		}
-		string s = text.Trim().Replace("%", "").Trim();
+		ReadOnlySpan<char> s = text.AsSpan().Trim();
+		if (s.Contains('%'))
+		{
+			s = text.Trim().Replace("%", "", StringComparison.Ordinal).Trim().AsSpan();
+		}
 		const NumberStyles styles = NumberStyles.Number | NumberStyles.AllowCurrencySymbol | NumberStyles.AllowParentheses | NumberStyles.AllowExponent;
 		return decimal.TryParse(s, styles, Us, out value) || decimal.TryParse(s, styles, CultureInfo.InvariantCulture, out value);
 	}
@@ -64,11 +95,11 @@ internal static class Text
 
 	private static readonly System.Text.RegularExpressions.Regex MeasurePattern = new(
 		@"^\s*(?<n>[-+]?(?:\d{1,3}(?:,\d{3})+|\d*)(?:\.\d+)?)\s*(?<u>[a-z'""”″′’.]+)?\s*$",
-		System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+		System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
 	private static readonly System.Text.RegularExpressions.Regex FeetInchesPattern = new(
 		@"^\s*(?<ft>\d+(?:\.\d+)?)\s*(?:'|’|′|ft\.?|feet|foot)\s*(?<in>\d+(?:\.\d+)?)\s*(?:""|”|″|in\.?|inch|inches)?\s*$",
-		System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+		System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
 	/// <summary>
 	/// A number with an optional unit, as inspectors write measurements: "3 ft", "2'", "3' 6\"", "36 in", "48 hrs",
@@ -133,7 +164,7 @@ internal static class Text
 		{
 			return false;
 		}
-		string s = text.Trim();
+		ReadOnlySpan<char> s = text.AsSpan().Trim();
 		if (DateTimeOffset.TryParse(s, Us, DateTimeStyles.AllowWhiteSpaces, out DateTimeOffset dto)
 			|| DateTimeOffset.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces, out dto))
 		{

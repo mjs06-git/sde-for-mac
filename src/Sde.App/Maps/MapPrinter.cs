@@ -145,7 +145,8 @@ public static class MapPrinter
 			missing += m;
 			zoom = z;
 		}
-		foreach (MapTileLayer overlay in scene.Overlays.Where(o => o.Visible && (o.Display?.IsVisibleAt(Scale(resolution, latitude)) ?? true)))
+		double scale = Scale(resolution, latitude);
+		foreach (MapTileLayer overlay in scene.Overlays.Where(o => o.Visible && (o.Display?.IsVisibleAt(scale) ?? true)))
 		{
 			if (tiles != null)
 			{
@@ -157,13 +158,12 @@ public static class MapPrinter
 		cancel.ThrowIfCancellationRequested();
 
 		// Layers and structures, drawn by the engine at print resolution.
-		DrawVectors(canvas, scene, resolution, dipW, dipH, density, Scale(resolution, latitude));
+		DrawVectors(canvas, scene, resolution, dipW, dipH, density, scale);
 
 		DrawScaleBar(canvas, pxW, pxH, groundMetresPerPixel);
 		DrawNorthArrow(canvas, pxW);
 
-		using SKImage image = SKImage.FromBitmap(bitmap);
-		using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+		using SKData data = bitmap.Encode(SKEncodedImageFormat.Png, 100);
 		return new MapPrintImage
 		{
 			Png = data.ToArray(),
@@ -238,13 +238,14 @@ public static class MapPrinter
 	{
 		MapTheme theme = PaperTheme;
 		List<BuiltFeatureLayer> built = new List<BuiltFeatureLayer>();
+		List<IDisposable> ownedLayers = new List<IDisposable>();
 		List<ILayer> layers = new List<ILayer>();
 		List<ILayer> labels = new List<ILayer>();
 		try
 		{
 			foreach (MapFeatureLayer spec in scene.Layers.Where(l => l.Visible && (l.Display?.IsVisibleAt(scale) ?? true)))
 			{
-				BuiltFeatureLayer b = BuiltFeatureLayer.Build(spec, theme, density);
+				BuiltFeatureLayer b = BuiltFeatureLayer.Build(spec, theme, density, forPrint: true);
 				built.Add(b);
 				// The features themselves, never raster tiles of them: print is drawn once, sharp.
 				b.Source.Opacity = spec.Display?.ClampedOpacity ?? 1;
@@ -259,17 +260,22 @@ public static class MapPrinter
 			// The analysis pictures, as on screen: over the layers, under the labels and the structures.
 			foreach (MapRasterOverlay raster in scene.Rasters ?? Array.Empty<MapRasterOverlay>())
 			{
-				layers.Add(AnalysisLayers.Raster(raster));
+				MemoryLayer rasterLayer = AnalysisLayers.Raster(raster);
+				ownedLayers.Add(rasterLayer);
+				layers.Add(rasterLayer);
 			}
 			layers.AddRange(labels);
 			List<IFeature> structures = scene.MarkersHidden ? new List<IFeature>()
 				: scene.Clusters != null ? AnalysisLayers.Clusters(scene.Clusters, scene.Markers, theme)
 				: StructureDots.Dots(scene.Markers, theme);
 			MemoryLayer dots = new MemoryLayer("Structures") { Style = null, Features = structures };
+			ownedLayers.Add(dots);
 			layers.Add(dots);
 			if (scene.MarkerLabels != null && !scene.MarkersHidden && scene.Clusters == null && scene.MarkerLabels.IsVisibleAt(scale))
 			{
-				layers.Add(StructureDots.LabelLayer(StructureDots.LabelPoints(scene.Markers), scene.MarkerLabels, theme));
+				MemoryLayer markerLabelLayer = StructureDots.LabelLayer(StructureDots.LabelPoints(scene.Markers), scene.MarkerLabels, theme);
+				ownedLayers.Add(markerLabelLayer);
+				layers.Add(markerLabelLayer);
 			}
 			foreach (ILayer layer in layers)
 			{
@@ -287,6 +293,10 @@ public static class MapPrinter
 		}
 		finally
 		{
+			foreach (IDisposable owned in ownedLayers)
+			{
+				owned.Dispose();
+			}
 			foreach (BuiltFeatureLayer b in built)
 			{
 				b.Dispose();
@@ -294,22 +304,38 @@ public static class MapPrinter
 		}
 	}
 
+	private static readonly double[] FeetSteps = { 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000 };
+	private static readonly double[] MileSteps = { 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500 };
+	private static readonly CultureInfo Us = CultureInfo.GetCultureInfo("en-US");
+
 	/// <summary>The bar's length: a round number of feet (under half a mile) or miles, about an inch and a half on paper.</summary>
 	public static (double Metres, string Label) ScaleBarLength(double groundMetresPerPixel)
 	{
 		double target = 1.5 * Dpi * groundMetresPerPixel;
 		double feet = target / 0.3048;
-		double[] feetSteps = { 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000 };
-		double[] mileSteps = { 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500 };
 		if (feet < 2640)
 		{
-			double f = feetSteps.LastOrDefault(s => s <= feet);
-			f = f == 0 ? feetSteps[0] : f;
-			return (f * 0.3048, f.ToString("N0", CultureInfo.GetCultureInfo("en-US")) + " ft");
+			double f = FeetSteps[0];
+			for (int i = FeetSteps.Length - 1; i >= 0; i--)
+			{
+				if (FeetSteps[i] <= feet)
+				{
+					f = FeetSteps[i];
+					break;
+				}
+			}
+			return (f * 0.3048, f.ToString("N0", Us) + " ft");
 		}
 		double miles = feet / 5280;
-		double mi = mileSteps.LastOrDefault(s => s <= miles);
-		mi = mi == 0 ? mileSteps[0] : mi;
+		double mi = MileSteps[0];
+		for (int i = MileSteps.Length - 1; i >= 0; i--)
+		{
+			if (MileSteps[i] <= miles)
+			{
+				mi = MileSteps[i];
+				break;
+			}
+		}
 		return (mi * 1609.344, mi.ToString("0.#", CultureInfo.InvariantCulture) + (mi == 1 ? " mile" : " miles"));
 	}
 

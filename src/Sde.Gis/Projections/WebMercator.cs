@@ -10,6 +10,7 @@ public sealed class WebMercator : MapProjection
 	public const double MaxLatitude = 89.5;
 
 	private readonly double _a;
+	private readonly double _invA;
 	private readonly double _lon0;
 	private readonly double _fe;
 	private readonly double _fn;
@@ -22,6 +23,7 @@ public sealed class WebMercator : MapProjection
 		: base(ellipsoid)
 	{
 		_a = ellipsoid.SemiMajorAxis;
+		_invA = 1.0 / _a;
 		_lon0 = longitudeOfOrigin * DegToRad;
 		_fe = falseEasting;
 		_fn = falseNorthing;
@@ -36,15 +38,15 @@ public sealed class WebMercator : MapProjection
 	{
 		double phi = Math.Clamp(latitude, -MaxLatitude, MaxLatitude) * DegToRad;
 		double x = _fe + _a * WrapRadians(longitude * DegToRad - _lon0);
-		double y = _fn + _a * Math.Log(Math.Tan(Math.PI / 4.0 + phi / 2.0));
+		double y = _fn + _a * Math.Log(Math.Tan(Math.PI / 4.0 + phi * 0.5));
 		return (x, y);
 	}
 
 	public override (double Longitude, double Latitude) Inverse(double x, double y)
 	{
-		double d = (_fn - y) / _a;
+		double d = (_fn - y) * _invA;
 		double phi = Math.PI / 2.0 - 2.0 * Math.Atan(Math.Exp(d));
-		double lambda = (x - _fe) / _a + _lon0;
+		double lambda = (x - _fe) * _invA + _lon0;
 		return (WrapDegrees(lambda * RadToDeg), phi * RadToDeg);
 	}
 }

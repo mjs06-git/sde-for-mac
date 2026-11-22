@@ -239,25 +239,39 @@ public sealed partial class SdeStore
 			List<AssessmentRecord> assessments = TableMap<AssessmentRecord>.Select(c, "PropertyID = @propertyId", new { propertyId },
 				orderBy: "DateofInspection DESC, LastUpdate DESC").ToList();
 			List<Guid> ids = assessments.Select(a => a.AssessmentID).ToList();
-			Dictionary<Guid, AssessmentStatusRecord> statuses = TableMap<AssessmentStatusRecord>.Select(c, "AssessmentID IN @ids", new { ids = IdText(ids) }).ToDictionary(s => s.AssessmentID);
-			Dictionary<Guid, Guid> memberships = TableMap<EventAssessmentRecord>.Select(c, "AssessmentID IN @ids", new { ids = IdText(ids) }).ToDictionary(r => r.AssessmentID, r => r.EventID);
-			List<Guid> eventIds = memberships.Values.Distinct().ToList();
-			Dictionary<Guid, EventRecord> events = TableMap<EventRecord>.Select(c, "EventID IN @eventIds", new { eventIds = IdText(eventIds) }).ToDictionary(e => e.EventID);
-			Dictionary<Guid, int> photos = c.Query<OpenCountRow>(
-				"SELECT AssessmentID, COUNT(*) AS Count FROM Attachment WHERE Active = 1 AND AssessmentID IN @ids GROUP BY AssessmentID", new { ids = IdText(ids) })
-				.ToDictionary(r => r.AssessmentID, r => r.Count);
-			List<LetterLogRecord> letters = GetLetters(c, ids);
-			Dictionary<Guid, AppealRecord> appeals = GetAppeals(c, ids).ToDictionary(a => a.AssessmentID);
-			List<ContractorBidRecord> bids = GetBids(c, ids);
-			List<ReviewCommentRecord> comments = GetReviewComments(c, ids);
+			List<string> idText = IdText(ids);
+			Dictionary<Guid, AssessmentStatusRecord> statuses = idText.Count == 0
+				? new Dictionary<Guid, AssessmentStatusRecord>()
+				: TableMap<AssessmentStatusRecord>.Select(c, "AssessmentID IN @ids", new { ids = idText }).ToDictionary(s => s.AssessmentID);
+			Dictionary<Guid, Guid> memberships = idText.Count == 0
+				? new Dictionary<Guid, Guid>()
+				: TableMap<EventAssessmentRecord>.Select(c, "AssessmentID IN @ids", new { ids = idText }).ToDictionary(r => r.AssessmentID, r => r.EventID);
+			List<string> eventIdText = IdText(memberships.Values);
+			Dictionary<Guid, EventRecord> events = eventIdText.Count == 0
+				? new Dictionary<Guid, EventRecord>()
+				: TableMap<EventRecord>.Select(c, "EventID IN @eventIds", new { eventIds = eventIdText }).ToDictionary(e => e.EventID);
+			Dictionary<Guid, int> photos = idText.Count == 0
+				? new Dictionary<Guid, int>()
+				: c.Query<OpenCountRow>(
+					"SELECT AssessmentID, COUNT(*) AS Count FROM Attachment WHERE Active = 1 AND AssessmentID IN @ids GROUP BY AssessmentID", new { ids = idText })
+					.ToDictionary(r => r.AssessmentID, r => r.Count);
+			List<LetterLogRecord> letters = ids.Count == 0 ? new List<LetterLogRecord>() : GetLetters(c, ids);
+			Dictionary<Guid, AppealRecord> appeals = ids.Count == 0 ? new Dictionary<Guid, AppealRecord>() : GetAppeals(c, ids).ToDictionary(a => a.AssessmentID);
+			List<ContractorBidRecord> bids = ids.Count == 0 ? new List<ContractorBidRecord>() : GetBids(c, ids);
+			List<ReviewCommentRecord> comments = ids.Count == 0 ? new List<ReviewCommentRecord>() : GetReviewComments(c, ids);
 			List<ComplianceCaseRecord> cases = TableMap<ComplianceCaseRecord>.Select(c, "PropertyID = @propertyId", new { propertyId },
 				orderBy: "CASE WHEN Status = 'Closed' THEN 1 ELSE 0 END, COALESCE(Deadline, '9999-12-31'), CreatedOn").ToList();
-			List<ComplianceEntryRecord> entries = GetComplianceEntries(c, cases.Select(x => x.CaseID).ToList());
+			List<ComplianceEntryRecord> entries = cases.Count == 0 ? new List<ComplianceEntryRecord>() : GetComplianceEntries(c, cases.Select(x => x.CaseID).ToList());
 			List<ImprovementProjectRecord> projects = GetImprovementProjects(c, propertyId);
 			List<SIDeterminationRecord> determinations = GetSiDeterminations(c, propertyId);
 			List<DocumentRecord> documents = GetDocuments(c, propertyId);
 			List<EditHistoryRecord> history = GetPropertyHistory(c, propertyId);
 			CumulativeSettings cumulativeSettings = GetCumulativeSettings(c);
+
+			ILookup<Guid, LetterLogRecord> lettersByAssessment = letters.ToLookup(l => l.AssessmentID);
+			ILookup<Guid, ContractorBidRecord> bidsByAssessment = bids.ToLookup(b => b.AssessmentID);
+			ILookup<Guid, ReviewCommentRecord> commentsByAssessment = comments.ToLookup(x => x.AssessmentID);
+			ILookup<Guid, ComplianceEntryRecord> entriesByCase = entries.ToLookup(en => en.CaseID);
 
 			List<CaseFileAssessment> list = assessments.Select(a => new CaseFileAssessment
 			{
@@ -266,10 +280,10 @@ public sealed partial class SdeStore
 				Event = memberships.TryGetValue(a.AssessmentID, out Guid eid) && events.TryGetValue(eid, out EventRecord e) ? e : null,
 				IsTrashed = !a.Active,
 				PhotoCount = photos.TryGetValue(a.AssessmentID, out int n) ? n : 0,
-				Letters = letters.Where(l => l.AssessmentID == a.AssessmentID).ToList(),
+				Letters = lettersByAssessment[a.AssessmentID].ToList(),
 				Appeal = appeals.TryGetValue(a.AssessmentID, out AppealRecord ap) ? ap : null,
-				Bids = bids.Where(b => b.AssessmentID == a.AssessmentID).ToList(),
-				Comments = comments.Where(x => x.AssessmentID == a.AssessmentID).ToList(),
+				Bids = bidsByAssessment[a.AssessmentID].ToList(),
+				Comments = commentsByAssessment[a.AssessmentID].ToList(),
 			}).ToList();
 
 			CumulativeResult cumulative = null;
@@ -297,7 +311,7 @@ public sealed partial class SdeStore
 				Latest = list.FirstOrDefault(a => !a.IsTrashed),
 				Cumulative = cumulative,
 				Assessments = list,
-				ComplianceCases = cases.Select(x => new CaseFileCompliance { Case = x, Entries = entries.Where(en => en.CaseID == x.CaseID).ToList() }).ToList(),
+				ComplianceCases = cases.Select(x => new CaseFileCompliance { Case = x, Entries = entriesByCase[x.CaseID].ToList() }).ToList(),
 				Letters = letters,
 				Appeals = list.Where(a => a.Appeal != null || a.Bids.Count > 0)
 					.Select(a => new CaseFileAppeal { AssessmentId = a.Assessment.AssessmentID, Appeal = a.Appeal, Bids = a.Bids }).ToList(),
@@ -447,8 +461,8 @@ public sealed partial class SdeStore
 					break;
 			}
 		}
-		// Newest first; on the same moment, keep the order they were gathered in.
-		return timeline.Select((e, i) => (e, i)).OrderByDescending(x => x.e.When).ThenBy(x => x.i).Select(x => x.e).ToList();
+		// Newest first; on the same moment, keep the order they were gathered in (OrderByDescending is stable).
+		return timeline.OrderByDescending(e => e.When).ToList();
 	}
 
 	/// <summary>IDs as text for an "IN @ids" list: Dapper's list expansion doesn't use the GUID type handler.</summary>

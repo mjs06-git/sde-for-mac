@@ -243,13 +243,8 @@ public sealed partial class MapCanvas
 	{
 		_drag = null;
 		(double x, double y) = Viewport.ScreenToWorldXY(at.X, at.Y);
-		if (MarkersDraggable && _editLayer == null && _sketchKind == MapSketch.None && MarkerAt(at) is Guid marker)
+		if (MarkersDraggable && _editLayer == null && _sketchKind == MapSketch.None && MarkerAt(at) is Guid marker && _markerIndexById.TryGetValue(marker, out int i))
 		{
-			int i = 0;
-			while (_markers[i].Id != marker)
-			{
-				i++;
-			}
 			_drag = new EditDrag { Kind = DragKind.Marker, Marker = marker, Start = at, StartX = _markerMetres[i].X, StartY = _markerMetres[i].Y };
 			return true;
 		}
@@ -427,15 +422,17 @@ public sealed partial class MapCanvas
 			return null;
 		}
 		VertexRef? best = null;
-		double bestDistance = HandleHitRadius;
+		double bestDistSq = HandleHitRadius * HandleHitRadius;
 		foreach ((VertexRef v, Coordinate c) in GeometryEdit.Vertices(_editMetres))
 		{
 			(double sx, double sy) = Viewport.WorldToScreenXY(c.X, c.Y);
-			double d = Math.Sqrt((sx - at.X) * (sx - at.X) + (sy - at.Y) * (sy - at.Y));
-			if (d <= bestDistance)
+			double dx = sx - at.X;
+			double dy = sy - at.Y;
+			double dSq = dx * dx + dy * dy;
+			if (dSq <= bestDistSq)
 			{
 				best = v;
-				bestDistance = d;
+				bestDistSq = dSq;
 			}
 		}
 		return best;
@@ -448,13 +445,17 @@ public sealed partial class MapCanvas
 		{
 			return null;
 		}
+		double maxDistSq = HandleHitRadius * HandleHitRadius;
 		foreach ((VertexRef from, Coordinate a, Coordinate b) in GeometryEdit.Edges(_editMetres))
 		{
-			Coordinate middle = new Coordinate((a.X + b.X) / 2, (a.Y + b.Y) / 2);
-			(double sx, double sy) = Viewport.WorldToScreenXY(middle.X, middle.Y);
-			if (Math.Sqrt((sx - at.X) * (sx - at.X) + (sy - at.Y) * (sy - at.Y)) <= HandleHitRadius)
+			double mx = (a.X + b.X) / 2;
+			double my = (a.Y + b.Y) / 2;
+			(double sx, double sy) = Viewport.WorldToScreenXY(mx, my);
+			double dx = sx - at.X;
+			double dy = sy - at.Y;
+			if (dx * dx + dy * dy <= maxDistSq)
 			{
-				return (from, middle);
+				return (from, new Coordinate(mx, my));
 			}
 		}
 		return null;
@@ -480,7 +481,7 @@ public sealed partial class MapCanvas
 	private static Geometry OtherCorners(Geometry shape, VertexRef except)
 	{
 		Coordinate[] others = GeometryEdit.Vertices(shape).Where(v => v.Ref != except).Select(v => v.At).ToArray();
-		return others.Length == 0 ? null : new GeometryFactory().CreateMultiPointFromCoords(others);
+		return others.Length == 0 ? null : BuiltFeatureLayer.PlanarFactory.CreateMultiPointFromCoords(others);
 	}
 
 	// ───────────── Snapping ─────────────
@@ -529,7 +530,7 @@ public sealed partial class MapCanvas
 			candidates.Add(own);
 			lonLats.Add(ownLonLat);
 		}
-		GeometryFactory planar = new GeometryFactory();
+		GeometryFactory planar = BuiltFeatureLayer.PlanarFactory;
 		foreach (int i in _markerIndex.Query(around))
 		{
 			candidates.Add(planar.CreatePoint(new Coordinate(_markerMetres[i].X, _markerMetres[i].Y)));
@@ -556,32 +557,92 @@ public sealed partial class MapCanvas
 	/// already makes the engine redraw within a few milliseconds, and redrawing at once too drew the map two or three
 	/// times for every move of the mouse.
 	/// </summary>
+	private MColor _handleAccent;
+	private MColor _handleCard;
+	private VectorStyle _movePathStyle;
+	private SymbolStyle _moveDotStyle;
+	private SymbolStyle _pointOutlineStyle;
+	private VectorStyle _polyOutlineStyle;
+	private VectorStyle _lineOutlineStyle;
+	private SymbolStyle _middleHandleStyle;
+	private SymbolStyle _plainCornerStyle;
+	private SymbolStyle _pickedCornerStyle;
+	private SymbolStyle _snapRingStyle;
+
+	private void EnsureHandleStyles()
+	{
+		MColor accent = _theme.Accent;
+		MColor card = _theme.DotOutline;
+		if (_movePathStyle != null && Equals(_handleAccent, accent) && Equals(_handleCard, card))
+		{
+			return;
+		}
+		_handleAccent = accent;
+		_handleCard = card;
+		_movePathStyle = new VectorStyle { Line = new Pen(accent, 2) { PenStyle = PenStyle.Dash } };
+		_moveDotStyle = new SymbolStyle
+		{
+			SymbolType = SymbolType.Ellipse,
+			SymbolScale = (DotDiameter + 4) / SymbolStyle.DefaultWidth,
+			Fill = new Brush(accent),
+			Outline = new Pen(card, 2),
+		};
+		_pointOutlineStyle = new SymbolStyle { SymbolType = SymbolType.Ellipse, SymbolScale = 20 / SymbolStyle.DefaultWidth, Fill = null, Outline = new Pen(accent, 2.5) };
+		_polyOutlineStyle = new VectorStyle
+		{
+			Fill = new Brush(new MColor(accent.R, accent.G, accent.B, 40)),
+			Outline = new Pen(accent, 2),
+			Line = new Pen(accent, 2.5),
+		};
+		_lineOutlineStyle = new VectorStyle
+		{
+			Fill = null,
+			Outline = new Pen(accent, 2),
+			Line = new Pen(accent, 2.5),
+		};
+		_middleHandleStyle = new SymbolStyle
+		{
+			SymbolType = SymbolType.Ellipse,
+			SymbolScale = 7 / SymbolStyle.DefaultWidth,
+			Fill = new Brush(new MColor(accent.R, accent.G, accent.B, 170)),
+			Outline = new Pen(card, 1.5),
+		};
+		_plainCornerStyle = new SymbolStyle
+		{
+			SymbolType = SymbolType.Rectangle,
+			SymbolScale = 9 / SymbolStyle.DefaultWidth,
+			Fill = new Brush(card),
+			Outline = new Pen(accent, 2),
+		};
+		_pickedCornerStyle = new SymbolStyle
+		{
+			SymbolType = SymbolType.Rectangle,
+			SymbolScale = 11 / SymbolStyle.DefaultWidth,
+			Fill = new Brush(accent),
+			Outline = new Pen(card, 2),
+		};
+		_snapRingStyle = new SymbolStyle { SymbolType = SymbolType.Ellipse, SymbolScale = 18 / SymbolStyle.DefaultWidth, Fill = null, Outline = new Pen(accent, 2.5) };
+	}
+
 	private void ShowHandles(bool redrawNow = true)
 	{
 		if (_control == null)
 		{
 			return;
 		}
+		EnsureHandleStyles();
 		List<Mapsui.IFeature> features = new List<Mapsui.IFeature>();
-		MColor accent = _theme.Accent;
-		MColor card = _theme.DotOutline;
 		(double FromX, double FromY, double ToX, double ToY)? move = _drag is { Kind: DragKind.Marker, Moved: true } marker
 			? (marker.StartX, marker.StartY, marker.X, marker.Y)
 			: _pendingMove;
 		if (move is (double fromX, double fromY, double toX, double toY))
 		{
 			// The dot's way from where it was to where it is going.
-			GeometryFeature path = new GeometryFeature(new GeometryFactory().CreateLineString(new[] { new Coordinate(fromX, fromY), new Coordinate(toX, toY) }));
-			path.Styles.Add(new VectorStyle { Line = new Pen(accent, 2) { PenStyle = PenStyle.Dash } });
+			GeometryFeature path = new GeometryFeature(BuiltFeatureLayer.PlanarFactory.CreateLineString(new[] { new Coordinate(fromX, fromY), new Coordinate(toX, toY) }));
+			path.Styles.Add(_movePathStyle);
 			features.Add(path);
 			PointFeature dot = new PointFeature(toX, toY);
-			dot.Styles.Add(new SymbolStyle
-			{
-				SymbolType = SymbolType.Ellipse,
-				SymbolScale = (DotDiameter + 4) / SymbolStyle.DefaultWidth,
-				Fill = new Brush(accent),
-				Outline = new Pen(card, 2),
-			});
+			dot.Styles.Add(_moveDotStyle);
 			features.Add(dot);
 		}
 		Geometry shape = _drag?.Preview ?? _editMetres;
@@ -590,46 +651,25 @@ public sealed partial class MapCanvas
 			GeometryKind kind = FeatureLayer.KindOf(shape);
 			GeometryFeature outline = new GeometryFeature(shape);
 			outline.Styles.Add(kind == GeometryKind.Point
-				? new SymbolStyle { SymbolType = SymbolType.Ellipse, SymbolScale = 20 / SymbolStyle.DefaultWidth, Fill = null, Outline = new Pen(accent, 2.5) }
-				: new VectorStyle
-				{
-					Fill = kind == GeometryKind.Polygon ? new Brush(new MColor(accent.R, accent.G, accent.B, 40)) : null,
-					Outline = new Pen(accent, 2),
-					Line = new Pen(accent, 2.5),
-				});
+				? _pointOutlineStyle
+				: kind == GeometryKind.Polygon ? _polyOutlineStyle : _lineOutlineStyle);
 			features.Add(outline);
 			if (kind != GeometryKind.Point)
 			{
-				// One style for each kind of handle, shared by all of them: this runs on every pointer move of a drag.
 				if (_drag == null)
 				{
-					SymbolStyle middleStyle = new SymbolStyle
-					{
-						SymbolType = SymbolType.Ellipse,
-						SymbolScale = 7 / SymbolStyle.DefaultWidth,
-						Fill = new Brush(new MColor(accent.R, accent.G, accent.B, 170)),
-						Outline = new Pen(card, 1.5),
-					};
 					foreach ((VertexRef _, Coordinate a, Coordinate b) in GeometryEdit.Edges(shape))
 					{
 						PointFeature middle = new PointFeature((a.X + b.X) / 2, (a.Y + b.Y) / 2);
-						middle.Styles.Add(middleStyle);
+						middle.Styles.Add(_middleHandleStyle);
 						features.Add(middle);
 					}
 				}
-				SymbolStyle CornerStyle(bool picked) => new SymbolStyle
-				{
-					SymbolType = SymbolType.Rectangle,
-					SymbolScale = (picked ? 11 : 9) / SymbolStyle.DefaultWidth,
-					Fill = new Brush(picked ? accent : card),
-					Outline = new Pen(picked ? card : accent, 2),
-				};
-				SymbolStyle plainCorner = CornerStyle(false), pickedCorner = CornerStyle(true);
 				foreach ((VertexRef v, Coordinate c) in GeometryEdit.Vertices(shape))
 				{
 					bool picked = _selectedVertex == v || _drag != null && _drag.Kind is DragKind.Corner or DragKind.NewCorner && _drag.Vertex == v;
 					PointFeature corner = new PointFeature(c.X, c.Y);
-					corner.Styles.Add(picked ? pickedCorner : plainCorner);
+					corner.Styles.Add(picked ? _pickedCornerStyle : _plainCornerStyle);
 					features.Add(corner);
 				}
 			}
@@ -637,7 +677,7 @@ public sealed partial class MapCanvas
 		if (_drag is { Snapped: true, Moved: true } snapping)
 		{
 			PointFeature ring = new PointFeature(snapping.X, snapping.Y);
-			ring.Styles.Add(new SymbolStyle { SymbolType = SymbolType.Ellipse, SymbolScale = 18 / SymbolStyle.DefaultWidth, Fill = null, Outline = new Pen(accent, 2.5) });
+			ring.Styles.Add(_snapRingStyle);
 			features.Add(ring);
 		}
 		Handles.Features = features;

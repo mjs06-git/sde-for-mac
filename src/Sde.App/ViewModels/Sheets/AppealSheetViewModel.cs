@@ -24,7 +24,12 @@ public static class AppealMath
 	{
 		ArgumentNullException.ThrowIfNull(file);
 		ArgumentNullException.ThrowIfNull(calculator);
-		AssessmentFile copy = UndoService.Read(UndoService.Snapshot(file));
+		return WhatIfFromSnapshot(UndoService.Snapshot(file), bidAmount, calculator);
+	}
+
+	internal static BidWhatIf WhatIfFromSnapshot(string snapshot, decimal bidAmount, AssessmentCalculator calculator)
+	{
+		AssessmentFile copy = UndoService.Read(snapshot);
 		copy.Assessment.CostOfRepairsID = LookupIds.RepairContractorEstimate;
 		copy.Assessment.ContractorEstimate = bidAmount;
 		calculator.Recalculate(copy);
@@ -132,6 +137,7 @@ public sealed partial class AppealSheetViewModel : SheetViewModel
 		bool first = !_hasAppeal;
 		try
 		{
+			AppealRecord existing = _app.Store.GetAppeal(_assessmentId);
 			_app.Store.SaveAppeal(new AppealRecord
 			{
 				AssessmentID = _assessmentId,
@@ -139,8 +145,8 @@ public sealed partial class AppealSheetViewModel : SheetViewModel
 				Basis = Blank(Basis),
 				Outcome = Outcome ?? AppealOutcomes.Pending,
 				Notes = Blank(Notes),
-				DecidedOn = _app.Store.GetAppeal(_assessmentId)?.DecidedOn,
-				DecidedBy = _app.Store.GetAppeal(_assessmentId)?.DecidedBy,
+				DecidedOn = existing?.DecidedOn,
+				DecidedBy = existing?.DecidedBy,
 			});
 		}
 		catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -213,10 +219,12 @@ public sealed partial class AppealSheetViewModel : SheetViewModel
 		StatusText = "Status: " + AssessmentStatuses.Label(status.Value) + (status.IsLocked ? " (locked; using a bid reopens it first)" : "");
 
 		AssessmentCalculator calc = _app.Store.Calculator;
+		List<ContractorBidRecord> bidRecords = _app.Store.GetBids(_assessmentId);
+		string snapshot = bidRecords.Count > 0 ? UndoService.Snapshot(file) : null;
 		Bids.Clear();
-		foreach (ContractorBidRecord bid in _app.Store.GetBids(_assessmentId))
+		foreach (ContractorBidRecord bid in bidRecords)
 		{
-			BidWhatIf whatIf = bid.Amount is decimal amount ? AppealMath.WhatIf(file, amount, calc) : null;
+			BidWhatIf whatIf = bid.Amount is decimal amount ? AppealMath.WhatIfFromSnapshot(snapshot, amount, calc) : null;
 			bool inUse = a.CostOfRepairsID == LookupIds.RepairContractorEstimate && a.ContractorEstimate == bid.Amount;
 			Bids.Add(new BidRowViewModel(bid, whatIf, inUse, UseBidCommand, RemoveBidCommand));
 		}

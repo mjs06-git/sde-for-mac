@@ -98,17 +98,37 @@ internal sealed class SourceRowBuilder
 		["ExistingImprovementPercent"] = nameof(AssessmentRecord.ExistingImprovementPercent),
 	};
 
+	private static readonly Dictionary<string, PropertyInfo> PropertyMembers =
+		typeof(PropertyRecord).GetProperties().ToDictionary(p => p.Name, StringComparer.Ordinal);
+	private static readonly Dictionary<string, PropertyInfo> AssessmentMembers =
+		typeof(AssessmentRecord).GetProperties().ToDictionary(p => p.Name, StringComparer.Ordinal);
+	private static readonly (EnterpriseField Field, string Key, string[] Targets)[] PropertyTargetEntries =
+		PropertyTargets.Select(kv => (kv.Key, kv.Key.ToString(), kv.Value)).ToArray();
+	private static readonly Dictionary<EnterpriseField, string> EnterpriseFieldNames =
+		PropertyTargets.Keys.ToDictionary(f => f, f => f.ToString());
+	private static readonly HashSet<string> AddressFieldKeys = new HashSet<string>(StringComparer.Ordinal)
+	{
+		nameof(EnterpriseField.StreetNumber),
+		nameof(EnterpriseField.StreetName),
+		nameof(EnterpriseField.StreetSuffix),
+		nameof(EnterpriseField.PostDirection),
+		nameof(EnterpriseField.ApartmentUnit),
+		nameof(EnterpriseField.Zip),
+	};
+
 	private readonly SourceProfile _profile;
 	private readonly SdeStore _store;
 	private readonly ReferenceData _ref;
 	private readonly AssessmentCalculator _calc;
 	private readonly AssessmentValidator _validator;
 	private readonly IReadOnlyDictionary<string, int> _columns;
+	private readonly IReadOnlyDictionary<Guid, List<ShapeRecord>> _preloadedShapes;
 	private readonly DefaultValuesRecord _defaults;
 	private readonly bool _checkLatLong;
 	private readonly PropertyRowParser _parser;
+	private readonly Dictionary<(int Type, string Name), int?> _lookupCache = new Dictionary<(int, string), int?>();
 
-	public SourceRowBuilder(SourceProfile profile, SdeStore store, IReadOnlyDictionary<string, int> columns)
+	public SourceRowBuilder(SourceProfile profile, SdeStore store, IReadOnlyDictionary<string, int> columns, IReadOnlyDictionary<Guid, List<ShapeRecord>> preloadedShapes = null)
 	{
 		_profile = profile;
 		_store = store;
@@ -116,6 +136,7 @@ internal sealed class SourceRowBuilder
 		_calc = store.Calculator;
 		_validator = new AssessmentValidator(_ref);
 		_columns = columns;
+		_preloadedShapes = preloadedShapes;
 		_defaults = profile.UseDefaultValues ? store.GetDefaults() : null;
 		_checkLatLong = store.GetPreferences().LatLong;
 		_parser = new PropertyRowParser(profile.ToEnterpriseMapping(), _ref);
@@ -194,9 +215,7 @@ internal sealed class SourceRowBuilder
 	public PropertyRecord ReadAddress(Dictionary<string, string> values)
 	{
 		PropertyRecord p = new PropertyRecord();
-		HashSet<string> keys = new[] { EnterpriseField.StreetNumber, EnterpriseField.StreetName, EnterpriseField.StreetSuffix, EnterpriseField.PostDirection,
-			EnterpriseField.ApartmentUnit, EnterpriseField.Zip }.Select(f => f.ToString()).ToHashSet(StringComparer.Ordinal);
-		ApplyPropertyFields(p, values, keys, fillBlanksOnly: false, new List<string>());
+		ApplyPropertyFields(p, values, AddressFieldKeys, fillBlanksOnly: false, new List<string>());
 		return p;
 	}
 
@@ -311,8 +330,20 @@ internal sealed class SourceRowBuilder
 		ApplyPropertyFields(p, values, keys, fillBlanksOnly, warn);
 		if (Has(nameof(EnterpriseField.TotalSquareFootage)) && p.SquareFootage != oldSquareFeet && p.SquareFootage is decimal sqft)
 		{
-			List<ShapeRecord> shapes = isNewStructure || p.PropertyID == Guid.Empty ? new List<ShapeRecord>() : _store.GetShapes(p.PropertyID);
-			if (shapes.Count == 0 || (shapes.Count == 1 && shapes[0].ShapeType == "c"))
+			List<ShapeRecord> shapes;
+			if (isNewStructure || p.PropertyID == Guid.Empty)
+			{
+				shapes = null;
+			}
+			else if (_preloadedShapes != null && _preloadedShapes.TryGetValue(p.PropertyID, out List<ShapeRecord> cached))
+			{
+				shapes = cached;
+			}
+			else
+			{
+				shapes = _store.GetShapes(p.PropertyID);
+			}
+			if (shapes == null || shapes.Count == 0 || (shapes.Count == 1 && shapes[0].ShapeType == "c"))
 			{
 				row.ShapeTotal = sqft;
 			}
@@ -360,30 +391,59 @@ internal sealed class SourceRowBuilder
 
 	private void ApplyPropertyFields(PropertyRecord p, Dictionary<string, string> values, HashSet<string> keys, bool fillBlanksOnly, List<string> warn)
 	{
-		List<EnterpriseField> fields = PropertyTargets.Keys.Where(f => keys.Contains(f.ToString()) && values.ContainsKey(f.ToString())).ToList();
-		if (fields.Count == 0)
+		HashSet<string> targets = null;
+		for (int i = 0; i < PropertyTargetEntries.Length; i++)
+		{
+			(EnterpriseField _, string key, string[] cols) = PropertyTargetEntries[i];
+			if (keys.Contains(key) && values.ContainsKey(key))
+			{
+				targets ??= new HashSet<string>(StringComparer.Ordinal);
+				for (int j = 0; j < cols.Length; j++)
+				{
+					targets.Add(cols[j]);
+				}
+			}
+		}
+		if (targets == null)
 		{
 			return;
 		}
 		// Address parts and state/county are read together, so a change to one re-reads the whole address.
-		HashSet<string> targets = fields.SelectMany(f => PropertyTargets[f]).ToHashSet();
-		HashSet<EnterpriseField> read = PropertyTargets.Keys.Where(f => PropertyTargets[f].Any(targets.Contains)).ToHashSet();
-		EnterpriseRow parsed = _parser.Parse(0, f => read.Contains(f) && values.TryGetValue(f.ToString(), out string v) ? v : null);
+		HashSet<EnterpriseField> read = new HashSet<EnterpriseField>();
+		for (int i = 0; i < PropertyTargetEntries.Length; i++)
+		{
+			(EnterpriseField field, string _, string[] cols) = PropertyTargetEntries[i];
+			for (int j = 0; j < cols.Length; j++)
+			{
+				if (targets.Contains(cols[j]))
+				{
+					read.Add(field);
+					break;
+				}
+			}
+		}
+		EnterpriseRow parsed = _parser.Parse(0, f => read.Contains(f) && EnterpriseFieldNames.TryGetValue(f, out string k) && values.TryGetValue(k, out string v) ? v : null);
 		warn.AddRange(parsed.Warnings);
 		foreach (string target in targets)
 		{
-			object value = typeof(PropertyRecord).GetProperty(target)!.GetValue(parsed.Property);
+			PropertyInfo pi = PropertyMembers[target];
+			object value = pi.GetValue(parsed.Property);
 			if (value != null && !(value is string s && string.IsNullOrWhiteSpace(s)))
 			{
-				Set(p, target, value, fillBlanksOnly);
+				Set(p, pi, value, fillBlanksOnly);
 			}
 		}
 	}
 
 	/// <summary>Sets a property; with <paramref name="fillBlanksOnly"/>, only when it is blank. Returns whether it changed.</summary>
-	private static bool Set(object target, string property, object value, bool fillBlanksOnly)
+	private static bool Set(PropertyRecord target, string property, object value, bool fillBlanksOnly) =>
+		Set(target, PropertyMembers[property], value, fillBlanksOnly);
+
+	private static bool Set(AssessmentRecord target, string property, object value, bool fillBlanksOnly) =>
+		Set(target, AssessmentMembers[property], value, fillBlanksOnly);
+
+	private static bool Set(object target, PropertyInfo pi, object value, bool fillBlanksOnly)
 	{
-		PropertyInfo pi = target.GetType().GetProperty(property)!;
 		object current = pi.GetValue(target);
 		if (fillBlanksOnly && !(current == null || current is string s && string.IsNullOrWhiteSpace(s)))
 		{
@@ -407,8 +467,20 @@ internal sealed class SourceRowBuilder
 		_ => resolved,
 	};
 
-	private int? LookupId(int lookupType, string name) =>
-		_ref.OfType(lookupType).FirstOrDefault(l => l.LookupFieldName == name)?.LookupID;
+	private int? LookupId(int lookupType, string name)
+	{
+		if (name == null)
+		{
+			return null;
+		}
+		if (_lookupCache.TryGetValue((lookupType, name), out int? cached))
+		{
+			return cached;
+		}
+		int? id = _ref.OfType(lookupType).FirstOrDefault(l => l.LookupFieldName == name)?.LookupID;
+		_lookupCache[(lookupType, name)] = id;
+		return id;
+	}
 
 	/// <summary>
 	/// Stories as SDE's choice for the building type: residential has "One Story" and "Two or More Stories",

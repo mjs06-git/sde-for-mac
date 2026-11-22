@@ -43,6 +43,7 @@ public sealed class MapAnalysisRunner
 	private int _generation;
 	private double _clusteredAt = double.NaN;
 	private IReadOnlyList<(MarkerCluster Cluster, MapExtent Members)> _clusters;
+	private bool _clustersDirty = true;
 	private MapRasterOverlay _heat;
 	private MapSurfaceResult _surface;
 	private bool _stopped;
@@ -88,6 +89,7 @@ public sealed class MapAnalysisRunner
 		{
 			_clusters = null;
 		}
+		_clustersDirty = true;
 		if (_inputs.Display != StructureDisplay.Heatmap)
 		{
 			_heat = null;
@@ -115,6 +117,7 @@ public sealed class MapAnalysisRunner
 	public void Refresh()
 	{
 		_clusteredAt = double.NaN;
+		_clustersDirty = true;
 		if (_inputs.AnyOn && !_stopped)
 		{
 			Schedule(TimeSpan.Zero);
@@ -125,15 +128,29 @@ public sealed class MapAnalysisRunner
 	public void Stop()
 	{
 		_stopped = true;
-		_pending?.Cancel();
-		_pending = null;
+		CancelPending();
 		IsBusy = false;
+	}
+
+	private void CancelPending()
+	{
+		CancellationTokenSource previous = _pending;
+		_pending = null;
+		if (previous != null)
+		{
+			previous.Cancel();
+			previous.Dispose();
+		}
 	}
 
 	/// <summary>Hands what there is now to the map.</summary>
 	private void Draw()
 	{
-		_map.Clusters = _inputs.Display == StructureDisplay.Clusters && _clusters != null ? Marks(_clusters) : null;
+		if (_clustersDirty)
+		{
+			_clustersDirty = false;
+			_map.Clusters = _inputs.Display == StructureDisplay.Clusters && _clusters != null ? Marks(_clusters) : null;
+		}
 		List<MapRasterOverlay> rasters = new List<MapRasterOverlay>();
 		if (_surface?.Overlay != null)
 		{
@@ -170,8 +187,7 @@ public sealed class MapAnalysisRunner
 
 	private void Schedule(TimeSpan delay)
 	{
-		_pending?.Cancel();
-		_pending = null;
+		CancelPending();
 		if (!_inputs.AnyOn || _stopped)
 		{
 			IsBusy = false;
@@ -253,6 +269,7 @@ public sealed class MapAnalysisRunner
 		{
 			_clusters = clusters;
 			_clusteredAt = clusteredAt;
+			_clustersDirty = true;
 			ClusterRuns++;
 		}
 		if (heat)
@@ -276,22 +293,40 @@ public sealed class MapAnalysisRunner
 	private static IReadOnlyList<(MarkerCluster, MapExtent)> ClusterWithExtents(IReadOnlyList<AnalysisPoint> points, double resolution)
 	{
 		Dictionary<string, AnalysisPoint> byId = new Dictionary<string, AnalysisPoint>(points.Count);
-		foreach (AnalysisPoint p in points)
+		List<ClusterPoint> input = new List<ClusterPoint>(points.Count);
+		for (int i = 0; i < points.Count; i++)
 		{
-			byId[p.Id.ToString()] = p;
+			AnalysisPoint p = points[i];
+			string id = p.Id.ToString();
+			byId[id] = p;
+			(double x, double y) = WebMercator.ToMetres(p.Longitude, p.Latitude);
+			input.Add(new ClusterPoint(id, x, y, p.PercentDamaged, p.Class.ToString()));
 		}
-		List<(MarkerCluster, MapExtent)> result = new List<(MarkerCluster, MapExtent)>();
-		foreach (MarkerCluster c in MapAnalysis.Cluster(points, resolution))
+		IReadOnlyList<MarkerCluster> clustered = MarkerClusterer.Cluster(input, MapAnalysis.ClusterRadiusPixels * resolution);
+		List<(MarkerCluster, MapExtent)> result = new List<(MarkerCluster, MapExtent)>(clustered.Count);
+		foreach (MarkerCluster c in clustered)
 		{
 			double minLon = double.MaxValue, minLat = double.MaxValue, maxLon = double.MinValue, maxLat = double.MinValue;
 			foreach (string id in c.MemberIds)
 			{
 				if (byId.TryGetValue(id, out AnalysisPoint p))
 				{
-					minLon = Math.Min(minLon, p.Longitude);
-					maxLon = Math.Max(maxLon, p.Longitude);
-					minLat = Math.Min(minLat, p.Latitude);
-					maxLat = Math.Max(maxLat, p.Latitude);
+					if (p.Longitude < minLon)
+					{
+						minLon = p.Longitude;
+					}
+					if (p.Longitude > maxLon)
+					{
+						maxLon = p.Longitude;
+					}
+					if (p.Latitude < minLat)
+					{
+						minLat = p.Latitude;
+					}
+					if (p.Latitude > maxLat)
+					{
+						maxLat = p.Latitude;
+					}
 				}
 			}
 			result.Add((c, new MapExtent(minLon, minLat, maxLon, maxLat)));

@@ -319,6 +319,9 @@ public sealed partial class ReviewViewModel : ViewModelBase
 
 	private const int EveryStatus = 6;
 	private const int ErrorsOnly = 2;
+	private static readonly Dictionary<string, int> RuleOrder = QaRules.Catalog
+		.Select((r, i) => (r.Id, i))
+		.ToDictionary(x => x.Id, x => x.i, StringComparer.Ordinal);
 
 	private readonly AppServices _app;
 	private readonly MainViewModel _main;
@@ -338,13 +341,13 @@ public sealed partial class ReviewViewModel : ViewModelBase
 	public bool IsActive { get; set; }
 
 	/// <summary>The queue: the assessments that pass the filters, problems first.</summary>
-	public ObservableCollection<ReviewRowViewModel> Rows { get; } = new();
+	public RangeObservableCollection<ReviewRowViewModel> Rows { get; } = new();
 
 	/// <summary>The quality findings that pass the filters, by check.</summary>
-	public ObservableCollection<QaGroupViewModel> Groups { get; } = new();
+	public RangeObservableCollection<QaGroupViewModel> Groups { get; } = new();
 
 	/// <summary>The selected assessment's open findings, beside the queue.</summary>
-	public ObservableCollection<QaFindingViewModel> SelectedFindings { get; } = new();
+	public RangeObservableCollection<QaFindingViewModel> SelectedFindings { get; } = new();
 
 	/// <summary>Every finding of the last run, open and set aside.</summary>
 	public IReadOnlyList<QaFinding> Findings => _findings;
@@ -481,7 +484,15 @@ public sealed partial class ReviewViewModel : ViewModelBase
 	/// <summary>Reads the assessments in scope, runs the quality checks and counts the comments again.</summary>
 	public void Reload()
 	{
-		HashSet<Guid> checkedIds = _all.Where(r => r.IsChecked).Select(r => r.AssessmentID).ToHashSet();
+		HashSet<Guid> checkedIds = new HashSet<Guid>();
+		foreach (ReviewRowViewModel old in _all)
+		{
+			old.PropertyChanged -= OnRowChanged;
+			if (old.IsChecked)
+			{
+				checkedIds.Add(old.AssessmentID);
+			}
+		}
 		Guid? selected = Selected?.AssessmentID;
 		ReferenceData reference = _app.Store.Reference;
 		List<StructureSummary> list = _app.Store.ListStructures().Where(s => s.AssessmentID != null && _app.Scope.Includes(s.AssessmentID)).ToList();
@@ -518,15 +529,37 @@ public sealed partial class ReviewViewModel : ViewModelBase
 			return new ReviewRowViewModel(s, reference, statuses.GetValueOrDefault(id), mine.Count, mine.Count(f => f.Severity == QaSeverity.Error),
 				mine.Count(f => f.Severity == QaSeverity.Warning), comments.GetValueOrDefault(id)) { IsChecked = checkedIds.Contains(id) };
 		}).ToList();
-		foreach (ReviewRowViewModel r in _all)
+		int waiting = 0;
+		int openComments = 0;
+		for (int i = 0; i < _all.Count; i++)
 		{
+			ReviewRowViewModel r = _all[i];
 			r.PropertyChanged += OnRowChanged;
+			if (r.StatusValue is AssessmentStatus.Draft or AssessmentStatus.Reviewed)
+			{
+				waiting++;
+			}
+			openComments += r.CommentCount;
+		}
+		int openFindings = 0;
+		int errors = 0;
+		for (int i = 0; i < _findings.Count; i++)
+		{
+			QaFinding f = _findings[i];
+			if (!f.IsDismissed)
+			{
+				openFindings++;
+				if (f.Severity == QaSeverity.Error)
+				{
+					errors++;
+				}
+			}
 		}
 
-		WaitingCount = _all.Count(r => r.StatusValue is AssessmentStatus.Draft or AssessmentStatus.Reviewed);
-		OpenFindingCount = _findings.Count(f => !f.IsDismissed);
-		ErrorCount = _findings.Count(f => !f.IsDismissed && f.Severity == QaSeverity.Error);
-		OpenCommentCount = _all.Sum(r => r.CommentCount);
+		WaitingCount = waiting;
+		OpenFindingCount = openFindings;
+		ErrorCount = errors;
+		OpenCommentCount = openComments;
 		_loadedFor = null;
 		FillRows();
 		FillGroups();
@@ -564,12 +597,8 @@ public sealed partial class ReviewViewModel : ViewModelBase
 		IEnumerable<ReviewRowViewModel> rows = _all.Where(r => StatusMatches(r.StatusValue) && (_only == null || _only.Contains(r.AssessmentID)));
 		Guid? selected = Selected?.AssessmentID;
 		_filling = true;
-		Rows.Clear();
-		foreach (ReviewRowViewModel r in rows.OrderByDescending(r => r.ErrorCount).ThenByDescending(r => r.FindingCount).ThenByDescending(r => r.CommentCount)
-			.ThenBy(r => r.Address, StringComparer.OrdinalIgnoreCase))
-		{
-			Rows.Add(r);
-		}
+		Rows.ReplaceAll(rows.OrderByDescending(r => r.ErrorCount).ThenByDescending(r => r.FindingCount).ThenByDescending(r => r.CommentCount)
+			.ThenBy(r => r.Address, StringComparer.OrdinalIgnoreCase));
 		_filling = false;
 		if (selected is Guid id && Rows.FirstOrDefault(r => r.AssessmentID == id) is ReviewRowViewModel again)
 		{
@@ -596,18 +625,19 @@ public sealed partial class ReviewViewModel : ViewModelBase
 	/// <summary>The findings that pass the severity filter (and the "only" limit), grouped by check in the catalog's order.</summary>
 	private void FillGroups()
 	{
-		Groups.Clear();
 		IEnumerable<QaFinding> shown = _findings.Where(f => (ShowDismissed || !f.IsDismissed)
 			&& (SeverityFilter == 0 || f.Severity == QaSeverity.Error || SeverityFilter == 1 && f.Severity == QaSeverity.Warning)
 			&& (_only == null || f.AssessmentId is Guid id && _only.Contains(id)));
-		foreach (IGrouping<string, QaFinding> g in shown.GroupBy(f => f.RuleId).OrderBy(g => QaRules.Catalog.ToList().FindIndex(r => r.Id == g.Key)))
+		List<QaGroupViewModel> groups = new List<QaGroupViewModel>();
+		foreach (IGrouping<string, QaFinding> g in shown.GroupBy(f => f.RuleId).OrderBy(g => RuleOrder.TryGetValue(g.Key, out int idx) ? idx : -1))
 		{
 			QaRuleInfo rule = QaRules.Rule(g.Key);
 			if (rule != null)
 			{
-				Groups.Add(new QaGroupViewModel(rule, g.OrderBy(f => f.IsDismissed).Select(Describe).ToList()));
+				groups.Add(new QaGroupViewModel(rule, g.OrderBy(f => f.IsDismissed).Select(Describe).ToList()));
 			}
 		}
+		Groups.ReplaceAll(groups);
 		OnPropertyChanged(nameof(HasGroups));
 		OnPropertyChanged(nameof(ChecksEmpty));
 		OnPropertyChanged(nameof(ChecksEmptyTitle));
@@ -643,10 +673,7 @@ public sealed partial class ReviewViewModel : ViewModelBase
 			return;
 		}
 		Guid id = Selected.AssessmentID;
-		foreach (QaFinding f in _findings.Where(f => f.AssessmentId == id && !f.IsDismissed))
-		{
-			SelectedFindings.Add(Describe(f));
-		}
+		SelectedFindings.ReplaceAll(_findings.Where(f => f.AssessmentId == id && !f.IsDismissed).Select(Describe));
 		SelectedComments = new CommentThreadsViewModel(_app, id);
 		SelectedComments.Changed += OnCommentsChanged;
 		OnPropertyChanged(nameof(HasSelectedFindings));

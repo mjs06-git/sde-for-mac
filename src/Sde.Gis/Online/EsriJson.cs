@@ -63,42 +63,87 @@ internal static class EsriJson
 			shells.AddRange(holes);
 			holes.Clear();
 		}
-		List<List<LinearRing>> holesOf = shells.Select(_ => new List<LinearRing>()).ToList();
-		List<Polygon> shellPolygons = shells.Select(s => f.CreatePolygon(s)).ToList();
+		if (holes.Count == 0)
+		{
+			if (shells.Count == 1)
+			{
+				return f.CreatePolygon(shells[0]);
+			}
+			Polygon[] simplePolygons = new Polygon[shells.Count];
+			for (int i = 0; i < shells.Count; i++)
+			{
+				simplePolygons[i] = f.CreatePolygon(shells[i]);
+			}
+			return f.CreateMultiPolygon(simplePolygons);
+		}
+		List<LinearRing>[] holesOf = new List<LinearRing>[shells.Count];
+		Polygon[] shellPolygons = new Polygon[shells.Count];
+		double[] shellAreas = new double[shells.Count];
+		for (int i = 0; i < shells.Count; i++)
+		{
+			shellPolygons[i] = f.CreatePolygon(shells[i]);
+			shellAreas[i] = -1.0;
+		}
 		foreach (LinearRing hole in holes)
 		{
 			int owner = -1;
-			for (int i = 0; i < shellPolygons.Count; i++)
+			double ownerArea = double.PositiveInfinity;
+			Envelope holeEnv = hole.EnvelopeInternal;
+			Point holePoint = f.CreatePoint(hole.CoordinateSequence.GetCoordinate(0));
+			for (int i = 0; i < shellPolygons.Length; i++)
 			{
-				if (shellPolygons[i].Contains(f.CreatePoint(hole.Coordinates[0])) || shellPolygons[i].Covers(hole))
+				if (!shellPolygons[i].EnvelopeInternal.Intersects(holeEnv))
 				{
-					if (owner < 0 || shellPolygons[i].Area < shellPolygons[owner].Area)
+					continue;
+				}
+				if (shellPolygons[i].Contains(holePoint) || shellPolygons[i].Covers(hole))
+				{
+					if (shellAreas[i] < 0)
+					{
+						shellAreas[i] = shellPolygons[i].Area;
+					}
+					if (owner < 0 || shellAreas[i] < ownerArea)
 					{
 						owner = i;
+						ownerArea = shellAreas[i];
 					}
 				}
 			}
 			if (owner >= 0)
 			{
-				holesOf[owner].Add(hole);
+				(holesOf[owner] ??= new List<LinearRing>()).Add(hole);
 			}
 		}
-		Polygon[] polygons = shells.Select((s, i) => f.CreatePolygon(s, holesOf[i].ToArray())).ToArray();
+		Polygon[] polygons = new Polygon[shells.Count];
+		for (int i = 0; i < shells.Count; i++)
+		{
+			polygons[i] = holesOf[i] == null ? shellPolygons[i] : f.CreatePolygon(shells[i], holesOf[i].ToArray());
+		}
 		return polygons.Length == 1 ? polygons[0] : f.CreateMultiPolygon(polygons);
 	}
 
 	private static Coordinate[] Coordinates(JsonElement array)
 	{
-		List<Coordinate> list = new List<Coordinate>();
 		if (array.ValueKind != JsonValueKind.Array)
 		{
-			return list.ToArray();
+			return Array.Empty<Coordinate>();
 		}
+		int count = array.GetArrayLength();
+		List<Coordinate> list = new List<Coordinate>(count);
 		foreach (JsonElement p in array.EnumerateArray())
 		{
-			if (p.ValueKind == JsonValueKind.Array && p.GetArrayLength() >= 2 && p[0].ValueKind == JsonValueKind.Number && p[1].ValueKind == JsonValueKind.Number)
+			if (p.ValueKind != JsonValueKind.Array)
 			{
-				list.Add(new Coordinate(p[0].GetDouble(), p[1].GetDouble()));
+				continue;
+			}
+			JsonElement.ArrayEnumerator e = p.EnumerateArray();
+			if (e.MoveNext() && e.Current.ValueKind == JsonValueKind.Number)
+			{
+				double x = e.Current.GetDouble();
+				if (e.MoveNext() && e.Current.ValueKind == JsonValueKind.Number)
+				{
+					list.Add(new Coordinate(x, e.Current.GetDouble()));
+				}
 			}
 		}
 		return list.ToArray();

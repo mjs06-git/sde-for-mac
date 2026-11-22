@@ -9,10 +9,30 @@ public readonly record struct Rgba(byte R, byte G, byte B, byte A = 255)
 	public static bool TryParse(string text, out Rgba color)
 	{
 		color = default;
-		string s = (text ?? "").Trim().TrimStart('#');
+		if (string.IsNullOrEmpty(text))
+		{
+			return false;
+		}
+		ReadOnlySpan<char> s = text.AsSpan().Trim();
+		while (s.Length > 0 && s[0] == '#')
+		{
+			s = s.Slice(1);
+		}
 		if (s.Length == 3)
 		{
-			s = string.Concat(s.Select(c => new string(c, 2)));
+			Span<char> expanded = stackalloc char[6];
+			expanded[0] = s[0];
+			expanded[1] = s[0];
+			expanded[2] = s[1];
+			expanded[3] = s[1];
+			expanded[4] = s[2];
+			expanded[5] = s[2];
+			if (!uint.TryParse(expanded, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint v3))
+			{
+				return false;
+			}
+			color = new Rgba((byte)(v3 >> 16), (byte)(v3 >> 8), (byte)v3);
+			return true;
 		}
 		if ((s.Length != 6 && s.Length != 8) || !uint.TryParse(s, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint v))
 		{
@@ -88,21 +108,50 @@ public sealed class ColorRamp
 	/// <summary>The colour at position <paramref name="t"/> from 0 (low) to 1 (high).</summary>
 	public Rgba At(double t)
 	{
-		List<Rgba> stops = Stops.Select(s => Rgba.Parse(s, new Rgba(128, 128, 128))).ToList();
-		if (stops.Count == 0)
+		if (Stops.Count == 0)
 		{
 			return new Rgba(128, 128, 128);
 		}
-		if (stops.Count == 1 || double.IsNaN(t))
+		if (Stops.Count == 1 || double.IsNaN(t))
 		{
-			return stops[0];
+			return Rgba.Parse(Stops[0], new Rgba(128, 128, 128));
 		}
 		t = Math.Clamp(t, 0.0, 1.0);
-		double position = t * (stops.Count - 1);
-		int i = Math.Min((int)Math.Floor(position), stops.Count - 2);
-		return Rgba.Lerp(stops[i], stops[i + 1], position - i);
+		double position = t * (Stops.Count - 1);
+		int i = Math.Min((int)Math.Floor(position), Stops.Count - 2);
+		Rgba lo = Rgba.Parse(Stops[i], new Rgba(128, 128, 128));
+		Rgba hi = Rgba.Parse(Stops[i + 1], new Rgba(128, 128, 128));
+		return Rgba.Lerp(lo, hi, position - i);
 	}
 
 	/// <summary><paramref name="n"/> colours spread evenly along the ramp.</summary>
-	public List<Rgba> Sample(int n) => Enumerable.Range(0, Math.Max(1, n)).Select(i => At(n <= 1 ? 0.5 : (double)i / (n - 1))).ToList();
+	public List<Rgba> Sample(int n)
+	{
+		int count = Math.Max(1, n);
+		List<Rgba> result = new List<Rgba>(count);
+		Rgba[] parsed = new Rgba[Stops.Count];
+		for (int i = 0; i < Stops.Count; i++)
+		{
+			parsed[i] = Rgba.Parse(Stops[i], new Rgba(128, 128, 128));
+		}
+		for (int k = 0; k < count; k++)
+		{
+			if (parsed.Length == 0)
+			{
+				result.Add(new Rgba(128, 128, 128));
+			}
+			else if (parsed.Length == 1)
+			{
+				result.Add(parsed[0]);
+			}
+			else
+			{
+				double t = n <= 1 ? 0.5 : (double)k / (n - 1);
+				double position = t * (parsed.Length - 1);
+				int i = Math.Min((int)Math.Floor(position), parsed.Length - 2);
+				result.Add(Rgba.Lerp(parsed[i], parsed[i + 1], position - i));
+			}
+		}
+		return result;
+	}
 }

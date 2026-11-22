@@ -1,3 +1,5 @@
+using System.Linq.Expressions;
+using System.Reflection;
 using Sde.Core;
 using Sde.Core.Addresses;
 using Sde.Core.Records;
@@ -133,12 +135,23 @@ public static class EnterpriseImport
 		}
 		AddressMatcher addresses = new AddressMatcher(reference);
 		AddressIndex<PropertyRecord> byAddress = addresses.Index(existing, addresses.KeyFor);
-		ILookup<string, PropertyRecord> byParcel = existing.Where(p => ParcelNumbers.Normalize(p.ParcelNumber) != null)
-			.ToLookup(p => ParcelNumbers.Normalize(p.ParcelNumber), StringComparer.Ordinal);
-		foreach (EnterpriseRow row in preview.Rows.Where(r => r.IsValid))
+		HashSet<string> existingParcels = new HashSet<string>(existing.Count, StringComparer.Ordinal);
+		foreach (PropertyRecord p in existing)
 		{
+			string norm = ParcelNumbers.Normalize(p.ParcelNumber);
+			if (norm != null)
+			{
+				existingParcels.Add(norm);
+			}
+		}
+		foreach (EnterpriseRow row in preview.Rows)
+		{
+			if (!row.IsValid)
+			{
+				continue;
+			}
 			string parcel = ParcelNumbers.Normalize(row.Property.ParcelNumber);
-			if (parcel != null && byParcel[parcel].Any())
+			if (parcel != null && existingParcels.Contains(parcel))
 			{
 				row.Warnings.Add($"A structure with parcel {row.Property.ParcelNumber.Trim()} is already in SDE");
 			}
@@ -170,30 +183,48 @@ public static class EnterpriseImport
 			return 0;
 		}
 		store.SaveProperties(rows.Select(x => x.Property));
+		List<(Guid PropertyID, IReadOnlyList<ShapeRecord> Shapes)> shapesBatch = new List<(Guid, IReadOnlyList<ShapeRecord>)>();
 		foreach ((EnterpriseRow row, PropertyRecord p) in rows)
 		{
 			row.ImportedPropertyID = p.PropertyID;
 			if (p.SquareFootage is decimal sqft)
 			{
-				store.SaveShapes(p.PropertyID, new[] { new ShapeRecord { ShapeType = "c", PropertyID = p.PropertyID, TotalSqFt = sqft } });
+				shapesBatch.Add((p.PropertyID, new[] { new ShapeRecord { ShapeType = "c", PropertyID = p.PropertyID, TotalSqFt = sqft } }));
 			}
+		}
+		if (shapesBatch.Count > 0)
+		{
+			store.SaveShapesBatch(shapesBatch);
 		}
 		return rows.Count;
 	}
 
-	public static string Label(EnterpriseField field) => EnterpriseMapping.Fields.First(f => f.Field == field).Label;
+	private static readonly Dictionary<EnterpriseField, string> FieldLabels = EnterpriseMapping.Fields.ToDictionary(f => f.Field, f => f.Label);
+	private static readonly Func<PropertyRecord, PropertyRecord> Cloner = BuildCloner();
+
+	public static string Label(EnterpriseField field) => FieldLabels[field];
 
 	private static PropertyRecord Copy(PropertyRecord source, DateTime now)
 	{
-		PropertyRecord p = new PropertyRecord();
-		foreach (System.Reflection.PropertyInfo prop in typeof(PropertyRecord).GetProperties())
-		{
-			prop.SetValue(p, prop.GetValue(source));
-		}
+		PropertyRecord p = Cloner(source);
 		p.PropertyID = Guid.Empty;
 		p.Active = true;
 		p.ImportDate = now;
 		p.LastUpdate = now;
 		return p;
+	}
+
+	private static Func<PropertyRecord, PropertyRecord> BuildCloner()
+	{
+		ParameterExpression src = Expression.Parameter(typeof(PropertyRecord), "src");
+		List<MemberBinding> bindings = new List<MemberBinding>();
+		foreach (PropertyInfo prop in typeof(PropertyRecord).GetProperties())
+		{
+			if (prop.CanRead && prop.CanWrite)
+			{
+				bindings.Add(Expression.Bind(prop, Expression.Property(src, prop)));
+			}
+		}
+		return Expression.Lambda<Func<PropertyRecord, PropertyRecord>>(Expression.MemberInit(Expression.New(typeof(PropertyRecord)), bindings), src).Compile();
 	}
 }

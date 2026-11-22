@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.InteropServices;
 using BitMiracle.LibTiff.Classic;
 using NetTopologySuite.Geometries;
 using Sde.Gis.Projections;
@@ -27,18 +28,29 @@ public sealed class GeoTiffRaster : IDisposable
 
 	private const int MaxCachedBlocks = 64;
 
+	private readonly record struct BlockEntry(int Key, double[] Data);
+
 	private readonly Tiff _tiff;
 	private readonly string _path;
 	private readonly bool _tiled;
 	private readonly int _blockWidth;
 	private readonly int _blockHeight;
+	private readonly int _tilesAcross;
+	private readonly int _blockByteSize;
 	private readonly int _bytesPerSample;
 	private readonly SampleFormat _format;
+	private readonly bool _hasNoData;
+	private readonly double _noDataValue;
+	private readonly bool _isFloat32;
+	private readonly float _noDataFloat32;
 	private readonly double[] _forward;
 	private readonly double[] _inverse;
 	private readonly bool _pixelIsPoint;
-	private readonly Dictionary<int, double[]> _blocks = new Dictionary<int, double[]>();
-	private readonly LinkedList<int> _recent = new LinkedList<int>();
+	private readonly Dictionary<int, LinkedListNode<BlockEntry>> _blocks = new Dictionary<int, LinkedListNode<BlockEntry>>(MaxCachedBlocks);
+	private readonly LinkedList<BlockEntry> _recent = new LinkedList<BlockEntry>();
+	private byte[] _readBuffer;
+	private int _lastBlockKey = -1;
+	private double[] _lastBlock;
 
 	private GeoTiffRaster(Tiff tiff, string path, int width, int height, CoordinateSystem cs, double? noData, int bits, SampleFormat format,
 		bool tiled, int blockWidth, int blockHeight, double[] forward, bool pixelIsPoint)
@@ -49,12 +61,18 @@ public sealed class GeoTiffRaster : IDisposable
 		Height = height;
 		CoordinateSystem = cs;
 		NoData = noData;
+		_hasNoData = noData.HasValue;
+		_noDataValue = noData ?? 0.0;
+		_isFloat32 = format == SampleFormat.IEEEFP && bits == 32;
+		_noDataFloat32 = _hasNoData ? (float)_noDataValue : 0f;
 		BitsPerSample = bits;
 		_bytesPerSample = bits / 8;
 		_format = format;
 		_tiled = tiled;
 		_blockWidth = blockWidth;
 		_blockHeight = blockHeight;
+		_tilesAcross = tiled ? (width + blockWidth - 1) / blockWidth : 1;
+		_blockByteSize = tiled ? tiff.TileSize() : tiff.StripSize();
 		_forward = forward;
 		_pixelIsPoint = pixelIsPoint;
 		double det = forward[0] * forward[4] - forward[1] * forward[3];
@@ -132,7 +150,7 @@ public sealed class GeoTiffRaster : IDisposable
 		{
 			throw new GisException("The GeoTIFF file couldn't be found.", path);
 		}
-		GeoTiffTags.TakeErrors();
+		GeoTiffTags.ClearErrors();
 		Tiff tiff = Tiff.Open(path, "r");
 		if (tiff == null)
 		{
@@ -231,7 +249,8 @@ public sealed class GeoTiffRaster : IDisposable
 		}
 		int nearestC = Math.Clamp((int)Math.Floor(c + 0.5), 0, Width - 1);
 		int nearestR = Math.Clamp((int)Math.Floor(r + 0.5), 0, Height - 1);
-		if (ValueAt(nearestC, nearestR) == null)
+		double? nearestValue = ValueAt(nearestC, nearestR);
+		if (nearestValue == null)
 		{
 			return null;
 		}
@@ -243,16 +262,23 @@ public sealed class GeoTiffRaster : IDisposable
 		double weights = 0;
 		for (int dy = 0; dy <= 1; dy++)
 		{
+			double wy = dy == 0 ? 1 - fy : fy;
+			if (wy <= 0)
+			{
+				continue;
+			}
+			int rr = Math.Clamp(r0 + dy, 0, Height - 1);
 			for (int dx = 0; dx <= 1; dx++)
 			{
-				double w = (dx == 0 ? 1 - fx : fx) * (dy == 0 ? 1 - fy : fy);
-				if (w <= 0)
+				double wx = dx == 0 ? 1 - fx : fx;
+				if (wx <= 0)
 				{
 					continue;
 				}
+				double w = wx * wy;
 				int cc = Math.Clamp(c0 + dx, 0, Width - 1);
-				int rr = Math.Clamp(r0 + dy, 0, Height - 1);
-				if (ValueAt(cc, rr) is double v)
+				double? sample = cc == nearestC && rr == nearestR ? nearestValue : ValueAt(cc, rr);
+				if (sample is double v)
 				{
 					sum += w * v;
 					weights += w;
@@ -265,20 +291,20 @@ public sealed class GeoTiffRaster : IDisposable
 	/// <summary>The value of one cell (column and row from the top left), or null for no data.</summary>
 	public double? ValueAt(int column, int row)
 	{
-		if (column < 0 || row < 0 || column >= Width || row >= Height)
+		if ((uint)column >= (uint)Width || (uint)row >= (uint)Height)
 		{
 			return null;
 		}
 		int blockX = column / _blockWidth;
 		int blockY = row / _blockHeight;
-		int key = _tiled ? _tiff.ComputeTile(column, row, 0, 0) : _tiff.ComputeStrip(row, 0);
-		double[] block = Block(key);
+		int key = _tiled ? blockY * _tilesAcross + blockX : blockY;
+		double[] block = key == _lastBlockKey ? _lastBlock : Block(key);
 		double v = block[(row - blockY * _blockHeight) * _blockWidth + (column - blockX * _blockWidth)];
-		if (double.IsNaN(v) || (NoData is double nd && (v == nd || (double.IsNaN(nd) && double.IsNaN(v)))))
+		if (double.IsNaN(v))
 		{
 			return null;
 		}
-		if (NoData is double n && _format == SampleFormat.IEEEFP && BitsPerSample == 32 && (float)v == (float)n)
+		if (_hasNoData && (v == _noDataValue || (_isFloat32 && (float)v == _noDataFloat32)))
 		{
 			return null;
 		}
@@ -297,48 +323,124 @@ public sealed class GeoTiffRaster : IDisposable
 
 	private double[] Block(int key)
 	{
-		if (_blocks.TryGetValue(key, out double[] cached))
+		if (_blocks.TryGetValue(key, out LinkedListNode<BlockEntry> node))
 		{
-			if (_recent.First.Value != key)   // usually the block just read: skip the search
+			if (!ReferenceEquals(_recent.First, node))
 			{
-				_recent.Remove(key);
-				_recent.AddFirst(key);
+				_recent.Remove(node);
+				_recent.AddFirst(node);
 			}
-			return cached;
+			_lastBlockKey = key;
+			_lastBlock = node.Value.Data;
+			return _lastBlock;
 		}
-		int size = _tiled ? _tiff.TileSize() : _tiff.StripSize();
-		byte[] buffer = new byte[size];
-		GeoTiffTags.TakeErrors();
+		int size = _blockByteSize;
+		byte[] buffer = _readBuffer ??= new byte[size];
+		GeoTiffTags.ClearErrors();
 		int read = _tiled ? _tiff.ReadEncodedTile(key, buffer, 0, size) : _tiff.ReadEncodedStrip(key, buffer, 0, size);
 		if (read < 0)
 		{
 			throw new GisException("Part of this GeoTIFF couldn't be read. The file may be damaged.", $"{_path}: block {key}: {string.Join("; ", GeoTiffTags.TakeErrors())}");
 		}
 		int count = _blockWidth * _blockHeight;
-		double[] values = new double[count];
-		for (int k = 0; k < count && (k + 1) * _bytesPerSample <= read; k++)
+		double[] values;
+		LinkedListNode<BlockEntry> targetNode;
+		if (_recent.Count >= MaxCachedBlocks)
 		{
-			int o = k * _bytesPerSample;
-			values[k] = (_format, BitsPerSample) switch
-			{
-				(SampleFormat.UINT, 8) => buffer[o],
-				(SampleFormat.INT, 8) => (sbyte)buffer[o],
-				(SampleFormat.UINT, 16) => BitConverter.ToUInt16(buffer, o),
-				(SampleFormat.INT, 16) => BitConverter.ToInt16(buffer, o),
-				(SampleFormat.UINT, 32) => BitConverter.ToUInt32(buffer, o),
-				(SampleFormat.INT, 32) => BitConverter.ToInt32(buffer, o),
-				(SampleFormat.IEEEFP, 32) => BitConverter.ToSingle(buffer, o),
-				_ => BitConverter.ToDouble(buffer, o),
-			};
-		}
-		_blocks[key] = values;
-		_recent.AddFirst(key);
-		if (_recent.Count > MaxCachedBlocks)
-		{
-			_blocks.Remove(_recent.Last.Value);
+			targetNode = _recent.Last;
+			_blocks.Remove(targetNode.Value.Key);
 			_recent.RemoveLast();
+			values = targetNode.Value.Data;
+			targetNode.Value = new BlockEntry(key, values);
 		}
+		else
+		{
+			values = new double[count];
+			targetNode = new LinkedListNode<BlockEntry>(new BlockEntry(key, values));
+		}
+		int pixelCount = Math.Min(count, read / _bytesPerSample);
+		DecodeBlock(buffer, pixelCount, values);
+		if (pixelCount < count)
+		{
+			Array.Clear(values, pixelCount, count - pixelCount);
+		}
+		_blocks[key] = targetNode;
+		_recent.AddFirst(targetNode);
+		_lastBlockKey = key;
+		_lastBlock = values;
 		return values;
+	}
+
+	private void DecodeBlock(byte[] buffer, int pixelCount, double[] values)
+	{
+		int byteCount = pixelCount * _bytesPerSample;
+		ReadOnlySpan<byte> bytes = buffer.AsSpan(0, byteCount);
+		switch (_format, BitsPerSample)
+		{
+			case (SampleFormat.UINT, 8):
+				for (int k = 0; k < pixelCount; k++)
+				{
+					values[k] = bytes[k];
+				}
+				break;
+			case (SampleFormat.INT, 8):
+				for (int k = 0; k < pixelCount; k++)
+				{
+					values[k] = (sbyte)bytes[k];
+				}
+				break;
+			case (SampleFormat.UINT, 16):
+			{
+				ReadOnlySpan<ushort> src = MemoryMarshal.Cast<byte, ushort>(bytes);
+				for (int k = 0; k < pixelCount; k++)
+				{
+					values[k] = src[k];
+				}
+				break;
+			}
+			case (SampleFormat.INT, 16):
+			{
+				ReadOnlySpan<short> src = MemoryMarshal.Cast<byte, short>(bytes);
+				for (int k = 0; k < pixelCount; k++)
+				{
+					values[k] = src[k];
+				}
+				break;
+			}
+			case (SampleFormat.UINT, 32):
+			{
+				ReadOnlySpan<uint> src = MemoryMarshal.Cast<byte, uint>(bytes);
+				for (int k = 0; k < pixelCount; k++)
+				{
+					values[k] = src[k];
+				}
+				break;
+			}
+			case (SampleFormat.INT, 32):
+			{
+				ReadOnlySpan<int> src = MemoryMarshal.Cast<byte, int>(bytes);
+				for (int k = 0; k < pixelCount; k++)
+				{
+					values[k] = src[k];
+				}
+				break;
+			}
+			case (SampleFormat.IEEEFP, 32):
+			{
+				ReadOnlySpan<float> src = MemoryMarshal.Cast<byte, float>(bytes);
+				for (int k = 0; k < pixelCount; k++)
+				{
+					values[k] = src[k];
+				}
+				break;
+			}
+			default:
+			{
+				ReadOnlySpan<double> src = MemoryMarshal.Cast<byte, double>(bytes);
+				src.CopyTo(values);
+				break;
+			}
+		}
 	}
 
 	/// <summary>The affine transform (a, b, c, d, e, f) from grid to map coordinates: from ModelTransformation, or ModelTiepoint and ModelPixelScale.</summary>

@@ -1,4 +1,7 @@
+using System.Globalization;
+using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Sde.Core.Records;
 
 namespace Sde.Core.Assessments;
@@ -23,9 +26,15 @@ public sealed record ValidationIssue(int RuleId, IssueSeverity Severity, string 
 /// </summary>
 public sealed class AssessmentValidator
 {
+	private static readonly ConditionalWeakTable<ReferenceData, CompiledRule[]> CompiledCache = new();
 	private readonly ReferenceData _ref;
+	private readonly CompiledRule[] _rules;
 
-	public AssessmentValidator(ReferenceData referenceData) => _ref = referenceData;
+	public AssessmentValidator(ReferenceData referenceData)
+	{
+		_ref = referenceData;
+		_rules = CompiledCache.GetValue(referenceData, CompileRules);
+	}
 
 	/// <param name="checkLatLong">The "Lat/Long Validation" preference; lat/long-in-state checks only run when on.</param>
 	/// <param name="today">For "not in the future" checks (DateTime.Today when null).</param>
@@ -35,16 +44,9 @@ public sealed class AssessmentValidator
 		PropertyRecord p = file.Property;
 		AssessmentRecord a = file.Assessment;
 		List<ValidationIssue> issues = new();
-		foreach (ValidationRuleRecord rule in _ref.ValidationRules.OrderBy(r => r.ValidationID))
+		foreach (CompiledRule rule in _rules)
 		{
-			bool isProperty = string.Equals(rule.ModelName, "property", StringComparison.OrdinalIgnoreCase);
-			object target = isProperty ? p : a;
-			PropertyInfo prop = target.GetType().GetProperty(rule.ControlName);
-			if (prop == null)
-			{
-				continue;
-			}
-			object obj = prop.GetValue(target);
+			object obj = rule.IsProperty ? rule.GetValue(p) : rule.GetValue(a);
 			bool flag = false;
 			switch (rule.ValidationTypeID)
 			{
@@ -67,19 +69,27 @@ public sealed class AssessmentValidator
 				}
 				break;
 			case 5:
-				if (p.StateID > 0 && checkLatLong && Convert.ToDouble(obj) > 0.0)
+				if (p.StateID > 0 && checkLatLong)
 				{
-					flag = LatitudeOutsideState(Convert.ToDouble(obj), p.StateID.Value);
+					double lat = Convert.ToDouble(obj);
+					if (lat > 0.0)
+					{
+						flag = LatitudeOutsideState(lat, p.StateID.Value);
+					}
 				}
 				break;
 			case 6:
-				if (p.StateID > 0 && checkLatLong && Convert.ToDouble(obj) < 0.0)
+				if (p.StateID > 0 && checkLatLong)
 				{
-					flag = LongitudeOutsideState(Convert.ToDouble(obj), p.StateID.Value);
+					double lon = Convert.ToDouble(obj);
+					if (lon < 0.0)
+					{
+						flag = LongitudeOutsideState(lon, p.StateID.Value);
+					}
 				}
 				break;
 			case 7:
-				flag = obj != null && Convert.ToDouble(obj) <= Convert.ToDouble(rule.ValidationType, System.Globalization.CultureInfo.InvariantCulture);
+				flag = obj != null && Convert.ToDouble(obj) <= rule.Threshold;
 				break;
 			case 8:
 				if (a.CauseofDamageID is LookupIds.CauseFlood or LookupIds.CauseFloodAndWind)
@@ -124,13 +134,37 @@ public sealed class AssessmentValidator
 			}
 			if (flag)
 			{
-				issues.Add(new ValidationIssue(rule.ValidationID, Severity(rule.PinColor), rule.Tab, rule.FieldName, rule.ControlName, isProperty ? "Property" : "Assessment", rule.PinMessage));
+				issues.Add(rule.Issue);
 			}
 		}
 		return issues;
 	}
 
-	private static bool IsBlank(object value) => value == null || string.IsNullOrEmpty(value.ToString());
+	private static CompiledRule[] CompileRules(ReferenceData referenceData)
+	{
+		List<CompiledRule> list = new List<CompiledRule>(referenceData.ValidationRules.Count);
+		foreach (ValidationRuleRecord rule in referenceData.ValidationRules.OrderBy(r => r.ValidationID))
+		{
+			bool isProperty = string.Equals(rule.ModelName, "property", StringComparison.OrdinalIgnoreCase);
+			Type targetType = isProperty ? typeof(PropertyRecord) : typeof(AssessmentRecord);
+			PropertyInfo prop = targetType.GetProperty(rule.ControlName);
+			if (prop == null)
+			{
+				continue;
+			}
+			ParameterExpression param = Expression.Parameter(typeof(object), "target");
+			Expression read = Expression.Property(Expression.Convert(param, targetType), prop);
+			Func<object, object> getter = Expression.Lambda<Func<object, object>>(Expression.Convert(read, typeof(object)), param).Compile();
+			double threshold = rule.ValidationTypeID == 7 ? Convert.ToDouble(rule.ValidationType, CultureInfo.InvariantCulture) : 0.0;
+			ValidationIssue issue = new ValidationIssue(rule.ValidationID, Severity(rule.PinColor), rule.Tab, rule.FieldName, rule.ControlName, isProperty ? "Property" : "Assessment", rule.PinMessage);
+			list.Add(new CompiledRule(isProperty, rule.ValidationTypeID, threshold, getter, issue));
+		}
+		return list.ToArray();
+	}
+
+	private sealed record CompiledRule(bool IsProperty, int ValidationTypeID, double Threshold, Func<object, object> GetValue, ValidationIssue Issue);
+
+	private static bool IsBlank(object value) => value == null || (value is string s ? s.Length == 0 : string.IsNullOrEmpty(value.ToString()));
 
 	// Original: Convert.ToInt32(value) > 0 (so 0.4 counts as not > 0, as it did in SDE).
 	private static bool NotGreaterThanZero(object value) => IsBlank(value) || Convert.ToInt32(value) <= 0;
@@ -142,7 +176,7 @@ public sealed class AssessmentValidator
 	/// <summary>checkLatitude: inside [LatMin, LatMax]; American Samoa (54, southern hemisphere) has min/max swapped in the table.</summary>
 	public bool LatitudeOutsideState(double latitude, int stateId)
 	{
-		LatLongValidationRecord box = _ref.LatLongBoxes.FirstOrDefault(b => b.StateID == stateId);
+		LatLongValidationRecord box = _ref.LatLongBox(stateId);
 		if (box == null)
 		{
 			return false;
@@ -157,7 +191,7 @@ public sealed class AssessmentValidator
 	/// <summary>checkLongitude: compares magnitudes (US longitudes are negative); Alaska (2) crosses the 180° line.</summary>
 	public bool LongitudeOutsideState(double longitude, int stateId)
 	{
-		LatLongValidationRecord box = _ref.LatLongBoxes.FirstOrDefault(b => b.StateID == stateId);
+		LatLongValidationRecord box = _ref.LatLongBox(stateId);
 		if (box == null)
 		{
 			return false;

@@ -20,6 +20,12 @@ public static class SourceValues
 	public const string Residential = "Residential";
 	public const string NonResidential = "Non-Residential";
 
+	private static readonly Regex StoriesSuffixRegex = new Regex(@"\s*(stor(y|ies)|floors?)$", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
+	private static readonly Regex ParensRegex = new Regex(@"\(.*?\)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+	private static readonly Regex LeadingDigitRegex = new Regex(@"^(\d)\b", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+	private static readonly Regex LeadingRatingPrefixRegex = new Regex(@"^\d+\s*-\s*", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+	private static readonly Regex TrailingConditionRegex = new Regex(@"\s*Condition$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
 	/// <summary>
 	/// The canonical text for a source value, after the field's translations. Null when <paramref name="text"/> is
 	/// blank; false when it can't be used (not one of FEMA's choices, not a number…).
@@ -49,7 +55,7 @@ public static class SourceValues
 				resolved = MatchLookup(value, field.LookupType, reference)?.LookupFieldName;
 				return resolved != null;
 			case SourceFieldKind.Stories:
-				if (Text.TryParseDecimal(Regex.Replace(value, @"(?i)\s*(stor(y|ies)|floors?)$", ""), out decimal stories) && stories > 0)
+				if (Text.TryParseDecimal(StoriesSuffixRegex.Replace(value, ""), out decimal stories) && stories > 0)
 				{
 					resolved = Number(stories);
 					return true;
@@ -131,20 +137,20 @@ public static class SourceValues
 		}
 		IReadOnlyList<LookupRecord> choices = reference.OfType(lookupType);
 		LookupRecord hit = choices.FirstOrDefault(l => SourceFields.Norm(l.LookupFieldName) == n)
-			?? choices.FirstOrDefault(l => SourceFields.Norm(Regex.Replace(l.LookupFieldName ?? "", @"\(.*?\)", "")) == n);
+			?? choices.FirstOrDefault(l => SourceFields.Norm(ParensRegex.Replace(l.LookupFieldName ?? "", "")) == n);
 		if (hit != null)
 		{
 			return hit;
 		}
 		if (lookupType == LookupTypes.DepreciationRating)
 		{
-			Match digit = Regex.Match(text.Trim(), @"^(\d)\b");
+			Match digit = LeadingDigitRegex.Match(text.Trim());
 			if (digit.Success)
 			{
 				return choices.FirstOrDefault(l => (l.LookupFieldName ?? "").StartsWith(digit.Groups[1].Value + " ", StringComparison.Ordinal));
 			}
-			return choices.FirstOrDefault(l => Regex.Replace(l.LookupFieldName ?? "", @"^\d+\s*-\s*", "") is string words
-				&& (SourceFields.Norm(words) == n || SourceFields.Norm(Regex.Replace(words, @"\s*Condition$", "")) == n));
+			return choices.FirstOrDefault(l => LeadingRatingPrefixRegex.Replace(l.LookupFieldName ?? "", "") is string words
+				&& (SourceFields.Norm(words) == n || SourceFields.Norm(TrailingConditionRegex.Replace(words, "")) == n));
 		}
 		if (choices.Any(l => l.LookupFieldName is "Yes") && YesNo(text) is bool yes)
 		{
@@ -191,7 +197,7 @@ public static class SourceValues
 					string text = Text.Clean(row[column]);
 					if (text != null && !TryResolve(field, text, map, reference, out _))
 					{
-						bad[text] = bad.TryGetValue(text, out var x) ? (x.Text, x.Count + 1) : (text, 1);
+						bad[text] = bad.TryGetValue(text, out (string Text, int Count) x) ? (x.Text, x.Count + 1) : (text, 1);
 					}
 				}
 			}
@@ -199,9 +205,12 @@ public static class SourceValues
 			{
 				bad[constant] = (constant, 0);
 			}
-			IReadOnlyList<string> choices = Choices(field, reference);
-			result.AddRange(bad.Values.OrderByDescending(v => v.Count).ThenBy(v => v.Text, StringComparer.OrdinalIgnoreCase)
-				.Select(v => new SourceUnmatched(field.Key, field.Label, v.Text, v.Count, choices)));
+			if (bad.Count > 0)
+			{
+				IReadOnlyList<string> choices = Choices(field, reference);
+				result.AddRange(bad.Values.OrderByDescending(v => v.Count).ThenBy(v => v.Text, StringComparer.OrdinalIgnoreCase)
+					.Select(v => new SourceUnmatched(field.Key, field.Label, v.Text, v.Count, choices)));
+			}
 		}
 		return result;
 	}

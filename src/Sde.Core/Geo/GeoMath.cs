@@ -77,8 +77,9 @@ public sealed class PointIndex<T>
 				{
 					continue;
 				}
-				foreach (Entry e in cell)
+				for (int i = 0; i < cell.Count; i++)
 				{
+					Entry e = cell[i];
 					double d = GeoMath.Meters(latitude, longitude, e.Latitude, e.Longitude);
 					if (d <= radiusMeters)
 					{
@@ -87,7 +88,20 @@ public sealed class PointIndex<T>
 				}
 			}
 		}
-		return found.OrderBy(x => x.Meters).ThenBy(x => x.Entry.Order).Select(x => (x.Entry.Item, x.Meters)).ToList();
+		if (found.Count > 1)
+		{
+			found.Sort(static (a, b) =>
+			{
+				int cmp = a.Meters.CompareTo(b.Meters);
+				return cmp != 0 ? cmp : a.Entry.Order.CompareTo(b.Entry.Order);
+			});
+		}
+		List<(T Item, double Meters)> result = new List<(T Item, double Meters)>(found.Count);
+		for (int i = 0; i < found.Count; i++)
+		{
+			result.Add((found[i].Entry.Item, found[i].Meters));
+		}
+		return result;
 	}
 
 	private (long Row, long Column) Cell(double latitude, double longitude) =>
@@ -96,5 +110,5 @@ public sealed class PointIndex<T>
 	/// <summary>The cosine of a latitude, kept away from 0 near the poles so cells stay a sensible size.</summary>
 	private static double Cos(double latitude) => Math.Max(Math.Cos(Math.Min(Math.Abs(latitude), 89.0) * Math.PI / 180.0), 0.01);
 
-	private sealed record Entry(T Item, double Latitude, double Longitude, int Order);
+	private readonly record struct Entry(T Item, double Latitude, double Longitude, int Order);
 }

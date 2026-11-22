@@ -84,6 +84,8 @@ public sealed partial class PairedPhoneViewModel(PairedPhone phone, Action<Paire
 /// </summary>
 public sealed partial class PhoneFormService : ObservableObject
 {
+	private static readonly CultureInfo Us = CultureInfo.GetCultureInfo("en-US");
+
 	private readonly AppServices _app;
 	private readonly FieldServer _server;
 	private readonly DispatcherTimer _timer;
@@ -222,7 +224,7 @@ public sealed partial class PhoneFormService : ObservableObject
 		IsRunning = false;
 		Address = null;
 		Pin = null;
-		QrCode = null;
+		SetQrCode(null);
 		_shownToken = null;
 		TimeLeft = null;
 		PinWarning = "";
@@ -243,12 +245,12 @@ public sealed partial class PhoneFormService : ObservableObject
 		{
 			_shownToken = code.Token;
 			Pin = code.Pin[..3] + " " + code.Pin[3..];
-			QrCode = MakeQrCode(_server.BaseAddress + "pair?t=" + code.Token);
+			SetQrCode(MakeQrCode(_server.BaseAddress + "pair?t=" + code.Token));
 		}
 		TimeSpan left = _server.StopsAtUtc - DateTime.UtcNow;
 		TimeLeft = left <= TimeSpan.Zero ? "Stopping…" : $"Stops by itself in {(int)left.TotalHours} h {left.Minutes:00} min";
 		PinWarning = _pairing.PinLockedUntil is DateTime until
-			? $"Too many wrong PINs: PIN pairing is paused until {until.ToLocalTime().ToString("h:mm tt", CultureInfo.GetCultureInfo("en-US"))}. The QR code still works."
+			? $"Too many wrong PINs: PIN pairing is paused until {until.ToLocalTime().ToString("h:mm tt", Us)}. The QR code still works."
 			: "";
 
 		IReadOnlyList<PairedPhone> phones = _pairing.Phones;
@@ -263,12 +265,20 @@ public sealed partial class PhoneFormService : ObservableObject
 		}
 	}
 
+	private void SetQrCode(Bitmap next)
+	{
+		Bitmap previous = QrCode;
+		QrCode = next;
+		previous?.Dispose();
+	}
+
 	/// <summary>The QR code for <paramref name="text"/> as a bitmap.</summary>
 	internal static Bitmap MakeQrCode(string text)
 	{
 		using QRCodeGenerator generator = new QRCodeGenerator();
 		using QRCodeData data = generator.CreateQrCode(text, QRCodeGenerator.ECCLevel.M);
-		byte[] png = new PngByteQRCode(data).GetGraphic(8);
+		using PngByteQRCode qr = new PngByteQRCode(data);
+		byte[] png = qr.GetGraphic(8);
 		using MemoryStream stream = new MemoryStream(png);
 		return new Bitmap(stream);
 	}

@@ -1,3 +1,6 @@
+using System.Buffers;
+using System.Numerics;
+
 namespace Sde.Gis.Analysis;
 
 /// <summary>A point with a weight for a heat map, in the same coordinates as the extent given to <see cref="HeatmapRaster"/>.</summary>
@@ -88,66 +91,115 @@ public static class HeatmapRaster
 		int r = radiusPixels;
 		int pw = width + 2 * r;
 		int ph = height + 2 * r;
-		double[] bins = new double[(long)pw * ph];
-		double sx = width / (maxX - minX);
-		double sy = height / (maxY - minY);
-		foreach (HeatPoint p in points ?? Enumerable.Empty<HeatPoint>())
-		{
-			if (!(p.Weight > 0) || !double.IsFinite(p.Weight) || !double.IsFinite(p.X) || !double.IsFinite(p.Y))
-			{
-				continue;
-			}
-			double fx = Math.Floor((p.X - minX) * sx);
-			double fy = Math.Floor((maxY - p.Y) * sy);
-			if (fx < -r || fx >= width + r || fy < -r || fy >= height + r)
-			{
-				continue;
-			}
-			bins[(long)((int)fy + r) * pw + (int)fx + r] += p.Weight;
-		}
-
-		// The kernel as a table of (2r+1) square.
-		int k = 2 * r + 1;
-		float[] table = new float[k * k];
-		for (int dy = -r; dy <= r; dy++)
-		{
-			for (int dx = -r; dx <= r; dx++)
-			{
-				double d2 = (double)(dx * dx + dy * dy) / ((double)r * r);
-				double v = d2 >= 1 ? 0
-					: kernel == HeatKernel.Gaussian ? Math.Exp(-0.5 * d2 * 9.0) // d / sigma = 3 d / r
-					: (1 - d2) * (1 - d2);
-				table[(dy + r) * k + dx + r] = (float)v;
-			}
-		}
-
+		int totalBins = checked(pw * ph);
+		double[] bins = ArrayPool<double>.Shared.Rent(totalBins);
+		Array.Clear(bins, 0, totalBins);
+		List<int> activeBins = new List<int>();
 		float[] density = new float[width * height];
-		for (int by = 0; by < ph; by++)
+		try
 		{
-			for (int bx = 0; bx < pw; bx++)
+			double sx = width / (maxX - minX);
+			double sy = height / (maxY - minY);
+			foreach (HeatPoint p in points ?? Enumerable.Empty<HeatPoint>())
 			{
-				double w = bins[(long)by * pw + bx];
-				if (w == 0)
+				if (!(p.Weight > 0) || !double.IsFinite(p.Weight) || !double.IsFinite(p.X) || !double.IsFinite(p.Y))
 				{
 					continue;
 				}
-				float fw = (float)w;
+				double fx = Math.Floor((p.X - minX) * sx);
+				double fy = Math.Floor((maxY - p.Y) * sy);
+				if (fx < -r || fx >= width + r || fy < -r || fy >= height + r)
+				{
+					continue;
+				}
+				int idx = ((int)fy + r) * pw + (int)fx + r;
+				if (bins[idx] == 0.0)
+				{
+					activeBins.Add(idx);
+				}
+				bins[idx] += p.Weight;
+			}
+			if (activeBins.Count > 1)
+			{
+				activeBins.Sort();
+			}
+
+			// The kernel as a table of (2r+1) square, plus circular row half-widths to skip zero corners.
+			int k = 2 * r + 1;
+			float[] table = new float[k * k];
+			int[] halfWidth = new int[k];
+			double invR2 = 1.0 / ((double)r * r);
+			for (int dy = -r; dy <= r; dy++)
+			{
+				int maxDx = -1;
+				int dy2 = dy * dy;
+				int rowBase = (dy + r) * k + r;
+				for (int dx = -r; dx <= r; dx++)
+				{
+					double d2 = (dx * dx + dy2) * invR2;
+					if (d2 < 1.0)
+					{
+						double v = kernel == HeatKernel.Gaussian ? Math.Exp(-0.5 * d2 * 9.0) : (1.0 - d2) * (1.0 - d2);
+						table[rowBase + dx] = (float)v;
+						int adx = Math.Abs(dx);
+						if (adx > maxDx)
+						{
+							maxDx = adx;
+						}
+					}
+				}
+				halfWidth[dy + r] = maxDx;
+			}
+
+			int vecWidth = Vector<float>.Count;
+			for (int b = 0; b < activeBins.Count; b++)
+			{
+				int idx = activeBins[b];
+				float fw = (float)bins[idx];
+				int by = idx / pw;
+				int bx = idx - by * pw;
 				int cy = by - r;
 				int cx = bx - r;
 				int y0 = Math.Max(0, cy - r);
 				int y1 = Math.Min(height - 1, cy + r);
-				int x0 = Math.Max(0, cx - r);
-				int x1 = Math.Min(width - 1, cx + r);
+				Vector<float> vFw = new Vector<float>(fw);
 				for (int y = y0; y <= y1; y++)
 				{
+					int kRow = y - cy + r;
+					int hw = halfWidth[kRow];
+					if (hw < 0)
+					{
+						continue;
+					}
+					int x0 = Math.Max(0, cx - hw);
+					int x1 = Math.Min(width - 1, cx + hw);
+					if (x0 > x1)
+					{
+						continue;
+					}
 					int rowOut = y * width;
-					int rowTable = (y - cy + r) * k + r - cx;
-					for (int x = x0; x <= x1; x++)
+					int rowTable = kRow * k + r - cx;
+					int x = x0;
+					if (Vector.IsHardwareAccelerated)
+					{
+						int vecEnd = x1 - vecWidth + 1;
+						for (; x <= vecEnd; x += vecWidth)
+						{
+							Vector<float> vDst = new Vector<float>(density, rowOut + x);
+							Vector<float> vTbl = new Vector<float>(table, rowTable + x);
+							(vDst + vFw * vTbl).CopyTo(density, rowOut + x);
+						}
+					}
+					for (; x <= x1; x++)
 					{
 						density[rowOut + x] += fw * table[rowTable + x];
 					}
 				}
 			}
+		}
+		finally
+		{
+			ArrayPool<double>.Shared.Return(bins);
 		}
 
 		float max = 0;
@@ -196,31 +248,45 @@ public static class HeatmapRaster
 			lut[i] = Colour(stops, i / 255.0);
 		}
 
-		byte[] rgba = new byte[grid.Values.Length * 4];
-		for (int i = 0; i < grid.Values.Length; i++)
+		ReadOnlySpan<float> values = grid.Values;
+		byte[] rgba = new byte[values.Length * 4];
+		if (premultiplied)
 		{
-			float d = grid.Values[i];
-			if (!(d > 0))
+			for (int i = 0; i < values.Length; i++)
 			{
-				continue;   // all four bytes stay 0: clear
+				float d = values[i];
+				if (!(d > 0))
+				{
+					continue;   // all four bytes stay 0: clear
+				}
+				d = Math.Min(1f, d);
+				uint alpha = (uint)Math.Round(d * maxAlpha);
+				(byte R, byte G, byte B) c = lut[(int)Math.Round(d * 255)];
+				int o = i * 4;
+				rgba[o] = (byte)((c.R * alpha + 127u) / 255u);
+				rgba[o + 1] = (byte)((c.G * alpha + 127u) / 255u);
+				rgba[o + 2] = (byte)((c.B * alpha + 127u) / 255u);
+				rgba[o + 3] = (byte)alpha;
 			}
-			d = Math.Min(1f, d);
-			int alpha = (int)Math.Round(d * maxAlpha);
-			(byte R, byte G, byte B) c = lut[(int)Math.Round(d * 255)];
-			int o = i * 4;
-			if (premultiplied)
+		}
+		else
+		{
+			for (int i = 0; i < values.Length; i++)
 			{
-				rgba[o] = (byte)((c.R * alpha + 127) / 255);
-				rgba[o + 1] = (byte)((c.G * alpha + 127) / 255);
-				rgba[o + 2] = (byte)((c.B * alpha + 127) / 255);
-			}
-			else
-			{
+				float d = values[i];
+				if (!(d > 0))
+				{
+					continue;   // all four bytes stay 0: clear
+				}
+				d = Math.Min(1f, d);
+				byte alpha = (byte)Math.Round(d * maxAlpha);
+				(byte R, byte G, byte B) c = lut[(int)Math.Round(d * 255)];
+				int o = i * 4;
 				rgba[o] = c.R;
 				rgba[o + 1] = c.G;
 				rgba[o + 2] = c.B;
+				rgba[o + 3] = alpha;
 			}
-			rgba[o + 3] = (byte)alpha;
 		}
 		return rgba;
 	}

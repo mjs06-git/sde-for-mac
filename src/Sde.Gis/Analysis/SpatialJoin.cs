@@ -68,26 +68,31 @@ public static class SpatialJoin
 		STRtree<int> index = new STRtree<int>();
 		IPreparedGeometry[] prepared = new IPreparedGeometry[polygonList.Count];
 		double[] areas = new double[polygonList.Count];
+		Array.Fill(areas, double.NaN);
 		for (int i = 0; i < polygonList.Count; i++)
 		{
 			index.Insert(polygonList[i].Geometry.EnvelopeInternal, i);
-			prepared[i] = PreparedGeometryFactory.Prepare(polygonList[i].Geometry);
-			areas[i] = polygonList[i].Geometry.Area;
 		}
 		index.Build();
 
-		Envelope extent = new Envelope();
-		foreach (Feature p in pointList)
+		LocalProjection local = null;
+		Dictionary<int, Geometry> projected = null;
+		if (options.NearestToleranceMetres > 0)
 		{
-			if (p.Geometry != null && !p.Geometry.IsEmpty)
+			Envelope extent = new Envelope();
+			foreach (Feature p in pointList)
 			{
-				extent.ExpandToInclude(p.Geometry.EnvelopeInternal);
+				if (p.Geometry != null && !p.Geometry.IsEmpty)
+				{
+					extent.ExpandToInclude(p.Geometry.EnvelopeInternal);
+				}
 			}
+			local = LocalProjection.For(extent);
+			projected = new Dictionary<int, Geometry>();
 		}
-		LocalProjection local = options.NearestToleranceMetres > 0 ? LocalProjection.For(extent) : null;
-		Dictionary<int, Geometry> projected = new Dictionary<int, Geometry>();
 
 		List<PointJoinResult> results = new List<PointJoinResult>(pointList.Count);
+		List<int> inside = new List<int>();
 		foreach (Feature point in pointList)
 		{
 			if (point.Geometry == null || point.Geometry.IsEmpty)
@@ -96,15 +101,53 @@ public static class SpatialJoin
 				continue;
 			}
 			Geometry g = point.Geometry is MultiPoint mp && mp.NumGeometries > 0 ? mp.GetGeometryN(0) : point.Geometry;
-			List<int> inside = index.Query(g.EnvelopeInternal).Where(i => prepared[i].Covers(g)).OrderBy(i => areas[i]).ThenBy(i => i).ToList();
-			if (inside.Count > 0)
+			inside.Clear();
+			foreach (int i in index.Query(g.EnvelopeInternal))
 			{
+				IPreparedGeometry prep = prepared[i] ??= PreparedGeometryFactory.Prepare(polygonList[i].Geometry);
+				if (prep.Covers(g))
+				{
+					inside.Add(i);
+				}
+			}
+			if (inside.Count == 1)
+			{
+				Feature match = polygonList[inside[0]];
 				results.Add(new PointJoinResult
 				{
 					Point = point,
-					Polygon = polygonList[inside[0]],
-					Matches = inside.Select(i => polygonList[i]).ToList(),
-					Outcome = inside.Count == 1 ? JoinOutcome.InOne : JoinOutcome.InSeveral,
+					Polygon = match,
+					Matches = new[] { match },
+					Outcome = JoinOutcome.InOne,
+				});
+				continue;
+			}
+			if (inside.Count > 1)
+			{
+				for (int k = 0; k < inside.Count; k++)
+				{
+					int idx = inside[k];
+					if (double.IsNaN(areas[idx]))
+					{
+						areas[idx] = polygonList[idx].Geometry.Area;
+					}
+				}
+				inside.Sort((a, b) =>
+				{
+					int cmp = areas[a].CompareTo(areas[b]);
+					return cmp != 0 ? cmp : a.CompareTo(b);
+				});
+				Feature[] matches = new Feature[inside.Count];
+				for (int k = 0; k < inside.Count; k++)
+				{
+					matches[k] = polygonList[inside[k]];
+				}
+				results.Add(new PointJoinResult
+				{
+					Point = point,
+					Polygon = matches[0],
+					Matches = matches,
+					Outcome = JoinOutcome.InSeveral,
 				});
 				continue;
 			}
@@ -115,6 +158,7 @@ public static class SpatialJoin
 				Envelope search = g.EnvelopeInternal.Copy();
 				search.ExpandBy(tolerance / (MetresPerDegree * Math.Max(0.01, Math.Cos(lat * Math.PI / 180.0))) * 1.05, tolerance / MetresPerDegree * 1.05);
 				Geometry pointMetres = local.Project(g);
+				Envelope pointEnv = pointMetres.EnvelopeInternal;
 				int best = -1;
 				double bestDistance = double.MaxValue;
 				foreach (int i in index.Query(search))
@@ -123,6 +167,11 @@ public static class SpatialJoin
 					{
 						polygonMetres = local.Project(polygonList[i].Geometry);
 						projected[i] = polygonMetres;
+					}
+					double limit = bestDistance < tolerance ? bestDistance : tolerance;
+					if (polygonMetres.EnvelopeInternal.Distance(pointEnv) > limit)
+					{
+						continue;
 					}
 					double d = pointMetres.Distance(polygonMetres);
 					if (d <= tolerance && (d < bestDistance || (d == bestDistance && i < best)))

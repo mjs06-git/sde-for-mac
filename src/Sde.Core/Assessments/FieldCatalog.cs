@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Linq.Expressions;
 using System.Reflection;
 using Sde.Core.Records;
 
@@ -36,7 +37,12 @@ public enum FieldModel
 /// <param name="Step">The editor step it's on (1 Location &amp; owner … 8 Photos &amp; notes).</param>
 public sealed record FieldInfo(FieldModel Model, string Member, string Label, int Step, FieldKind Kind, int LookupType = 0)
 {
-	public string Key => Model + "." + Member;
+	private string _key;
+	private PropertyInfo _recordProperty;
+	private Func<object, object> _getter;
+	private Action<object, object> _setter;
+
+	public string Key => _key ??= (Model == FieldModel.Property ? "Property." : "Assessment.") + Member;
 
 	/// <summary>
 	/// Identifies one building (address, owner, mailing details, parcel, coordinates): never set on many structures at
@@ -63,7 +69,30 @@ public sealed record FieldInfo(FieldModel Model, string Member, string Label, in
 
 	public Type RecordType => Model == FieldModel.Property ? typeof(PropertyRecord) : typeof(AssessmentRecord);
 
-	public PropertyInfo RecordProperty => RecordType.GetProperty(Member);
+	public PropertyInfo RecordProperty => _recordProperty ??= RecordType.GetProperty(Member);
+
+	internal object ReadFrom(object target) => (_getter ??= BuildGetter())(target);
+
+	internal void WriteTo(object target, object value) => (_setter ??= BuildSetter())(target, value);
+
+	private Func<object, object> BuildGetter()
+	{
+		PropertyInfo prop = RecordProperty;
+		ParameterExpression param = Expression.Parameter(typeof(object), "target");
+		Expression read = Expression.Property(Expression.Convert(param, RecordType), prop);
+		return Expression.Lambda<Func<object, object>>(Expression.Convert(read, typeof(object)), param).Compile();
+	}
+
+	private Action<object, object> BuildSetter()
+	{
+		PropertyInfo prop = RecordProperty;
+		ParameterExpression target = Expression.Parameter(typeof(object), "target");
+		ParameterExpression value = Expression.Parameter(typeof(object), "value");
+		Expression assign = Expression.Assign(
+			Expression.Property(Expression.Convert(target, RecordType), prop),
+			Expression.Convert(value, prop.PropertyType));
+		return Expression.Lambda<Action<object, object>>(assign, target, value).Compile();
+	}
 }
 
 /// <summary>
@@ -90,11 +119,15 @@ public static class FieldCatalog
 
 	public static readonly IReadOnlyList<FieldInfo> All = Build();
 
+	private static readonly CultureInfo Us = CultureInfo.GetCultureInfo("en-US");
+
 	private static readonly Dictionary<string, FieldInfo> ByKey = All.ToDictionary(f => f.Key, StringComparer.Ordinal);
+
+	private static readonly Dictionary<(FieldModel Model, string Member), FieldInfo> ByModelMember = All.ToDictionary(f => (f.Model, f.Member));
 
 	public static FieldInfo Get(string key) => key != null && ByKey.TryGetValue(key, out FieldInfo f) ? f : null;
 
-	public static FieldInfo Find(FieldModel model, string member) => Get(model + "." + member);
+	public static FieldInfo Find(FieldModel model, string member) => member != null && ByModelMember.TryGetValue((model, member), out FieldInfo f) ? f : null;
 
 	/// <summary>The history key for an element's % damaged, e.g. "Element.Foundation".</summary>
 	public static string ElementKey(string elementName) => "Element." + elementName;
@@ -240,14 +273,14 @@ public static class FieldCatalog
 
 	// ───────────────────────── Reading and writing values ─────────────────────────
 
-	public static object GetValue(AssessmentFile file, FieldInfo f) => f.RecordProperty.GetValue(Target(file, f));
+	public static object GetValue(AssessmentFile file, FieldInfo f) => f.ReadFrom(Target(file, f));
 
 	/// <summary>
 	/// Sets a field, converting the value to the column's type (numbers and dates are kept as text in a few FEMA
 	/// columns). Null clears it; a non-nullable column gets its default.
 	/// </summary>
 	public static void SetValue(AssessmentFile file, FieldInfo f, object value) =>
-		f.RecordProperty.SetValue(Target(file, f), Convert(value, f.RecordProperty.PropertyType));
+		f.WriteTo(Target(file, f), Convert(value, f.RecordProperty.PropertyType));
 
 	private static object Target(AssessmentFile file, FieldInfo f) => f.Model == FieldModel.Property ? file.Property : file.Assessment;
 
@@ -322,12 +355,12 @@ public static class FieldCatalog
 				return value is true or "True" or "1" ? "Yes" : "No";
 			case FieldKind.Date:
 				return value is DateTime d || DateTime.TryParse(value.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out d)
-					? d.ToString("MMM d, yyyy", CultureInfo.GetCultureInfo("en-US"))
+					? d.ToString("MMM d, yyyy", Us)
 					: value.ToString();
 			case FieldKind.Number:
 				if (value is IConvertible && decimal.TryParse(System.Convert.ToString(value, CultureInfo.InvariantCulture), NumberStyles.Number, CultureInfo.InvariantCulture, out decimal n))
 				{
-					string text = n.ToString(f.Format, CultureInfo.GetCultureInfo("en-US"));
+					string text = n.ToString(f.Format, Us);
 					return f.Unit switch
 					{
 						null => text,

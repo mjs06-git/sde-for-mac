@@ -59,14 +59,18 @@ public static class SpatialSelect
 		}
 
 		STRtree<int> index = new STRtree<int>();
-		IPreparedGeometry[] prepared = new IPreparedGeometry[shapes.Count];
-		Geometry[] projected = new Geometry[shapes.Count];
+		IPreparedGeometry[] prepared = relation == SpatialRelation.Contains ? null : new IPreparedGeometry[shapes.Count];
+		Geometry[] projected = relation == SpatialRelation.WithinDistance ? new Geometry[shapes.Count] : null;
+		bool pad = padLon != 0 || padLat != 0;
 		for (int i = 0; i < shapes.Count; i++)
 		{
-			Envelope e = shapes[i].EnvelopeInternal.Copy();
-			e.ExpandBy(padLon, padLat);
+			Envelope e = shapes[i].EnvelopeInternal;
+			if (pad)
+			{
+				e = e.Copy();
+				e.ExpandBy(padLon, padLat);
+			}
 			index.Insert(e, i);
-			prepared[i] = PreparedGeometryFactory.Prepare(shapes[i]);
 		}
 		index.Build();
 
@@ -79,16 +83,16 @@ public static class SpatialSelect
 				switch (relation)
 				{
 					case SpatialRelation.Intersects:
-						match = prepared[i].Intersects(f.Geometry);
+						match = (prepared[i] ??= PreparedGeometryFactory.Prepare(shapes[i])).Intersects(f.Geometry);
 						break;
 					case SpatialRelation.Within:
-						match = prepared[i].Covers(f.Geometry);
+						match = (prepared[i] ??= PreparedGeometryFactory.Prepare(shapes[i])).Covers(f.Geometry);
 						break;
 					case SpatialRelation.Contains:
 						match = f.Geometry.Covers(shapes[i]);
 						break;
 					default:
-						if (prepared[i].Intersects(f.Geometry))
+						if ((prepared[i] ??= PreparedGeometryFactory.Prepare(shapes[i])).Intersects(f.Geometry))
 						{
 							match = true;
 							break;

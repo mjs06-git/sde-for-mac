@@ -19,11 +19,13 @@ internal static class FieldHelpCatalog
 	}
 
 	private static readonly Lazy<IReadOnlyList<FieldHelpItem>> Entries = new Lazy<IReadOnlyList<FieldHelpItem>>(Load);
+	private static readonly Lazy<Dictionary<string, FieldHelpItem>> ByKey = new Lazy<Dictionary<string, FieldHelpItem>>(
+		() => Entries.Value.ToDictionary(e => e.Key, StringComparer.Ordinal));
 
 	/// <summary>Every field with help, in the order of the editor's steps.</summary>
 	public static IReadOnlyList<FieldHelpItem> All => Entries.Value;
 
-	public static FieldHelpItem Get(string key) => All.FirstOrDefault(e => e.Key == key);
+	public static FieldHelpItem Get(string key) => key != null && ByKey.Value.TryGetValue(key, out FieldHelpItem item) ? item : null;
 
 	private static IReadOnlyList<FieldHelpItem> Load()
 	{

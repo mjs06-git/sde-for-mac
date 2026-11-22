@@ -200,6 +200,23 @@ public sealed class SdeMcpContext : IDisposable
 		return file;
 	}
 
+	/// <summary>
+	/// Loads only the Property and Assessment rows of an active assessment (without child tables), or throws the same
+	/// tool error as <see cref="LoadAssessment"/>.
+	/// </summary>
+	internal AssessmentFile LoadAssessmentHeader(SdeStore store, string assessmentId)
+	{
+		RequireDatabase();
+		Guid id = ParseAssessmentId(assessmentId);
+		AssessmentFile file = store.LoadAssessmentHeader(id)
+			?? throw new McpException($"There's no assessment {id} in this database. find_structures lists the assessment IDs.");
+		if (!file.Assessment.Active || file.Property == null || !file.Property.Active)
+		{
+			throw new McpException($"Assessment {id} is in Recently deleted in SDE, so it can't be used here.");
+		}
+		return file;
+	}
+
 	internal static Guid ParseAssessmentId(string text) =>
 		Guid.TryParse(text?.Trim(), out Guid id)
 			? id

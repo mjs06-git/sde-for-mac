@@ -13,6 +13,9 @@ public static class PhotoMarkupRenderer
 	/// <summary>Text height as a fraction of the picture's long edge.</summary>
 	public const float TextSize = 0.032f;
 
+	// Resolved once and kept (never disposed, since fallback is the SKTypeface.Default singleton).
+	private static readonly Lazy<SKTypeface> BoldTypeface = new Lazy<SKTypeface>(() => SKTypeface.FromFamilyName("Helvetica", SKFontStyle.Bold) ?? SKTypeface.Default);
+
 	/// <summary>Draws the markup over a picture of <paramref name="width"/> × <paramref name="height"/> already drawn on the canvas at 0,0.</summary>
 	public static void Draw(SKCanvas canvas, PhotoMarkup markup, float width, float height)
 	{
@@ -21,16 +24,22 @@ public static class PhotoMarkupRenderer
 			return;
 		}
 		float edge = Math.Max(width, height);
-		using SKTypeface typeface = SKTypeface.FromFamilyName("Helvetica", SKFontStyle.Bold) ?? SKTypeface.Default;
-		using SKFont font = new SKFont(typeface, Math.Max(8f, edge * TextSize));
+		using SKFont font = new SKFont(BoldTypeface.Value, Math.Max(8f, edge * TextSize));
+		using SKPaint line = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeCap = SKStrokeCap.Round };
+		using SKPaint halo = new SKPaint { Color = new SKColor(255, 255, 255, 200), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeCap = SKStrokeCap.Round };
+		using SKPaint fill = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill };
+		using SKPaint labelBack = new SKPaint { Color = new SKColor(255, 255, 255, 225), IsAntialias = true };
+		using SKPaint labelInk = new SKPaint { IsAntialias = true };
 		foreach (MarkupShape s in markup.Shapes)
 		{
 			SKColor colour = SKColor.TryParse(s.Color, out SKColor c) ? c : SKColors.Red;
 			float stroke = Math.Max(1.5f, (float)s.Width * edge);
 			SKPoint a = new SKPoint((float)s.X1 * width, (float)s.Y1 * height);
 			SKPoint b = new SKPoint((float)s.X2 * width, (float)s.Y2 * height);
-			using SKPaint line = new SKPaint { Color = colour, IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = stroke, StrokeCap = SKStrokeCap.Round };
-			using SKPaint halo = new SKPaint { Color = new SKColor(255, 255, 255, 200), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = stroke * 2.2f, StrokeCap = SKStrokeCap.Round };
+			line.Color = colour;
+			line.StrokeWidth = stroke;
+			line.PathEffect = null;
+			halo.StrokeWidth = stroke * 2.2f;
 			switch (s.Kind)
 			{
 				case MarkupKinds.WaterLine:
@@ -39,10 +48,11 @@ public static class PhotoMarkupRenderer
 						canvas.DrawLine(a, b, halo);
 						line.PathEffect = dash;
 						canvas.DrawLine(a, b, line);
+						line.PathEffect = null;
 					}
 					if (!string.IsNullOrWhiteSpace(s.Text))
 					{
-						Label(canvas, s.Text.Trim(), new SKPoint(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y) - stroke * 1.5f), font, colour);
+						Label(canvas, s.Text.Trim(), new SKPoint(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y) - stroke * 1.5f), font, colour, labelBack, labelInk);
 					}
 					break;
 				case MarkupKinds.Arrow:
@@ -50,7 +60,7 @@ public static class PhotoMarkupRenderer
 					{
 						canvas.DrawLine(a, b, halo);
 						canvas.DrawLine(a, b, line);
-						using SKPaint fill = new SKPaint { Color = colour, IsAntialias = true, Style = SKPaintStyle.Fill };
+						fill.Color = colour;
 						canvas.DrawPath(head, fill);
 					}
 					break;
@@ -67,7 +77,7 @@ public static class PhotoMarkupRenderer
 				case MarkupKinds.Text:
 					if (!string.IsNullOrWhiteSpace(s.Text))
 					{
-						Label(canvas, s.Text.Trim(), a, font, colour);
+						Label(canvas, s.Text.Trim(), a, font, colour, labelBack, labelInk);
 					}
 					break;
 			}
@@ -75,7 +85,7 @@ public static class PhotoMarkupRenderer
 	}
 
 	/// <summary>Text on a white rounded box, its top-left corner at <paramref name="at"/> (kept inside the picture).</summary>
-	private static void Label(SKCanvas canvas, string text, SKPoint at, SKFont font, SKColor colour)
+	private static void Label(SKCanvas canvas, string text, SKPoint at, SKFont font, SKColor colour, SKPaint back, SKPaint ink)
 	{
 		float textWidth = font.MeasureText(text);
 		float pad = font.Size * 0.3f;
@@ -83,9 +93,8 @@ public static class PhotoMarkupRenderer
 		float x = Math.Clamp(at.X, bounds.Left, Math.Max(bounds.Left, bounds.Right - textWidth - pad * 2));
 		float y = Math.Clamp(at.Y - font.Size - pad * 2, bounds.Top, Math.Max(bounds.Top, bounds.Bottom - font.Size - pad * 2));
 		SKRect box = SKRect.Create(x, y, textWidth + pad * 2, font.Size + pad * 2);
-		using SKPaint back = new SKPaint { Color = new SKColor(255, 255, 255, 225), IsAntialias = true };
 		canvas.DrawRoundRect(box, pad, pad, back);
-		using SKPaint ink = new SKPaint { Color = colour, IsAntialias = true };
+		ink.Color = colour;
 		canvas.DrawText(text, x + pad, y + pad + font.Size * 0.85f, SKTextAlign.Left, font, ink);
 	}
 
@@ -132,8 +141,7 @@ public static class PhotoMarkupRenderer
 		{
 			Draw(canvas, markup, bitmap.Width, bitmap.Height);
 		}
-		using SKImage image = SKImage.FromBitmap(bitmap);
-		using SKData data = image.Encode(SKEncodedImageFormat.Jpeg, Internal.PhotoPrep.JpegQuality);
+		using SKData data = bitmap.Encode(SKEncodedImageFormat.Jpeg, Internal.PhotoPrep.JpegQuality);
 		return data.ToArray();
 	}
 

@@ -67,8 +67,8 @@ public static class ComplianceReport
 	{
 		ArgumentNullException.ThrowIfNull(store);
 		List<ComplianceCaseRecord> list = (cases ?? store.GetComplianceCases()).ToList();
-		Dictionary<Guid, PropertyRecord> properties = store.GetProperties(activeOnly: false).ToDictionary(p => p.PropertyID);
-		List<ComplianceRow> rows = new();
+		Dictionary<Guid, PropertyRecord> properties = store.GetProperties(list.Select(c => c.PropertyID));
+		List<ComplianceRow> rows = new List<ComplianceRow>(list.Count);
 		foreach (ComplianceCaseRecord c in list)
 		{
 			properties.TryGetValue(c.PropertyID, out PropertyRecord p);
@@ -215,16 +215,39 @@ public static class ComplianceReport
 
 	private static void Headline(Section sec, IReadOnlyList<ComplianceRow> rows)
 	{
-		int open = rows.Count(r => r.Case.IsOpen);
-		int overdue = rows.Count(r => r.IsOverdue);
-		int iccOpen = rows.Count(r => r.Case.IccStatus is IccStatuses.Filed or IccStatuses.Approved);
-		decimal iccPaid = rows.Where(r => r.Case.IccStatus == IccStatuses.Paid).Sum(r => r.Case.IccAmount ?? 0m);
+		int open = 0;
+		int overdue = 0;
+		int iccOpen = 0;
+		int iccPaidCount = 0;
+		decimal iccPaid = 0m;
+		for (int i = 0; i < rows.Count; i++)
+		{
+			ComplianceRow r = rows[i];
+			if (r.Case.IsOpen)
+			{
+				open++;
+			}
+			if (r.IsOverdue)
+			{
+				overdue++;
+			}
+			string iccStatus = r.Case.IccStatus;
+			if (iccStatus is IccStatuses.Filed or IccStatuses.Approved)
+			{
+				iccOpen++;
+			}
+			else if (iccStatus == IccStatuses.Paid)
+			{
+				iccPaidCount++;
+				iccPaid += r.Case.IccAmount ?? 0m;
+			}
+		}
 		(string Value, string Label, string Note)[] tiles =
 		{
 			(open.ToString("N0", Us), "Open cases", $"{rows.Count - open:N0} closed"),
 			(overdue.ToString("N0", Us), "Overdue", "deadline passed, still open"),
 			(iccOpen.ToString("N0", Us), "ICC claims in progress", "filed or approved, not paid"),
-			(iccPaid.ToString("C0", Us), "ICC paid", $"{rows.Count(r => r.Case.IccStatus == IccStatuses.Paid):N0} claim(s)"),
+			(iccPaid.ToString("C0", Us), "ICC paid", $"{iccPaidCount:N0} claim(s)"),
 		};
 		double w = Kit.LandscapeWidth / tiles.Length;
 		Table t = Kit.NewTable(sec, tiles.Select(_ => w));

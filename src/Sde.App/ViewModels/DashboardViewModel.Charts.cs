@@ -115,8 +115,21 @@ public sealed partial class DashboardViewModel
 		{
 			return points;
 		}
+		DateTime minDay = DateTime.MaxValue;
+		DateTime maxDay = DateTime.MinValue;
+		foreach (DateTime d in perDay.Keys)
+		{
+			if (d < minDay)
+			{
+				minDay = d;
+			}
+			if (d > maxDay)
+			{
+				maxDay = d;
+			}
+		}
 		int total = 0;
-		for (DateTime day = perDay.Keys.Min(); day <= perDay.Keys.Max(); day = day.AddDays(1))
+		for (DateTime day = minDay; day <= maxDay; day = day.AddDays(1))
 		{
 			total += perDay.TryGetValue(day, out int n) ? n : 0;
 			points.Add(new ProgressPoint(day, total));

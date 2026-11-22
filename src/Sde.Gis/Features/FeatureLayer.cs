@@ -30,6 +30,14 @@ public sealed class Feature
 		_values = new object[fields.Count];
 	}
 
+	private Feature(FieldList fields, Geometry geometry, long id, object[] values)
+	{
+		Fields = fields;
+		Geometry = geometry;
+		Id = id;
+		_values = values;
+	}
+
 	/// <summary>The feature's id in its source: the GeoPackage fid, the ArcGIS object id, the record number. 0 when it hasn't been saved.</summary>
 	public long Id { get; set; }
 
@@ -92,12 +100,7 @@ public sealed class Feature
 	}
 
 	/// <summary>A copy of this feature (the geometry is copied too).</summary>
-	public Feature Clone()
-	{
-		Feature f = new Feature(Fields, Geometry?.Copy(), Id);
-		f._values = GetValues();
-		return f;
-	}
+	public Feature Clone() => new Feature(Fields, Geometry?.Copy(), Id, GetValues());
 
 	public override string ToString() => $"Feature {Id}";
 }

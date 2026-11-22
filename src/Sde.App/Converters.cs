@@ -8,8 +8,17 @@ namespace Sde.App;
 /// <summary>Value converters used by the views.</summary>
 public static class Converters
 {
+	private static readonly CultureInfo Us = CultureInfo.GetCultureInfo("en-US");
+
 	/// <summary>The name of the result's text colour, e.g. "StatusSubstantialFg", for <see cref="ThemeBrush"/>.</summary>
-	public static readonly IValueConverter StatusForegroundKey = new FuncValueConverter<ResultState, string>(s => $"Status{s}Fg");
+	public static readonly IValueConverter StatusForegroundKey = new FuncValueConverter<ResultState, string>(s => s switch
+	{
+		ResultState.Substantial => "StatusSubstantialFg",
+		ResultState.Close => "StatusCloseFg",
+		ResultState.NotSubstantial => "StatusNotSubstantialFg",
+		ResultState.Undetermined => "StatusUndeterminedFg",
+		_ => "StatusIncompleteFg",
+	});
 
 	/// <summary>The damaged percentage's colour: red when substantially damaged, otherwise ordinary text (colour is kept for the one result that matters).</summary>
 	public static readonly IValueConverter PercentForegroundKey = new FuncValueConverter<ResultState, string>(s => s == ResultState.Substantial ? "StatusSubstantialFg" : "TextPrimary");
@@ -18,25 +27,46 @@ public static class Converters
 	public static readonly IValueConverter IsSubstantial = new FuncValueConverter<ResultState, bool>(s => s == ResultState.Substantial);
 
 	/// <summary>The result dot's colour: the status hues, brighter than text so a small dot reads.</summary>
-	public static readonly IValueConverter StatusDotKey = new FuncValueConverter<ResultState, string>(s => $"Status{s}Dot");
+	public static readonly IValueConverter StatusDotKey = new FuncValueConverter<ResultState, string>(s => s switch
+	{
+		ResultState.Substantial => "StatusSubstantialDot",
+		ResultState.Close => "StatusCloseDot",
+		ResultState.NotSubstantial => "StatusNotSubstantialDot",
+		ResultState.Undetermined => "StatusUndeterminedDot",
+		_ => "StatusIncompleteDot",
+	});
 
 	/// <summary>The name of the result's background colour, e.g. "StatusSubstantialBg", for <see cref="ThemeBrush"/>.</summary>
-	public static readonly IValueConverter StatusBackgroundKey = new FuncValueConverter<ResultState, string>(s => $"Status{s}Bg");
+	public static readonly IValueConverter StatusBackgroundKey = new FuncValueConverter<ResultState, string>(s => s switch
+	{
+		ResultState.Substantial => "StatusSubstantialBg",
+		ResultState.Close => "StatusCloseBg",
+		ResultState.NotSubstantial => "StatusNotSubstantialBg",
+		ResultState.Undetermined => "StatusUndeterminedBg",
+		_ => "StatusIncompleteBg",
+	});
 
 	/// <summary>"$1,234.56" or "—" for null.</summary>
-	public static readonly IValueConverter Money = new FuncValueConverter<decimal?, string>(v => v is decimal d ? d.ToString("C2", CultureInfo.GetCultureInfo("en-US")) : "–");
+	public static readonly IValueConverter Money = new FuncValueConverter<decimal?, string>(v => v is decimal d ? d.ToString("C2", Us) : "–");
 
 	/// <summary>"$1,235" (whole dollars) or "—".</summary>
-	public static readonly IValueConverter MoneyWhole = new FuncValueConverter<decimal?, string>(v => v is decimal d ? d.ToString("C0", CultureInfo.GetCultureInfo("en-US")) : "–");
+	public static readonly IValueConverter MoneyWhole = new FuncValueConverter<decimal?, string>(v => v is decimal d ? d.ToString("C0", Us) : "–");
 
 	/// <summary>"12.5%" or "—".</summary>
 	public static readonly IValueConverter Percent = new FuncValueConverter<decimal?, string>(v => v is decimal d ? d.ToString("0.#", CultureInfo.InvariantCulture) + "%" : "–");
 
 	/// <summary>"1,450 sq ft" or "—".</summary>
-	public static readonly IValueConverter SquareFeet = new FuncValueConverter<decimal?, string>(v => v is decimal d ? d.ToString("N0", CultureInfo.GetCultureInfo("en-US")) + " sq ft" : "–");
+	public static readonly IValueConverter SquareFeet = new FuncValueConverter<decimal?, string>(v => v is decimal d ? d.ToString("N0", Us) + " sq ft" : "–");
 
 	/// <summary>True when the structure-list filter equals the parameter (e.g. "Substantial").</summary>
-	public static readonly IValueConverter FilterIs = new FuncValueConverter<Sde.App.ViewModels.StructureFilter, string, bool>((f, p) => f.ToString() == p);
+	public static readonly IValueConverter FilterIs = new FuncValueConverter<Sde.App.ViewModels.StructureFilter, string, bool>((f, p) => (f switch
+	{
+		Sde.App.ViewModels.StructureFilter.All => nameof(Sde.App.ViewModels.StructureFilter.All),
+		Sde.App.ViewModels.StructureFilter.Substantial => nameof(Sde.App.ViewModels.StructureFilter.Substantial),
+		Sde.App.ViewModels.StructureFilter.Close => nameof(Sde.App.ViewModels.StructureFilter.Close),
+		Sde.App.ViewModels.StructureFilter.Below => nameof(Sde.App.ViewModels.StructureFilter.Below),
+		_ => nameof(Sde.App.ViewModels.StructureFilter.Incomplete),
+	}) == p);
 
 	public static readonly IValueConverter BoldIf = new FuncValueConverter<bool, FontWeight>(b => b ? FontWeight.SemiBold : FontWeight.Normal);
 

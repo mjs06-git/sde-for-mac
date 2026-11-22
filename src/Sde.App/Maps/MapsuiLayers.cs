@@ -25,6 +25,10 @@ internal sealed class BuiltFeatureLayer : IDisposable
 	/// <summary>Layers with more features than this are drawn as raster tiles.</summary>
 	public const int RasterizeAbove = 1500;
 
+	internal static readonly GeometryFactory PlanarFactory = new GeometryFactory();
+	private static readonly MercatorFilter MercatorFilterInstance = new MercatorFilter();
+	private static readonly LatLonFilter LatLonFilterInstance = new LatLonFilter();
+
 	private readonly STRtree<int> _index = new STRtree<int>();
 
 	/// <summary>One engine style per symbol and kind of geometry (a layer may mix points, lines and polygons).</summary>
@@ -77,15 +81,17 @@ internal sealed class BuiltFeatureLayer : IDisposable
 	public Feature[] Features { get; private set; }
 
 	/// <summary>Builds the engine's layers for a feature layer.</summary>
-	public static BuiltFeatureLayer Build(MapFeatureLayer spec, MapTheme theme, float pixelDensity)
+	public static BuiltFeatureLayer Build(MapFeatureLayer spec, MapTheme theme, float pixelDensity, bool forPrint = false)
 	{
 		BuiltFeatureLayer built = new BuiltFeatureLayer(spec);
-		List<IFeature> drawn = new List<IFeature>();
-		List<Geometry> shapes = new List<Geometry>();
-		List<Feature> features = new List<Feature>();
+		IReadOnlyList<Feature> sourceFeatures = spec.Data?.Features ?? (IReadOnlyList<Feature>)Array.Empty<Feature>();
+		List<IFeature> drawn = new List<IFeature>(sourceFeatures.Count);
+		List<Geometry> shapes = new List<Geometry>(sourceFeatures.Count);
+		List<Feature> features = new List<Feature>(sourceFeatures.Count);
 		LayerStyle style = spec.Style ?? new LayerStyle();
-		foreach (Feature f in spec.Data?.Features ?? new List<Feature>())
+		for (int i = 0; i < sourceFeatures.Count; i++)
 		{
+			Feature f = sourceFeatures[i];
 			if (f.Geometry == null || f.Geometry.IsEmpty)
 			{
 				continue;
@@ -98,28 +104,37 @@ internal sealed class BuiltFeatureLayer : IDisposable
 			Geometry metres = ToMetres(f.Geometry);
 			GeometryFeature g = new GeometryFeature(metres);
 			g.Styles.Add(built.StyleFor(symbol, FeatureLayer.KindOf(f.Geometry)));
-			built._index.Insert(metres.EnvelopeInternal, shapes.Count);
+			if (!forPrint)
+			{
+				built._index.Insert(metres.EnvelopeInternal, shapes.Count);
+			}
 			drawn.Add(g);
 			shapes.Add(metres);
 			features.Add(f);
 		}
-		built._index.Build();
+		if (!forPrint)
+		{
+			built._index.Build();
+		}
 		built.Shapes = shapes.ToArray();
 		built.Features = features.ToArray();
 		built._drawn = drawn;
 		built.Source = new MemoryLayer(spec.Name ?? spec.Key) { Features = drawn, Style = null };
-		built.IsRasterized = drawn.Count > RasterizeAbove;
+		built.IsRasterized = !forPrint && drawn.Count > RasterizeAbove;
 		built.Layer = built.IsRasterized
 			? new RasterizingTileLayer(built.Source, pixelDensity, dataFetchStrategy: new DataFetchStrategy(0)) { Name = spec.Name ?? spec.Key }
 			: built.Source;
 		built.Layer.Attribution.Enabled = false;
 		built.Layer.Opacity = spec.Display?.ClampedOpacity ?? 1;
 		built.Labels = BuildLabels(spec, built);
-		built.Selection = new MemoryLayer((spec.Name ?? spec.Key) + " selected") { Style = theme.SelectionStyle(spec.Data?.GeometryKind ?? GeometryKind.Unknown) };
 		built.Edits = new MemoryLayer((spec.Name ?? spec.Key) + " edits") { Style = null };
 		built.Edits.Attribution.Enabled = false;
 		built.ShowEdits(spec.Edits);
-		built.ShowSelection(spec, theme);
+		if (!forPrint)
+		{
+			built.Selection = new MemoryLayer((spec.Name ?? spec.Key) + " selected") { Style = theme.SelectionStyle(spec.Data?.GeometryKind ?? GeometryKind.Unknown) };
+			built.ShowSelection(spec, theme);
+		}
 		return built;
 	}
 
@@ -308,8 +323,7 @@ internal sealed class BuiltFeatureLayer : IDisposable
 	public static Geometry ToMetres(Geometry wgs84)
 	{
 		Geometry copy = wgs84.Copy();
-		copy.Apply(new MercatorFilter());
-		copy.GeometryChanged();
+		copy.Apply(MercatorFilterInstance);
 		return copy;
 	}
 
@@ -317,8 +331,7 @@ internal sealed class BuiltFeatureLayer : IDisposable
 	public static Geometry ToWgs84(Geometry metres)
 	{
 		Geometry copy = Sde.Gis.GisSetup.Factory.CreateGeometry(metres);
-		copy.Apply(new LatLonFilter());
-		copy.GeometryChanged();
+		copy.Apply(LatLonFilterInstance);
 		return copy;
 	}
 
@@ -405,7 +418,7 @@ internal sealed class BuiltFeatureLayer : IDisposable
 }
 
 /// <summary>The colours the map takes from the app's theme (light or dark), as engine styles.</summary>
-internal sealed class MapTheme
+internal sealed record MapTheme
 {
 	public Color Background { get; init; } = new Color(242, 244, 246);
 
@@ -445,13 +458,17 @@ internal sealed class MapTheme
 internal static class StructureDots
 {
 	/// <summary>One dot per marker, in its fill, with an outline in the theme's card colour.</summary>
-	public static List<IFeature> Dots(IReadOnlyList<MapMarker> markers, MapTheme theme)
+	public static List<IFeature> Dots(IReadOnlyList<MapMarker> markers, MapTheme theme) => Dots(markers, null, theme);
+
+	/// <summary>One dot per marker, reusing pre-projected Web Mercator coordinates when provided.</summary>
+	public static List<IFeature> Dots(IReadOnlyList<MapMarker> markers, (double X, double Y)[] metres, MapTheme theme)
 	{
 		Dictionary<Color, IStyle> dots = new Dictionary<Color, IStyle>();
 		List<IFeature> features = new List<IFeature>(markers.Count);
-		foreach (MapMarker m in markers)
+		for (int i = 0; i < markers.Count; i++)
 		{
-			(double x, double y) = WebMercator.ToMetres(m.Longitude, m.Latitude);
+			MapMarker m = markers[i];
+			(double x, double y) = metres != null ? metres[i] : WebMercator.ToMetres(m.Longitude, m.Latitude);
 			Color fill = MapCanvas.ToEngine(m.Fill, new Color(128, 128, 128));
 			if (!dots.TryGetValue(fill, out IStyle dot))
 			{
@@ -472,12 +489,17 @@ internal static class StructureDots
 	}
 
 	/// <summary>A label point for each marker that has a label.</summary>
-	public static List<IFeature> LabelPoints(IReadOnlyList<MapMarker> markers)
+	public static List<IFeature> LabelPoints(IReadOnlyList<MapMarker> markers, (double X, double Y)[] metres = null)
 	{
 		List<IFeature> labels = new List<IFeature>();
-		foreach (MapMarker m in markers.Where(m => !string.IsNullOrWhiteSpace(m.Label)))
+		for (int i = 0; i < markers.Count; i++)
 		{
-			(double x, double y) = WebMercator.ToMetres(m.Longitude, m.Latitude);
+			MapMarker m = markers[i];
+			if (string.IsNullOrWhiteSpace(m.Label))
+			{
+				continue;
+			}
+			(double x, double y) = metres != null ? metres[i] : WebMercator.ToMetres(m.Longitude, m.Latitude);
 			PointFeature label = new PointFeature(x, y);
 			label["text"] = m.Label;
 			labels.Add(label);

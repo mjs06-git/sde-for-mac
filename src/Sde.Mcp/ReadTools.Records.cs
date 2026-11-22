@@ -33,8 +33,7 @@ public sealed partial class ReadTools
 		List<Guid> assessments = file != null
 			? new List<Guid> { file.Assessment.AssessmentID }
 			: store.GetAssessmentsForProperty(p.PropertyID).Select(a => a.AssessmentID).ToList();
-		List<LetterItem> letters = assessments.SelectMany(store.GetLetters)
-			.OrderByDescending(l => l.GeneratedOn ?? DateTime.MinValue)
+		List<LetterItem> letters = store.GetLetters(assessments)
 			.Select(l => new LetterItem(l.LetterID.ToString(), l.AssessmentID.ToString(), Blank(l.Kind), Blank(FileNameOnly(l.Template)),
 				Describe.Date(l.GeneratedOn), Describe.Date(l.SentOn), l.SentOn != null, Blank(FileNameOnly(l.FileName))))
 			.ToList();
@@ -65,7 +64,7 @@ public sealed partial class ReadTools
 	[Description("Reads the owner's appeal of an assessment's determination: when it was received, what the owner disputes, the outcome (Pending, Upheld, Revised or Withdrawn) and when it was decided, with the contractor bids sent in and which one, if any, the assessment's repair cost uses. Appeals, bids and outcomes are changed only by a person, in SDE." + Untrusted)]
 	public AppealResult GetAppeal([Description("The assessment's ID (find_structures lists them).")] string assessmentId)
 	{
-		AssessmentFile file = sde.LoadAssessment(sde.Reader, assessmentId);
+		AssessmentFile file = sde.LoadAssessmentHeader(sde.Reader, assessmentId);
 		SdeStore store = sde.Reader;
 		Guid id = file.Assessment.AssessmentID;
 		AssessmentRecord a = file.Assessment;
@@ -111,9 +110,21 @@ public sealed partial class ReadTools
 			return new ImprovementProjectItem(project.ProjectID.ToString(), Blank(project.PermitNumber), Describe.Shorten(Blank(project.Description)),
 				Describe.Date(project.ProjectDate), project.Cost, Blank(project.CostBasis), project.Included, Describe.Shorten(Blank(project.ExclusionReason)), figures);
 		}).ToList();
-		List<SiDeterminationItem> determinations = store.GetSiDeterminations(p.PropertyID).Select(d => new SiDeterminationItem(d.DeterminationID.ToString(),
+		List<SIDeterminationRecord> siDeterminations = store.GetSiDeterminations(p.PropertyID);
+		Dictionary<Guid, Guid> caseByDetermination = new Dictionary<Guid, Guid>();
+		if (siDeterminations.Count > 0)
+		{
+			foreach (ComplianceCaseRecord cc in store.GetComplianceCasesForProperty(p.PropertyID))
+			{
+				if (cc.DeterminationID is Guid detId && !caseByDetermination.ContainsKey(detId))
+				{
+					caseByDetermination[detId] = cc.CaseID;
+				}
+			}
+		}
+		List<SiDeterminationItem> determinations = siDeterminations.Select(d => new SiDeterminationItem(d.DeterminationID.ToString(),
 			Describe.Date(d.DeterminedOn), d.Result, d.CumulativeCost, d.Percent, d.ThresholdPercent, d.MarketValue, Blank(d.MarketValueBasis), d.LookbackYears,
-			Blank(d.DeterminedBy), Describe.Shorten(Blank(d.Notes)), store.GetComplianceCaseForImprovement(d.DeterminationID)?.CaseID.ToString())).ToList();
+			Blank(d.DeterminedBy), Describe.Shorten(Blank(d.Notes)), caseByDetermination.TryGetValue(d.DeterminationID, out Guid caseId) ? caseId.ToString() : null)).ToList();
 		string note = projects.Count == 0 && determinations.Count == 0
 			? "No improvement projects or substantial improvement determinations are recorded for this structure."
 			: marketValue == null && projects.Count > 0
@@ -154,7 +165,7 @@ public sealed partial class ReadTools
 			throw new McpException($"\"{Describe.Shorten(caseId, 60)}\" isn't a compliance case ID. list_compliance_cases lists the cases and their IDs.");
 		}
 		ComplianceCaseRecord c = store.GetComplianceCase(id) ?? throw new McpException($"There's no compliance case {id} in this database. list_compliance_cases lists the cases.");
-		if (!store.GetActiveComplianceCases().Any(a => a.CaseID == id))
+		if (!store.IsComplianceCaseActive(id))
 		{
 			throw new McpException($"Compliance case {id} belongs to a structure or assessment in Recently deleted in SDE, so it can't be used here.");
 		}
@@ -169,7 +180,7 @@ public sealed partial class ReadTools
 	{
 		if (!string.IsNullOrWhiteSpace(assessmentId))
 		{
-			AssessmentFile file = sde.LoadAssessment(store, assessmentId);
+			AssessmentFile file = sde.LoadAssessmentHeader(store, assessmentId);
 			return (file.Property, file);
 		}
 		if (string.IsNullOrWhiteSpace(structureId))
@@ -184,9 +195,13 @@ public sealed partial class ReadTools
 		if (p == null)
 		{
 			// An assessment ID given as the structure works too, as assign_to_team takes either.
-			if (store.LoadAssessment(id) != null)
+			AssessmentFile file = store.LoadAssessmentHeader(id);
+			if (file != null)
 			{
-				AssessmentFile file = sde.LoadAssessment(store, id.ToString());
+				if (!file.Assessment.Active || file.Property == null || !file.Property.Active)
+				{
+					throw new McpException($"Assessment {id} is in Recently deleted in SDE, so it can't be used here.");
+				}
 				return (file.Property, null);
 			}
 			throw new McpException($"There's no structure {id} in this database. find_structures lists the structures (propertyId).");

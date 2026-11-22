@@ -14,20 +14,29 @@ public sealed record Basemap(string Id, string Name, string UrlTemplate, string 
 	public bool HasTiles => !string.IsNullOrEmpty(UrlTemplate);
 
 	/// <summary>True when the service draws any area ({bbox} and {size}), so it can send sharper tiles for a Retina screen.</summary>
-	public bool HasRetinaTiles => HasTiles && UrlTemplate.Contains("{bbox}") && UrlTemplate.Contains("{size}");
+	public bool HasRetinaTiles { get; } = !string.IsNullOrEmpty(UrlTemplate)
+		&& UrlTemplate.Contains("{bbox}", StringComparison.Ordinal)
+		&& UrlTemplate.Contains("{size}", StringComparison.Ordinal);
+
+	private readonly bool _hasZ = !string.IsNullOrEmpty(UrlTemplate) && UrlTemplate.Contains("{z}", StringComparison.Ordinal);
+	private readonly bool _hasBbox = !string.IsNullOrEmpty(UrlTemplate) && UrlTemplate.Contains("{bbox}", StringComparison.Ordinal);
 
 	/// <summary>The web address of one tile; <paramref name="scale"/> 2 asks for a Retina tile where the service has them.</summary>
 	public string TileUrl(int z, int x, int y, int scale = 1)
 	{
-		string url = UrlTemplate.Replace("{z}", z.ToString(CultureInfo.InvariantCulture))
-			.Replace("{x}", x.ToString(CultureInfo.InvariantCulture))
-			.Replace("{y}", y.ToString(CultureInfo.InvariantCulture));
-		if (url.Contains("{bbox}"))
+		string url = UrlTemplate;
+		if (_hasZ)
+		{
+			url = url.Replace("{z}", z.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
+				.Replace("{x}", x.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
+				.Replace("{y}", y.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
+		}
+		if (_hasBbox)
 		{
 			int factor = HasRetinaTiles && scale > 1 ? 2 : 1;
-			url = url.Replace("{bbox}", Bbox(z, x, y))
-				.Replace("{size}", (256 * factor).ToString(CultureInfo.InvariantCulture))
-				.Replace("{dpi}", (96 * factor).ToString(CultureInfo.InvariantCulture));
+			url = url.Replace("{bbox}", Bbox(z, x, y), StringComparison.Ordinal)
+				.Replace("{size}", factor == 2 ? "512" : "256", StringComparison.Ordinal)
+				.Replace("{dpi}", factor == 2 ? "192" : "96", StringComparison.Ordinal);
 		}
 		return url;
 	}
@@ -41,7 +50,7 @@ public sealed record Basemap(string Id, string Name, string UrlTemplate, string 
 		double size = 2 * WebMercator.HalfWorld / (1L << z);
 		double minX = -WebMercator.HalfWorld + x * size;
 		double maxY = WebMercator.HalfWorld - y * size;
-		return string.Join(",", new[] { minX, maxY - size, minX + size, maxY }.Select(v => v.ToString("0.###", CultureInfo.InvariantCulture)));
+		return string.Create(CultureInfo.InvariantCulture, $"{minX:0.###},{maxY - size:0.###},{minX + size:0.###},{maxY:0.###}");
 	}
 
 	public override string ToString() => Name;

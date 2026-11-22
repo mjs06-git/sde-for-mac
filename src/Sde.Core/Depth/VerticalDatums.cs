@@ -26,16 +26,16 @@ public static class VerticalDatums
 	/// </summary>
 	public static VerticalDatum Parse(string text)
 	{
-		string t = new string((text ?? "").Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+		string t = Squash(text);
 		if (t.Length == 0)
 		{
 			return VerticalDatum.Unknown;
 		}
-		if (t.Contains("NAVD") || t.Contains("NORTHAMERICANVERTICAL"))
+		if (t.Contains("NAVD", StringComparison.Ordinal) || t.Contains("NORTHAMERICANVERTICAL", StringComparison.Ordinal))
 		{
 			return VerticalDatum.Navd88;
 		}
-		if (t.Contains("NGVD") || t.Contains("NATIONALGEODETICVERTICAL") || t.Contains("SEALEVELDATUM"))
+		if (t.Contains("NGVD", StringComparison.Ordinal) || t.Contains("NATIONALGEODETICVERTICAL", StringComparison.Ordinal) || t.Contains("SEALEVELDATUM", StringComparison.Ordinal))
 		{
 			return VerticalDatum.Ngvd29;
 		}
@@ -77,5 +77,22 @@ public static class VerticalDatums
 		return ShortName(d) ?? (d == VerticalDatum.Unknown ? "no datum" : text.Trim());
 	}
 
-	private static string Squash(string text) => new string((text ?? "").Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+	private static string Squash(string text)
+	{
+		if (string.IsNullOrEmpty(text))
+		{
+			return "";
+		}
+		Span<char> buffer = text.Length <= 128 ? stackalloc char[text.Length] : new char[text.Length];
+		int len = 0;
+		for (int i = 0; i < text.Length; i++)
+		{
+			char c = text[i];
+			if (char.IsLetterOrDigit(c))
+			{
+				buffer[len++] = char.ToUpperInvariant(c);
+			}
+		}
+		return len == 0 ? "" : new string(buffer.Slice(0, len));
+	}
 }

@@ -143,7 +143,11 @@ public sealed class LayersStore
 	}
 
 	/// <summary>True when a feature table of that name exists.</summary>
-	public bool Exists(string table) => Table(table) != null;
+	public bool Exists(string table)
+	{
+		using SqliteConnection c = Connect();
+		return Find(c, null, table, counts: false) != null;
+	}
 
 	/// <summary>
 	/// A table name made from a layer name: lower-case letters, digits and underscores, starting with a letter, not
@@ -313,6 +317,7 @@ public sealed class LayersStore
 			delete.Transaction = tx;
 			delete.CommandText = $"DELETE FROM {t} WHERE {fid} = $id";
 			SqliteParameter id = delete.Parameters.Add("$id", SqliteType.Integer);
+			delete.Prepare();
 			foreach (long featureId in edits.Deletes)
 			{
 				id.Value = featureId;
@@ -342,6 +347,7 @@ public sealed class LayersStore
 			{
 				values[i] = update.Parameters.Add("$c" + i.ToString(CultureInfo.InvariantCulture), GeoPackageDb.SqliteTypeFor(fields[i].Type));
 			}
+			update.Prepare();
 			foreach (Feature feature in edits.Updates)
 			{
 				id.Value = feature.Id;

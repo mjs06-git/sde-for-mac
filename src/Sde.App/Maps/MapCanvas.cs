@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Reflection;
 using Avalonia;
 using Avalonia.Automation;
@@ -76,7 +77,11 @@ public sealed partial class MapCanvas : Panel, IDisposable
 	private MemoryLayer _structureLabels;
 	private STRtree<int> _markerIndex = new STRtree<int>();
 	private (double X, double Y)[] _markerMetres = Array.Empty<(double, double)>();
+	private readonly Dictionary<Guid, int> _markerIndexById = new Dictionary<Guid, int>();
 	private IReadOnlyList<MapMarker> _markers = Array.Empty<MapMarker>();
+	private MColor _ringAccent;
+	private SymbolStyle _selectedRingStyle;
+	private SymbolStyle _highlightRingStyle;
 	private IReadOnlyList<object> _layers = Array.Empty<object>();
 	private IReadOnlyCollection<Guid> _selectedMarkers = Array.Empty<Guid>();
 	private IReadOnlyList<MapClusterMark> _clusters;
@@ -191,7 +196,7 @@ public sealed partial class MapCanvas : Panel, IDisposable
 		set
 		{
 			_markers = value ?? Array.Empty<MapMarker>();
-			ShowMarkers();
+			ShowMarkers(rebuildIndex: true);
 		}
 	}
 
@@ -209,7 +214,7 @@ public sealed partial class MapCanvas : Panel, IDisposable
 				return;   // still a dot each: nothing to redraw (the analysis sets this after every pan with a surface on)
 			}
 			_clusters = value;
-			ShowMarkers();
+			ShowMarkers(rebuildIndex: false);
 		}
 	}
 
@@ -222,7 +227,7 @@ public sealed partial class MapCanvas : Panel, IDisposable
 			if (_markersHidden != value)
 			{
 				_markersHidden = value;
-				ShowMarkers();
+				ShowMarkers(rebuildIndex: false);
 			}
 		}
 	}
@@ -250,7 +255,7 @@ public sealed partial class MapCanvas : Panel, IDisposable
 		set
 		{
 			_markerLabels = value;
-			ShowMarkers();
+			ShowMarkers(rebuildIndex: false);
 		}
 	}
 
@@ -363,8 +368,30 @@ public sealed partial class MapCanvas : Panel, IDisposable
 			SetView(38.5, -96.0, 4);
 			return;
 		}
+		double minLon = double.PositiveInfinity, maxLon = double.NegativeInfinity;
+		double minLat = double.PositiveInfinity, maxLat = double.NegativeInfinity;
+		for (int i = 0; i < _markers.Count; i++)
+		{
+			MapMarker m = _markers[i];
+			if (m.Longitude < minLon)
+			{
+				minLon = m.Longitude;
+			}
+			if (m.Longitude > maxLon)
+			{
+				maxLon = m.Longitude;
+			}
+			if (m.Latitude < minLat)
+			{
+				minLat = m.Latitude;
+			}
+			if (m.Latitude > maxLat)
+			{
+				maxLat = m.Latitude;
+			}
+		}
 		// A wide margin: the page's floating controls sit in the corners and along the edges.
-		FitTo(new MapExtent(_markers.Min(m => m.Longitude), _markers.Min(m => m.Latitude), _markers.Max(m => m.Longitude), _markers.Max(m => m.Latitude)), 17, FitMargin);
+		FitTo(new MapExtent(minLon, minLat, maxLon, maxLat), 17, FitMargin);
 	}
 
 	/// <summary>Shows an area (with a margin of <paramref name="margin"/> pixels in all), no closer than <paramref name="maxZoom"/>.</summary>
@@ -419,17 +446,18 @@ public sealed partial class MapCanvas : Panel, IDisposable
 		}
 		(double x, double y) = Viewport.ScreenToWorldXY(p.X, p.Y);
 		double reach = HitRadius * resolution;
+		double reachSq = reach * reach;
 		int best = -1;
-		double bestDistance = double.MaxValue;
+		double bestDistSq = double.MaxValue;
 		foreach (int i in _markerIndex.Query(new Envelope(x - reach, x + reach, y - reach, y + reach)))
 		{
 			double dx = _markerMetres[i].X - x;
 			double dy = _markerMetres[i].Y - y;
-			double d = Math.Sqrt(dx * dx + dy * dy);
-			if (d <= reach && (d < bestDistance || d == bestDistance && i > best))
+			double dSq = dx * dx + dy * dy;
+			if (dSq <= reachSq && (dSq < bestDistSq || dSq == bestDistSq && i > best))
 			{
 				best = i;
-				bestDistance = d;
+				bestDistSq = dSq;
 			}
 		}
 		return best < 0 ? null : _markers[best].Id;
@@ -443,7 +471,7 @@ public sealed partial class MapCanvas : Panel, IDisposable
 			return null;
 		}
 		MapClusterMark best = null;
-		double bestDistance = double.MaxValue;
+		double bestDistSq = double.MaxValue;
 		foreach (MapClusterMark c in _clusters)
 		{
 			if (c.Count < 2)
@@ -451,11 +479,14 @@ public sealed partial class MapCanvas : Panel, IDisposable
 				continue;
 			}
 			(double sx, double sy) = Viewport.WorldToScreenXY(c.X, c.Y);
-			double d = Math.Sqrt((sx - p.X) * (sx - p.X) + (sy - p.Y) * (sy - p.Y));
-			if (d <= MapClusterStyle.DiameterFor(c.Count) / 2 + 3 && d < bestDistance)
+			double dx = sx - p.X;
+			double dy = sy - p.Y;
+			double dSq = dx * dx + dy * dy;
+			double radius = MapClusterStyle.DiameterFor(c.Count) / 2 + 3;
+			if (dSq <= radius * radius && dSq < bestDistSq)
 			{
 				best = c;
-				bestDistance = d;
+				bestDistSq = dSq;
 			}
 		}
 		return best;
@@ -492,7 +523,7 @@ public sealed partial class MapCanvas : Panel, IDisposable
 			return Array.Empty<Feature>();
 		}
 		Envelope box = WorldBox(area);
-		Geometry boxShape = new GeometryFactory().ToGeometry(box);
+		Geometry boxShape = BuiltFeatureLayer.PlanarFactory.ToGeometry(box);
 		return built.Query(box).OrderBy(i => i).Where(i => built.Shapes[i].Intersects(boxShape)).Select(i => built.Features[i]).ToList();
 	}
 
@@ -709,84 +740,104 @@ public sealed partial class MapCanvas : Panel, IDisposable
 		Refresh();
 	}
 
-	private void ShowMarkers()
+	private void ShowMarkers(bool rebuildIndex = true)
 	{
 		if (_control == null)
 		{
 			return;
 		}
-		STRtree<int> index = new STRtree<int>();
-		(double X, double Y)[] metres = new (double, double)[_markers.Count];
-		for (int i = 0; i < _markers.Count; i++)
+		if (rebuildIndex || _markerMetres.Length != _markers.Count)
 		{
-			(double x, double y) = WebMercator.ToMetres(_markers[i].Longitude, _markers[i].Latitude);
-			metres[i] = (x, y);
-			index.Insert(new Envelope(x, x, y, y), i);
+			STRtree<int> index = new STRtree<int>();
+			(double X, double Y)[] metres = new (double, double)[_markers.Count];
+			_markerIndexById.Clear();
+			for (int i = 0; i < _markers.Count; i++)
+			{
+				(double x, double y) = WebMercator.ToMetres(_markers[i].Longitude, _markers[i].Latitude);
+				metres[i] = (x, y);
+				index.Insert(new Envelope(x, x, y, y), i);
+				_markerIndexById[_markers[i].Id] = i;
+			}
+			index.Build();
+			_markerIndex = index;
+			_markerMetres = metres;
 		}
 		// A dot each, clusters, or nothing under a heat map; labels only beside plain dots.
 		List<IFeature> features = _markersHidden ? new List<IFeature>()
 			: _clusters != null ? AnalysisLayers.Clusters(_clusters, _markers, _theme)
-			: StructureDots.Dots(_markers, _theme);
-		List<IFeature> labels = _markersHidden || _clusters != null ? new List<IFeature>() : StructureDots.LabelPoints(_markers);
-		index.Build();
-		_markerIndex = index;
-		_markerMetres = metres;
+			: StructureDots.Dots(_markers, _markerMetres, _theme);
+		List<IFeature> labels = _markerLabels == null || _markersHidden || _clusters != null
+			? null
+			: StructureDots.LabelPoints(_markers, _markerMetres);
 		_structures ??= new MemoryLayer("Structures") { Style = null };
 		_structures.Attribution.Enabled = false;
 		_structures.Features = features;
 		_structures.DataHasChanged();
 		_structureLabels?.Dispose();
-		_structureLabels = _markerLabels == null || labels.Count == 0 ? null : StructureDots.LabelLayer(labels, _markerLabels, _theme);
-		ShowRings();
+		_structureLabels = labels == null || labels.Count == 0 ? null : StructureDots.LabelLayer(labels, _markerLabels, _theme);
+		ShowRings(refresh: false);
 		Arrange();
 	}
 
-	private void ShowRings()
+	private void ShowRings(bool refresh = true)
 	{
 		if (_control == null)
 		{
 			return;
 		}
-		SymbolStyle selectedRing = new SymbolStyle
+		if (_selectedRingStyle == null || !Equals(_ringAccent, _theme.Accent))
 		{
-			SymbolType = SymbolType.Ellipse,
-			SymbolScale = (DotDiameter + 7) / SymbolStyle.DefaultWidth,
-			Fill = null,
-			Outline = new Pen(_theme.Accent, 2.5),
-		};
-		SymbolStyle highlightRing = new SymbolStyle
+			_ringAccent = _theme.Accent;
+			_selectedRingStyle = new SymbolStyle
+			{
+				SymbolType = SymbolType.Ellipse,
+				SymbolScale = (DotDiameter + 7) / SymbolStyle.DefaultWidth,
+				Fill = null,
+				Outline = new Pen(_ringAccent, 2.5),
+			};
+			_highlightRingStyle = new SymbolStyle
+			{
+				SymbolType = SymbolType.Ellipse,
+				SymbolScale = (DotDiameter + 12) / SymbolStyle.DefaultWidth,
+				Fill = null,
+				Outline = new Pen(_ringAccent, 3),
+			};
+		}
+		List<IFeature> rings = new List<IFeature>(_selectedMarkers.Count + (_highlighted != null ? 1 : 0));
+		if (_highlighted is Guid hi && _markerIndexById.TryGetValue(hi, out int hiIndex))
 		{
-			SymbolType = SymbolType.Ellipse,
-			SymbolScale = (DotDiameter + 12) / SymbolStyle.DefaultWidth,
-			Fill = null,
-			Outline = new Pen(_theme.Accent, 3),
-		};
-		HashSet<Guid> selected = _selectedMarkers as HashSet<Guid> ?? new HashSet<Guid>(_selectedMarkers);
-		List<IFeature> rings = new List<IFeature>();
-		for (int i = 0; i < _markers.Count; i++)
+			PointFeature f = new PointFeature(_markerMetres[hiIndex].X, _markerMetres[hiIndex].Y);
+			f.Styles.Add(_highlightRingStyle);
+			rings.Add(f);
+		}
+		foreach (Guid id in _selectedMarkers)
 		{
-			bool isSelected = selected.Contains(_markers[i].Id);
-			bool isHighlighted = _highlighted == _markers[i].Id;
-			if (!isSelected && !isHighlighted)
+			if (_highlighted == id)
 			{
 				continue;
 			}
-			PointFeature f = new PointFeature(_markerMetres[i].X, _markerMetres[i].Y);
-			f.Styles.Add(isHighlighted ? highlightRing : selectedRing);
-			rings.Add(f);
+			if (_markerIndexById.TryGetValue(id, out int idx))
+			{
+				PointFeature f = new PointFeature(_markerMetres[idx].X, _markerMetres[idx].Y);
+				f.Styles.Add(_selectedRingStyle);
+				rings.Add(f);
+			}
 		}
 		_rings ??= new MemoryLayer("Selected structures") { Style = null };
 		_rings.Attribution.Enabled = false;
 		_rings.Features = rings;
 		_rings.DataHasChanged();
-		Refresh();
+		if (refresh)
+		{
+			Refresh();
+		}
 	}
 
 	// ───────────── Theme ─────────────
 
 	private void ApplyTheme()
 	{
-		_theme = new MapTheme
+		MapTheme nextTheme = new MapTheme
 		{
 			Background = ToEngine(Background ?? Resource("SubtleBg"), new MColor(242, 244, 246)),
 			DotOutline = ToEngine(Resource("CardBg"), MColor.White),
@@ -794,6 +845,8 @@ public sealed partial class MapCanvas : Panel, IDisposable
 			Text = ToEngine(Resource("TextPrimary"), new MColor(22, 25, 29)),
 			Halo = ToEngine(Resource("CardBg"), MColor.White),
 		};
+		bool sameTheme = nextTheme.Equals(_theme);
+		_theme = nextTheme;
 		IBrush accent = Resource("Accent") ?? Brushes.DodgerBlue;
 		Avalonia.Media.Color a = accent is ISolidColorBrush s ? s.Color : Colors.DodgerBlue;
 		_box.Stroke = accent;
@@ -805,13 +858,17 @@ public sealed partial class MapCanvas : Panel, IDisposable
 		{
 			return;
 		}
+		if (sameTheme && _structures != null)
+		{
+			return;
+		}
 		_control.Map.BackColor = _theme.Background;
 		// Every style that came from the theme is made again in the new colours.
 		foreach (BuiltFeatureLayer built in _built.Values)
 		{
 			built.ShowSelection(built.Spec, _theme);
 		}
-		ShowMarkers();
+		ShowMarkers(rebuildIndex: _structures == null);
 		ShowHandles();
 	}
 
@@ -989,6 +1046,9 @@ public sealed partial class MapCanvas : Panel, IDisposable
 	/// renames the fields; the engine's own callback then stays, and MapEngineTests fails, so an upgrade can't drop this
 	/// quietly.
 	/// </summary>
+	private static Func<object, int> _drawStartGetter;
+	private static Type _drawStartGetterType;
+
 	private bool ShareRedrawLoop(MapControl control)
 	{
 		FieldInfo controllerField = typeof(MapControl).GetField("_renderController", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -1000,18 +1060,28 @@ public sealed partial class MapCanvas : Panel, IDisposable
 			_lastDrawStart = null;
 			return false;
 		}
-		_lastDrawStart = () => (int)drawStarted.GetValue(controller);
+		Func<object, int> readStamp = _drawStartGetter;
+		if (readStamp == null || _drawStartGetterType != controller.GetType())
+		{
+			ParameterExpression param = Expression.Parameter(typeof(object), "c");
+			readStamp = Expression.Lambda<Func<object, int>>(
+				Expression.Field(Expression.Convert(param, controller.GetType()), drawStarted),
+				param).Compile();
+			_drawStartGetter = readStamp;
+			_drawStartGetterType = controller.GetType();
+		}
+		_lastDrawStart = () => readStamp(controller);
 		callback.SetValue(controller, (Action)(() =>
 		{
 			// The stamp of the last draw to begin before this request (it may still be drawing).
-			int askedAfter = (int)drawStarted.GetValue(controller);
+			int askedAfter = readStamp(controller);
 			_ui.Post(() =>
 			{
 				if (_control != control)
 				{
 					return;
 				}
-				int now = (int)drawStarted.GetValue(controller);
+				int now = readStamp(controller);
 				// A draw has begun since the request, or one this map asked for has yet to begin (it will begin after
 				// the request): either shows every change up to the request.
 				if (now != askedAfter || (_redrawPending && now == _redrawAskedAfter))

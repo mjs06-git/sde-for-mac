@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 
 namespace Sde.Interop.Online;
@@ -11,13 +12,14 @@ internal static class OnlineHttp
 	{
 		using CancellationTokenSource limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
 		limit.CancelAfter(timeout);
-		string body;
+		byte[] bytes;
 		try
 		{
 			using HttpResponseMessage response = await http.GetAsync(url, limit.Token).ConfigureAwait(false);
-			body = await response.Content.ReadAsStringAsync(limit.Token).ConfigureAwait(false);
+			bytes = await response.Content.ReadAsByteArrayAsync(limit.Token).ConfigureAwait(false);
 			if (!response.IsSuccessStatusCode)
 			{
+				string body = Encoding.UTF8.GetString(bytes);
 				throw new OnlineServiceException(
 					$"The {serviceName} had a problem and couldn't answer (error {(int)response.StatusCode}). Try again in a few minutes.",
 					$"GET {url} returned {(int)response.StatusCode} {response.ReasonPhrase}: {Truncate(body)}")
@@ -41,10 +43,11 @@ internal static class OnlineHttp
 
 		try
 		{
-			return JsonDocument.Parse(body);
+			return JsonDocument.Parse(bytes);
 		}
 		catch (JsonException ex)
 		{
+			string body = Encoding.UTF8.GetString(bytes);
 			throw new OnlineServiceException(
 				$"The {serviceName} sent back something SDE couldn't read. Try again later.",
 				$"GET {url} returned invalid JSON: {Truncate(body)}", ex);

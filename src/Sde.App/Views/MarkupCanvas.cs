@@ -18,8 +18,12 @@ public sealed class MarkupCanvas : Control
 	public static readonly StyledProperty<Bitmap> SourceProperty =
 		AvaloniaProperty.Register<MarkupCanvas, Bitmap>(nameof(Source));
 
+	private static readonly Pen HaloPen = new Pen(new SolidColorBrush(Colors.White, 0.8), 4);
+
 	private Point? _start;
 	private Point _current;
+	private Color _dragPenColor;
+	private Pen _dragPen;
 
 	static MarkupCanvas() => AffectsRender<MarkupCanvas>(SourceProperty);
 
@@ -64,8 +68,13 @@ public sealed class MarkupCanvas : Control
 			return;
 		}
 		Color colour = Color.TryParse(sheet.Colour?.Hex, out Color c) ? c : Colors.Red;
-		Pen halo = new Pen(new SolidColorBrush(Colors.White, 0.8), 4);
-		Pen pen = new Pen(new SolidColorBrush(colour), 2, DashStyle.Dash);
+		if (_dragPen == null || _dragPenColor != colour)
+		{
+			_dragPenColor = colour;
+			_dragPen = new Pen(new SolidColorBrush(colour), 2, DashStyle.Dash);
+		}
+		Pen halo = HaloPen;
+		Pen pen = _dragPen;
 		Point b = _current;
 		using (context.PushClip(picture))
 		{

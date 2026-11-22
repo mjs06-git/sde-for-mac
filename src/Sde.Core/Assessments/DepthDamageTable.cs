@@ -54,11 +54,36 @@ public sealed class DepthDamageTable
 	/// </summary>
 	public decimal? Percent(string elementName, decimal depthFt)
 	{
-		List<(decimal Depth, decimal Percent)> points = Rows
-			.Where(r => r.Percents != null && r.Percents.TryGetValue(elementName, out decimal? p) && p != null)
-			.Select(r => (r.DepthFt, Math.Clamp(r.Percents[elementName].Value, 0m, 100m)))
-			.OrderBy(p => p.Item1)
-			.ToList();
+		List<DepthDamageRow> sorted = Rows.OrderBy(r => r.DepthFt).ToList();
+		return PercentFromSorted(sorted, elementName, depthFt);
+	}
+
+	/// <summary>Suggested % damage by element name for the given depth (only elements the table has values for).</summary>
+	public Dictionary<string, decimal> Suggest(IEnumerable<string> elementNames, decimal depthFt)
+	{
+		List<DepthDamageRow> sorted = Rows.OrderBy(r => r.DepthFt).ToList();
+		Dictionary<string, decimal> result = new Dictionary<string, decimal>(StringComparer.Ordinal);
+		foreach (string name in elementNames)
+		{
+			if (PercentFromSorted(sorted, name, depthFt) is decimal p)
+			{
+				result[name] = p;
+			}
+		}
+		return result;
+	}
+
+	private static decimal? PercentFromSorted(List<DepthDamageRow> sortedRows, string elementName, decimal depthFt)
+	{
+		List<(decimal Depth, decimal Percent)> points = new List<(decimal, decimal)>(sortedRows.Count);
+		for (int i = 0; i < sortedRows.Count; i++)
+		{
+			DepthDamageRow r = sortedRows[i];
+			if (r.Percents != null && r.Percents.TryGetValue(elementName, out decimal? p) && p.HasValue)
+			{
+				points.Add((r.DepthFt, Math.Clamp(p.Value, 0m, 100m)));
+			}
+		}
 		if (points.Count == 0)
 		{
 			return null;
@@ -82,19 +107,5 @@ public sealed class DepthDamageTable
 			}
 		}
 		return Math.Round(points[^1].Percent, 2);
-	}
-
-	/// <summary>Suggested % damage by element name for the given depth (only elements the table has values for).</summary>
-	public Dictionary<string, decimal> Suggest(IEnumerable<string> elementNames, decimal depthFt)
-	{
-		Dictionary<string, decimal> result = new Dictionary<string, decimal>(StringComparer.Ordinal);
-		foreach (string name in elementNames)
-		{
-			if (Percent(name, depthFt) is decimal p)
-			{
-				result[name] = p;
-			}
-		}
-		return result;
 	}
 }
