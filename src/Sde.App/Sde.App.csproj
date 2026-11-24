@@ -12,6 +12,7 @@
     <RootNamespace>Sde.App</RootNamespace>
     <AssemblyName>SDE</AssemblyName>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationIcon />
     <Version>3.5.0</Version>
   </PropertyGroup>
@@ -21,10 +22,18 @@
   </ItemGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <AvaloniaResource Include="Assets/**" />
     <!-- Public Sans, the app's typeface: one copy of the files, shared with the PDF reports (SIL OFL 1.1) -->
     <AvaloniaResource Include="../Sde.Reports/Fonts/*.ttf" Link="Assets/Fonts/%(Filename)%(Extension)" />
     <EmbeddedResource Include="Help/field-help.json" LogicalName="field-help.json" />
+    <!-- Embedded MapLibre GL JS assets for the native macOS WKWebView map (BSD-3-Clause, offline-ready) -->
+    <EmbeddedResource Include="Maps/Web/*" LogicalName="Sde.App.Maps.Web.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../Sde.Reports/Fonts/PublicSans-Regular.ttf;../Sde.Reports/Fonts/PublicSans-SemiBold.ttf"
+                      Link="Maps/Web/fonts/%(Filename)%(Extension)" LogicalName="Sde.App.Maps.Web.fonts.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
