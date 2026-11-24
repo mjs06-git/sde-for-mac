@@ -196,6 +196,14 @@ The icons' path data is copied, unmodified, into `src/Sde.App/Styles/Icons.axaml
 > COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 > OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+## Embedded web map
+
+| Library | Version | License | Source |
+| --- | --- | --- | --- |
+| MapLibre GL JS (`maplibre-gl.js`, `maplibre-gl.css`) | 5.3.0 | BSD-3-Clause | https://github.com/maplibre/maplibre-gl-js |
+
+Bundled in `src/Sde.App/Maps/Web/` alongside its full license text (`LICENSE-maplibre-gl.txt`) and served locally to macOS's `WKWebView` over loopback when the Interactive Map view is active.
+
 ## mdbtools (separate programs)
 
 | Program | License | Source |
