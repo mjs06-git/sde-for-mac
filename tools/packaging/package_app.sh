@@ -60,6 +60,10 @@ for RID in $RIDS; do
   <key>LSMinimumSystemVersion</key><string>12.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
   <key>NSHighResolutionCapable</key><true/>
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsLocalNetworking</key><true/>
+  </dict>
   <key>NSLocalNetworkUsageDescription</key><string>SDE's phone form lets inspectors fill in assessments and add photos from a phone on the same Wi-Fi network. It runs only while you have started it in Settings.</string>
   <key>NSHumanReadableCopyright</key><string>Unofficial Mac port of FEMA's Substantial Damage Estimator 3.0. Not produced or endorsed by FEMA.</string>
 </dict>
