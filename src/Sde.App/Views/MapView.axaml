@@ -45,7 +45,7 @@
           </Flyout>
         </DropDownButton.Flyout>
       </DropDownButton>
-      <Button Classes="icon toolbar" VerticalAlignment="Center" ToolTip.Tip="More" AutomationProperties.Name="More map actions">
+      <Button Name="MoreButton" Classes="icon toolbar" VerticalAlignment="Center" ToolTip.Tip="More" AutomationProperties.Name="More map actions">
         <c:Icon Kind="More" Size="18" />
         <Button.Flyout>
           <MenuFlyout Placement="BottomEdgeAlignedRight">
@@ -58,6 +58,9 @@
                 </DataTemplate>
               </MenuItem.ItemTemplate>
             </MenuItem>
+            <Separator />
+            <MenuItem Name="MapEngineItem" Header="Interactive Map (MapLibre)" Click="OnToggleMapEngine"
+                      ToolTip.Tip="Use the hardware-accelerated MapLibre web view on macOS" />
             <Separator />
             <MenuItem Header="Keep This Area Offline…" Command="{Binding KeepOfflineCommand}"
                       ToolTip.Tip="Keep the background map of this area on this Mac, for working without a connection" />
@@ -118,7 +121,10 @@
           </Panel>
         </Border>
 
-        <Panel Margin="12">
+        <Panel>
+          <Image Name="WebMapBackdrop" Stretch="Fill" IsVisible="False" IsHitTestVisible="False" />
+          <c:MacWebView Name="WebMap" IsVisible="False" />
+          <Panel Name="ClassicMapFloats" Margin="12">
           <!-- The tools: what a click or a drag does (the mode) -->
           <Border Name="ToolPalette" Classes="mapFloat" HorizontalAlignment="Left" VerticalAlignment="Top">
             <StackPanel Spacing="2">
@@ -374,13 +380,16 @@
                   IsVisible="{Binding OnMapCount, Converter={x:Static app:Converters.IsZero}}">
             <c:EmptyState Title="No Structures on the Map" Padding="16,8" />
           </Border>
+          </Panel>
         </Panel>
       </DockPanel>
 
-      <!-- The map's sources, small in the corner -->
-      <Panel HorizontalAlignment="Right" VerticalAlignment="Bottom" IsVisible="{Binding HasAttribution}" ToolTip.Tip="{Binding Attribution}">
-        <Border Background="{DynamicResource BgSurface}" Opacity="0.8" />
-        <TextBlock Classes="muted xs" Text="{Binding Attribution}" TextTrimming="CharacterEllipsis" Margin="6,1" />
+      <!-- The map's sources, small in the corner (Classic mode; MapLibre renders its own) -->
+      <Panel Name="ClassicAttributionHost" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+        <Panel Name="AttributionBadge" IsVisible="{Binding HasAttribution}" ToolTip.Tip="{Binding Attribution}">
+          <Border Background="{DynamicResource BgSurface}" Opacity="0.8" />
+          <TextBlock Classes="muted xs" Text="{Binding Attribution}" TextTrimming="CharacterEllipsis" Margin="6,1" />
+        </Panel>
       </Panel>
     </Grid>
 

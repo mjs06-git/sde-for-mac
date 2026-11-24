@@ -28,8 +28,14 @@ public class MapWebServerTests
 		using HttpResponseMessage badToken = await client.GetAsync(server.BaseUrl + "/wrong/", ct);
 		Assert.Equal(HttpStatusCode.Forbidden, badToken.StatusCode);
 
-		// Valid token prefix serves bundled Public Sans fonts
-		foreach (string path in new[] { "fonts/PublicSans-Regular.ttf", "fonts/PublicSans-SemiBold.ttf" })
+		// Valid entry URL -> 200 HTML
+		using HttpResponseMessage html = await client.GetAsync(server.EntryUrl, ct);
+		Assert.Equal(HttpStatusCode.OK, html.StatusCode);
+		string body = await html.Content.ReadAsStringAsync(ct);
+		Assert.Contains("maplibre-gl.js", body);
+
+		// Valid token prefix serves bundled MapLibre, HUD, map script, styles and Public Sans fonts
+		foreach (string path in new[] { "maplibre-gl.js", "maplibre-gl.css", "hud.js", "map.js", "map.css", "fonts/PublicSans-Regular.ttf", "fonts/PublicSans-SemiBold.ttf" })
 		{
 			using HttpResponseMessage res = await client.GetAsync($"{server.EntryUrl}{path}", ct);
 			Assert.Equal(HttpStatusCode.OK, res.StatusCode);
