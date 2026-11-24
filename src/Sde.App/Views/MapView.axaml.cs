@@ -25,7 +25,11 @@ public partial class MapView : UserControl
 	{
 		InitializeComponent();
 		_analysis = new MapAnalysisRunner(Surface, key => this.TryFindResource(key, ActualThemeVariant, out object r) ? r : null);
-		_analysis.SurfaceChanged += result => _vm?.ShowSurfaceClasses(result);
+		_analysis.SurfaceChanged += result =>
+		{
+			_vm?.ShowSurfaceClasses(result);
+			QueueWebPush();
+		};
 		Surface.ClusterClicked += extent => Surface.FitTo(extent, 18);
 		Surface.MarkerClicked += (id, add) => _vm?.ClickStructure(id, add);
 		Surface.FeatureClicked += (layer, feature, add) => _vm?.ClickFeature(layer, feature, add);
@@ -57,8 +61,10 @@ public partial class MapView : UserControl
 		LegendCard.SizeChanged += (_, _) => PlaceSelectionBar();
 		MapArea.SizeChanged += (_, _) => PlaceSelectionBar();
 			_analysis.Refresh();
+			QueueWebPush();
 		};
 		BuildHeatRamp();
+		InitWebMapHooks();
 		PointList.DoubleTapped += (_, _) => _vm?.OpenSelectedCommand.Execute(null);
 		TableGrid.SelectionChanged += OnTableSelectionChanged;
 		TableGrid.DoubleTapped += (_, _) => _vm?.ZoomToRowCommand.Execute(TableGrid.SelectedItem as AttributeRowViewModel);
@@ -115,6 +121,10 @@ public partial class MapView : UserControl
 
 	private void OnViewChanged()
 	{
+		if (IsWebMapActive)
+		{
+			return;
+		}
 		if (_vm != null && Surface.Bounds.Width > 0)
 		{
 			_vm.ViewExtent = Surface.Extent;
@@ -133,13 +143,13 @@ public partial class MapView : UserControl
 		}
 		_vm.MarkersChanged += Rebuild;
 		_vm.LayersChanged += ShowLayers;
-		_vm.FitRequested += Surface.FitToMarkers;
+		_vm.FitRequested += OnFitRequested;
 		_vm.CenterRequested += Center;
 		_vm.ZoomToRequested += ZoomTo;
-		_vm.RetryRequested += Surface.RetryTiles;
+		_vm.RetryRequested += OnRetryRequested;
 		_vm.SelectionChanged += ShowSelection;
 		_vm.TableColumnsChanged += BuildTableColumns;
-		_vm.ClearSketchRequested += Surface.ClearSketch;
+		_vm.ClearSketchRequested += OnClearSketchRequested;
 		_vm.ShowViewRequested += ShowView;
 		_vm.MoveAnswered += Surface.ClearPendingMove;
 		_vm.PropertyChanged += VmChanged;
@@ -152,6 +162,26 @@ public partial class MapView : UserControl
 		Rebuild();
 		ShowLayers();
 		BuildTableColumns();
+		UpdateWebMapModeVisuals();
+		QueueWebPush();
+	}
+
+	private void OnFitRequested()
+	{
+		Surface.FitToMarkers();
+		WebFitToMarkers();
+	}
+
+	private void OnRetryRequested()
+	{
+		Surface.RetryTiles();
+		WebRetryTiles();
+	}
+
+	private void OnClearSketchRequested()
+	{
+		Surface.ClearSketch();
+		WebClearSketch();
 	}
 
 	protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -160,6 +190,7 @@ public partial class MapView : UserControl
 		Detach();
 		// The page closed: stop the analysis work and the map engine (its redraw loop, downloads and layers).
 		_analysis.Stop();
+		ShutdownWebMap();
 		Surface.Dispose();
 	}
 
@@ -171,13 +202,13 @@ public partial class MapView : UserControl
 		}
 		_vm.MarkersChanged -= Rebuild;
 		_vm.LayersChanged -= ShowLayers;
-		_vm.FitRequested -= Surface.FitToMarkers;
+		_vm.FitRequested -= OnFitRequested;
 		_vm.CenterRequested -= Center;
 		_vm.ZoomToRequested -= ZoomTo;
-		_vm.RetryRequested -= Surface.RetryTiles;
+		_vm.RetryRequested -= OnRetryRequested;
 		_vm.SelectionChanged -= ShowSelection;
 		_vm.TableColumnsChanged -= BuildTableColumns;
-		_vm.ClearSketchRequested -= Surface.ClearSketch;
+		_vm.ClearSketchRequested -= OnClearSketchRequested;
 		_vm.ShowViewRequested -= ShowView;
 		_vm.MoveAnswered -= Surface.ClearPendingMove;
 		_vm.PropertyChanged -= VmChanged;
@@ -196,20 +227,47 @@ public partial class MapView : UserControl
 		{
 			case nameof(MapViewModel.Basemap):
 				Surface.Basemap = _vm.Basemap;
+				QueueWebPush();
 				break;
 			case nameof(MapViewModel.Mode):
+				ApplyMode();
+				UpdateWebMapModeVisuals();
+				if (IsWebMapActive)
+				{
+					SyncWebMapViewportFromSurface();
+				}
+				QueueWebPush();
+				break;
 			case nameof(MapViewModel.Sketch):
 			case nameof(MapViewModel.SelectLayerKey):
 			case nameof(MapViewModel.EditLayer):
 			case nameof(MapViewModel.EditTool):
 			case nameof(MapViewModel.SnapToShapes):
 				ApplyMode();
+				QueueWebPush();
 				break;
 			case nameof(MapViewModel.EditFeature):
 				Surface.EditFeature = _vm.EditFeature;
 				break;
 			case nameof(MapViewModel.Selected):
 				Surface.Highlighted = _vm.Selected?.Id;
+				QueueWebPush();
+				break;
+			case nameof(MapViewModel.Display):
+			case nameof(MapViewModel.HeatByDamage):
+			case nameof(MapViewModel.IsLegendOpen):
+			case nameof(MapViewModel.MeasureArea):
+			case nameof(MapViewModel.MeasurementLine):
+			case nameof(MapViewModel.StatusMessage):
+			case nameof(MapViewModel.HasChecked):
+			case nameof(MapViewModel.SelectionText):
+			case nameof(MapViewModel.HasLayerSelection):
+			case nameof(MapViewModel.LayerSelectionText):
+			case nameof(MapViewModel.Attribution):
+			case nameof(MapViewModel.Hint):
+			case nameof(MapViewModel.ShowWaterSurface):
+			case nameof(MapViewModel.PlaceTarget):
+				QueueWebPush();
 				break;
 		}
 	}
@@ -265,17 +323,30 @@ public partial class MapView : UserControl
 	}
 
 	/// <summary>Shows exactly the area of a bookmark.</summary>
-	private void ShowView(MapExtent extent) => Surface.FitTo(extent, MapCanvas.MaxZoom, margin: 0);
+	private void ShowView(MapExtent extent)
+	{
+		Surface.FitTo(extent, MapCanvas.MaxZoom, margin: 0);
+		WebFitExtent(extent, MapCanvas.MaxZoom, padding: 0);
+	}
 
-	private void Center(MapPointViewModel p) => Surface.CenterOn(p.Latitude, p.Longitude);
+	private void Center(MapPointViewModel p)
+	{
+		Surface.CenterOn(p.Latitude, p.Longitude);
+		WebCenterOn(p.Latitude, p.Longitude);
+	}
 
-	private void ZoomTo(MapExtent extent) => Surface.FitTo(extent);
+	private void ZoomTo(MapExtent extent)
+	{
+		Surface.FitTo(extent);
+		WebFitExtent(extent);
+	}
 
 	private void ShowLayers()
 	{
 		if (_vm != null)
 		{
 			Surface.ShowLayers(_vm.MapLayers());
+			QueueWebPush();
 		}
 	}
 
@@ -285,6 +356,7 @@ public partial class MapView : UserControl
 		if (_vm != null)
 		{
 			Surface.SelectedMarkers = _vm.SelectedStructures();
+			QueueWebPush();
 		}
 	}
 
@@ -304,6 +376,7 @@ public partial class MapView : UserControl
 		Surface.Highlighted = _vm.Selected?.Id;
 		ShowSelection();
 		UpdateAnalysis();
+		QueueWebPush();
 	}
 
 	// ───────────── Analysis: clusters, heat map, water surface ─────────────
