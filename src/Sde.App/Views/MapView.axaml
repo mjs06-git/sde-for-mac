@@ -123,7 +123,7 @@
 
         <Panel>
           <Image Name="WebMapBackdrop" Stretch="Fill" IsVisible="False" IsHitTestVisible="False" />
-          <c:MacWebView Name="WebMap" IsVisible="False" />
+          <c:MacWebView Name="WebMap" IsVisible="False" AutomationProperties.Name="Interactive map" />
           <Panel Name="ClassicMapFloats" Margin="12">
           <!-- The tools: what a click or a drag does (the mode) -->
           <Border Name="ToolPalette" Classes="mapFloat" HorizontalAlignment="Left" VerticalAlignment="Top">

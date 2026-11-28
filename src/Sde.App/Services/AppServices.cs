@@ -84,6 +84,9 @@ public sealed class AppSettings
 	/// <summary>Settings, Appearance: stronger borders and text even while the Mac's own Increase Contrast is off.</summary>
 	public bool IncreaseContrast { get; set; }
 
+	/// <summary>True once the user turns off More ▸ Interactive Map: the Map page draws with the Classic engine from then on.</summary>
+	public bool UseClassicMap { get; set; }
+
 	/// <summary>The window's layout: the sidebar's and inspector's widths and whether they show, and tables' column widths (null = the defaults).</summary>
 	public LayoutState Layout { get; set; }
 

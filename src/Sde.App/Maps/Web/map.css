@@ -435,3 +435,60 @@ html, body {
   text-overflow: ellipsis;
   pointer-events: auto;
 }
+
+/* ───────────── Accessibility ───────────── */
+
+/* A keyboard ring on every HUD control (clicks don't show it). */
+.tool-btn:focus-visible,
+.hud-btn:focus-visible,
+.icon-btn:focus-visible,
+.hud-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Read by VoiceOver, not drawn. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Increase Contrast (the Mac's setting or SDE's own): solid panels, firm edges, stronger secondary text. */
+:root[data-contrast="high"] {
+  --bg-float: #ffffff;
+  --border-float: rgba(15, 23, 42, 0.6);
+  --rule: rgba(15, 23, 42, 0.45);
+  --text-secondary: #1f2937;
+  --text-muted: #374151;
+}
+
+:root[data-theme="dark"][data-contrast="high"] {
+  --bg-float: #10141b;
+  --border-float: rgba(255, 255, 255, 0.65);
+  --rule: rgba(255, 255, 255, 0.5);
+  --text-secondary: #e5e7eb;
+  --text-muted: #d1d5db;
+}
+
+:root[data-contrast="high"] .map-float,
+:root[data-contrast="high"] .maplibregl-popup-content {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+:root[data-contrast="high"] .tool-btn.active {
+  outline: 1.5px solid var(--accent);
+}
+
+/* Reduce Motion: no fades on the HUD (map moves are made instant in map.js). */
+:root[data-motion="off"] * {
+  transition: none !important;
+  animation: none !important;
+}
