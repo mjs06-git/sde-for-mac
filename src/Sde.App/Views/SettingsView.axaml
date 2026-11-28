@@ -353,6 +353,20 @@
                     <TextBlock Grid.Column="1" Classes="secondary" Text="{Binding BackupsState}" VerticalAlignment="Center" />
                   </Grid>
                 </Border>
+                <Border Classes="settingsRow">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16"
+                        ToolTip.Tip="Another disk keeps backups safe if this Mac's disk fails. Backups already made stay where they are.">
+                    <StackPanel Spacing="1">
+                      <TextBlock Classes="medium" Text="Backups folder" />
+                      <SelectableTextBlock Classes="sm secondary" Text="{Binding BackupsFolderText}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                      <Button Content="Use Default" Command="{Binding UseDefaultBackupFolderCommand}" IsVisible="{Binding HasChosenBackupFolder}"
+                              AutomationProperties.Name="Back up beside the database again" />
+                      <Button Content="Choose…" Command="{Binding ChooseBackupFolderCommand}" AutomationProperties.Name="Choose the backups folder" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
               </StackPanel>
             </Border>
 

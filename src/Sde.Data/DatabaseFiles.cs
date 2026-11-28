@@ -10,6 +10,54 @@ namespace Sde.Data;
 /// </summary>
 public static class DatabaseFiles
 {
+	private const string CloudStorage = "/Library/CloudStorage/";
+
+	/// <summary>
+	/// Where <paramref name="path"/> is when that's somewhere a database shouldn't be kept open: "iCloud Drive", the
+	/// name of a cloud storage service ("Dropbox", "OneDrive", "GoogleDrive"…), or "a network volume"; null for an
+	/// ordinary folder on this Mac. Syncing can copy a database half-written, and network file systems break SQLite's
+	/// locking; either can damage it. <paramref name="home"/> is the user's home folder (tests pass their own).
+	/// </summary>
+	public static string SharedPlace(string path, string home = null)
+	{
+		string full = Path.GetFullPath(path);
+		home ??= Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+		string iCloud = Path.Combine(home, "Library", "Mobile Documents");
+		if (full.StartsWith(iCloud + "/", StringComparison.Ordinal))
+		{
+			return "iCloud Drive";
+		}
+		// "Desktop & Documents Folders" in iCloud: the paths stay ~/Desktop and ~/Documents, and iCloud Drive gets both folders.
+		foreach (string synced in new[] { "Desktop", "Documents" })
+		{
+			if (full.StartsWith(Path.Combine(home, synced) + "/", StringComparison.Ordinal)
+				&& Directory.Exists(Path.Combine(iCloud, "com~apple~CloudDocs", synced)))
+			{
+				return "iCloud Drive";
+			}
+		}
+		int cloud = full.IndexOf(CloudStorage, StringComparison.Ordinal);
+		if (cloud >= 0)
+		{
+			// The folder is named like "Dropbox" or "OneDrive-Personal": the service is the part before any dash.
+			string folder = full[(cloud + CloudStorage.Length)..].Split('/')[0];
+			return folder.Length == 0 ? "a cloud storage folder" : folder.Split('-')[0];
+		}
+		DriveInfo drive = DriveInfo.GetDrives()
+			.Where(d => full.StartsWith(d.RootDirectory.FullName, StringComparison.Ordinal))
+			.MaxBy(d => d.RootDirectory.FullName.Length);
+		try
+		{
+			return drive != null && (drive.DriveType == DriveType.Network || drive.DriveFormat is "smbfs" or "afpfs" or "nfs" or "webdav")
+				? "a network volume"
+				: null;
+		}
+		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+		{
+			return null;   // The volume went away while asking: nothing to warn about.
+		}
+	}
+
 	/// <summary>
 	/// Writes a consistent copy of the database to <paramref name="newPath"/> (SQLite VACUUM INTO), with the photos and
 	/// documents it refers to and its layers. Files already in the target folders are kept. The copy keeps the

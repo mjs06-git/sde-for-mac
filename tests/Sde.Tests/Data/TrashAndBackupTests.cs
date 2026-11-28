@@ -232,4 +232,110 @@ public class TrashAndBackupTests
 		Assert.Equal((1, 1), reopened.Counts());
 		Assert.Equal(2, b.List().Count);
 	}
+
+	/// <summary>Breaks the b-tree page of one index in a SQLite file (its type byte), the kind of damage quick_check finds.</summary>
+	private static void DamageAnIndex(string path, Action beforeWriting = null)
+	{
+		int pageSize;
+		long rootPage;
+		using (SqliteConnection c = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString()))
+		{
+			c.Open();
+			c.Execute("PRAGMA wal_checkpoint(TRUNCATE)");
+			pageSize = c.ExecuteScalar<int>("PRAGMA page_size");
+			rootPage = c.ExecuteScalar<long>("SELECT rootpage FROM sqlite_master WHERE type = 'index' AND sql IS NOT NULL ORDER BY rootpage DESC LIMIT 1");
+		}
+		beforeWriting?.Invoke();
+		using FileStream f = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.ReadWrite);
+		f.Position = (rootPage - 1) * pageSize;
+		f.WriteByte(0x00);   // no valid b-tree page has type 0
+	}
+
+	[Fact]
+	public void DamagedDatabase_IsStillBackedUp_ButNoBackupIsRemoved()
+	{
+		using TempDatabase t = new TempDatabase();
+		SampleCases.RanchFlood(t.Store);
+		DateTime now = new DateTime(2026, 10, 1, 8, 0, 0);
+		BackupService b = new BackupService(t.Database, () => now);
+		for (int i = 0; i < BackupService.Keep; i++)
+		{
+			now = now.AddHours(1);
+			Assert.Null(b.BackUp(null).Problem);
+		}
+
+		DamageAnIndex(t.Database.FilePath, SqliteConnection.ClearAllPools);
+		now = now.AddHours(1);
+		BackupInfo made = b.BackUp(null);
+
+		Assert.NotNull(made.Problem);
+		Assert.Equal(BackupService.Keep + 1, b.List().Count);   // the oldest good one is kept
+		Assert.Equal("ok", BackupService.Check(Path.Combine(made.Folder, "sde.sqlite")));   // VACUUM INTO rebuilt the index
+	}
+
+	[Fact]
+	public void Restore_RefusesADamagedBackup_AndChangesNothing()
+	{
+		using TempDatabase t = new TempDatabase();
+		SampleCases.RanchFlood(t.Store);
+		DateTime now = new DateTime(2026, 10, 1, 8, 0, 0);
+		BackupService b = new BackupService(t.Database, () => now);
+		BackupInfo backup = b.BackUp(null);
+		DamageAnIndex(Path.Combine(backup.Folder, "sde.sqlite"));
+		Assert.NotEqual("ok", BackupService.Check(Path.Combine(backup.Folder, "sde.sqlite")));
+
+		now = now.AddMinutes(5);
+		InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => b.Restore(backup));
+		Assert.Contains("damaged", ex.Message);
+		Assert.Single(b.List());                                 // no "before restore" backup was made
+		Assert.Equal((1, 1), t.Store.Counts());
+	}
+
+	[Fact]
+	public void ChosenBackupsFolder_HoldsAFolderPerDatabase_AndReusesThePreviousBackupsPhotos()
+	{
+		using TempDatabase t = new TempDatabase();
+		AssessmentFile f = SampleCases.RanchFlood(t.Store);
+		string photo = Photo(t, f, "front.png");
+		string chosen = Path.Combine(t.Folder, "Other disk");
+		Directory.CreateDirectory(chosen);
+		DateTime now = new DateTime(2026, 10, 1, 8, 0, 0);
+		BackupService b = new BackupService(t.Database, () => now, chosen);
+
+		byte[] original = File.ReadAllBytes(photo);
+		BackupInfo first = b.BackUp(null);
+		// A new file of the same size under the same name: photos never change once added, so the second backup takes
+		// the first backup's copy rather than reading the live one again (which, on another disk, would copy it).
+		File.Delete(photo);
+		File.WriteAllBytes(photo, new byte[original.Length]);
+		now = now.AddHours(1);
+		BackupInfo second = b.BackUp(null);
+
+		Assert.Equal(chosen, Path.GetDirectoryName(b.BackupsFolder));
+		Assert.StartsWith(Path.GetFileNameWithoutExtension(t.Database.FilePath) + " ", Path.GetFileName(b.BackupsFolder));
+		Assert.StartsWith(b.BackupsFolder, first.Folder);
+		Assert.Equal(original, File.ReadAllBytes(Path.Combine(second.Folder, "attachments", Path.GetFileName(photo))));
+	}
+
+	[Theory]
+	[InlineData("/Users/pat/Library/Mobile Documents/com~apple~CloudDocs/SDE/sde.sqlite", "iCloud Drive")]
+	[InlineData("/Users/pat/Library/CloudStorage/OneDrive-Personal/sde.sqlite", "OneDrive")]
+	[InlineData("/Users/pat/Library/CloudStorage/Dropbox/Floods/sde.sqlite", "Dropbox")]
+	[InlineData("/Users/pat/Library/Application Support/SDE/sde.sqlite", null)]
+	public void SharedPlace_NamesSyncedFolders(string path, string expected)
+	{
+		Assert.Equal(expected, DatabaseFiles.SharedPlace(path, "/Users/pat"));
+	}
+
+	[Fact]
+	public void SharedPlace_KnowsDocumentsIsInICloud_OnlyWhenICloudDriveHasIt()
+	{
+		using TempDatabase t = new TempDatabase();
+		string home = t.Folder;
+		string db = Path.Combine(home, "Documents", "sde.sqlite");
+		Assert.Null(DatabaseFiles.SharedPlace(db, home));
+
+		Directory.CreateDirectory(Path.Combine(home, "Library", "Mobile Documents", "com~apple~CloudDocs", "Documents"));
+		Assert.Equal("iCloud Drive", DatabaseFiles.SharedPlace(db, home));
+	}
 }

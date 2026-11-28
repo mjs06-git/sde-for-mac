@@ -186,4 +186,35 @@ public class MapGisSettingsTests
 		Assert.Empty(AccessibilityTests.Unnamed(ui.Window));
 		ui.Snapshot(theme == "Dark" ? "45c-dark-settings-map-gis" : "31g-settings-map-gis");
 	}
+
+	[Fact]
+	public void TrimFolder_RemovesTheOldestTiles_DownTo90Percent_AndLeavesOtherFiles()
+	{
+		string folder = Path.Combine(Path.GetTempPath(), "sde-trim-" + Guid.NewGuid().ToString("N"));
+		try
+		{
+			string dir = Path.Combine(folder, "usgs-topo", "15");
+			Directory.CreateDirectory(dir);
+			DateTime start = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+			for (int i = 0; i < 10; i++)
+			{
+				string tile = Path.Combine(dir, i + ".tile");
+				File.WriteAllBytes(tile, new byte[1000]);
+				File.SetLastWriteTimeUtc(tile, start.AddDays(i));   // 0.tile is the oldest
+			}
+			File.WriteAllText(Path.Combine(folder, "notes.txt"), "not a tile");
+
+			Assert.Equal(0, TileCache.TrimFolder(folder, 10_000));   // at the limit: nothing to do
+			long freed = TileCache.TrimFolder(folder, 8_000);         // 10,000 > 8,000: down to 7,200
+
+			Assert.Equal(3000, freed);
+			Assert.Equal(new[] { "3.tile", "4.tile", "5.tile", "6.tile", "7.tile", "8.tile", "9.tile" },
+				Directory.GetFiles(dir).Select(Path.GetFileName).Order().ToArray());
+			Assert.True(File.Exists(Path.Combine(folder, "notes.txt")));
+		}
+		finally
+		{
+			Directory.Delete(folder, recursive: true);
+		}
+	}
 }

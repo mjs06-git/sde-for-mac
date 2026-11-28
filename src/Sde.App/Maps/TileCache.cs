@@ -272,6 +272,55 @@ public sealed class TileCache
 		return freed;
 	}
 
+	/// <summary>
+	/// The most room kept tiles may take on disk. Generous, because areas kept offline (up to about 100 MB each) live in
+	/// the same folder and should survive; past it <see cref="TrimFolder"/> removes the oldest.
+	/// </summary>
+	public const long MaxDiskBytes = 2L * 1024 * 1024 * 1024;
+
+	/// <summary>
+	/// Keeps the tiles in <paramref name="folder"/> under <paramref name="maxBytes"/>: when they take more, the ones
+	/// written longest ago are deleted until they take 90% of it (so it doesn't trim again at the next tile). Returns the
+	/// bytes freed. A tile that can't be deleted (being read) is skipped.
+	/// </summary>
+	public static long TrimFolder(string folder, long maxBytes)
+	{
+		if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
+		{
+			return 0;
+		}
+		List<FileInfo> tiles = new DirectoryInfo(folder).EnumerateFiles("*.tile", SearchOption.AllDirectories).ToList();
+		long total = 0;
+		foreach (FileInfo f in tiles)
+		{
+			total += f.Length;
+		}
+		if (total <= maxBytes)
+		{
+			return 0;
+		}
+		long target = maxBytes / 10 * 9;
+		long freed = 0;
+		foreach (FileInfo file in tiles.OrderBy(f => f.LastWriteTimeUtc))
+		{
+			if (total - freed <= target)
+			{
+				break;
+			}
+			try
+			{
+				long length = file.Length;
+				file.Delete();
+				freed += length;
+			}
+			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+			{
+				// In use: it stays.
+			}
+		}
+		return freed;
+	}
+
 	private static string Key(Basemap b, int z, int x, int y) => $"{b.Id}/{z}/{x}/{y}";
 
 	private string PathOf(string key)
