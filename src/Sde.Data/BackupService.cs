@@ -9,15 +9,21 @@ namespace Sde.Data;
 /// One automatic or manual backup: a folder with a copy of the database, its photos and documents, and its map layers.
 /// The counts are only filled in by <see cref="BackupService.List(bool)"/> when asked for (they mean opening the copy).
 /// </summary>
-public sealed record BackupInfo(string Folder, DateTime TakenOn, string Reason, long DatabaseBytes, int? Structures = null, int? Assessments = null);
+/// <param name="Problem">
+/// Set on a backup just made when SQLite's integrity check found a problem in the database (its first complaint);
+/// null when the database checked out.
+/// </param>
+public sealed record BackupInfo(string Folder, DateTime TakenOn, string Reason, long DatabaseBytes, int? Structures = null, int? Assessments = null, string Problem = null);
 
 /// <summary>
-/// Automatic backups, kept in a Backups folder beside the database: one when a database is first opened each day and
-/// one on quitting when something changed, keeping the newest <see cref="Keep"/>. Each backup is a consistent copy of
-/// the database (SQLite VACUUM INTO) plus the photos and documents, which are hard links to the originals (they never
-/// change once added, so a link costs no space and survives the original being deleted). The map layers GeoPackage is
-/// copied the same way when it changed since the previous backup, and otherwise linked to that backup's copy (backup
-/// copies never change either). Restoring a backup backs up the current state first.
+/// Automatic backups, kept in a Backups folder beside the database (or a folder chosen in Settings): one when a
+/// database is first opened each day and one on quitting when something changed, keeping the newest <see cref="Keep"/>.
+/// Each backup is a consistent copy of the database (SQLite VACUUM INTO) plus the photos and documents, which are hard
+/// links to the originals, or to the previous backup's copies on another disk (they never change once added, so a link
+/// costs no space and survives the original being deleted). The map layers GeoPackage is copied the same way when it
+/// changed since the previous backup, and otherwise linked to that backup's copy (backup copies never change either).
+/// The database is integrity-checked first: while it fails, backups are still made but none is removed, so the good
+/// ones before the damage are never rotated out. Restoring a backup checks it, then backs up the current state first.
 /// </summary>
 public sealed class BackupService
 {
@@ -29,15 +35,56 @@ public sealed class BackupService
 
 	private readonly SdeDatabase _database;
 
-	public BackupService(SdeDatabase database, Func<DateTime> clock = null)
+	private readonly string _folder;
+
+	/// <param name="folder">A folder chosen for backups (another disk, say); null keeps them beside the database.</param>
+	public BackupService(SdeDatabase database, Func<DateTime> clock = null, string folder = null)
 	{
 		_database = database;
 		Clock = clock ?? (() => DateTime.Now);
+		_folder = string.IsNullOrWhiteSpace(folder) ? null : folder;
 	}
 
 	public Func<DateTime> Clock { get; }
 
-	public string BackupsFolder => Path.Combine(Path.GetDirectoryName(_database.FilePath)!, FolderName);
+	/// <summary>
+	/// Where this database's backups go: the Backups folder beside it, or in a chosen folder, a folder named for this
+	/// database (its file name and the start of its ID), so several databases can share the choice.
+	/// </summary>
+	public string BackupsFolder => _folder == null
+		? Path.Combine(Path.GetDirectoryName(_database.FilePath)!, FolderName)
+		: Path.Combine(_folder, $"{Path.GetFileNameWithoutExtension(_database.FilePath)} {_database.DatabaseId.ToString("N")[..8]}");
+
+	/// <summary>
+	/// "ok", or the first problem SQLite's quick integrity check (PRAGMA quick_check) finds in the database file at
+	/// <paramref name="path"/>, including one that can't be read at all.
+	/// </summary>
+	public static string Check(string path)
+	{
+		try
+		{
+			using SqliteConnection c = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString());
+			c.Open();
+			return c.ExecuteScalar<string>("PRAGMA quick_check(1)") ?? "no answer from the check";
+		}
+		catch (SqliteException ex)
+		{
+			return ex.Message;
+		}
+	}
+
+	/// <summary><see cref="Check"/> on the open database, through its own connection (which sees the write-ahead log).</summary>
+	private string CheckLive()
+	{
+		try
+		{
+			return _database.Read(c => c.ExecuteScalar<string>("PRAGMA quick_check(1)")) ?? "no answer from the check";
+		}
+		catch (SqliteException ex)
+		{
+			return ex.Message;
+		}
+	}
 
 	/// <summary>
 	/// Backups of this database, newest first. Cheap: only the folder names and sizes are read, unless
@@ -81,11 +128,12 @@ public sealed class BackupService
 	/// <summary>"sde " for sde.sqlite, so several databases can share a folder.</summary>
 	private string Prefix => Path.GetFileNameWithoutExtension(_database.FilePath) + " ";
 
-	/// <summary>Backs up now and removes the oldest beyond <see cref="Keep"/>.</summary>
+	/// <summary>Backs up now and removes the oldest beyond <see cref="Keep"/> (none while the database fails its check).</summary>
 	public BackupInfo BackUp(string reason) => BackUpInternal(reason, List());
 
 	private BackupInfo BackUpInternal(string reason, List<BackupInfo> existing)
 	{
+		string health = CheckLive();
 		Directory.CreateDirectory(BackupsFolder);
 		DateTime now = Clock();
 		DateTime takenOn = now;
@@ -103,8 +151,8 @@ public sealed class BackupService
 			BackupInfo previous = existing.FirstOrDefault();
 			string dbCopy = Path.Combine(partial, "sde.sqlite");
 			_database.Read(c => c.Execute("VACUUM INTO @dbCopy", new { dbCopy }));
-			LinkFolder(_database.AttachmentsFolder, Path.Combine(partial, "attachments"));
-			LinkFolder(_database.DocumentsFolder, Path.Combine(partial, "documents"));
+			LinkFolder(_database.AttachmentsFolder, Path.Combine(partial, "attachments"), previous == null ? null : Path.Combine(previous.Folder, "attachments"));
+			LinkFolder(_database.DocumentsFolder, Path.Combine(partial, "documents"), previous == null ? null : Path.Combine(previous.Folder, "documents"));
 			BackUpLayers(previous, Path.Combine(partial, LayersFileName));
 			Directory.Move(partial, folder);
 		}
@@ -118,23 +166,33 @@ public sealed class BackupService
 		BackupInfo made = new BackupInfo(folder, parsedTaken, reason ?? "", new FileInfo(finalDb).Length);
 		existing.Insert(0, made);
 		existing.Sort((a, b) => b.TakenOn.CompareTo(a.TakenOn));
-		PruneList(existing);
+		bool damaged = health != "ok";
+		if (!damaged)
+		{
+			PruneList(existing);
+		}
 		(int structures, int assessments) = Counts(finalDb);
-		return made with { Structures = structures, Assessments = assessments };
+		return made with { Structures = structures, Assessments = assessments, Problem = damaged ? health : null };
 	}
 
 	/// <summary>The map layers GeoPackage's name inside a backup folder.</summary>
 	public const string LayersFileName = "layers.gpkg";
 
-	/// <summary>Hard-links (or copies) every file of a folder into a backup.</summary>
-	private static void LinkFolder(string source, string target)
+	/// <summary>
+	/// Hard-links (or copies) every file of a folder into a backup. A file the previous backup already has is linked to
+	/// that copy instead (files here never change once added), so backups on another disk copy only what's new.
+	/// </summary>
+	private static void LinkFolder(string source, string target, string previous)
 	{
 		Directory.CreateDirectory(target);
 		if (Directory.Exists(source))
 		{
 			foreach (string f in Directory.GetFiles(source))
 			{
-				LinkOrCopy(f, Path.Combine(target, Path.GetFileName(f)));
+				string name = Path.GetFileName(f);
+				string earlier = previous == null ? null : Path.Combine(previous, name);
+				bool reuse = earlier != null && File.Exists(earlier) && new FileInfo(earlier).Length == new FileInfo(f).Length;
+				LinkOrCopy(reuse ? earlier : f, Path.Combine(target, name));
 			}
 		}
 	}
@@ -241,6 +299,11 @@ public sealed class BackupService
 			if (!exclusive)
 			{
 				throw new InvalidOperationException("This database is also open in another copy of SDE (another window, or an AI assistant connected to it). Close that first, then restore.");
+			}
+			string health = Check(Path.Combine(backup.Folder, "sde.sqlite"));
+			if (health != "ok")
+			{
+				throw new InvalidOperationException($"This backup is damaged, so nothing was changed. Choose an earlier one. (SQLite: {health})");
 			}
 			BackupInfo before = BackUp("before restore");
 			_database.Read(c => c.Execute("PRAGMA wal_checkpoint(TRUNCATE)"));

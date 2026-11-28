@@ -112,7 +112,20 @@ public sealed partial class MapViewModel : ViewModelBase
 			new MapClassViewModel(DeterminationClass.Undetermined, "Undetermined", "Damage could not be determined", Apply),
 			new MapClassViewModel(DeterminationClass.Incomplete, "Incomplete", "No assessment or data entry incomplete", Apply),
 		};
-		Tiles = new TileCache(TileFolder(app));
+		string tileFolder = TileFolder(app);
+		Tiles = new TileCache(tileFolder);
+		// Once a launch, off the screen's thread: the folder can hold thousands of tiles.
+		_ = Task.Run(() =>
+		{
+			try
+			{
+				TileCache.TrimFolder(tileFolder, TileCache.MaxDiskBytes);
+			}
+			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+			{
+				AppLog.Write("Couldn't trim the saved map tiles", ex);
+			}
+		});
 		Tiles.DownloadFailed += reason => BasemapProblem = reason + " The structures are still shown.";
 		app.DataChanged += () =>
 		{

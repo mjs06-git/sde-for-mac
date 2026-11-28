@@ -202,7 +202,35 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
 	public string BackupsText => _app.Backups == null
 		? "Automatic backups are off for this database."
-		: $"Backed up automatically into the Backups folder next to the database, once a day when it's opened and when you quit (the newest {Sde.Data.BackupService.Keep} are kept).";
+		: $"Backed up automatically once a day when it's opened and when you quit (the newest {Sde.Data.BackupService.Keep} are kept).";
+
+	/// <summary>Where this database's automatic backups go now (Settings, Backups).</summary>
+	public string BackupsFolderText => _app.Backups?.BackupsFolder ?? "None: this database isn't backed up automatically.";
+
+	/// <summary>True when a backups folder was chosen (so Use Default shows).</summary>
+	public bool HasChosenBackupFolder => !string.IsNullOrEmpty(_app.Settings.BackupFolder);
+
+	/// <summary>Sends automatic backups to a folder the user picks, such as another disk, so a failed disk doesn't take them too.</summary>
+	[RelayCommand]
+	private async Task ChooseBackupFolder()
+	{
+		string folder = await _app.Dialogs.PickFolderAsync("Choose where automatic backups go");
+		if (folder != null)
+		{
+			SetBackupFolder(folder);
+		}
+	}
+
+	/// <summary>Puts automatic backups back in the Backups folder beside each database.</summary>
+	[RelayCommand]
+	private void UseDefaultBackupFolder() => SetBackupFolder(null);
+
+	private void SetBackupFolder(string folder)
+	{
+		_app.SetBackupFolder(folder);
+		OnPropertyChanged(nameof(BackupsFolderText));
+		OnPropertyChanged(nameof(HasChosenBackupFolder));
+	}
 
 	/// <summary>"On" or "Off", beside Automatic backups (<see cref="BackupsText"/> is its tooltip).</summary>
 	public string BackupsState => _app.Backups == null ? "Off" : "On";

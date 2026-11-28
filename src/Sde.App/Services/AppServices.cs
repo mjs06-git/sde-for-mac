@@ -87,6 +87,9 @@ public sealed class AppSettings
 	/// <summary>True once the user turns off More ▸ Interactive Map: the Map page draws with the Classic engine from then on.</summary>
 	public bool UseClassicMap { get; set; }
 
+	/// <summary>The folder chosen for automatic backups (Settings, Backups), such as another disk; null keeps them beside each database.</summary>
+	public string BackupFolder { get; set; }
+
 	/// <summary>The window's layout: the sidebar's and inspector's widths and whether they show, and tables' column widths (null = the defaults).</summary>
 	public LayoutState Layout { get; set; }
 
@@ -408,13 +411,16 @@ public sealed class AppServices
 			SampleReturnPath = previous;
 		}
 		// The sample is practice: no backups of it, and it isn't what SDE opens next time.
-		Backups = IsSample ? null : new BackupService(store.Database);
+		Backups = IsSample ? null : new BackupService(store.Database, folder: AvailableBackupFolder());
 		BackupService backups = Backups;
 		OpeningBackup = backups == null ? Task.CompletedTask : Task.Run(() =>
 		{
 			try
 			{
-				backups.BackUpIfNoneToday();
+				if (backups.BackUpIfNoneToday()?.Problem is string problem)
+				{
+					WarnDamaged(problem);
+				}
 			}
 			catch (Exception ex) when (ex is not OutOfMemoryException)
 			{
@@ -423,6 +429,13 @@ public sealed class AppServices
 		});
 		if (!IsSample)
 		{
+			if (DatabaseFiles.SharedPlace(store.Database.FilePath) is string place)
+			{
+				Dialogs.Notify(
+					place == "a network volume" ? "This Database Is on a Network Volume" : $"This Database Is in {place}",
+					"Syncing or a network can damage a database while SDE has it open. Keep it in a folder on this Mac (File ▸ Move or Copy the Database…), and share with Import & Export or work packages.",
+					isError: true);
+			}
 			Settings.DatabasePath = store.Database.FilePath;
 			Settings.RecentDatabases.RemoveAll(p => string.Equals(p, store.Database.FilePath, StringComparison.Ordinal));
 			Settings.RecentDatabases.Insert(0, store.Database.FilePath);
@@ -473,13 +486,56 @@ public sealed class AppServices
 		return Environment.UserName;
 	});
 
+	/// <summary>
+	/// The chosen backups folder, or null (beside the database) when none is chosen or it isn't there now, such as a
+	/// disk that isn't plugged in, which is said once so backups don't quietly stop.
+	/// </summary>
+	private string AvailableBackupFolder()
+	{
+		string chosen = Settings.BackupFolder;
+		if (string.IsNullOrEmpty(chosen) || Directory.Exists(chosen))
+		{
+			return chosen;
+		}
+		AppLog.Write("The backups folder isn't available, backing up beside the database: " + chosen);
+		Dialogs.Notify("Backups Folder Not Found", $"{chosen} isn't available (is its disk connected?), so backups go beside the database for now.", isError: true);
+		return null;
+	}
+
+	/// <summary>Sends this and every later database's automatic backups to <paramref name="folder"/>; null puts them beside each database again.</summary>
+	public void SetBackupFolder(string folder)
+	{
+		Settings.BackupFolder = string.IsNullOrWhiteSpace(folder) ? null : folder;
+		Settings.Save();
+		if (Backups != null)
+		{
+			Backups = new BackupService(Store.Database, folder: AvailableBackupFolder());
+		}
+	}
+
+	/// <summary>
+	/// The database failed its integrity check while being backed up: says so, once, from any thread. Backups go on
+	/// being made, and none are removed, until it checks out again.
+	/// </summary>
+	private void WarnDamaged(string problem)
+	{
+		AppLog.Write("The database failed its integrity check: " + problem);
+		Avalonia.Threading.Dispatcher.UIThread.Post(() => Dialogs.Notify(
+			"This Database May Be Damaged",
+			"SQLite found a problem in it. SDE keeps all its backups until this is fixed: Settings ▸ Backups ▸ Restore from Backup… puts back the last good one.",
+			isError: true));
+	}
+
 	/// <summary>On quitting: a backup if anything changed since the last one. Never stops the app from closing.</summary>
 	public void BackUpOnQuit()
 	{
 		try
 		{
 			OpeningBackup.Wait(TimeSpan.FromSeconds(30));
-			Backups?.BackUpIfChanged();
+			if (Backups?.BackUpIfChanged()?.Problem is string problem)
+			{
+				AppLog.Write("The database failed its integrity check on quitting: " + problem);
+			}
 		}
 		catch (Exception ex) when (ex is not OutOfMemoryException)
 		{
@@ -501,7 +557,7 @@ public sealed class AppServices
 		Watcher = null;
 		try
 		{
-			new BackupService(Store.Database).Restore(backup, Lease);
+			new BackupService(Store.Database, folder: AvailableBackupFolder()).Restore(backup, Lease);
 		}
 		catch
 		{
