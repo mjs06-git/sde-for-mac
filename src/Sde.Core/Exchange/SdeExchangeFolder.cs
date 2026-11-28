@@ -20,7 +20,7 @@ public static class SdeExchangeFolder
 	public const string JsonFileName = "Export.json";
 	public const string PhotosFolderName = "photos";
 
-	/// <summary>Legacy SDE 2.x exports contain this file instead of Export.json (not supported yet).</summary>
+	/// <summary>Legacy SDE 2.x exports contain this file instead of Export.json (read by Sde.Interop's LegacySde2Import).</summary>
 	public const string LegacySummaryFileName = "SummaryData.xml";
 
 	private static readonly UTF8Encoding Utf8NoBom = new(false);

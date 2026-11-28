@@ -52,8 +52,9 @@ in ▾ open a menu.
   Threshold**, **Not Substantial** and **Incomplete**. Each shows a count.
 - **Events**: the events in the database. Click an event to see only its structures (see
   [Events](#26-events)).
-- **Workflow**: **Review**, **Compliance** and **Assignments**.
-- **Recently Deleted**, at the bottom.
+- **Workflow**: **Review**, **Compliance**, **Agenda** and **Assignments**.
+- **Data**: **Import & Export** and **Recently Deleted**.
+- **Settings**, at the bottom.
 
 Hide or show the sidebar with its button at the top of the sidebar, or at the left of the toolbar when the sidebar is
 hidden. You can also choose **View > Hide or Show Sidebar** (⌃⌘S).
@@ -81,14 +82,14 @@ their shortcuts. **View > Search and Commands…** (⌘K) finds structures, page
 | **Summary** | Totals for the event, and files to share. | ⌘3 |
 | **Review** | Assessments waiting for review, and the checks that flag problems. | ⌘4 |
 | **Compliance** | Follow-up on substantially damaged structures: permits, deadlines, ICC claims. | ⌘5 |
+| **Agenda** | What is overdue and coming up, by week: compliance deadlines, final inspections, appeal dates, letters sent and event dates. **Add to Calendar…** saves them as a calendar file. | **View > Agenda** |
 | **Assignments** | Teams and the structures assigned to them. | ⌘6 |
 | **Recently Deleted** | What you deleted in the last 30 days. | ⌘7 |
 | **Import & Export** | Exchanging data with FEMA's SDE, spreadsheets, photos and GIS. | ⌘8 |
 | **Settings** | Your name, default values, letters, the phone form, backups and other options. | ⌘, |
 
-Map, Summary and Import & Export aren't in the sidebar. Open them from the **View** menu or their shortcuts; Map and
-Summary are also available from the toolbar switch. **Event > Event Summary** opens the summary. Open Settings with
-**SDE > Settings…** (⌘,); **SDE > About Substantial Damage Estimator** opens **Settings > About**, with the version.
+Map and Summary aren't in the sidebar. Open them from the **View** menu, their shortcuts or the toolbar switch.
+**Event > Event Summary** opens the summary. Open Settings with **SDE > Settings…** (⌘,); **SDE > About Substantial Damage Estimator** opens **Settings > About**, with the version.
 
 Import & Export has three tabs, switched in the toolbar: **Import** (SDE data, inspections, parcels and settings
 files), **Export** (SDE data, spreadsheets, maps and your setup) and **Field Work** (photos, work packages and
@@ -724,7 +725,8 @@ Options for the selected mode appear in a bar above the map:
   *land_value > 30000*.
 - **Set Location**: pick the structure under **Structure to place**, then click where it is on the map.
 - **Measure**: click points to measure a distance, or choose **Area** for an area and its perimeter. Double-click or
-  press Return to finish. Distances are measured along the earth's surface, areas on an equal-area projection.
+  press Return to finish; Delete takes back the last point. Distances are measured along the earth's surface, areas on
+  an equal-area projection.
 
 Selected structures are also checked in the Structures list. Use the status bar under the map to act on them: **Show
 in Structures**, **Set a Field…**, **Assign to Team…**, or **More** for **Reports**, **Add to Web Map…** and **Copy
@@ -733,6 +735,14 @@ Values…**. The status bar also shows the result of the last action.
 When the map has focus, use the arrow keys to move it and = and - to zoom. In the toolbar, use the zoom buttons or
 **Show All Structures** (the house) to change the view. **Bookmarks** saves a view so you can return to it. Choose
 **More > Background Map** to select USGS topographic map, USGS aerial imagery, OpenStreetMap or no background.
+
+The map is drawn with MapLibre, which uses the Mac's graphics card. **More > Interactive Map (MapLibre)** switches it
+off and on; with it off, the Classic map draws instead, and SDE remembers the choice. Drawing and changing shapes
+(**Edit**) always uses the Classic map. If the interactive map can't start, SDE shows the Classic map and says why;
+choose **More > Interactive Map (MapLibre)** to try again.
+
+Labels (addresses, or a layer's label field set in **Style…**) sit above the dots and on the shapes. Where labels would
+overlap, some are left out until you zoom in.
 
 ![The map with a parcel layer and FEMA flood zones](screenshots/56-map.png)
 
@@ -844,10 +854,12 @@ Before going somewhere without a connection, save the area's background map on t
    choose a team and choose **⋯ > Keep Map Offline…** for its structures and about 400 m around them).
 2. Choose **USGS topographic map** or **USGS aerial imagery**. Only USGS maps can be kept: OpenStreetMap's rules don't
    allow downloading areas.
-3. SDE says how many map pieces that is for zooms 12 to 16 (at most 5,000; for a large area the closest zooms are left
+3. SDE says how many map pieces that is for zooms 12 to 17 (at most 5,000; for a large area the closest zooms are left
    out). Click **Keep Offline**.
 
-The map can then show that area without a connection. SDE uses the saved pieces until it can fetch fresh ones.
+The map can then show that area without a connection. SDE uses the saved pieces until it can fetch fresh ones. Saved
+pieces are kept under 2 GB in all; past that, the oldest are removed. **Settings > Map & GIS** shows how much they take
+and can clear them.
 
 #### Map and GIS settings
 **Settings > Map & GIS** has:
@@ -1133,6 +1145,19 @@ SDE backs up the database, photos, documents and map layers to a `Backups` folde
 backup on the first opening each day and when you quit if anything changed. It keeps the 14 newest. Where the file
 system allows it, photos and documents use hard links instead of extra copies; otherwise SDE copies them.
 
+To keep backups on another disk, so a failed disk doesn't take them too, choose **Settings > Backups > Backups folder >
+Choose…**. SDE makes a folder in it for each database. Each new backup there copies only the photos and documents that
+are new since the last one. Backups made before stay where they were. If the disk isn't connected when SDE backs up, the
+backup goes beside the database and SDE says so. **Use Default** goes back to the folder beside the database.
+
+Before each backup, SDE checks the database for damage. If it finds any, SDE says so and keeps every backup until the
+problem is fixed, so the good ones from before aren't removed. Restore the last good one ([below](#restoring-a-backup)).
+SDE won't restore a backup that is itself damaged.
+
+Keep the database in a folder on the Mac. iCloud Drive (including Desktop and Documents when iCloud keeps them),
+Dropbox, OneDrive, Google Drive and network drives can damage a database while it is open, and SDE warns when you open
+one there. To share, use **Import & Export** or [work packages](#work-packages-assessing-on-another-mac-without-a-connection).
+
 ### Restoring a backup
 1. Choose **File > Restore from Backup…** (or **File > Backups…**, or **Restore from Backup…** in **Settings >
    Backups**).
@@ -1186,10 +1211,13 @@ adds one.
 | I can't make an assessment Final | Some damage values are still **Suggested** from a depth table. Accept or change them on the Damage step. |
 | An online look-up fails or times out | Check the internet connection and click **Try Again**. The Census and FEMA services are sometimes busy, especially right after a disaster. |
 | The map has no background | The background needs an internet connection. Structures without coordinates aren't shown at all ([3.5](#35-adding-coordinates)). |
+| "Showing the Classic Map" | The interactive map couldn't start, so SDE drew the Classic map instead; the message says why. Choose **More > Interactive Map (MapLibre)** on the map to try again. |
+| "This Database May Be Damaged" | SDE's check before a backup found a problem. Keep working only if you must; restore the last good backup ([17](#restoring-a-backup)). SDE keeps every backup until the database checks out again. |
+| "This Database Is in iCloud Drive" (or Dropbox, OneDrive, a network volume) | Move it to a folder on the Mac with **File > Move or Copy the Database…** ([17](#automatic-backups)). |
 | A phone can't reach the Mac | Check both are on the same Wi-Fi. Guest networks often keep devices apart: use another network or a hotspot. On the Mac, check **System Settings > Privacy & Security > Local Network** allows SDE. |
-| I deleted something by mistake | Look in **Recently Deleted** at the bottom of the sidebar (⌘7, 30 days). After that, [restore a backup](#restoring-a-backup). |
+| I deleted something by mistake | Look in **Recently Deleted** in the sidebar's Data section (⌘7, 30 days). After that, [restore a backup](#restoring-a-backup). |
 | The sidebar has gone | Click the sidebar button at the left of the toolbar, or choose **View > Hide or Show Sidebar** (⌃⌘S). |
-| I can't find a page that used to be in the sidebar | Map and Summary are in the toolbar's switch (**List**, **Map**, **Summary**), Import & Export is **View > Import & Export** (⌘8), and Settings is **SDE > Settings…** (⌘,). Events are under **Events** in the sidebar and in the **Event** menu; databases are in the **File** menu. |
+| I can't find a page that used to be in the sidebar | Map and Summary are in the toolbar's switch (**List**, **Map**, **Summary**). Review, Compliance, Agenda and Assignments are in the sidebar's Workflow section; Import & Export (⌘8) and Recently Deleted (⌘7) in its Data section; Settings at its foot (or **SDE > Settings…**, ⌘,). Events are under **Events** in the sidebar and in the **Event** menu; databases are in the **File** menu. |
 | A result differs from FEMA's SDE on Windows | Compare the inputs first (cost data, square footage, depreciation, adjustments, value and repair bases). If they match, please [report it](../README.md#getting-help) with the values, not the owner's details. |
 | SDE shows "Something went wrong" | Click **Show details** for the technical message. **Help > Show Log Folder** opens the log files. If you report the problem, read the log first and remove anything personal. |
 
