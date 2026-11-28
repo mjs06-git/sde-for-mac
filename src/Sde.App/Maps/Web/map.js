@@ -51,6 +51,19 @@
     onMapCount: 0,
   };
 
+  const LABEL_FONT = '"Public Sans", sans-serif';
+  const labelColors = () => (state.theme === "dark" ? { text: "#f3f4f6", halo: "#151921" } : { text: "#111827", halo: "#ffffff" });
+  const labelLayout = (extra) => Object.assign({
+    "text-field": ["get", "_label"],
+    "text-font": ["Public Sans Regular"],
+    "text-size": 11,
+    "text-max-width": 12,
+  }, extra);
+  const labelPaint = () => {
+    const c = labelColors();
+    return { "text-color": c.text, "text-halo-color": c.halo, "text-halo-width": 1.5 };
+  };
+
   const sketchPoints = [];
   let sketchFinished = false;
   let draggingMarkerId = null;
@@ -65,6 +78,8 @@
     container: "map",
     style: {
       version: 8,
+      // Required by MapLibre for text; never fetched, because every glyph is drawn from the embedded font (below).
+      glyphs: `${window.location.href.replace(/[^/]*$/, "")}glyphs/{fontstack}/{range}.pbf`,
       sources: {},
       layers: [{ id: "bg", type: "background", paint: { "background-color": "#eef1f5" } }],
     },
@@ -76,7 +91,13 @@
     pitchWithRotate: false,
     attributionControl: false,
     canvasContextAttributes: { preserveDrawingBuffer: true, antialias: true },
+    localIdeographFontFamily: LABEL_FONT,
   });
+
+  // Labels are drawn from the Public Sans the page embeds, so they work offline and match the Classic map and print.
+  // shortcut: overrides a private GlyphManager method (MapLibre 5.3) that limits local glyphs to CJK; recheck it when
+  // maplibre-gl.js is updated, or bundle glyph .pbf files instead.
+  if (map.style?.glyphManager) map.style.glyphManager._doesCharSupportLocalGlyph = () => true;
 
   // WebKit can take the GPU context away (memory pressure, GPU switch). MapLibre rebuilds when it comes back;
   // if it doesn't come back the map stays blank, so hand over to the Classic map.
@@ -227,6 +248,16 @@
         paint: { "circle-radius": 4.5, "circle-color": "#ffffff", "circle-stroke-width": 2, "circle-stroke-color": accent },
       });
     }
+    // Addresses (or the chosen field) above the dots; MapLibre leaves out labels that would overlap, as Classic does.
+    if (!map.getLayer("sde-marker-labels")) {
+      map.addLayer({
+        id: "sde-marker-labels",
+        type: "symbol",
+        source: "sde-structures",
+        layout: labelLayout({ "text-field": ["get", "label"], "text-anchor": "bottom", "text-offset": [0, -0.9] }),
+        paint: labelPaint(),
+      });
+    }
   };
 
   let activeBasemapKey = null;
@@ -331,7 +362,7 @@
 
     for (const oldKey of activeFeatureLayerKeys) {
       if (!wantedKeys.includes(oldKey)) {
-        for (const suffix of ["-fill", "-line", "-pts"]) {
+        for (const suffix of ["-fill", "-line", "-pts", "-labels", "-line-labels"]) {
           const lid = `fl-${oldKey}${suffix}`;
           if (map.getLayer(lid)) map.removeLayer(lid);
         }
@@ -414,6 +445,26 @@
         map.setPaintProperty(ptsId, "circle-stroke-color", ["case", ["==", ["get", "_selected"], true], accent, ["get", "_stroke"]]);
         if (anchor) map.moveLayer(ptsId, anchor);
       }
+
+      // The layer's label field (_label, empty when none is chosen): on top of every layer, along the middle of lines.
+      if (!map.getLayer(`${sid}-labels`)) {
+        map.addLayer({
+          id: `${sid}-labels`,
+          type: "symbol",
+          source: sid,
+          filter: ["all", ["!=", ["geometry-type"], "LineString"], ["!=", ["geometry-type"], "MultiLineString"]],
+          layout: labelLayout({}),
+          paint: labelPaint(),
+        });
+        map.addLayer({
+          id: `${sid}-line-labels`,
+          type: "symbol",
+          source: sid,
+          filter: ["any", ["==", ["geometry-type"], "LineString"], ["==", ["geometry-type"], "MultiLineString"]],
+          layout: labelLayout({ "symbol-placement": "line-center" }),
+          paint: labelPaint(),
+        });
+      }
     }
     activeFeatureLayerKeys = wantedKeys;
   };
@@ -488,6 +539,7 @@
     const isHeatmap = state.display === "Heatmap";
 
     map.setLayoutProperty("sde-markers", "visibility", isMarkers ? "visible" : "none");
+    map.setLayoutProperty("sde-marker-labels", "visibility", isMarkers ? "visible" : "none");
     map.setLayoutProperty("sde-selected-rings", "visibility", isMarkers ? "visible" : "none");
     map.setLayoutProperty("sde-highlight-ring", "visibility", isMarkers ? "visible" : "none");
     map.setLayoutProperty("sde-cluster-circles", "visibility", isClusters ? "visible" : "none");
@@ -517,6 +569,13 @@
     if (map.getLayer("sde-sketch-line")) map.setPaintProperty("sde-sketch-line", "line-color", accent);
     if (map.getLayer("sde-sketch-pts")) map.setPaintProperty("sde-sketch-pts", "circle-stroke-color", accent);
     if (map.getLayer("sde-basemap")) map.setPaintProperty("sde-basemap", "raster-brightness-max", state.theme === "dark" ? 0.86 : 1.0);
+    const lc = labelColors();
+    for (const l of map.getStyle().layers) {
+      if (l.type === "symbol") {
+        map.setPaintProperty(l.id, "text-color", lc.text);
+        map.setPaintProperty(l.id, "text-halo-color", lc.halo);
+      }
+    }
   };
 
   const renderSketch = (previewLngLat = null) => {
@@ -935,7 +994,13 @@
     },
   };
 
-  map.on("load", () => {
+  map.on("load", async () => {
+    // A glyph drawn before the font arrives is drawn in a fallback font and kept, so wait for it (it is local).
+    try {
+      await document.fonts.load(`16px ${LABEL_FONT}`);
+    } catch (_) {
+      // Labels fall back to the system font.
+    }
     mapReady = true;
     ensureCoreSourcesAndLayers();
     syncTheme();
