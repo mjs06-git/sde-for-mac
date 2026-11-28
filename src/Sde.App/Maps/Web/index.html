@@ -4,6 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SDE Map</title>
+  <script>
+    // First, so it hears every script's errors (MapLibre's included): they go to SDE's log, and one before the map is
+    // ready makes SDE show the Classic map instead of a blank one.
+    window.addEventListener("error", function (e) {
+      try {
+        window.webkit.messageHandlers.sde.postMessage(JSON.stringify({ type: "jsError", message: String(e.message || "error"), source: e.filename || "", line: e.lineno || 0 }));
+      } catch (_) {}
+    });
+  </script>
   <link rel="stylesheet" href="maplibre-gl.css" />
   <link rel="stylesheet" href="map.css" />
 </head>
@@ -14,20 +23,20 @@
   <!-- Floating HUD rendered inside WKWebView so it floats cleanly over WebGL with zero airspace issues -->
   <div id="hud" class="hud">
     <!-- Left tool palette -->
-    <div class="map-float tool-palette" role="radiogroup" aria-label="Map tools">
-      <button type="button" class="tool-btn" data-mode="Browse" title="Open: click a structure to open it">
+    <div class="map-float tool-palette" role="group" aria-label="Map tools">
+      <button type="button" class="tool-btn" data-mode="Browse" aria-label="Open" aria-pressed="false" title="Open: click a structure to open it">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-6.5 1.8L9 20.5 5 3z"/></svg>
       </button>
-      <button type="button" class="tool-btn" data-mode="Select" title="Select: drag a box around structures">
+      <button type="button" class="tool-btn" data-mode="Select" aria-label="Select" aria-pressed="false" title="Select: drag a box around structures">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/></svg>
       </button>
-      <button type="button" class="tool-btn" data-mode="SetLocation" title="Set Location: click where a structure is or drag its dot">
+      <button type="button" class="tool-btn" data-mode="SetLocation" aria-label="Set Location" aria-pressed="false" title="Set Location: click where a structure is or drag its dot">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.2-6-10a6 6 0 1 1 12 0c0 4.8-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg>
       </button>
-      <button type="button" class="tool-btn" data-mode="Measure" title="Measure: click points for a distance or area">
+      <button type="button" class="tool-btn" data-mode="Measure" aria-label="Measure" aria-pressed="false" title="Measure: click points for a distance or area">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17L17 3l4 4L7 21H3v-4z"/><path d="M13 7l2 2M10 10l2 2M7 13l2 2"/></svg>
       </button>
-      <button type="button" class="tool-btn" data-mode="Edit" title="Edit: draw and change your own layers (switches to Classic editor for full vertex editing)">
+      <button type="button" class="tool-btn" data-mode="Edit" aria-label="Edit" aria-pressed="false" title="Edit: draw and change your own layers (switches to Classic editor for full vertex editing)">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
       </button>
     </div>
@@ -45,7 +54,7 @@
           <div id="legend-title" class="legend-title">Structures</div>
           <div id="legend-count" class="legend-count"></div>
         </div>
-        <button id="legend-toggle" type="button" class="icon-btn" title="Show or Hide the Legend" aria-label="Toggle legend">▾</button>
+        <button id="legend-toggle" type="button" class="icon-btn" title="Show or Hide the Legend" aria-label="Legend" aria-expanded="true" aria-controls="legend-body">▾</button>
       </div>
       <div id="legend-body" class="legend-body"></div>
     </div>
@@ -72,6 +81,9 @@
 
     <!-- Attribution -->
     <div id="attribution" class="attribution" hidden></div>
+
+    <!-- What VoiceOver announces: the selection, status and measurement (hud.js writes it only when it changes) -->
+    <div id="hud-live" class="visually-hidden" role="status" aria-live="polite"></div>
   </div>
 
   <script src="maplibre-gl.js"></script>

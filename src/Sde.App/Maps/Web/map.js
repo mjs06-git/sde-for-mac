@@ -9,8 +9,13 @@
     }
   };
 
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const dur = (ms) => (state.reduceMotion || reducedMotion.matches ? 0 : ms);
+
   let state = {
     theme: "light",
+    highContrast: false,
+    reduceMotion: false,
     accent: "#1769c2",
     basemap: { id: "none", maxZoom: 19, hasTiles: false, retina: false, attribution: "" },
     display: "Markers",
@@ -72,6 +77,15 @@
     attributionControl: false,
     canvasContextAttributes: { preserveDrawingBuffer: true, antialias: true },
   });
+
+  // WebKit can take the GPU context away (memory pressure, GPU switch). MapLibre rebuilds when it comes back;
+  // if it doesn't come back the map stays blank, so hand over to the Classic map.
+  let contextLostTimer = null;
+  map.on("webglcontextlost", () => {
+    clearTimeout(contextLostTimer);
+    contextLostTimer = setTimeout(() => post({ type: "failed", reason: "it lost its graphics context" }), 5000);
+  });
+  map.on("webglcontextrestored", () => clearTimeout(contextLostTimer));
 
   const hoverPopup = new maplibregl.Popup({
     closeButton: false,
@@ -485,6 +499,8 @@
   const syncTheme = () => {
     const accent = state.accent || "#1769c2";
     document.documentElement.dataset.theme = state.theme === "dark" ? "dark" : "light";
+    document.documentElement.dataset.contrast = state.highContrast ? "high" : "normal";
+    document.documentElement.dataset.motion = dur(1) ? "on" : "off";
     document.documentElement.style.setProperty("--accent", accent);
     const bg = state.theme === "dark" ? "#151921" : "#eef1f5";
     const outline = state.theme === "dark" ? "#1e2430" : "#ffffff";
@@ -535,9 +551,9 @@
 
   window.sdeHud?.wire({
     post,
-    zoomIn: () => map.zoomIn({ duration: 180 }),
-    zoomOut: () => map.zoomOut({ duration: 180 }),
-    resetNorth: () => map.resetNorth({ duration: 220 }),
+    zoomIn: () => map.zoomIn({ duration: dur(180) }),
+    zoomOut: () => map.zoomOut({ duration: dur(180) }),
+    resetNorth: () => map.resetNorth({ duration: dur(220) }),
   });
 
   const reportView = () => {
@@ -627,7 +643,8 @@
     const shouldBox = (state.mode === "Select" && state.sketch === "None") || (ev.metaKey && state.mode === "Browse");
     if (shouldBox) {
       boxStart = pt;
-      boxAdditive = ev.shiftKey;
+      // Shift adds in any mode; in Select, ⌘ adds too (the hint and the user guide say ⌘). In Open, ⌘ only starts the box.
+      boxAdditive = ev.shiftKey || (ev.metaKey && state.mode === "Select");
       map.dragPan.disable();
       boxEl.hidden = false;
       boxEl.style.left = `${pt.x}px`;
@@ -719,7 +736,7 @@
       if (chits.length > 0) {
         const clusterId = chits[0].properties.cluster_id;
         map.getSource("sde-clusters").getClusterExpansionZoom(clusterId).then((zoom) => {
-          map.easeTo({ center: chits[0].geometry.coordinates, zoom: Math.min(18, zoom + 0.5), duration: 240 });
+          map.easeTo({ center: chits[0].geometry.coordinates, zoom: Math.min(18, zoom + 0.5), duration: dur(240) });
         }).catch(() => {});
         return;
       }
@@ -788,6 +805,19 @@
     document.getElementById("reset-north").hidden = Math.abs(map.getBearing()) < 0.5;
   });
 
+  const postSketch = (finished) =>
+    post({ type: "sketchChanged", points: sketchPoints.map(([lon, lat]) => ({ lat, lon })), finished });
+
+  // One zoom step per press. MapLibre's keyboard handler also zooms on = + − while the map has focus, which zoomed
+  // twice; taking the keys here (capture phase, before the map) gives one step wherever the focus is.
+  window.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey || !(e.key === "=" || e.key === "+" || e.key === "-")) return;
+    e.stopPropagation();
+    e.preventDefault();
+    if (e.key === "-") map.zoomOut({ duration: dur(150) });
+    else map.zoomIn({ duration: dur(150) });
+  }, true);
+
   window.addEventListener("keydown", (e) => {
     if (e.metaKey) {
       const k = e.key.toLowerCase();
@@ -806,16 +836,19 @@
       } else {
         post({ type: "shortcut", key: "escape" });
       }
-    } else if (e.key === "=" || e.key === "+") {
-      map.zoomIn({ duration: 150 });
-    } else if (e.key === "-") {
-      map.zoomOut({ duration: 150 });
     } else if (e.key === "0") {
       post({ type: "fitAll" });
     } else if (e.key === "Enter" && state.sketch !== "None" && sketchPoints.length >= 2) {
       sketchFinished = true;
       renderSketch();
-      post({ type: "sketchChanged", points: sketchPoints.map(([lon, lat]) => ({ lat, lon })), finished: true });
+      postSketch(true);
+    } else if ((e.key === "Backspace" || e.key === "Delete") && state.sketch !== "None" && sketchPoints.length > 0) {
+      // As in the Classic map: Delete takes back the last point (the Measure hint promises it).
+      e.preventDefault();
+      sketchPoints.pop();
+      sketchFinished = false;
+      renderSketch();
+      postSketch(false);
     }
   });
 
@@ -852,15 +885,15 @@
     fitBounds(minLon, minLat, maxLon, maxLat, maxZoom = 17, padding = 48) {
       if (!mapReady || !Number.isFinite(minLon) || !Number.isFinite(maxLon) || minLon > maxLon || minLat > maxLat) return;
       if (Math.abs(maxLon - minLon) < 1e-6 && Math.abs(maxLat - minLat) < 1e-6) {
-        map.easeTo({ center: [minLon, minLat], zoom: Math.min(maxZoom, 16), duration: 240 });
+        map.easeTo({ center: [minLon, minLat], zoom: Math.min(maxZoom, 16), duration: dur(240) });
       } else {
-        map.fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding, maxZoom, duration: 240 });
+        map.fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding, maxZoom, duration: dur(240) });
       }
     },
 
     centerOn(lat, lon, zoom) {
       if (!mapReady) return;
-      const opts = { center: [lon, lat], duration: 240 };
+      const opts = { center: [lon, lat], duration: dur(240) };
       if (typeof zoom === "number" && Number.isFinite(zoom)) opts.zoom = zoom;
       else if (map.getZoom() < 15) opts.zoom = 16;
       map.easeTo(opts);

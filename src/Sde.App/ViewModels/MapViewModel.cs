@@ -132,6 +132,20 @@ public sealed partial class MapViewModel : ViewModelBase
 		_basemap = Maps.Basemaps.UsgsTopo;
 	}
 
+	/// <summary>The Mac's saved choice of map engine (More ▸ Interactive Map), kept across launches.</summary>
+	public bool UseClassicMap
+	{
+		get => _app.Settings.UseClassicMap;
+		set
+		{
+			if (_app.Settings.UseClassicMap != value)
+			{
+				_app.Settings.UseClassicMap = value;
+				_app.Settings.Save();
+			}
+		}
+	}
+
 	/// <summary>Where downloaded tiles are kept: next to the app's other files (or the test database's folder).</summary>
 	internal static string TileFolder(AppServices app)
 	{

@@ -36,6 +36,15 @@ public sealed class MacWebView : NativeControlHost
 	/// <summary>Raised on the UI thread once the native WKWebView has been created and attached.</summary>
 	public event Action NativeReady;
 
+	/// <summary>
+	/// Raised on the UI thread when the page can't be shown: a navigation failed, or the web content process quit.
+	/// The text says why in words for a toast.
+	/// </summary>
+	public event Action<string> LoadFailed;
+
+	// NSURLErrorCancelled: a load replaced by the next Navigate, which isn't a failure.
+	private const long NSUrlErrorCancelled = -999;
+
 	/// <summary>True when running on macOS with a real AppKit window (false in headless tests or other OSes).</summary>
 	public static bool IsSupportedFor(TopLevel topLevel) =>
 		OperatingSystem.IsMacOS()
@@ -141,6 +150,9 @@ public sealed class MacWebView : NativeControlHost
 			IntPtr noNum = SendPtrBool(Cls("NSNumber"), Sel("numberWithBool:"), false);
 			SendVoid(webView, Sel("setValue:forKey:"), noNum, CreateNSString("drawsBackground"));
 
+			// The same handler object hears failed loads and a crashed web process (navigationDelegate is a weak reference).
+			SendVoid(webView, Sel("setNavigationDelegate:"), handler);
+
 #if DEBUG
 			IntPtr setInspectable = Sel("setInspectable:");
 			if (SendBoolPtr(webView, Sel("respondsToSelector:"), setInspectable))
@@ -203,6 +215,7 @@ public sealed class MacWebView : NativeControlHost
 				}
 				if (webView != IntPtr.Zero)
 				{
+					SendVoid(webView, Sel("setNavigationDelegate:"), IntPtr.Zero);
 					SendVoid(webView, Sel("stopLoading"));
 					SendVoid(webView, Sel("removeFromSuperview"));
 					SendVoid(webView, Sel("release"));
@@ -278,6 +291,11 @@ public sealed class MacWebView : NativeControlHost
 				{
 					delegate* unmanaged[Cdecl]<IntPtr, IntPtr, IntPtr, IntPtr, void> cb = &OnScriptMessage;
 					ClassAddMethod(cls, Sel("userContentController:didReceiveScriptMessage:"), (IntPtr)cb, "v@:@@");
+					delegate* unmanaged[Cdecl]<IntPtr, IntPtr, IntPtr, void> quit = &OnContentProcessTerminated;
+					ClassAddMethod(cls, Sel("webViewWebContentProcessDidTerminate:"), (IntPtr)quit, "v@:@");
+					delegate* unmanaged[Cdecl]<IntPtr, IntPtr, IntPtr, IntPtr, IntPtr, void> fail = &OnNavigationFailed;
+					ClassAddMethod(cls, Sel("webView:didFailProvisionalNavigation:withError:"), (IntPtr)fail, "v@:@@@");
+					ClassAddMethod(cls, Sel("webView:didFailNavigation:withError:"), (IntPtr)fail, "v@:@@@");
 				}
 				ObjCRegisterClassPair(cls);
 				_handlerClass = cls;
@@ -286,31 +304,67 @@ public sealed class MacWebView : NativeControlHost
 		}
 	}
 
+	private static bool TryGetView(IntPtr handler, out MacWebView view)
+	{
+		view = null;
+		return Handlers.TryGetValue(handler, out WeakReference<MacWebView> weak) && weak.TryGetTarget(out view);
+	}
+
+	private static string StringOf(IntPtr nsObject)
+	{
+		IntPtr utf8Sel = Sel("UTF8String");
+		if (nsObject == IntPtr.Zero || !SendBoolPtr(nsObject, Sel("respondsToSelector:"), utf8Sel))
+		{
+			return null;
+		}
+		IntPtr utf8 = SendPtr(nsObject, utf8Sel);
+		return utf8 == IntPtr.Zero ? null : Marshal.PtrToStringUTF8(utf8);
+	}
+
+	[UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+	private static void OnContentProcessTerminated(IntPtr self, IntPtr cmd, IntPtr webView)
+	{
+		try
+		{
+			if (TryGetView(self, out MacWebView view))
+			{
+				Dispatcher.UIThread.Post(() => view.LoadFailed?.Invoke("its web view quit unexpectedly"));
+			}
+		}
+		catch
+		{
+			// Never let a managed exception unwind across the Objective-C runtime boundary.
+		}
+	}
+
+	[UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+	private static void OnNavigationFailed(IntPtr self, IntPtr cmd, IntPtr webView, IntPtr navigation, IntPtr error)
+	{
+		try
+		{
+			if (!TryGetView(self, out MacWebView view) || error == IntPtr.Zero || SendLong(error, Sel("code")) == NSUrlErrorCancelled)
+			{
+				return;
+			}
+			string why = StringOf(SendPtr(error, Sel("localizedDescription")));
+			Dispatcher.UIThread.Post(() => view.LoadFailed?.Invoke(string.IsNullOrEmpty(why) ? "its page didn't load" : $"its page didn't load ({why})"));
+		}
+		catch
+		{
+			// Never let a managed exception unwind across the Objective-C runtime boundary.
+		}
+	}
+
 	[UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
 	private static void OnScriptMessage(IntPtr self, IntPtr cmd, IntPtr controller, IntPtr message)
 	{
 		try
 		{
-			if (!Handlers.TryGetValue(self, out WeakReference<MacWebView> weak) || !weak.TryGetTarget(out MacWebView view))
+			if (!TryGetView(self, out MacWebView view))
 			{
 				return;
 			}
-			IntPtr body = SendPtr(message, Sel("body"));
-			if (body == IntPtr.Zero)
-			{
-				return;
-			}
-			IntPtr utf8Sel = Sel("UTF8String");
-			if (!SendBoolPtr(body, Sel("respondsToSelector:"), utf8Sel))
-			{
-				return;
-			}
-			IntPtr utf8 = SendPtr(body, utf8Sel);
-			if (utf8 == IntPtr.Zero)
-			{
-				return;
-			}
-			string json = Marshal.PtrToStringUTF8(utf8);
+			string json = StringOf(SendPtr(message, Sel("body")));
 			if (json != null)
 			{
 				Dispatcher.UIThread.Post(() => view.MessageReceived?.Invoke(json));
@@ -374,6 +428,9 @@ public sealed class MacWebView : NativeControlHost
 	[DllImport(ObjC, EntryPoint = "objc_msgSend")]
 	[return: MarshalAs(UnmanagedType.I1)]
 	private static extern bool SendBoolPtr(IntPtr receiver, IntPtr selector, IntPtr arg1);
+
+	[DllImport(ObjC, EntryPoint = "objc_msgSend")]
+	private static extern long SendLong(IntPtr receiver, IntPtr selector);
 
 	[DllImport(ObjC, EntryPoint = "objc_msgSend")]
 	private static extern void SendVoid(IntPtr receiver, IntPtr selector);

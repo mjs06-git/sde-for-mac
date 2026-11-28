@@ -6,7 +6,9 @@
 
     // Active tool button
     document.querySelectorAll(".tool-palette .tool-btn").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.mode === state.mode);
+      const on = btn.dataset.mode === state.mode;
+      btn.classList.toggle("active", on);
+      btn.setAttribute("aria-pressed", String(on));
     });
 
     // Cursor
@@ -40,6 +42,7 @@
       const polyBtn = document.createElement("button");
       polyBtn.type = "button";
       polyBtn.className = "hud-btn" + (state.sketch === "Polygon" ? " active" : "");
+      polyBtn.setAttribute("aria-pressed", String(state.sketch === "Polygon"));
       polyBtn.textContent = "Draw an Area";
       polyBtn.onclick = () => post({ type: "togglePolygonSelect" });
       const attrBtn = document.createElement("button");
@@ -85,11 +88,13 @@
       const dBtn = document.createElement("button");
       dBtn.type = "button";
       dBtn.className = "hud-btn" + (!state.measureArea ? " active" : "");
+      dBtn.setAttribute("aria-pressed", String(!state.measureArea));
       dBtn.textContent = "Distance";
       dBtn.onclick = () => post({ type: "setMeasureArea", area: false });
       const aBtn = document.createElement("button");
       aBtn.type = "button";
       aBtn.className = "hud-btn" + (state.measureArea ? " active" : "");
+      aBtn.setAttribute("aria-pressed", String(!!state.measureArea));
       aBtn.textContent = "Area";
       aBtn.onclick = () => post({ type: "setMeasureArea", area: true });
       seg.append(dBtn, aBtn);
@@ -121,6 +126,7 @@
     document.getElementById("legend-count").textContent = state.countText || "";
     const toggleBtn = document.getElementById("legend-toggle");
     toggleBtn.textContent = state.legendOpen ? "▾" : "▴";
+    toggleBtn.setAttribute("aria-expanded", String(!!state.legendOpen));
     const body = document.getElementById("legend-body");
     body.hidden = !state.legendOpen;
     body.innerHTML = "";
@@ -248,7 +254,23 @@
       attr.hidden = true;
     }
 
+    announce(state);
     placeSelectionBar();
+  };
+
+  // The bars above are rebuilt on every state push, so a live region on them would repeat itself. VoiceOver hears
+  // this one instead, and only when the words change.
+  let lastAnnouncement = "";
+  const announce = (state) => {
+    const parts = [
+      state.hasChecked ? state.selectionText : state.hasLayerSelection ? state.layerSelectionText : state.statusMessage,
+      state.mode === "Measure" ? state.measurementLine : "",
+    ];
+    const text = parts.filter(Boolean).join(". ");
+    if (text !== lastAnnouncement) {
+      lastAnnouncement = text;
+      document.getElementById("hud-live").textContent = text;
+    }
   };
 
   const placeSelectionBar = () => {

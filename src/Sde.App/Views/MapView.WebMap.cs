@@ -31,6 +31,7 @@ public partial class MapView
 
 	private MapWebServer _webServer;
 	private Task _webServerTask;
+	private int _webGeneration;
 	private bool _webSupported;
 	private bool _preferWebMap = true;
 	private bool _webJsReady;
@@ -52,6 +53,7 @@ public partial class MapView
 	private void InitWebMapHooks()
 	{
 		WebMap.MessageReceived += OnWebMessage;
+		WebMap.LoadFailed += why => FallBackToClassic(why);
 		AttachedToVisualTree += OnMapAttachedToVisualTree;
 		if (BookmarksButton.Flyout is FlyoutBase bf)
 		{
@@ -75,6 +77,8 @@ public partial class MapView
 			return;
 		}
 
+		// Each visit starts from the saved choice, so a map that fell back after a failure gets another try.
+		_preferWebMap = !(_vm?.UseClassicMap ?? false);
 		AttachAirspaceWatchers(top as MainWindow);
 		UpdateWebMapModeVisuals();
 		if (IsWebMapActive)
@@ -90,6 +94,10 @@ public partial class MapView
 			return;
 		}
 		_preferWebMap = !_preferWebMap;
+		if (_vm != null)
+		{
+			_vm.UseClassicMap = !_preferWebMap;
+		}
 		UpdateWebMapModeVisuals();
 		if (IsWebMapActive)
 		{
@@ -97,6 +105,31 @@ public partial class MapView
 			QueueWebPush();
 			SyncWebMapViewportFromSurface();
 		}
+		else if (!_preferWebMap)
+		{
+			// Classic chosen: free the web page, its GPU memory and the loopback server rather than keep them idle.
+			StopWebServer();
+		}
+	}
+
+	/// <summary>
+	/// The interactive map can't be shown (<paramref name="why"/> finishes "The interactive map stopped because…"):
+	/// switch to the Classic map for this visit and say so. The saved choice is kept, so the next visit tries again.
+	/// </summary>
+	private void FallBackToClassic(string why, Exception ex = null)
+	{
+		if (!_preferWebMap)
+		{
+			return;
+		}
+		Services.AppLog.Write($"Interactive map stopped because {why}; showing the Classic map", ex);
+		_preferWebMap = false;
+		StopWebServer();
+		UpdateWebMapModeVisuals();
+		_hostWindow?.Notify(
+			"Showing the Classic Map",
+			$"The interactive map stopped because {why}. To try it again, choose More ▸ Interactive Map.",
+			isError: true);
 	}
 
 	private void UpdateWebMapModeVisuals()
@@ -131,27 +164,28 @@ public partial class MapView
 
 	private async Task StartWebServerCoreAsync()
 	{
+		int generation = _webGeneration;
 		try
 		{
 			MapWebServer server = await MapWebServer.StartAsync();
-			if (_vm == null && !IsLoaded)
+			// Stopped (engine switched off, page closed) while the server was starting: this one is no longer wanted.
+			if (generation != _webGeneration || (_vm == null && !IsLoaded))
 			{
 				await server.DisposeAsync();
 				return;
 			}
 			_webServer = server;
 			_webServer.Tiles = _vm?.Tiles;
+			// No load timeout: WebKit pauses drawing in a window behind others, so a slow "ready" isn't a broken map.
 			WebMap.Navigate(_webServer.EntryUrl);
 		}
 		catch (Exception ex)
 		{
-			Services.AppLog.Write("MapWebServer failed to start; falling back to Classic map", ex);
-			_preferWebMap = false;
-			UpdateWebMapModeVisuals();
+			FallBackToClassic("its local server couldn't start", ex);
 		}
 		finally
 		{
-			if (_webServer == null)
+			if (_webServer == null && generation == _webGeneration)
 			{
 				_webServerTask = null;
 			}
@@ -161,6 +195,13 @@ public partial class MapView
 	private void ShutdownWebMap()
 	{
 		DetachAirspaceWatchers();
+		StopWebServer();
+	}
+
+	/// <summary>Unloads the page and disposes the loopback server; <see cref="EnsureWebServerAndLoadAsync"/> starts both afresh.</summary>
+	private void StopWebServer()
+	{
+		_webGeneration++;
 		_webJsReady = false;
 		_snapshotInFlight = false;
 		_webServerTask = null;
@@ -168,6 +209,7 @@ public partial class MapView
 		WebMapBackdrop.Source = null;
 		_backdropBitmap?.Dispose();
 		_backdropBitmap = null;
+		WebMap.Navigate("about:blank");
 		MapWebServer server = _webServer;
 		_webServer = null;
 		if (server != null)
@@ -195,6 +237,7 @@ public partial class MapView
 		}
 		_hostWindow.Toasts.Items.CollectionChanged += OnToastsChanged;
 		_hostWindow.DropOverlayView.PropertyChanged += OnDropOverlayPropertyChanged;
+		Services.HighContrast.Changed += QueueWebPush;
 		if (_hostWindow.FindControl<DropDownButton>("NewButton")?.Flyout is FlyoutBase nf)
 		{
 			nf.Opened += OnToolbarFlyoutOpened;
@@ -204,6 +247,7 @@ public partial class MapView
 
 	private void DetachAirspaceWatchers()
 	{
+		Services.HighContrast.Changed -= QueueWebPush;
 		if (_hostMain != null)
 		{
 			_hostMain.Sheets.PropertyChanged -= OnOverlayStateChanged;
@@ -390,6 +434,8 @@ public partial class MapView
 		object payload = new
 		{
 			theme = ActualThemeVariant == ThemeVariant.Dark ? "dark" : "light",
+			highContrast = Services.HighContrast.IsOn,
+			reduceMotion = !Services.Motion.Enabled,
 			accent = CssColor(ThemeBrushFor("AccentBg", ActualThemeVariant)),
 			basemap = new
 			{
@@ -776,6 +822,20 @@ public partial class MapView
 				case "snapshot":
 					_snapshotInFlight = false;
 					ApplyBackdropSnapshot(root.TryGetProperty("dataUrl", out JsonElement u) ? u.GetString() : null);
+					break;
+
+				case "failed":
+					FallBackToClassic(root.TryGetProperty("reason", out JsonElement why) ? why.GetString() : "of a problem in its page");
+					break;
+
+				case "jsError":
+					string where = root.TryGetProperty("source", out JsonElement src) ? $"{src.GetString()}:{(root.TryGetProperty("line", out JsonElement ln) ? ln.GetInt32() : 0)}" : "";
+					Services.AppLog.Write($"Map page script error {where}: {(root.TryGetProperty("message", out JsonElement msg) ? msg.GetString() : "")}");
+					// Before "ready" a script error means the map never starts, so don't wait out the timeout.
+					if (!_webJsReady)
+					{
+						FallBackToClassic("of a script error in its page");
+					}
 					break;
 			}
 		}
